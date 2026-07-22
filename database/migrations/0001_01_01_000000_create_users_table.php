@@ -16,19 +16,20 @@ return new class extends Migration
             $table->id();
 
             // Informations personnelles
-            $table->string('nom');
-            $table->string('prenom');
+            $table->string('nom',100);
+            $table->string('prenom',100);
 
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
 
-            $table->string('telephone', 20)->nullable();
+            $table->text('telephone',20)->nullable()->unique();
+
             $table->string('adresse')->nullable();
 
             $table->string('password');
 
-            // Gestion du compte
-            $table->enum('etat_compte', [
+            // Etat métier
+            $table->enum('etat_compte',[
                 'actif',
                 'inactif',
                 'suspendu'

@@ -56,7 +56,12 @@ class User extends Authenticatable
 
     public function getNomCompletAttribute(): string
     {
-        return "$this->prenom.' '. $this->nom";
+        return $this->prenom . ' ' . $this->nom;
+    }
+
+    public function getNameAttribute(): string
+    {
+        return $this->prenom . ' ' . $this->nom;
     }
 
     /*
@@ -78,5 +83,27 @@ class User extends Authenticatable
     public function isAgent(): bool
     {
         return $this->hasRole(RoleEnum::AGENT->value);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Relations
+    |--------------------------------------------------------------------------
+    */
+
+    public function equipes(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Equipe::class, 'appartenance_equipe', 'user_id', 'equipe_id')
+            ->withPivot(['date_debut', 'date_fin', 'fonction']);
+    }
+
+    public function historiquePoints(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(HistoriquePoint::class, 'user_id');
+    }
+
+    public function signalements(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Signalement::class, 'user_id');
     }
 }
