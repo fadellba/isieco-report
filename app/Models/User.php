@@ -2,25 +2,43 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Database\Factories\UserFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Attributes\Hidden;
+use App\Enums\RoleEnum;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['name', 'email', 'password'])]
-#[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens;
+    use HasFactory;
+    use Notifiable;
+    use HasRoles;
 
     /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
+     * Les attributs assignables.
+     */
+    protected $fillable = [
+        'nom',
+        'prenom',
+        'email',
+        'telephone',
+        'adresse',
+        'password',
+        'etat_compte',
+    ];
+
+    /**
+     * Les attributs cachés.
+     */
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
+    /**
+     * Les conversions automatiques.
      */
     protected function casts(): array
     {
@@ -28,5 +46,37 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Accessors
+    |--------------------------------------------------------------------------
+    */
+
+    public function getNomCompletAttribute(): string
+    {
+        return "$this->prenom.' '. $this->nom";
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Helpers métier
+    |--------------------------------------------------------------------------
+    */
+
+    public function isAdmin(): bool
+    {
+        return $this->hasRole(RoleEnum::ADMIN->value);
+    }
+
+    public function isCitizen(): bool
+    {
+        return $this->hasRole(RoleEnum::CITIZEN->value);
+    }
+
+    public function isAgent(): bool
+    {
+        return $this->hasRole(RoleEnum::AGENT->value);
     }
 }
