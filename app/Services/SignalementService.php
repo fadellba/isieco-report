@@ -13,91 +13,169 @@ use App\Repositories\Contracts\SignalementRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
-final class SignalementService
+final readonly class SignalementService
 {
     public function __construct(
-        private readonly SignalementRepositoryInterface $repository,
+        private SignalementRepositoryInterface $repository,
     ) {
     }
 
     public function create(CreateSignalementDTO $dto): Signalement
     {
         return DB::transaction(function () use ($dto): Signalement {
-            /** @var Signalement $signalement */
-            $signalement = $this->repository->create($dto->toArray());
 
-            // Attach waste types with pivot data
-            if (!empty($dto->type_dechets)) {
+            /** @var Signalement $signalement */
+            $signalement = $this->repository->create(
+                $dto->toArray()
+            );
+
+            /*
+             |--------------------------------------------------------------------------
+             | Types de déchets
+             |--------------------------------------------------------------------------
+             */
+            if ($dto->type_dechets !== []) {
+
                 $attachData = [];
+
                 foreach ($dto->type_dechets as $item) {
+
+                    if (empty($item['type_dechet_id'])) {
+                        continue;
+                    }
+
                     $attachData[$item['type_dechet_id']] = [
-                        'quantite_estime' => $item['quantite_estime'],
-                        'volume_estime' => $item['volume_estime'],
-                        'dangerosite' => $item['dangerosite'],
-                        'remarque' => $item['remarque'] ?? null,
+                        'quantite_estime' => $item['quantite_estime'] ?? null,
+                        'volume_estime'   => $item['volume_estime'] ?? null,
+                        'dangerosite'     => $item['dangerosite'] ?? null,
+                        'remarque'        => $item['remarque'] ?? null,
                     ];
                 }
-                $signalement->typeDechets()->attach($attachData);
+
+                if ($attachData !== []) {
+                    $signalement
+                        ->typeDechets()
+                        ->attach($attachData);
+                }
             }
 
-            // Create photos
-            if (!empty($dto->photos)) {
-                foreach ($dto->photos as $url) {
+            /*
+             |--------------------------------------------------------------------------
+             | Photos
+             |--------------------------------------------------------------------------
+             */
+            if ($dto->photos !== []) {
+
+                foreach ($dto->photos as $photo) {
+
                     $signalement->photos()->create([
-                        'url' => $url,
+                        'url' => $photo,
                     ]);
                 }
             }
 
-            return $signalement->load(['typeDechets', 'photos']);
+            return $signalement->load([
+                'typeDechets',
+                'photos',
+            ]);
         });
     }
 
-    public function update(Signalement $signalement, UpdateSignalementDTO $dto): Signalement
-    {
-        return DB::transaction(function () use ($signalement, $dto): Signalement {
-            if ($dto->statut !== null && $dto->statut !== $signalement->statut) {
-                $this->validateTransition($signalement->statut, $dto->statut);
+    public function update(
+        Signalement $signalement,
+        UpdateSignalementDTO $dto
+    ): Signalement {
+
+        return DB::transaction(function () use (
+            $signalement,
+            $dto
+        ): Signalement {
+
+            if (
+                $dto->statut !== null &&
+                $dto->statut !== $signalement->statut
+            ) {
+                $this->validateTransition(
+                    $signalement->statut,
+                    $dto->statut
+                );
             }
 
             /** @var Signalement */
-            return $this->repository->update($signalement, $dto->toArray());
+            return $this->repository->update(
+                $signalement,
+                $dto->toArray()
+            );
         });
     }
 
-    public function transitionTo(Signalement $signalement, SignalementStatutEnum $newStatut): Signalement
-    {
-        return DB::transaction(function () use ($signalement, $newStatut): Signalement {
-            if ($signalement->statut !== $newStatut) {
-                $this->validateTransition($signalement->statut, $newStatut);
-                /** @var Signalement */
-                return $this->repository->update($signalement, ['statut' => $newStatut->value]);
+    public function transitionTo(
+        Signalement $signalement,
+        SignalementStatutEnum $newStatut
+    ): Signalement {
+
+        return DB::transaction(function () use (
+            $signalement,
+            $newStatut
+        ): Signalement {
+
+            if ($signalement->statut === $newStatut) {
+                return $signalement;
             }
-            return $signalement;
+
+            $this->validateTransition(
+                $signalement->statut,
+                $newStatut
+            );
+
+            /** @var Signalement */
+            return $this->repository->update(
+                $signalement,
+                [
+                    'statut' => $newStatut->value,
+                ]
+            );
         });
     }
 
-    private function validateTransition(SignalementStatutEnum $current, SignalementStatutEnum $next): void
-    {
-        $allowed = $current->transitionsAutorisees();
-        if (!in_array($next, $allowed, true)) {
-            throw new InvalidTransitionException($current->value, $next->value);
+    private function validateTransition(
+        SignalementStatutEnum $current,
+        SignalementStatutEnum $next
+    ): void {
+
+        if (
+            ! in_array(
+                $next,
+                $current->transitionsAutorisees(),
+                true
+            )
+        ) {
+            throw new InvalidTransitionException(
+                $current->value,
+                $next->value
+            );
         }
     }
 
-    public function findOrFail(int|string $id): Signalement
-    {
+    public function findOrFail(
+        int|string $id
+    ): Signalement {
+
         /** @var Signalement */
         return $this->repository->findOrFail($id);
     }
 
-    public function paginate(int $perPage = 15): LengthAwarePaginator
-    {
+    public function paginate(
+        int $perPage = 15
+    ): LengthAwarePaginator {
+
         return $this->repository->paginate($perPage);
     }
 
-    public function delete(Signalement $signalement): bool
-    {
+    public function delete(
+        Signalement $signalement
+    ): bool {
+
         return $this->repository->delete($signalement);
     }
 }

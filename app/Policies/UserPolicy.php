@@ -30,7 +30,8 @@ final class UserPolicy
 
     public function update(User $user, User $model): bool
     {
-        return $user->hasRole(RoleEnum::ADMIN->value);
+        return $user->id === $model->id
+            || $user->hasRole(RoleEnum::ADMIN->value);
     }
 
 

@@ -13,24 +13,42 @@ final class SignalementResource extends JsonResource
     {
         return [
             'id' => $this->id,
+
             'description' => $this->description,
-            'date_heure_signalement' => $this->date_heure_signalement,
+
             'latitude' => $this->latitude,
+
             'longitude' => $this->longitude,
-            'statut' => $this->statut->value,
-            'priorite' => $this->priorite->value,
-            'user' => new UserResource($this->whenLoaded('user')),
-            'zone' => new ZoneResource($this->whenLoaded('zone')),
-            'type_dechets' => TypeDechetResource::collection($this->whenLoaded('typeDechets')),
+
+            'statut' => $this->statut?->value,
+
+            'priorite' => $this->priorite?->value,
+
+            'user' => new UserResource(
+                $this->whenLoaded('user')
+            ),
+
+            'zone' => new ZoneResource(
+                $this->whenLoaded('zone')
+            ),
+
+            'type_dechets' => TypeDechetResource::collection(
+                $this->whenLoaded('typeDechets')
+            ),
+
             'photos' => $this->when(
                 $this->relationLoaded('photos'),
-                fn () => $this->photos->map(fn ($photo) => [
-                    'id' => $photo->id,
-                    'url' => $photo->url,
-                    'description' => $photo->description,
-                ])
+                fn () => $this->photos->map(
+                    fn ($photo) => [
+                        'id' => $photo->id,
+                        'url' => $photo->url,
+                        'description' => $photo->description,
+                    ]
+                )
             ),
+
             'created_at' => $this->created_at,
+
             'updated_at' => $this->updated_at,
         ];
     }

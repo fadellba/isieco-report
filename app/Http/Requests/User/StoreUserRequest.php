@@ -49,6 +49,18 @@ final class StoreUserRequest extends FormRequest
                 'sometimes',
                 new Enum(RoleEnum::class),
             ],
+
+            'telephone' => [
+                'nullable',
+                'string',
+                'max:50',
+            ],
+
+            'adresse' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
         ];
     }
 
@@ -63,6 +75,8 @@ final class StoreUserRequest extends FormRequest
             role: $this->filled('role')
                 ? RoleEnum::from($this->validated('role'))
                 : RoleEnum::CITIZEN,
+            telephone: $this->validated('telephone'),
+            adresse: $this->validated('adresse'),
         );
     }
 }

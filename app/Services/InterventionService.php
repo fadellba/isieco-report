@@ -8,41 +8,62 @@ use App\DTOs\Intervention\CreateInterventionDTO;
 use App\DTOs\Intervention\UpdateInterventionDTO;
 use App\Enums\InterventionStatutEnum;
 use App\Enums\SignalementStatutEnum;
+use App\Exceptions\Business\InvalidTransitionException;
 use App\Models\Intervention;
 use App\Repositories\Contracts\InterventionRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
-final class InterventionService
+final readonly class InterventionService
 {
     public function __construct(
-        private readonly InterventionRepositoryInterface $repository,
-        private readonly SignalementService $signalementService,
-        private readonly HistoriquePointService $pointsService,
+        private InterventionRepositoryInterface $repository,
+        private SignalementService              $signalementService,
+        private HistoriquePointService          $pointsService,
     ) {
     }
 
     public function create(CreateInterventionDTO $dto): Intervention
     {
         return DB::transaction(function () use ($dto): Intervention {
-            /** @var Intervention $intervention */
-            $intervention = $this->repository->create($dto->toArray());
+            $intervention = $this->repository->create(
+                $dto->toArray()
+            );
 
-            // Transition the signalement status to 'en_intervention'
-            $signalement = $intervention->affectation->signalement;
-            $this->signalementService->transitionTo($signalement, SignalementStatutEnum::EN_INTERVENTION);
+            $signalement = $intervention
+                ->load('affectation.signalement')
+                ->affectation
+                ->signalement;
 
-            return $intervention;
+            if ($signalement->statut !== SignalementStatutEnum::AFFECTE) {
+                throw new InvalidTransitionException(
+                    $signalement->statut->value,
+                    SignalementStatutEnum::EN_INTERVENTION->value
+                );
+            }
+
+            $this->signalementService->transitionTo(
+                $signalement,
+                SignalementStatutEnum::EN_INTERVENTION
+            );
+
+            return $intervention->load([
+                'affectation',
+                'photos',
+            ]);
         });
     }
 
-    public function update(Intervention $intervention, UpdateInterventionDTO $dto): Intervention
-    {
-        return DB::transaction(function () use ($intervention, $dto): Intervention {
-            /** @var Intervention $updated */
-            $updated = $this->repository->update($intervention, $dto->toArray());
+    public function update(
+        Intervention $intervention,
+        UpdateInterventionDTO $dto
+    ): Intervention {
+        return DB::transaction(function () use ($intervention, $dto): \Illuminate\Database\Eloquent\Model {
+            $updated = $this->repository->update(
+                $intervention,
+                $dto->toArray()
+            );
 
-            // Add photos if provided
             if (!empty($dto->photos)) {
                 foreach ($dto->photos as $url) {
                     $updated->photos()->create([
@@ -51,11 +72,16 @@ final class InterventionService
                 }
             }
 
-            $signalement = $updated->affectation->signalement;
+            $signalement = $updated
+                ->load('affectation.signalement')
+                ->affectation
+                ->signalement;
 
-            // If intervention is finished, signalement is transitioned to 'termine'
             if ($dto->statut === InterventionStatutEnum::TERMINEE) {
-                $this->signalementService->transitionTo($signalement, SignalementStatutEnum::TERMINE);
+                $this->signalementService->transitionTo(
+                    $signalement,
+                    SignalementStatutEnum::TERMINE
+                );
             }
 
             return $updated->load('photos');
@@ -65,12 +91,16 @@ final class InterventionService
     public function cloturer(Intervention $intervention): Intervention
     {
         return DB::transaction(function () use ($intervention): Intervention {
-            $signalement = $intervention->affectation->signalement;
+            $signalement = $intervention
+                ->load('affectation.signalement')
+                ->affectation
+                ->signalement;
 
-            // Transition the signalement to 'cloture'
-            $this->signalementService->transitionTo($signalement, SignalementStatutEnum::CLOTURE);
+            $this->signalementService->transitionTo(
+                $signalement,
+                SignalementStatutEnum::CLOTURE
+            );
 
-            // Award 100 points to the citizen who created the signalement (RG34, RG35)
             $this->pointsService->awardPoints(
                 $signalement->user_id,
                 100,
@@ -82,9 +112,8 @@ final class InterventionService
         });
     }
 
-    public function findOrFail(int|string $id): Intervention
+    public function findOrFail(int|string $id): \Illuminate\Database\Eloquent\Model
     {
-        /** @var Intervention */
         return $this->repository->findOrFail($id);
     }
 

@@ -20,7 +20,6 @@ final class Signalement extends Model
 
     protected $fillable = [
         'description',
-        'date_heure_signalement',
         'latitude',
         'longitude',
         'statut',
@@ -32,7 +31,7 @@ final class Signalement extends Model
     protected function casts(): array
     {
         return [
-            'date_heure_signalement' => 'datetime',
+            //'date_heure_signalement' => 'datetime',
             'latitude' => 'float',
             'longitude' => 'float',
             'statut' => SignalementStatutEnum::class,
@@ -47,7 +46,7 @@ final class Signalement extends Model
 
     public function zone(): BelongsTo
     {
-        return $this->belongsTo(Zone::class, 'zone_id');
+        return $this->belongsTo(Zone::class);
     }
 
     public function typeDechets(): BelongsToMany

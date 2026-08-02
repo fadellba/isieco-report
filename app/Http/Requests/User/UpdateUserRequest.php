@@ -49,6 +49,18 @@ final class UpdateUserRequest extends FormRequest
                 'sometimes',
                 new Enum(RoleEnum::class),
             ],
+
+            'telephone' => [
+                'nullable',
+                'string',
+                'max:50',
+            ],
+
+            'adresse' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
         ];
     }
 
@@ -66,6 +78,8 @@ final class UpdateUserRequest extends FormRequest
                     $this->validated('role')
                 )
                 : null,
+            telephone: $this->validated('telephone'),
+            adresse: $this->validated('adresse'),
         );
     }
 }

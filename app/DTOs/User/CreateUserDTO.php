@@ -14,6 +14,8 @@ final readonly class CreateUserDTO
         public string $email,
         public string $password,
         public RoleEnum $role = RoleEnum::CITIZEN,
+        public ?string $telephone = null,
+        public ?string $adresse = null,
     ) {
     }
 
@@ -24,6 +26,8 @@ final readonly class CreateUserDTO
             'prenom'   => $this->prenom,
             'email'    => $this->email,
             'password' => $this->password,
+            'telephone'=> $this->telephone,
+            'adresse'  => $this->adresse,
         ];
     }
 }

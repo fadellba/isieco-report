@@ -14,6 +14,8 @@ final readonly class UpdateUserDTO
         public ?string $email = null,
         public ?string $password = null,
         public ?RoleEnum $role = null,
+        public ?string $telephone = null,
+        public ?string $adresse = null,
     ) {
     }
 
@@ -25,6 +27,8 @@ final readonly class UpdateUserDTO
             'prenom'   => $this->prenom,
             'email'    => $this->email,
             'password' => $this->password,
+            'telephone'=> $this->telephone,
+            'adresse'  => $this->adresse,
         ], fn ($value) => $value !== null);
     }
 }

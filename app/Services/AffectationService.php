@@ -13,38 +13,43 @@ use App\Repositories\Contracts\SignalementRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
-final class AffectationService
+final readonly class AffectationService
 {
     public function __construct(
-        private readonly AffectationRepositoryInterface $repository,
-        private readonly SignalementRepositoryInterface $signalementRepository,
-        private readonly SignalementService $signalementService,
+        private AffectationRepositoryInterface $repository,
+        private SignalementRepositoryInterface $signalementRepository,
+        private SignalementService             $signalementService,
     ) {
     }
 
     public function create(CreateAffectationDTO $dto): Affectation
     {
         return DB::transaction(function () use ($dto): Affectation {
-            /** @var \App\Models\Signalement $signalement */
-            $signalement = $this->signalementRepository->findOrFail($dto->signalement_id);
+            $signalement = $this->signalementRepository
+                ->findOrFail($dto->signalement_id);
 
             if (!$signalement->statut->peutEtreAffecte()) {
                 throw new SignalementNotValidatedException();
             }
 
-            /** @var Affectation $affectation */
-            $affectation = $this->repository->create($dto->toArray());
+            $affectation = $this->repository->create(
+                $dto->toArray()
+            );
 
-            // Transition the signalement status to 'affecte' — cycle-vie-signalement.md
-            $this->signalementService->transitionTo($signalement, SignalementStatutEnum::AFFECTE);
+            $this->signalementService->transitionTo(
+                $signalement,
+                SignalementStatutEnum::AFFECTE
+            );
 
-            return $affectation;
+            return $affectation->load([
+                'signalement',
+                'equipe',
+            ]);
         });
     }
 
-    public function findOrFail(int|string $id): Affectation
+    public function findOrFail(int|string $id): \Illuminate\Database\Eloquent\Model
     {
-        /** @var Affectation */
         return $this->repository->findOrFail($id);
     }
 

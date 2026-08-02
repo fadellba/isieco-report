@@ -22,28 +22,83 @@ final class SignalementFactory extends Factory
     {
         return [
             'description' => $this->faker->sentence(),
-            'date_heure_signalement' => $this->faker->dateTimeBetween('-3 months', 'now')->format('Y-m-d H:i:s'),
-            'latitude' => $this->faker->latitude(0, 20),
-            'longitude' => $this->faker->longitude(-20, 20),
+
+            'latitude' => (float) $this->faker->latitude(0, 20),
+            'longitude' => (float) $this->faker->longitude(-20, 20),
+
             'statut' => SignalementStatutEnum::EN_ATTENTE_VALIDATION->value,
-            'priorite' => $this->faker->randomElement(SignalementPrioriteEnum::cases())->value,
+
+            'priorite' => $this->faker
+                ->randomElement(SignalementPrioriteEnum::cases())
+                ->value,
+
             'user_id' => User::factory(),
+
+            // Par défaut un signalement appartient à une zone.
             'zone_id' => Zone::factory(),
         ];
     }
 
+    public function sansDescription(): static
+    {
+        return $this->state(fn () => [
+            'description' => null,
+        ]);
+    }
+
+    public function sansZone(): static
+    {
+        return $this->state(fn () => [
+            'zone_id' => null,
+        ]);
+    }
+
     public function valide(): static
     {
-        return $this->state(['statut' => SignalementStatutEnum::VALIDE->value]);
+        return $this->state(fn () => [
+            'statut' => SignalementStatutEnum::VALIDE->value,
+        ]);
     }
 
     public function priorise(): static
     {
-        return $this->state(['statut' => SignalementStatutEnum::PRIORISE->value]);
+        return $this->state(fn () => [
+            'statut' => SignalementStatutEnum::PRIORISE->value,
+        ]);
     }
 
     public function affecte(): static
     {
-        return $this->state(['statut' => SignalementStatutEnum::AFFECTE->value]);
+        return $this->state(fn () => [
+            'statut' => SignalementStatutEnum::AFFECTE->value,
+        ]);
+    }
+
+    public function enIntervention(): static
+    {
+        return $this->state(fn () => [
+            'statut' => SignalementStatutEnum::EN_INTERVENTION->value,
+        ]);
+    }
+
+    public function termine(): static
+    {
+        return $this->state(fn () => [
+            'statut' => SignalementStatutEnum::TERMINE->value,
+        ]);
+    }
+
+    public function cloture(): static
+    {
+        return $this->state(fn () => [
+            'statut' => SignalementStatutEnum::CLOTURE->value,
+        ]);
+    }
+
+    public function rejete(): static
+    {
+        return $this->state(fn () => [
+            'statut' => SignalementStatutEnum::REJETE->value,
+        ]);
     }
 }

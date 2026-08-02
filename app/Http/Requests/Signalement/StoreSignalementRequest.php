@@ -21,24 +21,67 @@ final class StoreSignalementRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'description' => ['required', 'string'],
-            'date_heure_signalement' => ['required', 'date_format:Y-m-d H:i:s'],
+            'description' => ['nullable', 'string'],
             'latitude' => ['required', 'numeric', 'between:-90,90'],
             'longitude' => ['required', 'numeric', 'between:-180,180'],
-            'zone_id' => ['required', 'integer', 'exists:zones,id'],
-            'statut' => ['sometimes', new Enum(SignalementStatutEnum::class)],
-            'priorite' => ['sometimes', new Enum(SignalementPrioriteEnum::class)],
 
-            // Pivot details
-            'type_dechets' => ['required', 'array', 'min:1'],
-            'type_dechets.*.type_dechet_id' => ['required', 'integer', 'exists:types_dechets,id'],
-            'type_dechets.*.quantite_estime' => ['required', 'numeric', 'min:0'],
-            'type_dechets.*.volume_estime' => ['required', 'numeric', 'min:0'],
-            'type_dechets.*.dangerosite' => ['required', new Enum(DangerositeEnum::class)],
-            'type_dechets.*.remarque' => ['nullable', 'string'],
+            'zone_id' => [
+                'nullable',
+                'integer',
+                'exists:zones,id',
+            ],
 
-            'photos' => ['sometimes', 'array'],
-            'photos.*' => ['string', 'url'],
+            'statut' => [
+                'sometimes',
+                new Enum(SignalementStatutEnum::class),
+            ],
+
+            'priorite' => [
+                'sometimes',
+                new Enum(SignalementPrioriteEnum::class),
+            ],
+
+            'type_dechets' => [
+                'nullable',
+                'array',
+            ],
+
+            'type_dechets.*.type_dechet_id' => [
+                'required',
+                'integer',
+                'exists:types_dechets,id',
+            ],
+
+            'type_dechets.*.quantite_estime' => [
+                'nullable',
+                'numeric',
+                'min:0',
+            ],
+
+            'type_dechets.*.volume_estime' => [
+                'nullable',
+                'numeric',
+                'min:0',
+            ],
+
+            'type_dechets.*.dangerosite' => [
+                'nullable',
+                new Enum(DangerositeEnum::class),
+            ],
+
+            'type_dechets.*.remarque' => [
+                'nullable',
+                'string',
+            ],
+
+            'photos' => [
+                'nullable',
+                'array',
+            ],
+
+            'photos.*' => [
+                'url',
+            ],
         ];
     }
 
@@ -46,11 +89,10 @@ final class StoreSignalementRequest extends FormRequest
     {
         return new CreateSignalementDTO(
             description: $this->validated('description'),
-            date_heure_signalement: $this->validated('date_heure_signalement'),
             latitude: (float) $this->validated('latitude'),
             longitude: (float) $this->validated('longitude'),
             user_id: $this->user()->id,
-            zone_id: (int) $this->validated('zone_id'),
+            zone_id: $this->validated('zone_id'),
             statut: $this->filled('statut')
                 ? SignalementStatutEnum::from($this->validated('statut'))
                 : SignalementStatutEnum::EN_ATTENTE_VALIDATION,

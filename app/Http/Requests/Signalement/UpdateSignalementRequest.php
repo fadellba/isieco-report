@@ -20,10 +20,28 @@ final class UpdateSignalementRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'description' => ['sometimes', 'string'],
-            'statut' => ['sometimes', new Enum(SignalementStatutEnum::class)],
-            'priorite' => ['sometimes', new Enum(SignalementPrioriteEnum::class)],
-            'zone_id' => ['sometimes', 'integer', 'exists:zones,id'],
+            'description' => [
+                'sometimes',
+                'nullable',
+                'string',
+            ],
+
+            'statut' => [
+                'sometimes',
+                new Enum(SignalementStatutEnum::class),
+            ],
+
+            'priorite' => [
+                'sometimes',
+                new Enum(SignalementPrioriteEnum::class),
+            ],
+
+            'zone_id' => [
+                'sometimes',
+                'nullable',
+                'integer',
+                'exists:zones,id',
+            ],
         ];
     }
 
@@ -31,9 +49,14 @@ final class UpdateSignalementRequest extends FormRequest
     {
         return new UpdateSignalementDTO(
             description: $this->validated('description'),
-            statut: $this->filled('statut') ? SignalementStatutEnum::from($this->validated('statut')) : null,
-            priorite: $this->filled('priorite') ? SignalementPrioriteEnum::from($this->validated('priorite')) : null,
-            zone_id: $this->filled('zone_id') ? (int) $this->validated('zone_id') : null,
+            statut: $this->filled('statut')
+                ? SignalementStatutEnum::from($this->validated('statut'))
+                : null,
+            priorite: $this->filled('priorite')
+                ? SignalementPrioriteEnum::from($this->validated('priorite'))
+                : null,
+            zone_id: $this->validated('zone_id'),
+            zone_id_present: $this->exists('zone_id'),
         );
     }
 }
