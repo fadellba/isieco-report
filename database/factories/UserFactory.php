@@ -13,33 +13,64 @@ use Illuminate\Support\Str;
 class UserFactory extends Factory
 {
     /**
-     * The current password being used by the factory.
+     * Le mot de passe utilisé par défaut.
      */
     protected static ?string $password;
 
     /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
+     * Définition de l'état par défaut.
      */
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
+            'nom' => fake()->lastName(),
+
+            'prenom' => fake()->firstName(),
+
             'email' => fake()->unique()->safeEmail(),
+
             'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
+
+            'telephone' => fake()->unique()->numerify('77########'),
+
+            'adresse' => fake()->address(),
+
+            'etat_compte' => 'actif',
+
+            'password' => static::$password
+                ??= Hash::make('password'),
+
             'remember_token' => Str::random(10),
         ];
     }
 
     /**
-     * Indicate that the model's email address should be unverified.
+     * Adresse email non vérifiée.
      */
     public function unverified(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn () => [
             'email_verified_at' => null,
+        ]);
+    }
+
+    /**
+     * Compte suspendu.
+     */
+    public function suspended(): static
+    {
+        return $this->state(fn () => [
+            'etat_compte' => 'suspendu',
+        ]);
+    }
+
+    /**
+     * Compte inactif.
+     */
+    public function inactive(): static
+    {
+        return $this->state(fn () => [
+            'etat_compte' => 'inactif',
         ]);
     }
 }

@@ -1,0 +1,1269 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "ISI-Eco-Report API",
+        "description": "API de signalement et de gestion des déchets sauvages. Permet l'authentification des utilisateurs (Citoyens, Agents et Administrateurs), le signalement géolocalisé avec photo, l'affectation à des brigades de collecte, le suivi des interventions terrain et l'attribution automatique de points de fidélité.",
+        "version": "1.0.0"
+    },
+    "paths": {
+        "/auth/register": {
+            "post": {
+                "tags": [
+                    "Authentification"
+                ],
+                "summary": "Inscription citoyenne",
+                "description": "Permet aux nouveaux citoyens de créer un compte. Rôle par défaut : 'citizen'.",
+                "operationId": "f18a0c4b85d7508bf5f73ad13af12198",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "nom",
+                                    "prenom",
+                                    "email",
+                                    "password",
+                                    "password_confirmation"
+                                ],
+                                "properties": {
+                                    "nom": {
+                                        "type": "string",
+                                        "example": "Sow"
+                                    },
+                                    "prenom": {
+                                        "type": "string",
+                                        "example": "Mamadou"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "mamadou@gmail.com"
+                                    },
+                                    "telephone": {
+                                        "type": "string",
+                                        "example": "775283814"
+                                    },
+                                    "adresse": {
+                                        "type": "string",
+                                        "example": "Fann Résidence, Dakar"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "password"
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "password"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Citoyen créé avec succès"
+                    },
+                    "422": {
+                        "description": "Données de validation invalides"
+                    }
+                },
+                "servers": [
+                    {
+                        "url": "/api",
+                        "description": "Serveur API local"
+                    }
+                ]
+            }
+        },
+        "/auth/login": {
+            "post": {
+                "tags": [
+                    "Authentification"
+                ],
+                "summary": "Connexion de l'utilisateur",
+                "description": "Permet aux Citoyens, Agents et Admins de se connecter et d'obtenir un jeton d'accès.",
+                "operationId": "c6c9874077b7f3ebeda92067d8d9fa9f",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "admin@isieco.sn"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "password"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Connexion réussie avec token"
+                    },
+                    "401": {
+                        "description": "Identifiants invalides"
+                    }
+                },
+                "servers": [
+                    {
+                        "url": "/api",
+                        "description": "Serveur API local"
+                    }
+                ]
+            }
+        },
+        "/auth/logout": {
+            "post": {
+                "tags": [
+                    "Authentification"
+                ],
+                "summary": "Déconnexion de l'utilisateur",
+                "description": "Révoque le jeton d'accès actuel de l'utilisateur connecté.",
+                "operationId": "767c40d11a53a4b9ef07c97c6353be52",
+                "responses": {
+                    "204": {
+                        "description": "Déconnexion réussie"
+                    },
+                    "401": {
+                        "description": "Non authentifié"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "servers": [
+                    {
+                        "url": "/api",
+                        "description": "Serveur API local"
+                    }
+                ]
+            }
+        },
+        "/auth/forgot-password": {
+            "post": {
+                "tags": [
+                    "Authentification"
+                ],
+                "summary": "Demander un lien de réinitialisation de mot de passe",
+                "description": "Envoie un e-mail contenant le lien de réinitialisation si l'adresse e-mail existe.",
+                "operationId": "b1ff7c459a9fec2ac05541848a768b83",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "mamadou@gmail.com"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Lien envoyé"
+                    }
+                },
+                "servers": [
+                    {
+                        "url": "/api",
+                        "description": "Serveur API local"
+                    }
+                ]
+            }
+        },
+        "/auth/reset-password": {
+            "post": {
+                "tags": [
+                    "Authentification"
+                ],
+                "summary": "Réinitialisation du mot de passe",
+                "description": "Réinitialise le mot de passe de l'utilisateur à l'aide du jeton reçu par e-mail.",
+                "operationId": "92f72120af6836efb02f39cde32189ab",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "token",
+                                    "email",
+                                    "password",
+                                    "password_confirmation"
+                                ],
+                                "properties": {
+                                    "token": {
+                                        "type": "string",
+                                        "example": "token_recu"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "mamadou@gmail.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "newpassword"
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "newpassword"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Mot de passe modifié avec succès"
+                    }
+                },
+                "servers": [
+                    {
+                        "url": "/api",
+                        "description": "Serveur API local"
+                    }
+                ]
+            }
+        },
+        "/users": {
+            "get": {
+                "tags": [
+                    "Utilisateurs"
+                ],
+                "summary": "Lister les utilisateurs",
+                "description": "Accès : Admin uniquement.",
+                "operationId": "caed9c21fe975df9190788a75f4b758c",
+                "responses": {
+                    "200": {
+                        "description": "Liste des utilisateurs récupérée"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "servers": [
+                    {
+                        "url": "/api",
+                        "description": "Serveur API local"
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Utilisateurs"
+                ],
+                "summary": "Créer un utilisateur",
+                "description": "Accès : Admin uniquement. Permet de créer un compte avec un rôle spécifique ('admin', 'agent', 'citizen').",
+                "operationId": "4f0b4b5cc1916208e42c21db68b4f0ae",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "nom",
+                                    "prenom",
+                                    "email",
+                                    "password",
+                                    "role"
+                                ],
+                                "properties": {
+                                    "nom": {
+                                        "type": "string",
+                                        "example": "Diallo"
+                                    },
+                                    "prenom": {
+                                        "type": "string",
+                                        "example": "Aicha"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "aicha@isieco.sn"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "example": "password"
+                                    },
+                                    "telephone": {
+                                        "type": "string",
+                                        "example": "776382910"
+                                    },
+                                    "adresse": {
+                                        "type": "string",
+                                        "example": "Medina, Dakar"
+                                    },
+                                    "role": {
+                                        "type": "string",
+                                        "example": "agent"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Utilisateur créé"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "servers": [
+                    {
+                        "url": "/api",
+                        "description": "Serveur API local"
+                    }
+                ]
+            }
+        },
+        "/users/{id}": {
+            "get": {
+                "tags": [
+                    "Utilisateurs"
+                ],
+                "summary": "Voir les détails d'un utilisateur",
+                "description": "Accès : Admin uniquement.",
+                "operationId": "28c8679c3bcc7f7e2469e732ce035974",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Détails de l'utilisateur"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "servers": [
+                    {
+                        "url": "/api",
+                        "description": "Serveur API local"
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Utilisateurs"
+                ],
+                "summary": "Modifier un utilisateur",
+                "description": "Accès : Admin uniquement.",
+                "operationId": "165a4ede0a0ecfc2bb8a11f6046ae366",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "nom": {
+                                        "type": "string",
+                                        "example": "Diallo"
+                                    },
+                                    "prenom": {
+                                        "type": "string",
+                                        "example": "Aicha Modifiée"
+                                    },
+                                    "telephone": {
+                                        "type": "string",
+                                        "example": "776382910"
+                                    },
+                                    "role": {
+                                        "type": "string",
+                                        "example": "agent"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Utilisateur mis à jour"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "servers": [
+                    {
+                        "url": "/api",
+                        "description": "Serveur API local"
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Utilisateurs"
+                ],
+                "summary": "Supprimer un utilisateur",
+                "description": "Accès : Admin uniquement.",
+                "operationId": "fe34178197b07119bd2b397f3b281e90",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Utilisateur supprimé"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "servers": [
+                    {
+                        "url": "/api",
+                        "description": "Serveur API local"
+                    }
+                ]
+            }
+        },
+        "/types-dechets/{id}": {
+            "get": {
+                "tags": [
+                    "Types Déchets"
+                ],
+                "summary": "Voir les détails d'un type de déchet",
+                "description": "Accès : Tout utilisateur connecté.",
+                "operationId": "1a4d2b3dc98156ee1ad71bc6067e7ce5",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Détails du type de déchet"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "servers": [
+                    {
+                        "url": "/api",
+                        "description": "Serveur API local"
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Types Déchets"
+                ],
+                "summary": "Modifier un type de déchet",
+                "description": "Accès : Admin uniquement.",
+                "operationId": "e4c35c0cff812efa9e5f519f67a4e334",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "libelle": {
+                                        "type": "string",
+                                        "example": "Déchets Plastiques Modifiés"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Description modifiée"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Type de déchet mis à jour"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "servers": [
+                    {
+                        "url": "/api",
+                        "description": "Serveur API local"
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Types Déchets"
+                ],
+                "summary": "Supprimer un type de déchet",
+                "description": "Accès : Admin uniquement.",
+                "operationId": "365d1d55fae47948d2970f76ab22c2ed",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Type de déchet supprimé"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "servers": [
+                    {
+                        "url": "/api",
+                        "description": "Serveur API local"
+                    }
+                ]
+            }
+        },
+        "/zones/{id}": {
+            "get": {
+                "tags": [
+                    "Zones"
+                ],
+                "summary": "Voir les détails d'une zone",
+                "description": "Accès : Tout utilisateur connecté.",
+                "operationId": "58e15fd4bd62362469f8a1e69b2fe441",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Détails de la zone"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "servers": [
+                    {
+                        "url": "/api",
+                        "description": "Serveur API local"
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Zones"
+                ],
+                "summary": "Modifier une zone",
+                "description": "Accès : Admin uniquement.",
+                "operationId": "adadb37c2955486617b51cead4ae93e7",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "nom_zone": {
+                                        "type": "string",
+                                        "example": "Dakar Plateau Nord"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Zone réévaluée"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Zone mise à jour"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "servers": [
+                    {
+                        "url": "/api",
+                        "description": "Serveur API local"
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Zones"
+                ],
+                "summary": "Supprimer une zone",
+                "description": "Accès : Admin uniquement.",
+                "operationId": "822e7cfe81089a777d23f6e37f3c6503",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Zone supprimée"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "servers": [
+                    {
+                        "url": "/api",
+                        "description": "Serveur API local"
+                    }
+                ]
+            }
+        },
+        "/equipes": {
+            "get": {
+                "tags": [
+                    "Équipes"
+                ],
+                "summary": "Lister les équipes",
+                "description": "Accès : Admin et Agent de collecte.",
+                "operationId": "d1b6aaa538683f55cf8bd02c714391e8",
+                "responses": {
+                    "200": {
+                        "description": "Liste des équipes récupérée"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "servers": [
+                    {
+                        "url": "/api",
+                        "description": "Serveur API local"
+                    }
+                ]
+            }
+        },
+        "/equipes/{id}": {
+            "get": {
+                "tags": [
+                    "Équipes"
+                ],
+                "summary": "Voir les détails d'une équipe",
+                "description": "Accès : Admin et Agent. Renvoie les membres (agents) associés.",
+                "operationId": "13258af909d3cf86203280d60158bdb6",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Détails de l'équipe"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "servers": [
+                    {
+                        "url": "/api",
+                        "description": "Serveur API local"
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Équipes"
+                ],
+                "summary": "Modifier une équipe",
+                "description": "Accès : Admin uniquement. Permet également d'associer de nouveaux agents via 'agent_ids'.",
+                "operationId": "5dcb932472a5703e322d88285e93a360",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "nom_equipe": {
+                                        "type": "string",
+                                        "example": "Brigade Dakar Est Modifiée"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Description mise à jour"
+                                    },
+                                    "agent_ids": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer",
+                                            "example": 2
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Équipe mise à jour"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "servers": [
+                    {
+                        "url": "/api",
+                        "description": "Serveur API local"
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Équipes"
+                ],
+                "summary": "Supprimer une équipe",
+                "description": "Accès : Admin uniquement.",
+                "operationId": "579b48540ee5aa72890e57cc343ba688",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Équipe supprimée"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "servers": [
+                    {
+                        "url": "/api",
+                        "description": "Serveur API local"
+                    }
+                ]
+            }
+        },
+        "/signalements": {
+            "get": {
+                "tags": [
+                    "Signalements"
+                ],
+                "summary": "Lister les signalements",
+                "description": "Accès : Tout utilisateur. Les citoyens voient uniquement leurs propres signalements. Les admins/agents voient tous les signalements.",
+                "operationId": "49d2c9d81862854ebb2cdbc14914cc45",
+                "responses": {
+                    "200": {
+                        "description": "Liste des signalements récupérée"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "servers": [
+                    {
+                        "url": "/api",
+                        "description": "Serveur API local"
+                    }
+                ]
+            }
+        },
+        "/signalements/{id}": {
+            "get": {
+                "tags": [
+                    "Signalements"
+                ],
+                "summary": "Voir les détails d'un signalement",
+                "description": "Accès : Propriétaire citoyen, Agent ou Admin.",
+                "operationId": "0bc8a6adb944414a64a07304091f232c",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Détails du signalement"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "servers": [
+                    {
+                        "url": "/api",
+                        "description": "Serveur API local"
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Signalements"
+                ],
+                "summary": "Supprimer un signalement",
+                "description": "Accès : Citoyen (uniquement si le signalement est encore en statut 'brouillon') ou Admin.",
+                "operationId": "3592653233b0075f24112191ab06922f",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Signalement supprimé"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "servers": [
+                    {
+                        "url": "/api",
+                        "description": "Serveur API local"
+                    }
+                ]
+            }
+        },
+        "/affectations": {
+            "get": {
+                "tags": [
+                    "Affectations"
+                ],
+                "summary": "Lister les affectations",
+                "description": "Accès : Admin et Agent uniquement.",
+                "operationId": "65be21fd7b38a706a1dc7d863b94aaf9",
+                "responses": {
+                    "200": {
+                        "description": "Liste des affectations récupérée"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "servers": [
+                    {
+                        "url": "/api",
+                        "description": "Serveur API local"
+                    }
+                ]
+            }
+        },
+        "/affectations/{id}": {
+            "get": {
+                "tags": [
+                    "Affectations"
+                ],
+                "summary": "Voir une affectation spécifique",
+                "description": "Accès : Admin et Agent uniquement.",
+                "operationId": "e0b53481c8c70343b3b7c7e71051bea1",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Détails de l'affectation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "servers": [
+                    {
+                        "url": "/api",
+                        "description": "Serveur API local"
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Affectations"
+                ],
+                "summary": "Annuler une affectation",
+                "description": "Accès : Admin uniquement.",
+                "operationId": "c8c06ca4792fa62fcfb96d32fce018a8",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Affectation annulée"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "servers": [
+                    {
+                        "url": "/api",
+                        "description": "Serveur API local"
+                    }
+                ]
+            }
+        },
+        "/interventions": {
+            "get": {
+                "tags": [
+                    "Interventions"
+                ],
+                "summary": "Lister les interventions",
+                "description": "Accès : Admin et Agent uniquement.",
+                "operationId": "ce1611ef2aa04d7e07b334f39659ec80",
+                "responses": {
+                    "200": {
+                        "description": "Liste des interventions"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "servers": [
+                    {
+                        "url": "/api",
+                        "description": "Serveur API local"
+                    }
+                ]
+            }
+        },
+        "/interventions/{id}": {
+            "get": {
+                "tags": [
+                    "Interventions"
+                ],
+                "summary": "Voir les détails d'une intervention",
+                "description": "Accès : Admin et Agent.",
+                "operationId": "3da9ac94cc7191c8090df14ddf49a33a",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Détails de l'intervention"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "servers": [
+                    {
+                        "url": "/api",
+                        "description": "Serveur API local"
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Interventions"
+                ],
+                "summary": "Supprimer une intervention",
+                "description": "Accès : Admin uniquement.",
+                "operationId": "641f2e7aaeab1d70375634223a3e2c9a",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Intervention supprimée"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "servers": [
+                    {
+                        "url": "/api",
+                        "description": "Serveur API local"
+                    }
+                ]
+            }
+        },
+        "/historique-points/{id}": {
+            "get": {
+                "tags": [
+                    "Points"
+                ],
+                "summary": "Consulter un historique de points spécifique",
+                "description": "Accès : Admin, ou le citoyen propriétaire de l'historique.",
+                "operationId": "ded60a0e7cc24476671fbbd85d7eb5de",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Détails de la transaction de points"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "servers": [
+                    {
+                        "url": "/api",
+                        "description": "Serveur API local"
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "description": "Insérez votre jeton d'accès brut obtenu lors de la connexion (sans le préfixe 'Bearer ').",
+                "bearerFormat": "JWT",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Authentification",
+            "description": "Authentification"
+        },
+        {
+            "name": "Utilisateurs",
+            "description": "Utilisateurs"
+        },
+        {
+            "name": "Types Déchets",
+            "description": "Types Déchets"
+        },
+        {
+            "name": "Zones",
+            "description": "Zones"
+        },
+        {
+            "name": "Équipes",
+            "description": "Équipes"
+        },
+        {
+            "name": "Signalements",
+            "description": "Signalements"
+        },
+        {
+            "name": "Affectations",
+            "description": "Affectations"
+        },
+        {
+            "name": "Interventions",
+            "description": "Interventions"
+        },
+        {
+            "name": "Points",
+            "description": "Points"
+        }
+    ]
+}
