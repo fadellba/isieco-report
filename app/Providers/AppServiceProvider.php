@@ -56,6 +56,11 @@ class AppServiceProvider extends ServiceProvider
             \App\Repositories\Contracts\HistoriquePointRepositoryInterface::class,
             \App\Repositories\Eloquent\HistoriquePointRepository::class,
         );
+
+        $this->app->bind(
+            \App\Repositories\Contracts\DashboardRepositoryInterface::class,
+            \App\Repositories\Eloquent\DashboardRepository::class,
+        );
     }
 
     /**

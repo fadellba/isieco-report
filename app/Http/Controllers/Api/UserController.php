@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\UserService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 
@@ -25,11 +26,14 @@ final class UserController extends Controller
     }
 
 
-    public function index(): AnonymousResourceCollection
+    public function index(Request $request): AnonymousResourceCollection
     {
         $this->authorize('viewAny', User::class);
         return UserResource::collection(
-            $this->userService->paginate()
+            $this->userService->paginate(
+                $request->only(['nom', 'email', 'role']),
+                (int) $request->query('per_page', 15)
+            )
         );
     }
 

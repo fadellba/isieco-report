@@ -65,7 +65,10 @@ final class EquipeService
 
     public function paginate(int $perPage = 15): LengthAwarePaginator
     {
-        return $this->repository->paginate($perPage);
+        $paginator = $this->repository->paginate($perPage);
+        $paginator->getCollection()->load(['agents', 'zones']);
+
+        return $paginator;
     }
 
     public function delete(Equipe $equipe): bool

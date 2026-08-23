@@ -544,6 +544,34 @@ use OpenApi\Attributes as OA;
         new OA\Response(response: 200, description: "Détails de la transaction de points")
     ]
 )]
+// =========================================================================
+// 10. DASHBOARD MODULE
+// =========================================================================
+
+#[OA\Get(
+    path: "/dashboard/heatmap",
+    summary: "Heatmap des zones les plus critiques",
+    description: "Accès : Admin uniquement. Agrège les signalements actifs (ni brouillon, ni rejeté, ni clôturé) par zone : le poids correspond au nombre de signalements actifs et les coordonnées au centroïde de la zone. Aucune donnée personnelle n'est renvoyée.",
+    tags: ["Dashboard"],
+    security: [["bearerAuth" => []]],
+    responses: [
+        new OA\Response(response: 200, description: "Tableau de points pour la heatmap", content: new OA\JsonContent(
+            type: "array",
+            items: new OA\Items(
+                properties: [
+                    new OA\Property(property: "latitude", type: "number", format: "float", example: 14.7168),
+                    new OA\Property(property: "longitude", type: "number", format: "float", example: -17.4677),
+                    new OA\Property(property: "weight", type: "integer", example: 3),
+                    new OA\Property(property: "zone_id", type: "integer", example: 4),
+                    new OA\Property(property: "zone_nom", type: "string", example: "Mermoz")
+                ]
+            )
+        )),
+        new OA\Response(response: 401, description: "Non authentifié"),
+        new OA\Response(response: 403, description: "Accès réservé à l'administrateur")
+    ]
+)]
+
 final class OpenApi
 {
 }

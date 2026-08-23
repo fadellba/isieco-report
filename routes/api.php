@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AffectationController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\EquipeController;
 use App\Http\Controllers\Api\HistoriquePointController;
 use App\Http\Controllers\Api\InterventionController;
@@ -123,6 +124,16 @@ Route::middleware('auth:sanctum')
             ->name('interventions.cloturer');
 
         Route::apiResource('interventions', InterventionController::class);
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Dashboard (Admin only)
+        |--------------------------------------------------------------------------
+        */
+        Route::get('/dashboard/heatmap', [DashboardController::class, 'heatmap'])
+            ->middleware('role:admin')
+            ->name('dashboard.heatmap');
 
 
         /*

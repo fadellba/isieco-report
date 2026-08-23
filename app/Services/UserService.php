@@ -69,10 +69,11 @@ final readonly class UserService
 
 
     public function paginate(
+        array $filters = [],
         int $perPage = 15
     ): LengthAwarePaginator {
         return $this->userRepository
-            ->paginate($perPage);
+            ->paginateWithFilters($filters, $perPage);
     }
 
 

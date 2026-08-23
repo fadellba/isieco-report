@@ -9,6 +9,7 @@
 /.cursor/
 /.idea
 /.nova
+/opencode.json
 /.phpunit.cache
 /.vscode
 /.zed

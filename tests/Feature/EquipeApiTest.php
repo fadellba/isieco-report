@@ -111,4 +111,18 @@ final class EquipeApiTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['nom_equipe']);
     }
+
+    public function test_equipe_list_includes_agents_members(): void
+    {
+        $admin = $this->admin();
+        $agent = $this->agent();
+        $equipe = Equipe::factory()->create();
+        $equipe->agents()->attach($agent->id, ['date_debut' => now(), 'fonction' => 'agent']);
+
+        $this->actingAs($admin)
+            ->getJson('/api/equipes')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $equipe->id)
+            ->assertJsonPath('data.0.agents.0.id', $agent->id);
+    }
 }

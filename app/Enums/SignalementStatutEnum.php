@@ -42,4 +42,21 @@ enum SignalementStatutEnum: string
     {
         return in_array($this, [self::VALIDE, self::PRIORISE], true);
     }
+
+    /**
+     * Statuts des signalements encore actifs (ni brouillon, ni rejeté,
+     * ni clôturé). Utilisés pour la heatmap des zones critiques.
+     *
+     * @return list<string>
+     */
+    public static function statutsActifs(): array
+    {
+        return [
+            self::VALIDE->value,
+            self::PRIORISE->value,
+            self::AFFECTE->value,
+            self::EN_INTERVENTION->value,
+            self::TERMINE->value,
+        ];
+    }
 }
