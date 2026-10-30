@@ -15,10 +15,11 @@
 | Mobile | APK Android signé et GitHub Release | À faire ; aucun APK de release confirmé. |
 | Backend | Configuration API | Validation au démarrage des URL PostgreSQL/Supabase, du port, des origines CORS et de NODE_ENV. |
 | Backend | Accounts | Provisionnement citoyen, profil personnel, administration des comptes, attributions/révocations transactionnelles, audit métier et protection du dernier administrateur ; tests unitaires en CI. |
-| Backend | Reports, cases, qualification, assignments, interventions, verification, referentials, audit | Squelettes ; règles et parcours à implémenter. |
-| Merise | MLD v2.13 dans Prisma | 38 modèles présents. |
+| Backend | Referentials | Types de déchets, hiérarchie géographique, équipes, appartenances, compétences, disponibilité historisée et délégations ; habilitation GESTIONNAIRE_REFERENTIEL, événements d'audit atomiques et tests de service/PostgreSQL. |
+| Backend | Reports, qualification, cases, assignments, interventions, verification, audit | Squelettes ; règles et parcours à implémenter. |
+| Merise | MLD v2.13 dans Prisma | 38 modèles présents ; EvenementMetier possède des cibles explicites pour équipes, types de déchets et subdivisions géographiques. |
 | Base de données | PostgreSQL local et base shadow | Deux services Docker distincts et configuration SHADOW_DATABASE_URL ajoutés ; migrations appliquées et diff testé dans PostgreSQL CI. |
-| Merise | Migrations SQL MLD v2.13 | Trois migrations versionnées : comptes/rôles, 35 modèles métier restants et contraintes d'intégrité conditionnelles. Application sur PostgreSQL vierge et tests négatifs d'intégrité en CI réussis ; projet Supabase distant non migré. |
+| Merise | Migrations SQL MLD v2.13 | Quatre migrations versionnées : comptes/rôles, 35 modèles métier restants, contraintes d'intégrité et cibles géographiques d'audit. Application sur PostgreSQL vierge et tests négatifs d'intégrité en CI requis pour ce lot ; projet Supabase distant non migré. |
 | UML | Diagramme de cas d’utilisation détaillé | SVG avec 8 acteurs et relations `<<include>>` / `<<extend>>`, plus fiches par acteur. Spécification cible ; non équivalente à une implémentation. |
 | UML | Diagramme de classes détaillé | Source Mermaid versionnée avec les 38 classes, attributs, clés et associations par domaine ; générée depuis le schéma Prisma. |
 | UML | Diagrammes de contexte et vue relationnelle | SVG versionnés dans docs/uml. |
