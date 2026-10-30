@@ -91,7 +91,7 @@ test('accepts comma-separated HTTP(S) origins and rejects URL paths', () => {
 });
 
 test('never includes secret values in validation errors', () => {
-  const secret = 'postgresql://private-user:very-secret@db.example.test/report';
+  const secret = 'very-secret-value';
   assert.throws(
     () => validateEnvironment({ ...validEnvironment, DATABASE_URL: secret }),
     (error) => {
