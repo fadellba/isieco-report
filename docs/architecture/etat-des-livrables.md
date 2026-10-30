@@ -7,11 +7,13 @@
 | Architecture | Architecture client-serveur et monolithe modulaire | Documentée dans architecture-applicative.md et decisions.md. |
 | Architecture | Structure cible du monorepo | Documentée ; le code sera aligné progressivement. |
 | Déploiement | Choix GitHub/Vercel/Render/Supabase | Documenté dans docs/deployment. |
-| CI | Workflow ci.yml | Présent ; dernier run connu réussi. |
+| CI | Workflow ci.yml | Présent ; les validations doivent rester liées aux commits qui les déclenchent. L’installation n’est pas encore reproductible tant que pnpm-lock.yaml n’est pas versionné. |
 | CI/CD | web-deploy.yml et api-deploy.yml | À créer. |
+| Toolchain | Node.js et pnpm | Versions épinglées dans .nvmrc, .node-version et package.json ; lockfile pnpm à versionner avant d’activer --frozen-lockfile en CI. |
 | Web | Connexion, accueil admin et /telecharger | Initialisés ; parcours métier incomplets. |
 | Mobile | Expo, connexion, inscription, navigation initiale | Initialisés ; parcours citoyen et agent incomplets. |
 | Mobile | APK Android signé et GitHub Release | À faire ; aucun APK de release confirmé. |
+| Backend | Configuration API | Validation au démarrage des URL PostgreSQL/Supabase, du port, des origines CORS et de NODE_ENV. |
 | Backend | Accounts | Première implémentation. |
 | Backend | Reports, cases, qualification, assignments, interventions, verification, referentials, audit | Squelettes ; règles et parcours à implémenter. |
 | Merise | MLD v2.13 dans Prisma | 38 modèles présents. |
