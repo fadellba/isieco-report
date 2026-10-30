@@ -70,6 +70,34 @@ jobs:
           DATABASE_URL: postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report?schema=public
           DIRECT_URL: postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report?schema=public
 
+      - name: Generate SQL migration preview when the Prisma schema changes
+        if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
+        env:
+          BASE_SHA: ${{ github.event.before }}
+          DATABASE_URL: postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report?schema=public
+          DIRECT_URL: postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report?schema=public
+        run: |
+          if git diff --quiet "$BASE_SHA" "$GITHUB_SHA" -- prisma/schema.prisma; then
+            echo "Prisma schema unchanged; skipping migration preview."
+            exit 0
+          fi
+          git show "$BASE_SHA:prisma/schema.prisma" > "$RUNNER_TEMP/schema-before.prisma"
+          pnpm exec prisma migrate diff \\
+            --from-schema "$RUNNER_TEMP/schema-before.prisma" \\
+            --to-schema prisma/schema.prisma \\
+            --script \\
+            --output "$RUNNER_TEMP/prisma-migration.sql"
+          test -s "$RUNNER_TEMP/prisma-migration.sql"
+
+      - name: Upload SQL migration preview
+        if: always() && hashFiles('/home/runner/work/_temp/prisma-migration.sql') != ''
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: prisma-schema-migration-preview
+          path: ${{ runner.temp }}/prisma-migration.sql
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Build shared packages
         run: pnpm build:packages
 
