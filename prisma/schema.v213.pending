@@ -433,4 +433,112 @@ model Affectation {
 
 model Intervention {
   idIntervention             String @id @default(uuid()) @db.Uuid @map("id_intervention")
-  idAffectation              String
+  idAffectation              String@db.Uuid @map("id_affectation")
+  dateHeureDebut             DateTime? @map("date_heure_debut")
+  dateHeureFin               DateTime? @map("date_heure_fin")
+  dateSoumissionCompteRendu  DateTime? @map("date_soumission_compte_rendu")
+  statutIntervention         String @map("statut_intervention")
+  resultatIntervention       String? @map("resultat_intervention")
+  compteRendu                String? @db.Text @map("compte_rendu")
+  motifException             String? @map("motif_exception")
+  renseignePar               String @db.Uuid @map("renseigne_par")
+  affectation                Affectation @relation(fields: [idAffectation], references: [idAffectation], onDelete: Restrict)
+  redacteur                  Utilisateur @relation(fields: [renseignePar], references: [idUtilisateur], onDelete: Restrict)
+  photos                     PhotoIntervention[]
+  evenementsCible            EvenementMetier[] @relation("EventInterventionTarget")
+
+  @@index([idAffectation, statutIntervention])
+  @@map("intervention")
+}
+
+model PhotoIntervention {
+  idPhotoIntervention     String @id @default(uuid()) @db.Uuid @map("id_photo_intervention")
+  idIntervention          String @db.Uuid @map("id_intervention")
+  referencePhoto          String @map("reference_photo")
+  contextePhoto           String @map("contexte_photo")
+  description             String?
+  dateAjout               DateTime @map("date_ajout")
+  dateExpiration          DateTime @map("date_expiration")
+  mediaPurgeAt            DateTime? @map("media_purge_at")
+  mediaStockeeLocale      Boolean @map("media_stockee_locale")
+  etatPublication         String @map("etat_publication")
+  referencePhotoPublique  String? @map("reference_photo_publique")
+  floutageConfirme        Boolean @map("floutage_confirme")
+  varianteSoumisePar      String? @db.Uuid @map("variante_soumise_par")
+  dateSoumissionVariante  DateTime? @map("date_soumission_variante")
+  approuvePar             String? @db.Uuid @map("approuve_par")
+  dateApprobation         DateTime? @map("date_approbation")
+  intervention            Intervention @relation(fields: [idIntervention], references: [idIntervention], onDelete: Restrict)
+  soumisePar              Utilisateur? @relation("InterventionPhotoSubmitter", fields: [varianteSoumisePar], references: [idUtilisateur], onDelete: SetNull)
+  approuveePar            Utilisateur? @relation("InterventionPhotoApprover", fields: [approuvePar], references: [idUtilisateur], onDelete: SetNull)
+  publications            PhotoPublication[]
+
+  @@index([idIntervention, dateAjout])
+  @@index([dateExpiration, mediaPurgeAt])
+  @@map("photo_intervention")
+}
+
+model VerificationResolution {
+  idVerification       String @id @default(uuid()) @db.Uuid @map("id_verification")
+  idAffectation        String @db.Uuid @map("id_affectation")
+  idVerificateur       String @db.Uuid @map("id_verificateur")
+  dateVerification     DateTime @map("date_verification")
+  resultatVerification String @map("resultat_verification")
+  etatVerification     String @map("etat_verification")
+  motif                String?
+  referencePreuve      String? @map("reference_preuve")
+  affectation          Affectation @relation(fields: [idAffectation], references: [idAffectation], onDelete: Restrict)
+  verificateur         Utilisateur @relation(fields: [idVerificateur], references: [idUtilisateur], onDelete: Restrict)
+  evenementsCible      EvenementMetier[] @relation("EventVerificationTarget")
+
+  @@index([idAffectation, etatVerification])
+  @@map("verification_resolution")
+}
+
+model EvenementMetier {
+  idEvenement               String @id @default(uuid()) @db.Uuid @map("id_evenement")
+  typeEvenement             String @map("type_evenement")
+  dateEvenement             DateTime? @map("date_evenement")
+  dateEnregistrement        DateTime @map("date_enregistrement")
+  origine                   String
+  idActeur                  String? @db.Uuid @map("id_acteur")
+  idSignalementCible        String? @db.Uuid @map("id_signalement_cible")
+  idDossierCible            String? @db.Uuid @map("id_dossier_cible")
+  idRattachementCible       String? @db.Uuid @map("id_rattachement_cible")
+  idAffectationCible        String? @db.Uuid @map("id_affectation_cible")
+  idInterventionCible       String? @db.Uuid @map("id_intervention_cible")
+  idVerificationCible       String? @db.Uuid @map("id_verification_cible")
+  idUtilisateurCible        String? @db.Uuid @map("id_utilisateur_cible")
+  idEquipeCible             String? @db.Uuid @map("id_equipe_cible")
+  idTypeDechetCible         String? @db.Uuid @map("id_type_dechet_cible")
+  idCompetenceEquipeCible   String? @db.Uuid @map("id_competence_equipe_cible")
+  idDossierContenuCible     String? @db.Uuid @map("id_dossier_contenu_cible")
+  idTypeDechetContenuCible  String? @db.Uuid @map("id_type_dechet_contenu_cible")
+  idEvenementCorrige        String? @db.Uuid @map("id_evenement_corrige")
+  donneesAvant              Json? @map("donnees_avant")
+  donneesApres              Json? @map("donnees_apres")
+  destinataireExterne       String? @map("destinataire_externe")
+  motif                     String?
+  correlationId             String? @db.Uuid @map("correlation_id")
+  referenceOperationUnique  String? @unique @map("reference_operation_unique")
+  versionSchema             Int @map("version_schema")
+  acteur                    Utilisateur? @relation("EventActor", fields: [idActeur], references: [idUtilisateur], onDelete: SetNull)
+  signalementCible          Signalement? @relation("EventReportTarget", fields: [idSignalementCible], references: [idSignalement], onDelete: Restrict)
+  dossierCible              DossierTraitement? @relation("EventCaseTarget", fields: [idDossierCible], references: [idDossier], onDelete: Restrict)
+  rattachementCible         RattachementSignalement? @relation("EventAttachmentTarget", fields: [idRattachementCible], references: [idRattachement], onDelete: Restrict)
+  affectationCible          Affectation? @relation("EventAssignmentTarget", fields: [idAffectationCible], references: [idAffectation], onDelete: Restrict)
+  interventionCible         Intervention? @relation("EventInterventionTarget", fields: [idInterventionCible], references: [idIntervention], onDelete: Restrict)
+  verificationCible         VerificationResolution? @relation("EventVerificationTarget", fields: [idVerificationCible], references: [idVerification], onDelete: Restrict)
+  utilisateurCible          Utilisateur? @relation("EventUserTarget", fields: [idUtilisateurCible], references: [idUtilisateur], onDelete: Restrict)
+  equipeCible               Equipe? @relation("EventTeamTarget", fields: [idEquipeCible], references: [idEquipe], onDelete: Restrict)
+  typeDechetCible           TypeDechet? @relation("EventWasteTypeTarget", fields: [idTypeDechetCible], references: [idTypeDechet], onDelete: Restrict)
+  competenceEquipeCible     CompetenceEquipe? @relation("EventTeamSkillTarget", fields: [idCompetenceEquipeCible], references: [idCompetenceEquipe], onDelete: Restrict)
+  contenuDossierCible       ContenuDossier? @relation("EventCaseContentTarget", fields: [idDossierContenuCible, idTypeDechetContenuCible], references: [idDossier, idTypeDechet], onDelete: Restrict)
+  evenementCorrige          EvenementMetier? @relation("EventCorrection", fields: [idEvenementCorrige], references: [idEvenement], onDelete: Restrict)
+  corrections               EvenementMetier[] @relation("EventCorrection")
+  @@index([typeEvenement, dateEnregistrement])
+  @@index([idDossierCible, dateEnregistrement])
+  @@index([correlationId])
+  @@map("evenement_metier")
+}
+
