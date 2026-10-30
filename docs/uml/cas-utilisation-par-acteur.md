@@ -2,7 +2,7 @@
 
 Ce document décrit le périmètre fonctionnel cible d’ISI-Eco Report acteur par acteur. Les identifiants correspondent aux ovales du [diagramme UML](cas-utilisation.svg).
 
-> **Important — portée du document :** ces fiches décrivent le comportement métier attendu à partir des rôles, des règles d’habilitation et du MLD v2.13. Elles ne signifient pas que tous ces parcours sont déjà disponibles dans l’application. Les modules Reports, Cases, Qualification, Assignments, Interventions, Verification et Referentials restent à implémenter ou à compléter, comme indiqué dans l’[état des livrables](../architecture/etat-des-livrables.md).
+> **Important — portée du document :** ces fiches décrivent le comportement métier attendu à partir des rôles, des règles d’habilitation et du MLD v2.13. Elles ne signifient pas que tous ces parcours sont déjà disponibles dans l’application. Les modules Accounts et Referentials couvrent un premier périmètre opérationnel. Les parcours Reports, Qualification, Cases, Assignments, Interventions et Verification restent à implémenter ou à compléter, comme indiqué dans l’[état des livrables](../architecture/etat-des-livrables.md).
 
 ## 1. Règles transversales
 
