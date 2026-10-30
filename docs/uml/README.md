@@ -1,6 +1,6 @@
 # Livrables UML
 
-Les diagrammes sont intégrés comme SVG vectoriels, affichables directement dans GitHub et lisibles au zoom. Les sources textuelles Mermaid restent présentes à côté des images.
+Les diagrammes sont intégrés comme SVG vectoriels, affichables directement dans GitHub et lisibles au zoom.
 
 ## Diagramme de contexte
 
@@ -8,11 +8,14 @@ Les diagrammes sont intégrés comme SVG vectoriels, affichables directement dan
 
 Source et explications : [contexte-systeme.md](contexte-systeme.md).
 
-## Diagramme de cas d'utilisation
+## Diagramme de cas d’utilisation
 
-![Diagramme UML des cas d'utilisation](cas-utilisation.svg)
+![Diagramme UML détaillé des cas d’utilisation](cas-utilisation.svg)
 
-Source et préconditions : [cas-utilisation.md](cas-utilisation.md).
+- [Présentation du diagramme et conventions UML](cas-utilisation.md)
+- [Description détaillée des cas d’utilisation par acteur](cas-utilisation-par-acteur.md)
+
+Le diagramme représente les huit rôles métier et explicite les relations `<<include>>` et `<<extend>>`. Les fiches décrivent les préconditions, objectifs, résultats et règles propres à chaque acteur. Ces spécifications décrivent le périmètre fonctionnel cible et ne valent pas preuve d’implémentation.
 
 ## Diagramme de classes / données
 
@@ -22,6 +25,4 @@ Cette vue est générée à partir du schéma Prisma actuel et représente les 3
 
 ## Note sur les livrables historiques
 
-Les fichiers de conception initiaux contiennent également des vues détaillées des cas d'utilisation par rôle et des diagrammes de classes historiques. La vue de données ci-dessus a été régénérée à partir du schéma Prisma actuel afin d'éviter qu'un ancien diagramme incomplet soit interprété comme le modèle définitif.
-
-Toute évolution des acteurs ou associations doit rester alignée sur les huit rôles et les 38 modèles métier.
+Les documents de conception initiaux contiennent également des vues historiques des cas d'utilisation par rôle. Les spécifications présentées ici sont la référence consolidée à maintenir avec les huit rôles métier, le MLD v2.13 et les règles de sécurité.

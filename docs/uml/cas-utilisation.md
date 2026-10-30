@@ -1,68 +1,28 @@
-# Cas d'utilisation
+# Diagramme UML des cas d’utilisation
 
-![Diagramme UML synthétique des cas d'utilisation](cas-utilisation.svg)
+![Diagramme UML détaillé des cas d’utilisation ISI-Eco Report](cas-utilisation.svg)
 
-~~~mermaid
-flowchart TB
-  C[Citoyen]
-  Q[Agent de qualification]
-  RT[Responsable de traitement]
-  RA[Responsable d'affectation]
-  AT[Agent de terrain]
-  V[Vérificateur de clôture]
-  GR[Gestionnaire de référentiel]
-  AC[Administrateur des comptes]
+Le diagramme présente les huit acteurs métier et leurs interactions avec ISI-Eco Report. Il distingue les cas principaux des comportements obligatoires ou conditionnels qui les complètent.
 
-  subgraph APP[ISI-Eco Report]
-    U1([Créer un signalement])
-    U2([Ajouter photos et position])
-    U3([Suivre ses signalements])
-    U4([Répondre à une demande de complément])
-    U5([Qualifier un signalement])
-    U6([Demander un complément, accepter ou rejeter])
-    U7([Créer et mettre à jour un dossier])
-    U8([Définir priorité et catégories])
-    U9([Affecter une catégorie à une équipe])
-    U10([Répondre à une affectation])
-    U11([Réaliser une intervention])
-    U12([Soumettre compte rendu et preuves])
-    U13([Vérifier la résolution])
-    U14([Clôturer ou demander une reprise])
-    U15([Gérer les référentiels])
-    U16([Gérer les comptes et rôles])
-    U17([Consulter l'historique métier])
-  end
+## Lire les relations UML
 
-  C --> U1
-  C --> U2
-  C --> U3
-  C --> U4
-  Q --> U5
-  Q --> U6
-  RT --> U7
-  RT --> U8
-  RT --> U17
-  RA --> U9
-  RA --> U10
-  AT --> U11
-  AT --> U12
-  V --> U13
-  V --> U14
-  GR --> U15
-  AC --> U16
-  Q --> U17
-  RA --> U17
-  V --> U17
-~~~
+| Relation | Sens de la flèche | Signification |
+|---|---|---|
+| `<<include>>` | Du cas principal vers le cas inclus | Le comportement inclus est exécuté obligatoirement dans le cadre du cas principal. Il factorise une étape commune ou indispensable. |
+| `<<extend>>` | Du cas complémentaire vers le cas de base | Le comportement complémentaire intervient uniquement sous une condition ou lorsqu'une option est choisie. Le cas de base reste valide sans cette extension. |
+| Association acteur | Trait plein entre acteur et cas | L’acteur participe directement au cas d’utilisation. |
 
-## Préconditions essentielles
+Les libellés du SVG utilisent la notation UML française `«include»` et `«extend»`, équivalente aux stéréotypes UML `<<include>>` et `<<extend>>`.
 
-- L'acteur est authentifié pour toute opération protégée.
-- Le rôle est résolu côté API, jamais accepté comme preuve depuis le client.
-- Un citoyen n'accède qu'aux signalements qu'il est autorisé à consulter.
-- Un agent n'agit que sur ses missions accessibles via une affectation valide.
-- Une affectation nécessite une équipe et une compétence valide pour le type de déchet.
-- La clôture nécessite une vérification conforme aux règles de résolution.
-- Toute décision négative ou transition exceptionnelle conserve un motif.
+## Périmètre et règles de lecture
 
-Ce diagramme synthétise les principaux cas. Il ne remplace pas les fiches de scénario détaillées, diagrammes de séquence, validations et tests d'acceptation à produire par module.
+- Les acteurs sont les huit rôles métier définis dans [Sécurité et habilitations](../architecture/securite-et-habilitations.md).
+- L’authentification et la vérification du jeton sont des préconditions transversales, pas des étapes métier répétées dans chaque cas. Supabase Auth reste un service externe.
+- Les droits sont vérifiés par l’API à chaque opération. L’affichage d’un bouton dans un client ne constitue jamais une autorisation.
+- Les fonctions de notifications, préférences, publications, points et badges apparaissent parce qu’elles sont représentées dans le MLD v2.13. Leur présence dans ce modèle ne prouve pas qu’elles sont déjà implémentées ni que leur périmètre de première version est définitivement validé.
+
+La description des objectifs, préconditions, scénarios et règles propres à chaque acteur se trouve dans [Cas d’utilisation par acteur](cas-utilisation-par-acteur.md).
+
+## Correspondance avec les fiches détaillées
+
+Les identifiants affichés dans les ovales du diagramme sont repris dans la fiche par acteur : `CIT`, `QUAL`, `DOS`, `AFF`, `INT`, `VER`, `REF` et `ADM`.
