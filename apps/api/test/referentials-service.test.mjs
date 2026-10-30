@@ -141,15 +141,24 @@ test('createWasteType creates a stable reference and its audit event atomically'
   assert.equal(calls.events[0].idEquipeCible, undefined);
 });
 
-test('createWasteType converts duplicate reference codes into HTTP 409', async () => {
-  const { service } = createHarness();
+test('createWasteType converts duplicate reference codes into HTTP 409 without an audit event', async () => {
+  const calls = { transactions: 0, events: [] };
   const serviceWithConflict = new ReferentialsService({
     utilisateur: { findUnique: async () => ({ idUtilisateur: actorId, etatCompte: 'ACTIF' }) },
-    $transaction: async (callback) => callback({
-      typeDechet: {
-        create: async () => { throw Object.assign(new Error('duplicate'), { code: 'P2002' }); },
-      },
-    }),
+    $transaction: async (callback) => {
+      calls.transactions += 1;
+      return callback({
+        typeDechet: {
+          create: async () => { throw Object.assign(new Error('duplicate'), { code: 'P2002' }); },
+        },
+        evenementMetier: {
+          create: async ({ data }) => {
+            calls.events.push(data);
+            return data;
+          },
+        },
+      });
+    },
   });
 
   await assert.rejects(
@@ -161,7 +170,8 @@ test('createWasteType converts duplicate reference codes into HTTP 409', async (
     }, actorAuthId),
     (error) => error instanceof ConflictException && error.getStatus() === 409,
   );
-  assert.equal(calls.transactions.length, 0);
+  assert.equal(calls.transactions, 1);
+  assert.equal(calls.events.length, 0);
 });
 
 test('addMembership checks that the member is active and writes a team audit event', async () => {
