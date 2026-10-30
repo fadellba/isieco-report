@@ -1,0 +1,70 @@
+# Déploiement et exploitation
+
+## Cible MVP
+
+GitHub héberge le monorepo et les workflows. Vercel héberge le Web React/Vite, Render exécute l'API NestJS, Supabase fournit PostgreSQL, Auth et Storage. L'application Android Expo est compilée séparément ; l'APK signé sera publié dans une GitHub Release et lié depuis la page publique /telecharger.
+
+| Élément | Plateforme | Responsabilité |
+|---|---|---|
+| Source et collaboration | GitHub | Dépôt, branches, revues, issues, tags et Releases. |
+| Intégration continue | GitHub Actions | Dépendances, génération Prisma/OpenAPI, tests, typecheck et builds. |
+| Frontend Web | Vercel | Back-office et page /telecharger. Vérifier que l'usage est éligible au plan retenu. |
+| Backend | Render | Une instance de l'API NestJS modulaire. |
+| Base métier | Supabase PostgreSQL | Données relationnelles et transactions. |
+| Identité | Supabase Auth | Identifiants, sessions et JWT. |
+| Médias | Supabase Storage | Photos et preuves dans des buckets privés. |
+| Distribution Android | GitHub Releases | APK signé, versionné, avec somme SHA-256. |
+
+Les offres gratuites sont destinées au développement, aux tests et à la démonstration. Elles ne garantissent ni disponibilité permanente, ni support, ni coût nul en exploitation réelle. Render Free peut mettre en veille un service inactif ; Supabase Free a des quotas et conditions de pause ; Vercel Hobby est soumis à ses conditions d'utilisation personnelle/non commerciale. Vérifier les conditions avant mise en service publique.
+
+## Vue de déploiement
+
+~~~mermaid
+flowchart TB
+  GH[GitHub monorepo]
+  CI[GitHub Actions]
+  WEB[Vercel - Web + /telecharger]
+  API[Render - NestJS API]
+  DB[(Supabase PostgreSQL)]
+  AUTH[Supabase Auth]
+  MEDIA[(Supabase Storage)]
+  APK[GitHub Release - APK signé]
+  MOB[App Expo sur Android]
+
+  GH --> CI
+  GH --> WEB
+  GH --> API
+  WEB -->|HTTPS / REST| API
+  MOB -->|HTTPS / REST| API
+  WEB --> AUTH
+  MOB --> AUTH
+  API -->|Validation JWT| AUTH
+  API --> DB
+  API --> MEDIA
+  WEB -->|Lien de téléchargement| APK
+~~~
+
+## Parcours d'une requête
+
+Le client crée une session Supabase Auth, transmet l'access token à l'API par HTTPS, puis NestJS vérifie le JWT et résout les rôles depuis la base métier. L'API applique les permissions, exécute la transaction PostgreSQL et utilise Storage pour les médias privés. Les clients ne reçoivent aucune clé privilégiée. Le disque local Render n'est jamais un stockage métier.
+
+## Chaîne de livraison cible
+
+1. Développement sur une branche.
+2. Pull request et CI réussie.
+3. Revue du code, des tests, du contrat OpenAPI et des migrations SQL.
+4. Fusion dans la branche de livraison.
+5. Déploiement du Web sur Vercel et de l'API sur Render.
+6. Application contrôlée des migrations sur Supabase après test et sauvegarde.
+7. Smoke tests de santé API, authentification, autorisations, signalement, affectation, intervention et média.
+8. Si le Mobile a changé : build Android, signature, calcul SHA-256, publication GitHub Release et mise à jour du lien /telecharger.
+
+## Docker et production
+
+Docker Compose sert à lancer PostgreSQL et les dépendances locales. Kubernetes n'est pas retenu pour le MVP.
+
+Avant un usage opérationnel, prévoir un plan d'hébergement adapté à la disponibilité attendue, sauvegardes indépendantes de la base et des médias, tests de restauration, supervision, gestion/rotation des secrets, domaine/TLS, politique de conservation et rollback des migrations.
+
+## État dans le dépôt
+
+ci.yml est présent et le dernier run connu a réussi. web-deploy.yml et api-deploy.yml figurent dans la structure cible mais ne sont pas encore créés. Aucun déploiement de production ou APK de release signé n'est confirmé. Le SQL snapshot CI n'est pas l'équivalent d'une migration additive appliquée à PostgreSQL.

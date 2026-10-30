@@ -1,0 +1,32 @@
+# Architecture
+
+## Décision d'ensemble
+
+ISI-Eco Report suit une architecture client-serveur : une application Web d'administration, une application Mobile unique pour les citoyens et agents de terrain, et une API REST NestJS déployée comme monolithe modulaire.
+
+Les modules partagent un backend et PostgreSQL. Aucun besoin mesuré ne justifie des microservices pour le MVP.
+
+## Documents
+
+- [Architecture applicative](architecture-applicative.md)
+- [Organisation cible du monorepo](organisation-monorepo.md)
+- [Décisions d'architecture (ADR)](decisions.md)
+- [Sécurité et habilitations](securite-et-habilitations.md)
+- [État des livrables](etat-des-livrables.md)
+- [Principes d'ingénierie](engineering-principles.md)
+
+## Modules métier
+
+| Module | Responsabilité |
+|---|---|
+| accounts | Profils, comptes et rôles. |
+| reports | Signalements et médias associés. |
+| qualification | Analyse, complétude et décision. |
+| cases | Création et pilotage des dossiers. |
+| assignments | Affectation des catégories aux équipes. |
+| interventions | Exécution terrain et compte rendu. |
+| verification | Vérification et clôture ou reprise. |
+| referentials | Types de déchets, équipes, compétences, géographie. |
+| audit | Événements métier et historique. |
+
+Ce sont des frontières applicatives internes, pas des services déployés séparément. Le module accounts dispose d'une première implémentation ; les autres modules NestJS sont actuellement des squelettes.
