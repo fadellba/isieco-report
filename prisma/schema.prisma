@@ -7,7 +7,7 @@ datasource db {
   provider = "postgresql"
 }
 
-// MLD v2.13: 38 tables métier. auth.users reste gérée par Supabase Auth.
+// MLD v2.13: 38 tables métier traduites. auth.users reste gérée par Supabase Auth.
 // Les codes d'état restent des String contrôlées en SQL/API pour préserver
 // l'alignement avec le dictionnaire métier sans figer prématurément des enums.
 model Utilisateur {
