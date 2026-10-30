@@ -1,3 +1,10 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# pnpm 12 blocks unreviewed install scripts. Only explicitly required Prisma
+# engine/client generation scripts are allowed; telemetry and other scripts stay blocked.
+allowBuilds:
+  "@prisma/engines": true
+  prisma: true
+  "@scarf/scarf": false
