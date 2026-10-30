@@ -111,17 +111,21 @@ export class ReferentialsController {
   @ApiOperation({ summary: 'Crée une région' })
   @ApiCreatedResponse({ description: 'Région créée.' })
   @ApiConflictResponse({ description: 'Code ou nom de région déjà utilisé.' })
-  createRegion(@Body() dto: CreateRegionDto) {
-    return this.referentials.createRegion(dto);
+  createRegion(@Body() dto: CreateRegionDto, @CurrentAuthUser() user: User) {
+    return this.referentials.createRegion(dto, user.id);
   }
 
   @Patch('regions/:id')
-  @ApiOperation({ summary: 'Renomme ou désactive une région sans la supprimer' })
+  @ApiOperation({ summary: 'Active ou désactive une région sans modifier son code ou son nom' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ description: 'Région mise à jour.' })
   @ApiNotFoundResponse({ description: 'Région introuvable.' })
-  updateRegion(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateRegionDto) {
-    return this.referentials.updateRegion(id, dto);
+  updateRegion(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateRegionDto,
+    @CurrentAuthUser() user: User,
+  ) {
+    return this.referentials.updateRegion(id, dto, user.id);
   }
 
   @Post('regions/:regionId/departments')
@@ -133,17 +137,22 @@ export class ReferentialsController {
   createDepartment(
     @Param('regionId', ParseUUIDPipe) regionId: string,
     @Body() dto: CreateDepartmentDto,
+    @CurrentAuthUser() user: User,
   ) {
-    return this.referentials.createDepartment(regionId, dto);
+    return this.referentials.createDepartment(regionId, dto, user.id);
   }
 
   @Patch('departments/:id')
-  @ApiOperation({ summary: 'Renomme ou désactive un département sans le supprimer' })
+  @ApiOperation({ summary: 'Active ou désactive un département sans modifier son code ou son nom' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ description: 'Département mis à jour.' })
   @ApiNotFoundResponse({ description: 'Département introuvable.' })
-  updateDepartment(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateDepartmentDto) {
-    return this.referentials.updateDepartment(id, dto);
+  updateDepartment(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateDepartmentDto,
+    @CurrentAuthUser() user: User,
+  ) {
+    return this.referentials.updateDepartment(id, dto, user.id);
   }
 
   @Post('departments/:departmentId/communes')
@@ -155,17 +164,22 @@ export class ReferentialsController {
   createCommune(
     @Param('departmentId', ParseUUIDPipe) departmentId: string,
     @Body() dto: CreateCommuneDto,
+    @CurrentAuthUser() user: User,
   ) {
-    return this.referentials.createCommune(departmentId, dto);
+    return this.referentials.createCommune(departmentId, dto, user.id);
   }
 
   @Patch('communes/:id')
-  @ApiOperation({ summary: 'Renomme ou désactive une commune sans la supprimer' })
+  @ApiOperation({ summary: 'Active ou désactive une commune sans modifier son code ou son nom' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ description: 'Commune mise à jour.' })
   @ApiNotFoundResponse({ description: 'Commune introuvable.' })
-  updateCommune(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateCommuneDto) {
-    return this.referentials.updateCommune(id, dto);
+  updateCommune(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateCommuneDto,
+    @CurrentAuthUser() user: User,
+  ) {
+    return this.referentials.updateCommune(id, dto, user.id);
   }
 
   @Get('teams')
