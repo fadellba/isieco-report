@@ -200,7 +200,7 @@ export class ReferentialsService {
     });
   }
 
-  // Geography: historical references are deactivated/renamed, never physically deleted.
+  // Geography: names and codes remain immutable; references are deactivated, never physically deleted.
   async listRegions(includeInactive = false) {
     return this.prisma.region.findMany({
       where: includeInactive ? {} : { actif: true },
