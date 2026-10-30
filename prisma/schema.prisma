@@ -54,6 +54,7 @@ model Utilisateur {
   notifications               Notification[]
   preferencesVisibilite       PreferencesVisibiliteCitoyen?
   badgesAttribues             BadgeUtilisateur[] @relation("BadgeAttributionActor")
+  badgesRecus                 BadgeUtilisateur[]
   publicationsCreees          PublicationFlux[] @relation("PublicationCreator")
   publicationsApprouvees      PublicationFlux[] @relation("PublicationApprover")
   photosInterventionSoumises PhotoIntervention[] @relation("InterventionPhotoSubmitter")
@@ -100,7 +101,6 @@ model TypeDechet {
   contenusDossier          ContenuDossier[]
   competences              CompetenceEquipe[]
   qualifications           QualificationSignalement[]
-  affectations             Affectation[]
   evenementsCible          EvenementMetier[] @relation("EventWasteTypeTarget")
 
   @@map("type_dechet")
@@ -177,6 +177,7 @@ model Signalement {
   photos                 PhotoSignalement[]
   contenus               ContenuSignalement[]
   rattachements          RattachementSignalement[]
+  provenances             ProvenanceContenuDossier[] @relation("ProvenanceSignalement")
   demandesComplement    DemandeComplement[]
   qualifications         QualificationSignalement[]
   idempotence            IdempotenceSignalement?
@@ -247,7 +248,6 @@ model DossierTraitement {
   createur               Utilisateur @relation(fields: [creePar], references: [idUtilisateur], onDelete: Restrict)
   rattachements          RattachementSignalement[]
   contenus               ContenuDossier[]
-  affectations           Affectation[]
   evenementsCible        EvenementMetier[] @relation("EventCaseTarget")
   historiquesLocalisation HistoriqueLocalisationDossier[]
   historiquesPriorite    HistoriquePrioriteDossier[]
@@ -514,7 +514,7 @@ model ProvenanceContenuDossier {
   motif            String?
   contenuDossier   ContenuDossier @relation(fields: [idDossier, idTypeDechet], references: [idDossier, idTypeDechet], onDelete: Restrict)
   qualification   QualificationSignalement @relation(fields: [idQualification, idSignalement, idTypeDechet], references: [idQualification, idSignalement, idTypeDechet], onDelete: Restrict)
-  signalement     Signalement @relation(fields: [idSignalement], references: [idSignalement], onDelete: Restrict)
+  signalement     Signalement @relation("ProvenanceSignalement", fields: [idSignalement], references: [idSignalement], onDelete: Restrict)
   rattachement    RattachementSignalement @relation(fields: [idRattachement], references: [idRattachement], onDelete: Restrict)
   auteur          Utilisateur @relation(fields: [ajoutePar], references: [idUtilisateur], onDelete: Restrict)
 
