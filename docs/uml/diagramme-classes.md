@@ -4,6 +4,13 @@ Ce livrable est généré à partir du schéma `prisma/schema.prisma` de la bran
 
 Les diagrammes sont séparés en cinq domaines métier pour rester lisibles. Les propriétés de navigation Prisma sont représentées par les associations plutôt que répétées comme attributs.
 
+## Vue d’ensemble en PNG
+
+![Diagramme de classes du système ISI-Eco Report](diagramme-classes-systeme.png)
+
+Cette vue présente les 38 classes et les associations entre domaines. Les attributs sont détaillés dans les cinq planches PNG suivantes.
+
+
 ## Conventions de lecture
 
 - Tous les attributs sont représentés privés (`-`) par convention d'encapsulation. Prisma ne spécifie pas la visibilité UML des propriétés ; elle ne doit donc pas être interprétée comme une information extraite du schéma.
@@ -18,7 +25,7 @@ Les diagrammes sont séparés en cinq domaines métier pour rester lisibles. Les
 - `auth.users` et les sessions ne sont pas des classes métier de ce modèle : l'identité et les sessions sont gérées par Supabase Auth.
 
 ## Identité et engagement
-
+\n![Diagramme de classes — Identité et engagement](diagramme-classes-identite-engagement.png)\n
 ```mermaid
 classDiagram
   class Utilisateur {
@@ -102,7 +109,7 @@ classDiagram
 ```
 
 ## Référentiels et équipes
-
+\n![Diagramme de classes — Référentiels et équipes](diagramme-classes-referentiels-equipes.png)\n
 ```mermaid
 classDiagram
   class TypeDechet {
@@ -195,7 +202,7 @@ classDiagram
 ```
 
 ## Signalements et qualification
-
+\n![Diagramme de classes — Signalements et qualification](diagramme-classes-signalements-qualification.png)\n
 ```mermaid
 classDiagram
   class Signalement {
@@ -283,7 +290,7 @@ classDiagram
 ```
 
 ## Dossiers et opérations
-
+\n![Diagramme de classes — Dossiers et opérations](diagramme-classes-dossiers-operations.png)\n
 ```mermaid
 classDiagram
   class DossierTraitement {
@@ -435,7 +442,7 @@ classDiagram
 ```
 
 ## Traçabilité et diffusion
-
+\n![Diagramme de classes — Traçabilité et diffusion](diagramme-classes-tracabilite-diffusion.png)\n
 ```mermaid
 classDiagram
   class EvenementMetier {

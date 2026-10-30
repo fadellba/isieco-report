@@ -19,7 +19,17 @@ Le diagramme représente les huit rôles métier et explicite les relations `<<i
 
 ## Diagramme de classes UML
 
-[Ouvrir le diagramme de classes détaillé](diagramme-classes.md).
+![Diagramme de classes du système ISI-Eco Report](diagramme-classes-systeme.png)
+
+[Ouvrir les sources Mermaid, les attributs et les conventions](diagramme-classes.md).
+
+Les vues PNG détaillées par domaine sont également publiées :
+
+- [Identité et engagement](diagramme-classes-identite-engagement.png)
+- [Référentiels et équipes](diagramme-classes-referentiels-equipes.png)
+- [Signalements et qualification](diagramme-classes-signalements-qualification.png)
+- [Dossiers et opérations](diagramme-classes-dossiers-operations.png)
+- [Traçabilité et diffusion](diagramme-classes-tracabilite-diffusion.png)
 
 Cette source Mermaid contient les 38 classes métier, leurs attributs, les marqueurs PK/FK/UQ et les associations du schéma Prisma. Cinq vues par domaine métier sont proposées, suivies de l'inventaire des associations inter-domaines.
 
