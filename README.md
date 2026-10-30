@@ -34,7 +34,8 @@ Docker Engine ou Docker Desktop est nécessaire pour lancer PostgreSQL localemen
 5. Générer le client : pnpm db:generate.
 6. Appliquer les migrations locales versionnées : pnpm db:migrate.
 7. Prévisualiser le SQL additif restant : pnpm db:migration:preview (la commande utilise SHADOW_DATABASE_URL, qui doit cibler une base distincte).
-8. Démarrer :
+8. Exécuter les tests d'intégrité PostgreSQL après application des migrations : `TEST_DATABASE_URL="postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report" pnpm db:test:invariants`.
+9. Démarrer :
    - pnpm dev:api : API sur http://localhost:3000, Swagger sur /docs ;
    - pnpm dev:web : Web sur http://localhost:5173 ;
    - pnpm dev:mobile : serveur Expo.
