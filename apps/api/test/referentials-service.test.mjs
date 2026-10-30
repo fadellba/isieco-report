@@ -286,3 +286,79 @@ test('createDelegation refuses to extend beyond the delegate membership period',
   );
   assert.equal(delegationCreates, 0);
 });
+
+
+test('createRegion writes an audit event with the region foreign-key target', async () => {
+  const regionId = '88888888-8888-4888-8888-888888888888';
+  const calls = { events: [], writes: [] };
+  const service = new ReferentialsService({
+    utilisateur: {
+      findUnique: async () => ({ idUtilisateur: actorId, etatCompte: 'ACTIF' }),
+    },
+    $transaction: async (callback) => callback({
+      region: {
+        create: async ({ data }) => {
+          calls.writes.push(data);
+          return { idRegion: regionId, ...data };
+        },
+      },
+      evenementMetier: {
+        create: async ({ data }) => {
+          calls.events.push(data);
+          return data;
+        },
+      },
+    }),
+  });
+
+  const region = await service.createRegion({
+    codeRegion: 'DK',
+    nomRegion: 'Dakar',
+    actif: true,
+  }, actorAuthId);
+
+  assert.equal(region.idRegion, regionId);
+  assert.equal(calls.writes[0].codeRegion, 'DK');
+  assert.equal(calls.events.length, 1);
+  assert.equal(calls.events[0].typeEvenement, 'REFERENTIEL_REGION_CREE');
+  assert.equal(calls.events[0].idRegionCible, regionId);
+  assert.equal(calls.events[0].idEquipeCible, undefined);
+});
+
+test('createDelegation refuses a beneficiary whose account is inactive', async () => {
+  const membership = {
+    idUtilisateur: userId,
+    idEquipe: teamId,
+    dateDebut: new Date('2026-01-01T00:00:00.000Z'),
+    dateFin: null,
+    fonction: 'Agent terrain',
+  };
+  let creates = 0;
+  const service = new ReferentialsService({
+    utilisateur: {
+      findUnique: async ({ where }) => {
+        if (where.authUserId) return { idUtilisateur: actorId, etatCompte: 'ACTIF' };
+        return { idUtilisateur: userId, etatCompte: 'SUSPENDU' };
+      },
+    },
+    equipe: { findUnique: async () => ({ idEquipe: teamId }) },
+    appartenanceEquipe: { findUnique: async () => membership },
+    $transaction: async (callback) => callback({
+      delegationDecisionEquipe: {
+        create: async () => { creates += 1; },
+      },
+      evenementMetier: { create: async () => ({}) },
+    }),
+  });
+
+  await assert.rejects(
+    service.createDelegation(teamId, {
+      idUtilisateurDelegue: userId,
+      dateDebutAppartenance: membership.dateDebut.toISOString(),
+      typeDecision: 'AFFECTATION',
+      dateDebut: '2026-11-01T00:00:00.000Z',
+    }, actorAuthId),
+    (error) => error instanceof ConflictException && error.getStatus() === 409,
+  );
+  assert.equal(creates, 0);
+});
