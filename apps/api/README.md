@@ -36,9 +36,16 @@ Depuis la racine :
 ```bash
 pnpm dev:api
 pnpm api:openapi
+pnpm --filter @isieco/api test
 ```
 
 Le client Prisma doit être généré. Préparer le dépôt avec `pnpm install` puis `pnpm db:generate`. Démarrer PostgreSQL local avec `docker compose up -d postgres`.
+
+## Comptes et habilitations
+
+Le module Accounts provisionne uniquement le rôle `CITOYEN` lors de l'initialisation publique d'un profil Supabase confirmé. Les attributions/révocations administratives sont réservées au rôle `ADMINISTRATEUR_COMPTES`, sérialisées côté PostgreSQL et journalisées dans `EvenementMetier` au sein de la même transaction. La révocation du dernier administrateur actif est refusée.
+
+Les tests de service couvrent le provisionnement citoyen, les attributions concurrentes, l'audit transactionnel, les dates de fin planifiées et la protection du dernier administrateur. Les tests d'intégration PostgreSQL d'intégrité sont séparés dans `pnpm db:test:invariants`.
 
 ## Modules métier initialisés
 
