@@ -454,6 +454,9 @@ model EvenementMetier {
   corrections               EvenementMetier[] @relation("EventCorrection")
   @@index([typeEvenement, dateEnregistrement])
   @@index([idDossierCible, dateEnregistrement])
+  @@index([idRegionCible, dateEnregistrement], map: "evenement_metier_id_region_cible_date_idx")
+  @@index([idDepartementCible, dateEnregistrement], map: "evenement_metier_id_departement_cible_date_idx")
+  @@index([idCommuneCible, dateEnregistrement], map: "evenement_metier_id_commune_cible_date_idx")
   @@index([correlationId])
   @@map("evenement_metier")
 }
