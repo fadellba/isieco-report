@@ -647,7 +647,7 @@ export class ReferentialsService {
 
   async createDelegation(teamId: string, dto: CreateTeamDelegationDto, authUserId: string) {
     const actorId = await this.actorId(authUserId);
-    const [team, member] = await Promise.all([
+    const [team, member, delegate] = await Promise.all([
       this.requireTeam(teamId),
       this.prisma.appartenanceEquipe.findUnique({
         where: {
@@ -658,7 +658,15 @@ export class ReferentialsService {
           },
         },
       }),
+      this.prisma.utilisateur.findUnique({
+        where: { idUtilisateur: dto.idUtilisateurDelegue },
+        select: { idUtilisateur: true, etatCompte: true },
+      }),
     ]);
+    if (!delegate) throw new NotFoundException('Utilisateur délégué introuvable.');
+    if (delegate.etatCompte !== 'ACTIF') {
+      throw new ConflictException('Un compte inactif ne peut recevoir une délégation.');
+    }
     if (!member) throw new NotFoundException('Appartenance de l’utilisateur à cette équipe introuvable.');
     const dateDebut = new Date(dto.dateDebut);
     const dateFin = dto.dateFin ? new Date(dto.dateFin) : null;
