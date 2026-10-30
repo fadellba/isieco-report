@@ -420,6 +420,9 @@ model EvenementMetier {
   idVerificationCible       String? @db.Uuid @map("id_verification_cible")
   idUtilisateurCible        String? @db.Uuid @map("id_utilisateur_cible")
   idEquipeCible             String? @db.Uuid @map("id_equipe_cible")
+  idRegionCible             String? @db.Uuid @map("id_region_cible")
+  idDepartementCible        String? @db.Uuid @map("id_departement_cible")
+  idCommuneCible            String? @db.Uuid @map("id_commune_cible")
   idTypeDechetCible         String? @db.Uuid @map("id_type_dechet_cible")
   idCompetenceEquipeCible   String? @db.Uuid @map("id_competence_equipe_cible")
   idDossierContenuCible     String? @db.Uuid @map("id_dossier_contenu_cible")
@@ -441,6 +444,9 @@ model EvenementMetier {
   verificationCible         VerificationResolution? @relation("EventVerificationTarget", fields: [idVerificationCible], references: [idVerification], onDelete: Restrict)
   utilisateurCible          Utilisateur? @relation("EventUserTarget", fields: [idUtilisateurCible], references: [idUtilisateur], onDelete: Restrict)
   equipeCible               Equipe? @relation("EventTeamTarget", fields: [idEquipeCible], references: [idEquipe], onDelete: Restrict)
+  regionCible               Region? @relation("EventRegionTarget", fields: [idRegionCible], references: [idRegion], onDelete: Restrict)
+  departementCible          Departement? @relation("EventDepartmentTarget", fields: [idDepartementCible], references: [idDepartement], onDelete: Restrict)
+  communeCible              Commune? @relation("EventCommuneTarget", fields: [idCommuneCible], references: [idCommune], onDelete: Restrict)
   typeDechetCible           TypeDechet? @relation("EventWasteTypeTarget", fields: [idTypeDechetCible], references: [idTypeDechet], onDelete: Restrict)
   competenceEquipeCible     CompetenceEquipe? @relation("EventTeamSkillTarget", fields: [idCompetenceEquipeCible], references: [idCompetenceEquipe], onDelete: Restrict)
   contenuDossierCible       ContenuDossier? @relation("EventCaseContentTarget", fields: [idDossierContenuCible, idTypeDechetContenuCible], references: [idDossier, idTypeDechet], onDelete: Restrict)
@@ -448,6 +454,9 @@ model EvenementMetier {
   corrections               EvenementMetier[] @relation("EventCorrection")
   @@index([typeEvenement, dateEnregistrement])
   @@index([idDossierCible, dateEnregistrement])
+  @@index([idRegionCible, dateEnregistrement], map: "evenement_metier_id_region_cible_date_idx")
+  @@index([idDepartementCible, dateEnregistrement], map: "evenement_metier_id_departement_cible_date_idx")
+  @@index([idCommuneCible, dateEnregistrement], map: "evenement_metier_id_commune_cible_date_idx")
   @@index([correlationId])
   @@map("evenement_metier")
 }
@@ -542,6 +551,7 @@ model Region {
   nomRegion String @unique @map("nom_region")
   actif     Boolean
   departements Departement[]
+  evenementsCible EvenementMetier[] @relation("EventRegionTarget")
 
   @@map("region")
 }
@@ -554,6 +564,7 @@ model Departement {
   actif         Boolean
   region        Region @relation(fields: [idRegion], references: [idRegion], onDelete: Restrict)
   communes      Commune[]
+  evenementsCible EvenementMetier[] @relation("EventDepartmentTarget")
 
   @@unique([idDepartement, idRegion])
   @@unique([idRegion, codeDepartement])
@@ -571,6 +582,7 @@ model Commune {
   signalements  Signalement[]
   dossiers      DossierTraitement[]
   historiquesLocalisation HistoriqueLocalisationDossier[]
+  evenementsCible EvenementMetier[] @relation("EventCommuneTarget")
 
   @@unique([idCommune, idDepartement])
   @@unique([idDepartement, codeCommune])

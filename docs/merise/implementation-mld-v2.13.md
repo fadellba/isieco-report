@@ -34,10 +34,10 @@ Ces règles ne doivent pas être considérées comme garanties tant qu'elles ne 
 
 Une version de travail antérieure du MLD mentionnait encore un condensat de jeton dans une table `SESSION`. Cette note était incompatible avec la décision d'utiliser Supabase Auth comme gestionnaire des sessions. Elle ne fait pas partie du modèle v2.13 transcrit. La journalisation éventuelle d'événements de connexion devra stocker des métadonnées non secrètes, jamais les jetons.
 
-## Vérifications
+## Vérifications et migrations
 
 La configuration Prisma accepte `SHADOW_DATABASE_URL`, qui doit pointer vers une base PostgreSQL distincte de la base applicative. En local, Docker Compose expose la base applicative sur le port 5432 et la base shadow sur le port 5433. En CI, deux services PostgreSQL isolés sont utilisés.
 
-La migration `20261030230000_mld_v213_domain_models` ajoute les 35 modèles absents de la première migration comptes/rôles. La migration `20261030231500_mld_v213_integrity_constraints` complète cette structure avec les règles PostgreSQL qui ne sont pas décrites dans Prisma : contraintes d'intervalles, bornes géographiques, quantités non négatives, exclusivité des cibles d'événements et des sources de photos publiées, unicité partielle des attributions et liens courants.
+Les migrations versionnées matérialisent les 38 modèles métier et ajoutent les contraintes PostgreSQL qui ne sont pas exprimables directement dans Prisma. La migration `20261030233000_geographic_audit_targets` complète `EvenementMetier` avec trois cibles explicites (`Region`, `Departement`, `Commune`), les clés étrangères restrictives et les index de consultation par date. Le contrôle SQL exige exactement une cible métier par événement et les services écrivent le journal dans la même transaction que le changement.
 
 La CI applique toutes les migrations sur une base vierge, vérifie le statut, produit le diff additif depuis l'historique et exécute des tests d'intégrité sur PostgreSQL. Le test ciblé local est `TEST_DATABASE_URL=postgresql://... pnpm db:test:invariants`. Ces migrations ne sont pas encore déclarées appliquées à un projet Supabase distant ; toute mise en production exige une sauvegarde, une revue du SQL, un plan de reprise et une application contrôlée.
