@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { validateEnvironment } from './config/env.validation.js';
 import { HealthModule } from './health/health.module.js';
 import { PrismaModule } from './database/prisma.module.js';
 import { AuthModule } from './auth/auth.module.js';
@@ -15,10 +16,23 @@ import { AuditModule } from './modules/audit/audit.module.js';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, envFilePath: ['../../.env', '.env'] }),
-    PrismaModule, AuthModule, HealthModule, AccountsModule, ReportsModule,
-    QualificationModule, CasesModule, AssignmentsModule, InterventionsModule,
-    VerificationModule, ReferentialsModule, AuditModule,
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: ['../../.env', '.env'],
+      validate: validateEnvironment,
+    }),
+    PrismaModule,
+    AuthModule,
+    HealthModule,
+    AccountsModule,
+    ReportsModule,
+    QualificationModule,
+    CasesModule,
+    AssignmentsModule,
+    InterventionsModule,
+    VerificationModule,
+    ReferentialsModule,
+    AuditModule,
   ],
 })
 export class AppModule {}
