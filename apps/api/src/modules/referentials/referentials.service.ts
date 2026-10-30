@@ -248,9 +248,10 @@ export class ReferentialsService {
     const actorId = await this.actorId(authUserId);
     const current = await this.prisma.region.findUnique({ where: { idRegion: id } });
     if (!current) throw new NotFoundException('Région introuvable.');
-    if (dto.actif === undefined || dto.actif === current.actif) return current;
+    const actif = dto.actif;
+    if (actif === undefined || actif === current.actif) return current;
     return this.prisma.$transaction(async (tx) => {
-      const updated = await tx.region.update({ where: { idRegion: id }, data: { actif: dto.actif } });
+      const updated = await tx.region.update({ where: { idRegion: id }, data: { actif } });
       await this.writeEvent(tx, {
         type: 'REFERENTIEL_REGION_ACTIVATION_MODIFIEE',
         actorId,
@@ -299,9 +300,10 @@ export class ReferentialsService {
     const actorId = await this.actorId(authUserId);
     const current = await this.prisma.departement.findUnique({ where: { idDepartement: id } });
     if (!current) throw new NotFoundException('Département introuvable.');
-    if (dto.actif === undefined || dto.actif === current.actif) return current;
+    const actif = dto.actif;
+    if (actif === undefined || actif === current.actif) return current;
     return this.prisma.$transaction(async (tx) => {
-      const updated = await tx.departement.update({ where: { idDepartement: id }, data: { actif: dto.actif } });
+      const updated = await tx.departement.update({ where: { idDepartement: id }, data: { actif } });
       await this.writeEvent(tx, {
         type: 'REFERENTIEL_DEPARTEMENT_ACTIVATION_MODIFIEE',
         actorId,
@@ -355,9 +357,10 @@ export class ReferentialsService {
     const actorId = await this.actorId(authUserId);
     const current = await this.prisma.commune.findUnique({ where: { idCommune: id } });
     if (!current) throw new NotFoundException('Commune introuvable.');
-    if (dto.actif === undefined || dto.actif === current.actif) return current;
+    const actif = dto.actif;
+    if (actif === undefined || actif === current.actif) return current;
     return this.prisma.$transaction(async (tx) => {
-      const updated = await tx.commune.update({ where: { idCommune: id }, data: { actif: dto.actif } });
+      const updated = await tx.commune.update({ where: { idCommune: id }, data: { actif } });
       await this.writeEvent(tx, {
         type: 'REFERENTIEL_COMMUNE_ACTIVATION_MODIFIEE',
         actorId,
@@ -707,7 +710,7 @@ export class ReferentialsService {
             dateDebut: delegation.dateDebut.toISOString(),
             dateFin: delegation.dateFin?.toISOString() ?? null,
           },
-          reason: delegation.motif ?? undefined,
+          ...(delegation.motif ? { reason: delegation.motif } : {}),
         });
         return delegation;
       } catch (error) {
