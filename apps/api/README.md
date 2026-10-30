@@ -15,6 +15,7 @@ Variables obligatoires :
 Variables facultatives :
 
 - `DIRECT_URL` : URL PostgreSQL directe pour les opérations Prisma ;
+- `SHADOW_DATABASE_URL` : URL d'une base PostgreSQL shadow séparée ;
 - `PORT` : port HTTP, compris entre 1 et 65535 (3000 par défaut) ;
 - `WEB_ORIGIN` : liste d’origines HTTP(S) autorisées, séparées par des virgules ;
 - `NODE_ENV` : `development`, `test` ou `production`.
@@ -37,16 +38,19 @@ Depuis la racine :
 pnpm dev:api
 pnpm api:openapi
 pnpm --filter @isieco/api test
+TEST_DATABASE_URL="postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report" pnpm db:test:invariants
 ```
 
-Le client Prisma doit être généré. Préparer le dépôt avec `pnpm install` puis `pnpm db:generate`. Démarrer PostgreSQL local avec `docker compose up -d postgres`.
+Le client Prisma doit être généré. Préparer le dépôt avec `pnpm install` puis `pnpm db:generate`. Démarrer PostgreSQL local et la base shadow avec `docker compose up -d postgres postgres-shadow`.
 
 ## Comptes et habilitations
 
 Le module Accounts provisionne uniquement le rôle `CITOYEN` lors de l'initialisation publique d'un profil Supabase confirmé. Les attributions/révocations administratives sont réservées au rôle `ADMINISTRATEUR_COMPTES`, sérialisées côté PostgreSQL et journalisées dans `EvenementMetier` au sein de la même transaction. La révocation du dernier administrateur actif est refusée.
 
-Les tests de service couvrent le provisionnement citoyen, les attributions concurrentes, l'audit transactionnel, les dates de fin planifiées et la protection du dernier administrateur. Les tests d'intégration PostgreSQL d'intégrité sont séparés dans `pnpm db:test:invariants`.
+## Référentiels
 
-## Modules métier initialisés
+Le module Referentials expose les types de déchets, les subdivisions géographiques, les équipes, leurs appartenances, compétences, disponibilités et délégations. L'administration est réservée au rôle `GESTIONNAIRE_REFERENTIEL`. Les relations temporelles sont préservées, les mutations sensibles sont auditées dans la transaction et les références géographiques ne sont jamais supprimées physiquement. Voir [le guide Referentials](src/modules/referentials/README.md).
 
-Comptes, signalements, qualification, dossiers, affectations, interventions, vérification, référentiels et audit. Les modules métier autres que Comptes sont encore des squelettes ; leurs règles seront implémentées progressivement à partir des cas d’utilisation et règles de gestion existants.
+## État des autres modules
+
+Reports, Qualification, Cases, Assignments, Interventions, Verification et Audit restent à implémenter ou à compléter à partir du MLD, des cas d'utilisation et des règles de gestion validées.
