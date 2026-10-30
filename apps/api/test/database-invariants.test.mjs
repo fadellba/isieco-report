@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import pg from 'pg';
 import test from 'node:test';
 
-const databaseUrl = process.env.DATABASE_URL;
+const databaseUrl = process.env.TEST_DATABASE_URL;
 const { Pool } = pg;
 
 test('PostgreSQL enforces MLD v2.13 integrity constraints', { skip: !databaseUrl }, async () => {
@@ -15,18 +15,23 @@ test('PostgreSQL enforces MLD v2.13 integrity constraints', { skip: !databaseUrl
   const typeId = randomUUID();
   const publicationId = randomUUID();
 
-  async function expectCheckViolation(statement, values) {
+  async function expectSqlState(statement, values, expectedCode) {
     await client.query('SAVEPOINT invariant_probe');
     try {
       await assert.rejects(
         client.query(statement, values),
-        (error) => error && error.code === '23514',
+        (error) => error && error.code === expectedCode,
       );
     } finally {
       await client.query('ROLLBACK TO SAVEPOINT invariant_probe');
       await client.query('RELEASE SAVEPOINT invariant_probe');
     }
   }
+
+  const expectCheckViolation = (statement, values) =>
+    expectSqlState(statement, values, '23514');
+  const expectUniqueViolation = (statement, values) =>
+    expectSqlState(statement, values, '23505');
 
   try {
     await client.query('BEGIN');
@@ -42,6 +47,16 @@ test('PostgreSQL enforces MLD v2.13 integrity constraints', { skip: !databaseUrl
       ['CITOYEN'],
     );
     assert.equal(role.rowCount, 1, 'The baseline migration must seed the CITOYEN role.');
+
+    const roleStart = new Date('2026-10-10T00:00:00.000Z');
+    await client.query(
+      'INSERT INTO utilisateur_role (id_utilisateur, id_role, date_debut) VALUES ($1, $2, $3)',
+      [userId, role.rows[0].id_role, roleStart],
+    );
+    await expectUniqueViolation(
+      'INSERT INTO utilisateur_role (id_utilisateur, id_role, date_debut) VALUES ($1, $2, $3)',
+      [userId, role.rows[0].id_role, new Date('2026-10-11T00:00:00.000Z')],
+    );
 
     await expectCheckViolation(
       `INSERT INTO utilisateur_role (id_utilisateur, id_role, date_debut, date_fin)
