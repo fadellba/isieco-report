@@ -20,6 +20,7 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:migration:preview": "prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --script",
+    "db:test:invariants": "pnpm --filter @isieco/api test:database:invariants",
     "db:studio": "prisma studio",
     "format:check": "prettier --check .",
     "check:commits": "node scripts/check-conventional-commits.mjs",
