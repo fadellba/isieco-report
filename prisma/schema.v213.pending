@@ -542,3 +542,218 @@ model EvenementMetier {
   @@map("evenement_metier")
 }
 
+model DemandeComplement {
+  idDemande     String @id @default(uuid()) @db.Uuid @map("id_demande")
+  idSignalement String @db.Uuid @map("id_signalement")
+  demandePar    String @db.Uuid @map("demande_par")
+  dateDemande   DateTime @map("date_demande")
+  motif         String
+  etatDemande   String @map("etat_demande")
+  signalement   Signalement @relation(fields: [idSignalement], references: [idSignalement], onDelete: Restrict)
+  demandeur     Utilisateur @relation("SupplementRequester", fields: [demandePar], references: [idUtilisateur], onDelete: Restrict)
+  reponse       ReponseComplement?
+
+  @@index([idSignalement, etatDemande])
+  @@map("demande_complement")
+}
+
+model ReponseComplement {
+  idReponse   String @id @default(uuid()) @db.Uuid @map("id_reponse")
+  idDemande   String @unique @db.Uuid @map("id_demande")
+  reponduPar  String @db.Uuid @map("repondu_par")
+  dateReponse DateTime @map("date_reponse")
+  contenu     String @db.Text
+  demande     DemandeComplement @relation(fields: [idDemande], references: [idDemande], onDelete: Restrict)
+  repondant   Utilisateur @relation(fields: [reponduPar], references: [idUtilisateur], onDelete: Restrict)
+
+  @@map("reponse_complement")
+}
+
+model QualificationSignalement {
+  idQualification        String @id @default(uuid()) @db.Uuid @map("id_qualification")
+  idSignalement          String @db.Uuid @map("id_signalement")
+  idTypeDechet           String @db.Uuid @map("id_type_dechet")
+  quantiteEstimee        Decimal? @db.Decimal(12, 3) @map("quantite_estimee")
+  uniteQuantite          String? @map("unite_quantite")
+  quantiteEstimeeLegacy  Decimal? @db.Decimal(12, 3) @map("quantite_estimee_legacy")
+  volumeEstime           Decimal? @db.Decimal(12, 3) @map("volume_estime")
+  remarque               String?
+  qualifiePar            String @db.Uuid @map("qualifie_par")
+  dateQualification      DateTime @map("date_qualification")
+  etatQualification      String @map("etat_qualification")
+  motifRetrait           String? @map("motif_retrait")
+  signalement            Signalement @relation(fields: [idSignalement], references: [idSignalement], onDelete: Restrict)
+  typeDechet             TypeDechet @relation(fields: [idTypeDechet], references: [idTypeDechet], onDelete: Restrict)
+  qualificateur          Utilisateur @relation(fields: [qualifiePar], references: [idUtilisateur], onDelete: Restrict)
+  provenances            ProvenanceContenuDossier[]
+
+  @@unique([idQualification, idSignalement, idTypeDechet])
+  @@index([idSignalement, dateQualification])
+  @@map("qualification_signalement")
+}
+
+model ProvenanceContenuDossier {
+  idDossier        String @db.Uuid @map("id_dossier")
+  idTypeDechet     String @db.Uuid @map("id_type_dechet")
+  idQualification  String @db.Uuid @map("id_qualification")
+  dateDebut        DateTime @map("date_debut")
+  idSignalement    String @db.Uuid @map("id_signalement")
+  idRattachement   String @db.Uuid @map("id_rattachement")
+  ajoutePar        String @db.Uuid @map("ajoute_par")
+  dateFin          DateTime? @map("date_fin")
+  motif            String?
+  contenuDossier   ContenuDossier @relation(fields: [idDossier, idTypeDechet], references: [idDossier, idTypeDechet], onDelete: Restrict)
+  qualification   QualificationSignalement @relation(fields: [idQualification, idSignalement, idTypeDechet], references: [idQualification, idSignalement, idTypeDechet], onDelete: Restrict)
+  signalement     Signalement @relation(fields: [idSignalement], references: [idSignalement], onDelete: Restrict)
+  rattachement    RattachementSignalement @relation(fields: [idRattachement], references: [idRattachement], onDelete: Restrict)
+  auteur          Utilisateur @relation(fields: [ajoutePar], references: [idUtilisateur], onDelete: Restrict)
+
+  @@id([idDossier, idTypeDechet, idQualification, dateDebut])
+  @@index([idSignalement, idRattachement])
+  @@map("provenance_contenu_dossier")
+}
+
+model IdempotenceSignalement {
+  idUtilisateur  String @db.Uuid @map("id_utilisateur")
+  cleIdempotence String @map("cle_idempotence")
+  empreinteRequete String @map("empreinte_requete")
+  idSignalement  String @unique @db.Uuid @map("id_signalement")
+  dateCreation   DateTime @map("date_creation")
+  utilisateur    Utilisateur @relation(fields: [idUtilisateur], references: [idUtilisateur], onDelete: Restrict)
+  signalement    Signalement @relation(fields: [idSignalement], references: [idSignalement], onDelete: Restrict)
+
+  @@id([idUtilisateur, cleIdempotence])
+  @@map("idempotence_signalement")
+}
+
+model Region {
+  idRegion  String @id @default(uuid()) @db.Uuid @map("id_region")
+  codeRegion String? @unique @map("code_region")
+  nomRegion String @unique @map("nom_region")
+  actif     Boolean
+  departements Departement[]
+
+  @@map("region")
+}
+
+model Departement {
+  idDepartement String @id @default(uuid()) @db.Uuid @map("id_departement")
+  idRegion      String @db.Uuid @map("id_region")
+  codeDepartement String? @map("code_departement")
+  nomDepartement String @map("nom_departement")
+  actif         Boolean
+  region        Region @relation(fields: [idRegion], references: [idRegion], onDelete: Restrict)
+  communes      Commune[]
+
+  @@unique([idDepartement, idRegion])
+  @@unique([idRegion, codeDepartement])
+  @@unique([idRegion, nomDepartement])
+  @@map("departement")
+}
+
+model Commune {
+  idCommune     String @id @default(uuid()) @db.Uuid @map("id_commune")
+  idDepartement String @db.Uuid @map("id_departement")
+  codeCommune   String? @map("code_commune")
+  nomCommune    String @map("nom_commune")
+  actif         Boolean
+  departement   Departement @relation(fields: [idDepartement], references: [idDepartement], onDelete: Restrict)
+  signalements  Signalement[]
+  dossiers      DossierTraitement[]
+  historiquesLocalisation HistoriqueLocalisationDossier[]
+
+  @@unique([idCommune, idDepartement])
+  @@unique([idDepartement, codeCommune])
+  @@unique([idDepartement, nomCommune])
+  @@map("commune")
+}
+
+model DelegationDecisionEquipe {
+  idDelegation          String @id @default(uuid()) @db.Uuid @map("id_delegation")
+  idEquipe              String @db.Uuid @map("id_equipe")
+  idUtilisateurDelegue  String @db.Uuid @map("id_utilisateur_delegue")
+  dateDebutAppartenance DateTime @map("date_debut_appartenance")
+  typeDecision          String @map("type_decision")
+  deleguePar            String @db.Uuid @map("delegue_par")
+  dateDebut             DateTime @map("date_debut")
+  dateFin               DateTime? @map("date_fin")
+  motif                 String?
+  equipe                Equipe @relation(fields: [idEquipe], references: [idEquipe], onDelete: Restrict)
+  delegue               Utilisateur @relation("DelegatedUser", fields: [idUtilisateurDelegue], references: [idUtilisateur], onDelete: Restrict)
+  auteur                Utilisateur @relation("DelegationAuthor", fields: [deleguePar], references: [idUtilisateur], onDelete: Restrict)
+
+  @@unique([idEquipe, idUtilisateurDelegue, typeDecision, dateDebut])
+  @@index([idUtilisateurDelegue, dateFin])
+  @@map("delegation_decision_equipe")
+}
+
+model DisponibiliteEquipe {
+  idEquipe          String @id @db.Uuid @map("id_equipe")
+  etatDisponibilite String @map("etat_disponibilite")
+  miseAJourPar      String @db.Uuid @map("mise_a_jour_par")
+  dateMiseAJour     DateTime @map("date_mise_a_jour")
+  valideJusqua      DateTime @map("valide_jusqua")
+  commentaire       String?
+  equipe            Equipe @relation(fields: [idEquipe], references: [idEquipe], onDelete: Restrict)
+  auteur            Utilisateur @relation(fields: [miseAJourPar], references: [idUtilisateur], onDelete: Restrict)
+
+  @@map("disponibilite_equipe")
+}
+
+model HistoriqueDisponibiliteEquipe {
+  idHistorique      String @id @default(uuid()) @db.Uuid @map("id_historique")
+  idEquipe          String @db.Uuid @map("id_equipe")
+  etatDisponibilite String @map("etat_disponibilite")
+  miseAJourPar      String @db.Uuid @map("mise_a_jour_par")
+  dateMiseAJour     DateTime @map("date_mise_a_jour")
+  valideJusqua      DateTime @map("valide_jusqua")
+  commentaire       String?
+  equipe            Equipe @relation(fields: [idEquipe], references: [idEquipe], onDelete: Restrict)
+  auteur            Utilisateur @relation(fields: [miseAJourPar], references: [idUtilisateur], onDelete: Restrict)
+
+  @@index([idEquipe, dateMiseAJour])
+  @@map("historique_disponibilite_equipe")
+}
+
+model HistoriqueLocalisationDossier {
+  idHistorique          String @id @default(uuid()) @db.Uuid @map("id_historique")
+  idDossier             String @db.Uuid @map("id_dossier")
+  idCommune             String? @db.Uuid @map("id_commune")
+  latitude              Decimal? @db.Decimal(9, 6)
+  longitude             Decimal? @db.Decimal(9, 6)
+  precisionLocalisation Decimal? @db.Decimal(9, 2) @map("precision_localisation")
+  descriptionLocalisation String? @map("description_localisation")
+  modifiePar            String @db.Uuid @map("modifie_par")
+  dateModification     DateTime @map("date_modification")
+  motif                 String?
+  dossier               DossierTraitement @relation(fields: [idDossier], references: [idDossier], onDelete: Restrict)
+  commune               Commune? @relation(fields: [idCommune], references: [idCommune], onDelete: SetNull)
+  acteur                Utilisateur @relation(fields: [modifiePar], references: [idUtilisateur], onDelete: Restrict)
+
+  @@index([idDossier, dateModification])
+  @@map("historique_localisation_dossier")
+}
+
+model HistoriquePrioriteDossier {
+  idHistorique  String @id @default(uuid()) @db.Uuid @map("id_historique")
+  idDossier     String @db.Uuid @map("id_dossier")
+  priorite      String
+  definiePar    String @db.Uuid @map("definie_par")
+  dateDefinition DateTime @map("date_definition")
+  justification String @db.Text
+  dossier       DossierTraitement @relation(fields: [idDossier], references: [idDossier], onDelete: Restrict)
+  auteur        Utilisateur @relation(fields: [definiePar], references: [idUtilisateur], onDelete: Restrict)
+
+  @@index([idDossier, dateDefinition])
+  @@map("historique_priorite_dossier")
+}
+
+model HistoriquePoints {
+  idPoint        String @id @default(uuid()) @db.Uuid @map("id_point")
+  idUtilisateur String @db.Uuid @map("id_utilisateur")
+  idSignalement String? @db.Uuid @map("id_signalement")
+  points        Int
+  dateAttribution DateTime @map("date_attribution")
+  motif         String
+  typeMouvement String @map("type_mouvement")
+  idPointOrigine String? @db.Uuid @map("id_point_origine")
