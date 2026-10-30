@@ -756,4 +756,101 @@ model HistoriquePoints {
   dateAttribution DateTime @map("date_attribution")
   motif         String
   typeMouvement String @map("type_mouvement")
-  idPointOrigine String? @db.Uuid @map("id_point_origine")
+  idPointOrigine String? @db.Uuid @map("id_point_origine")  utilisateur   Utilisateur @relation(fields: [idUtilisateur], references: [idUtilisateur], onDelete: Restrict)
+  signalement   Signalement? @relation(fields: [idSignalement], references: [idSignalement], onDelete: SetNull)
+  pointOrigine  HistoriquePoints? @relation("PointCompensation", fields: [idPointOrigine], references: [idPoint], onDelete: Restrict)
+  compensations HistoriquePoints[] @relation("PointCompensation")
+
+  @@index([idUtilisateur, dateAttribution])
+  @@map("historique_points")
+}
+
+model Notification {
+  idNotification String @id @default(uuid()) @db.Uuid @map("id_notification")
+  idUtilisateur  String @db.Uuid @map("id_utilisateur")
+  titre          String
+  message        String @db.Text
+  lu             Boolean
+  dateCreation   DateTime @map("date_creation")
+  lienCible      String? @map("lien_cible")
+  utilisateur    Utilisateur @relation(fields: [idUtilisateur], references: [idUtilisateur], onDelete: Restrict)
+
+  @@index([idUtilisateur, lu, dateCreation])
+  @@map("notification")
+}
+
+model PreferencesVisibiliteCitoyen {
+  idUtilisateur      String @id @db.Uuid @map("id_utilisateur")
+  afficherAvatar     Boolean @map("afficher_avatar")
+  afficherNomPublic  Boolean @map("afficher_nom_public")
+  nomPublic          String? @map("nom_public")
+  afficherPoints     Boolean @map("afficher_points")
+  afficherRang       Boolean @map("afficher_rang")
+  afficherBadges     Boolean @map("afficher_badges")
+  participerClassement Boolean @map("participer_classement")
+  utilisateur        Utilisateur @relation(fields: [idUtilisateur], references: [idUtilisateur], onDelete: Restrict)
+
+  @@map("preferences_visibilite_citoyen")
+}
+
+model Badge {
+  idBadge     String @id @default(uuid()) @db.Uuid @map("id_badge")
+  codeBadge   String @unique @map("code_badge")
+  libelle     String
+  description String?
+  actif       Boolean
+  utilisateurs BadgeUtilisateur[]
+
+  @@map("badge")
+}
+
+model BadgeUtilisateur {
+  idUtilisateur String @db.Uuid @map("id_utilisateur")
+  idBadge       String @db.Uuid @map("id_badge")
+  dateAttribution DateTime @map("date_attribution")
+  attribuePar   String? @db.Uuid @map("attribue_par")
+  motif         String?
+  utilisateur   Utilisateur @relation(fields: [idUtilisateur], references: [idUtilisateur], onDelete: Restrict)
+  badge         Badge @relation(fields: [idBadge], references: [idBadge], onDelete: Restrict)
+  attribuant    Utilisateur? @relation("BadgeAttributionActor", fields: [attribuePar], references: [idUtilisateur], onDelete: SetNull)
+
+  @@id([idUtilisateur, idBadge, dateAttribution])
+  @@map("badge_utilisateur")
+}
+
+model PublicationFlux {
+  idPublication  String @id @default(uuid()) @db.Uuid @map("id_publication")
+  idSignalement  String? @db.Uuid @map("id_signalement")
+  idDossier      String? @db.Uuid @map("id_dossier")
+  creePar        String @db.Uuid @map("cree_par")
+  dateCreation   DateTime @map("date_creation")
+  etatPublication String @map("etat_publication")
+  approuvePar    String? @db.Uuid @map("approuve_par")
+  dateApprobation DateTime? @map("date_approbation")
+  datePublication DateTime? @map("date_publication")
+  motifDecision  String? @map("motif_decision")
+  signalement    Signalement? @relation(fields: [idSignalement], references: [idSignalement], onDelete: Restrict)
+  dossier        DossierTraitement? @relation(fields: [idDossier], references: [idDossier], onDelete: Restrict)
+  createur       Utilisateur @relation("PublicationCreator", fields: [creePar], references: [idUtilisateur], onDelete: Restrict)
+  approbateur    Utilisateur? @relation("PublicationApprover", fields: [approuvePar], references: [idUtilisateur], onDelete: SetNull)
+  photos         PhotoPublication[]
+
+  @@index([etatPublication, dateCreation])
+  @@map("publication_flux")
+}
+
+model PhotoPublication {
+  idPhotoPublication  String @id @default(uuid()) @db.Uuid @map("id_photo_publication")
+  idPublication      String @db.Uuid @map("id_publication")
+  idPhotoSignalement String? @db.Uuid @map("id_photo_signalement")
+  idPhotoIntervention String? @db.Uuid @map("id_photo_intervention")
+  rolePhoto          String @map("role_photo")
+  dateAjout          DateTime @map("date_ajout")
+  publication        PublicationFlux @relation(fields: [idPublication], references: [idPublication], onDelete: Restrict)
+  photoSignalement   PhotoSignalement? @relation(fields: [idPhotoSignalement], references: [idPhotoSignalement], onDelete: Restrict)
+  photoIntervention  PhotoIntervention? @relation(fields: [idPhotoIntervention], references: [idPhotoIntervention], onDelete: Restrict)
+
+  @@unique([idPublication, idPhotoSignalement])
+  @@unique([idPublication, idPhotoIntervention])
+  @@map("photo_publication")
+}
