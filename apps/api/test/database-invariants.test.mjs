@@ -14,6 +14,8 @@ test('PostgreSQL enforces MLD v2.13 integrity constraints', { skip: !databaseUrl
   const reportId = randomUUID();
   const typeId = randomUUID();
   const publicationId = randomUUID();
+  const regionId = randomUUID();
+  const teamId = randomUUID();
 
   async function expectSqlState(statement, values, expectedCode) {
     await client.query('SAVEPOINT invariant_probe');
@@ -108,11 +110,37 @@ test('PostgreSQL enforces MLD v2.13 integrity constraints', { skip: !databaseUrl
       [randomUUID(), reportId],
     );
 
+    await client.query(
+      `INSERT INTO region (id_region, code_region, nom_region, actif)
+       VALUES ($1, $2, 'Region integrity test', true)`,
+      [regionId, `REG-${regionId}`],
+    );
+    await client.query(
+      `INSERT INTO equipe (id_equipe, nom_equipe, etat_equipe)
+       VALUES ($1, 'Team integrity test', 'ACTIVE')`,
+      [teamId],
+    );
+
     await expectCheckViolation(
       `INSERT INTO evenement_metier
         (id_evenement, type_evenement, date_enregistrement, origine, version_schema)
        VALUES ($1, 'TEST', CURRENT_TIMESTAMP, 'TEST', 1)`,
       [randomUUID()],
+    );
+
+    await client.query(
+      `INSERT INTO evenement_metier
+        (id_evenement, type_evenement, date_enregistrement, origine, version_schema, id_region_cible)
+       VALUES ($1, 'REFERENTIEL_REGION_CREE', CURRENT_TIMESTAMP, 'API', 1, $2)`,
+      [randomUUID(), regionId],
+    );
+
+    await expectCheckViolation(
+      `INSERT INTO evenement_metier
+        (id_evenement, type_evenement, date_enregistrement, origine, version_schema,
+         id_region_cible, id_equipe_cible)
+       VALUES ($1, 'INVALID_MULTI_TARGET', CURRENT_TIMESTAMP, 'TEST', 1, $2, $3)`,
+      [randomUUID(), regionId, teamId],
     );
 
     await client.query(
