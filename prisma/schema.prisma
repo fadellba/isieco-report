@@ -666,7 +666,8 @@ model HistoriquePoints {
   dateAttribution DateTime @map("date_attribution")
   motif         String
   typeMouvement String @map("type_mouvement")
-  idPointOrigine String? @db.Uuid @map("id_point_origine")  utilisateur   Utilisateur @relation(fields: [idUtilisateur], references: [idUtilisateur], onDelete: Restrict)
+  idPointOrigine String? @db.Uuid @map("id_point_origine")
+  utilisateur    Utilisateur @relation(fields: [idUtilisateur], references: [idUtilisateur], onDelete: Restrict)
   signalement   Signalement? @relation(fields: [idSignalement], references: [idSignalement], onDelete: SetNull)
   pointOrigine  HistoriquePoints? @relation("PointCompensation", fields: [idPointOrigine], references: [idPoint], onDelete: Restrict)
   compensations HistoriquePoints[] @relation("PointCompensation")
