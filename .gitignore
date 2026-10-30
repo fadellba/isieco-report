@@ -25,8 +25,9 @@ ios/
 *.mobileprovision
 *.orig.*
 
-# Generated Prisma client
+# Generated Prisma client and migration previews
 apps/api/src/generated/prisma/
+prisma/migration-preview.sql
 
 # Local database / logs
 *.log
