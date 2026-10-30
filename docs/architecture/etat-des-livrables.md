@@ -14,7 +14,7 @@
 | Mobile | Expo, connexion, inscription, navigation initiale | Initialisés ; parcours citoyen et agent incomplets. |
 | Mobile | APK Android signé et GitHub Release | À faire ; aucun APK de release confirmé. |
 | Backend | Configuration API | Validation au démarrage des URL PostgreSQL/Supabase, du port, des origines CORS et de NODE_ENV. |
-| Backend | Accounts | Première implémentation. |
+| Backend | Accounts | Provisionnement citoyen, profil personnel, administration des comptes, attributions/révocations transactionnelles, audit métier et protection du dernier administrateur ; tests unitaires en CI. |
 | Backend | Reports, cases, qualification, assignments, interventions, verification, referentials, audit | Squelettes ; règles et parcours à implémenter. |
 | Merise | MLD v2.13 dans Prisma | 38 modèles présents. |
 | Base de données | PostgreSQL local et base shadow | Deux services Docker distincts et configuration SHADOW_DATABASE_URL ajoutés ; migrations appliquées et diff testé dans PostgreSQL CI. |
