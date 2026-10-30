@@ -64,7 +64,7 @@ jobs:
           node scripts/check-conventional-commits.mjs "$RUNNER_TEMP/commit-subjects.txt"
 
       - name: Install workspace dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Generate Prisma Client
         run: pnpm db:generate
@@ -135,11 +135,3 @@ jobs:
           EXPO_PUBLIC_SUPABASE_URL: https://example.supabase.co
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-public-key
 
-      - name: Upload generated pnpm lockfile (bootstrap only)
-        if: always() && hashFiles('pnpm-lock.yaml') != ''
-        uses: actions/upload-artifact@v7.0.2
-        with:
-          name: pnpm-lockfile
-          path: pnpm-lock.yaml
-          if-no-files-found: error
-          retention-days: 7
