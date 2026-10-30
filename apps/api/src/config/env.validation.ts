@@ -29,10 +29,6 @@ function parseUrl(
   }
 }
 
-/**
- * Validate runtime configuration before NestJS creates application providers.
- * Only variable names are included in errors; secret values are never echoed.
- */
 export function validateEnvironment(
   config: Record<string, unknown>,
 ): Record<string, unknown> {
@@ -65,7 +61,11 @@ export function validateEnvironment(
         const parsed = parseUrl(origin, 'WEB_ORIGIN', HTTP_PROTOCOLS, errors);
         if (
           parsed &&
-          (parsed.username || parsed.password || parsed.pathname !== '/' || parsed.search || parsed.hash)
+          (parsed.username ||
+            parsed.password ||
+            parsed.pathname !== '/' ||
+            parsed.search ||
+            parsed.hash)
         ) {
           errors.push(
             'WEB_ORIGIN entries must be origins without paths, credentials, queries or fragments.',
