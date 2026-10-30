@@ -19,6 +19,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
+    "db:migration:preview": "prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --script",
     "db:studio": "prisma studio",
     "format:check": "prettier --check .",
     "check:commits": "node scripts/check-conventional-commits.mjs",

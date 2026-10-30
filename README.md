@@ -30,10 +30,11 @@ Docker Engine ou Docker Desktop est nécessaire pour lancer PostgreSQL localemen
 1. Copier .env.example vers .env et renseigner les variables de développement.
 2. Copier apps/mobile/.env.example vers apps/mobile/.env.
 3. Installer les dépendances avec pnpm install.
-4. Démarrer PostgreSQL local : docker compose up -d postgres.
+4. Démarrer PostgreSQL et sa base shadow isolée : docker compose up -d postgres postgres-shadow.
 5. Générer le client : pnpm db:generate.
 6. Appliquer les migrations locales versionnées : pnpm db:migrate.
-7. Démarrer :
+7. Prévisualiser le SQL additif restant : pnpm db:migration:preview (la commande utilise SHADOW_DATABASE_URL, qui doit cibler une base distincte).
+8. Démarrer :
    - pnpm dev:api : API sur http://localhost:3000, Swagger sur /docs ;
    - pnpm dev:web : Web sur http://localhost:5173 ;
    - pnpm dev:mobile : serveur Expo.

@@ -17,5 +17,24 @@ services:
       timeout: 3s
       retries: 10
 
+  postgres-shadow:
+    image: postgres:18-alpine
+    container_name: isieco-postgres-shadow
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: isieco_shadow
+      POSTGRES_USER: isieco
+      POSTGRES_PASSWORD: isieco_dev_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - isieco_postgres_shadow_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U isieco -d isieco_shadow"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
 volumes:
   isieco_postgres_data:
+  isieco_postgres_shadow_data:

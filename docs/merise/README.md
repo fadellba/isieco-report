@@ -28,7 +28,9 @@ Utilisateur, Role, UtilisateurRole, PreferencesVisibiliteCitoyen, Badge, BadgeUt
 
 Le schéma Prisma décrit 38 modèles, mais l'historique de migrations versionnées est encore incomplet : la migration initiale porte sur comptes et rôles. Un SQL snapshot CI généré depuis un schéma vide n'est pas une migration additive depuis la base existante.
 
-Avant une base partagée, il faut produire une migration additive, ajouter les contraintes SQL complémentaires, appliquer toutes les migrations sur PostgreSQL vierge, vérifier le diff Prisma/base et tester les cas valides et invalides. Seulement ensuite une migration peut être déployée sur Supabase.
+Le dépôt configure maintenant deux bases PostgreSQL locales distinctes : la base applicative et la base shadow utilisée par Prisma Migrate. La commande `pnpm db:migration:preview` compare l'historique de migrations existant au schéma Prisma et produit un SQL additif ; elle ne repart pas d'un schéma vide et ne modifie pas la base applicative.
+
+La CI applique d'abord les migrations versionnées sur une base PostgreSQL vierge, puis génère et archive le diff additif. Ce diff reste un artefact à relire : il doit être examiné, complété avec les contraintes SQL non représentables dans Prisma, puis enregistré comme migration versionnée. Les contraintes et invariants métier doivent ensuite être testés sur PostgreSQL réel avant tout déploiement sur Supabase.
 
 ## Invariants à tester
 
