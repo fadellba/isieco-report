@@ -58,7 +58,9 @@ jobs:
             exit 0
           fi
 
-          git log --format=%s "$BASE_SHA..$HEAD_SHA" > "$RUNNER_TEMP/commit-subjects.txt"
+          # GitHub merge commits use generated subjects that do not follow Conventional Commits.
+          # Validate the authored commits, not the synthetic merge commit.
+          git log --no-merges --format=%s "$BASE_SHA..$HEAD_SHA" > "$RUNNER_TEMP/commit-subjects.txt"
           node scripts/check-conventional-commits.mjs "$RUNNER_TEMP/commit-subjects.txt"
 
       - name: Install workspace dependencies
