@@ -6,6 +6,10 @@ Les diagrammes sont séparés en cinq domaines métier pour rester lisibles. Les
 
 ## Conventions de lecture
 
+- Tous les attributs sont représentés privés (`-`) par convention d'encapsulation. Prisma ne spécifie pas la visibilité UML des propriétés ; elle ne doit donc pas être interprétée comme une information extraite du schéma.
+- Aucun attribut `protected` n'est introduit, car le modèle ne définit pas de hiérarchie d'héritage. Les contrats publics sont portés par les opérations applicatives, pas par l'exposition directe des champs de persistance.
+
+
 - `PK` : propriété composant la clé primaire, y compris une clé composite.
 - `FK` : propriété utilisée comme clé étrangère dans une relation Prisma.
 - `UQ` : propriété couverte par une contrainte d'unicité déclarée dans Prisma.
@@ -18,72 +22,72 @@ Les diagrammes sont séparés en cinq domaines métier pour rester lisibles. Les
 ```mermaid
 classDiagram
   class Utilisateur {
-    +UUID idUtilisateur PK
-    +UUID authUserId UQ
-    +String nom
-    +String prenom?
-    +String referenceAvatar?
-    +String email UQ
-    +String telephone?
-    +DateTime dateInscription
-    +String etatCompte
+    -UUID idUtilisateur PK
+    -UUID authUserId UQ
+    -String nom
+    -String prenom?
+    -String referenceAvatar?
+    -String email UQ
+    -String telephone?
+    -DateTime dateInscription
+    -String etatCompte
   }
   class Role {
-    +UUID idRole PK
-    +String codeRole UQ
-    +String libelleRole
-    +String description?
+    -UUID idRole PK
+    -String codeRole UQ
+    -String libelleRole
+    -String description?
   }
   class UtilisateurRole {
-    +UUID idUtilisateur PK FK
-    +UUID idRole PK FK
-    +DateTime dateDebut PK
-    +DateTime dateFin?
-    +UUID attribuePar? FK
-    +String motif?
+    -UUID idUtilisateur PK FK
+    -UUID idRole PK FK
+    -DateTime dateDebut PK
+    -DateTime dateFin?
+    -UUID attribuePar? FK
+    -String motif?
   }
   class PreferencesVisibiliteCitoyen {
-    +UUID idUtilisateur PK FK
-    +Boolean afficherAvatar
-    +Boolean afficherNomPublic
-    +String nomPublic?
-    +Boolean afficherPoints
-    +Boolean afficherRang
-    +Boolean afficherBadges
-    +Boolean participerClassement
+    -UUID idUtilisateur PK FK
+    -Boolean afficherAvatar
+    -Boolean afficherNomPublic
+    -String nomPublic?
+    -Boolean afficherPoints
+    -Boolean afficherRang
+    -Boolean afficherBadges
+    -Boolean participerClassement
   }
   class Badge {
-    +UUID idBadge PK
-    +String codeBadge UQ
-    +String libelle
-    +String description?
-    +Boolean actif
+    -UUID idBadge PK
+    -String codeBadge UQ
+    -String libelle
+    -String description?
+    -Boolean actif
   }
   class BadgeUtilisateur {
-    +UUID idUtilisateur PK FK
-    +UUID idBadge PK FK
-    +DateTime dateAttribution PK
-    +UUID attribuePar? FK
-    +String motif?
+    -UUID idUtilisateur PK FK
+    -UUID idBadge PK FK
+    -DateTime dateAttribution PK
+    -UUID attribuePar? FK
+    -String motif?
   }
   class HistoriquePoints {
-    +UUID idPoint PK
-    +UUID idUtilisateur FK
-    +UUID idSignalement? FK
-    +Int points
-    +DateTime dateAttribution
-    +String motif
-    +String typeMouvement
-    +UUID idPointOrigine? FK
+    -UUID idPoint PK
+    -UUID idUtilisateur FK
+    -UUID idSignalement? FK
+    -Int points
+    -DateTime dateAttribution
+    -String motif
+    -String typeMouvement
+    -UUID idPointOrigine? FK
   }
   class Notification {
-    +UUID idNotification PK
-    +UUID idUtilisateur FK
-    +String titre
-    +String message
-    +Boolean lu
-    +DateTime dateCreation
-    +String lienCible?
+    -UUID idNotification PK
+    -UUID idUtilisateur FK
+    -String titre
+    -String message
+    -Boolean lu
+    -DateTime dateCreation
+    -String lienCible?
   }
   Utilisateur "1" -- "*" UtilisateurRole : roles
   Utilisateur "1" -- "*" UtilisateurRole : rolesAttribues
@@ -102,83 +106,83 @@ classDiagram
 ```mermaid
 classDiagram
   class TypeDechet {
-    +UUID idTypeDechet PK
-    +String codeType UQ
-    +String libelle
-    +String description?
-    +Boolean orientationSpecialisee
-    +DateTime dateDebutValidite
-    +DateTime dateFinValidite?
+    -UUID idTypeDechet PK
+    -String codeType UQ
+    -String libelle
+    -String description?
+    -Boolean orientationSpecialisee
+    -DateTime dateDebutValidite
+    -DateTime dateFinValidite?
   }
   class Equipe {
-    +UUID idEquipe PK
-    +String nomEquipe
-    +String description?
-    +String etatEquipe
+    -UUID idEquipe PK
+    -String nomEquipe
+    -String description?
+    -String etatEquipe
   }
   class AppartenanceEquipe {
-    +UUID idUtilisateur PK FK
-    +UUID idEquipe PK FK
-    +DateTime dateDebut PK
-    +DateTime dateFin?
-    +String fonction
+    -UUID idUtilisateur PK FK
+    -UUID idEquipe PK FK
+    -DateTime dateDebut PK
+    -DateTime dateFin?
+    -String fonction
   }
   class CompetenceEquipe {
-    +UUID idCompetenceEquipe PK UQ
-    +UUID idEquipe FK UQ
-    +UUID idTypeDechet FK UQ
-    +DateTime dateDebut UQ
-    +DateTime dateFin?
-    +String commentaire?
-    +UUID valideePar? FK
+    -UUID idCompetenceEquipe PK UQ
+    -UUID idEquipe FK UQ
+    -UUID idTypeDechet FK UQ
+    -DateTime dateDebut UQ
+    -DateTime dateFin?
+    -String commentaire?
+    -UUID valideePar? FK
   }
   class Region {
-    +UUID idRegion PK
-    +String codeRegion? UQ
-    +String nomRegion UQ
-    +Boolean actif
+    -UUID idRegion PK
+    -String codeRegion? UQ
+    -String nomRegion UQ
+    -Boolean actif
   }
   class Departement {
-    +UUID idDepartement PK UQ
-    +UUID idRegion FK UQ
-    +String codeDepartement? UQ
-    +String nomDepartement UQ
-    +Boolean actif
+    -UUID idDepartement PK UQ
+    -UUID idRegion FK UQ
+    -String codeDepartement? UQ
+    -String nomDepartement UQ
+    -Boolean actif
   }
   class Commune {
-    +UUID idCommune PK UQ
-    +UUID idDepartement FK UQ
-    +String codeCommune? UQ
-    +String nomCommune UQ
-    +Boolean actif
+    -UUID idCommune PK UQ
+    -UUID idDepartement FK UQ
+    -String codeCommune? UQ
+    -String nomCommune UQ
+    -Boolean actif
   }
   class DelegationDecisionEquipe {
-    +UUID idDelegation PK
-    +UUID idEquipe FK UQ
-    +UUID idUtilisateurDelegue FK UQ
-    +DateTime dateDebutAppartenance
-    +String typeDecision UQ
-    +UUID deleguePar FK
-    +DateTime dateDebut UQ
-    +DateTime dateFin?
-    +String motif?
+    -UUID idDelegation PK
+    -UUID idEquipe FK UQ
+    -UUID idUtilisateurDelegue FK UQ
+    -DateTime dateDebutAppartenance
+    -String typeDecision UQ
+    -UUID deleguePar FK
+    -DateTime dateDebut UQ
+    -DateTime dateFin?
+    -String motif?
   }
   class DisponibiliteEquipe {
-    +UUID idEquipe PK FK
-    +String etatDisponibilite
-    +UUID miseAJourPar FK
-    +DateTime dateMiseAJour
-    +DateTime valideJusqua
-    +String commentaire?
+    -UUID idEquipe PK FK
+    -String etatDisponibilite
+    -UUID miseAJourPar FK
+    -DateTime dateMiseAJour
+    -DateTime valideJusqua
+    -String commentaire?
   }
   class HistoriqueDisponibiliteEquipe {
-    +UUID idHistorique PK
-    +UUID idEquipe FK
-    +String etatDisponibilite
-    +UUID miseAJourPar FK
-    +DateTime dateMiseAJour
-    +DateTime valideJusqua
-    +String commentaire?
+    -UUID idHistorique PK
+    -UUID idEquipe FK
+    -String etatDisponibilite
+    -UUID miseAJourPar FK
+    -DateTime dateMiseAJour
+    -DateTime valideJusqua
+    -String commentaire?
   }
   TypeDechet "1" -- "*" CompetenceEquipe : competences
   Equipe "1" -- "*" AppartenanceEquipe : appartenances
@@ -195,80 +199,80 @@ classDiagram
 ```mermaid
 classDiagram
   class Signalement {
-    +UUID idSignalement PK
-    +UUID idUtilisateur FK
-    +DateTime dateConstat?
-    +DateTime dateSoumission?
-    +String description?
-    +UUID idCommune? FK
-    +Decimal latitude?
-    +Decimal longitude?
-    +Decimal precisionLocalisation?
-    +String descriptionLocalisation?
-    +String statutSignalement
-    +UUID decisionPar? FK
-    +DateTime dateDecision?
-    +String motifDecision?
+    -UUID idSignalement PK
+    -UUID idUtilisateur FK
+    -DateTime dateConstat?
+    -DateTime dateSoumission?
+    -String description?
+    -UUID idCommune? FK
+    -Decimal latitude?
+    -Decimal longitude?
+    -Decimal precisionLocalisation?
+    -String descriptionLocalisation?
+    -String statutSignalement
+    -UUID decisionPar? FK
+    -DateTime dateDecision?
+    -String motifDecision?
   }
   class PhotoSignalement {
-    +UUID idPhotoSignalement PK
-    +String referencePhoto
-    +String description?
-    +DateTime dateAjout
-    +UUID idSignalement FK
-    +DateTime dateExpiration
-    +DateTime mediaPurgeAt?
-    +Boolean mediaStockeeLocale
-    +String etatPublication
-    +String referencePhotoPublique?
-    +Boolean floutageConfirme
-    +UUID varianteSoumisePar? FK
-    +DateTime dateSoumissionVariante?
-    +UUID approuvePar? FK
-    +DateTime dateApprobation?
+    -UUID idPhotoSignalement PK
+    -String referencePhoto
+    -String description?
+    -DateTime dateAjout
+    -UUID idSignalement FK
+    -DateTime dateExpiration
+    -DateTime mediaPurgeAt?
+    -Boolean mediaStockeeLocale
+    -String etatPublication
+    -String referencePhotoPublique?
+    -Boolean floutageConfirme
+    -UUID varianteSoumisePar? FK
+    -DateTime dateSoumissionVariante?
+    -UUID approuvePar? FK
+    -DateTime dateApprobation?
   }
   class ContenuSignalement {
-    +UUID idSignalement PK FK
-    +UUID idTypeDechet PK FK
-    +Decimal quantiteEstimee?
-    +Decimal volumeEstime?
-    +String remarque?
+    -UUID idSignalement PK FK
+    -UUID idTypeDechet PK FK
+    -Decimal quantiteEstimee?
+    -Decimal volumeEstime?
+    -String remarque?
   }
   class DemandeComplement {
-    +UUID idDemande PK
-    +UUID idSignalement FK
-    +UUID demandePar FK
-    +DateTime dateDemande
-    +String motif
-    +String etatDemande
+    -UUID idDemande PK
+    -UUID idSignalement FK
+    -UUID demandePar FK
+    -DateTime dateDemande
+    -String motif
+    -String etatDemande
   }
   class ReponseComplement {
-    +UUID idReponse PK
-    +UUID idDemande FK UQ
-    +UUID reponduPar FK
-    +DateTime dateReponse
-    +String contenu
+    -UUID idReponse PK
+    -UUID idDemande FK UQ
+    -UUID reponduPar FK
+    -DateTime dateReponse
+    -String contenu
   }
   class QualificationSignalement {
-    +UUID idQualification PK UQ
-    +UUID idSignalement FK UQ
-    +UUID idTypeDechet FK UQ
-    +Decimal quantiteEstimee?
-    +String uniteQuantite?
-    +Decimal quantiteEstimeeLegacy?
-    +Decimal volumeEstime?
-    +String remarque?
-    +UUID qualifiePar FK
-    +DateTime dateQualification
-    +String etatQualification
-    +String motifRetrait?
+    -UUID idQualification PK UQ
+    -UUID idSignalement FK UQ
+    -UUID idTypeDechet FK UQ
+    -Decimal quantiteEstimee?
+    -String uniteQuantite?
+    -Decimal quantiteEstimeeLegacy?
+    -Decimal volumeEstime?
+    -String remarque?
+    -UUID qualifiePar FK
+    -DateTime dateQualification
+    -String etatQualification
+    -String motifRetrait?
   }
   class IdempotenceSignalement {
-    +UUID idUtilisateur PK FK
-    +String cleIdempotence PK
-    +String empreinteRequete
-    +UUID idSignalement FK UQ
-    +DateTime dateCreation
+    -UUID idUtilisateur PK FK
+    -String cleIdempotence PK
+    -String empreinteRequete
+    -UUID idSignalement FK UQ
+    -DateTime dateCreation
   }
   Signalement "1" -- "*" PhotoSignalement : photos
   Signalement "1" -- "*" ContenuSignalement : contenus
@@ -283,140 +287,140 @@ classDiagram
 ```mermaid
 classDiagram
   class DossierTraitement {
-    +UUID idDossier PK
-    +String referenceDossier UQ
-    +String descriptionSynthese
-    +DateTime dateCreationDossier
-    +String statutDossier
-    +String priorite
-    +DateTime dateQualification?
-    +UUID idCommune? FK
-    +Decimal latitude?
-    +Decimal longitude?
-    +Decimal precisionLocalisation?
-    +String descriptionLocalisation?
-    +DateTime dateCloture?
-    +UUID creePar FK
+    -UUID idDossier PK
+    -String referenceDossier UQ
+    -String descriptionSynthese
+    -DateTime dateCreationDossier
+    -String statutDossier
+    -String priorite
+    -DateTime dateQualification?
+    -UUID idCommune? FK
+    -Decimal latitude?
+    -Decimal longitude?
+    -Decimal precisionLocalisation?
+    -String descriptionLocalisation?
+    -DateTime dateCloture?
+    -UUID creePar FK
   }
   class RattachementSignalement {
-    +UUID idRattachement PK
-    +UUID idSignalement FK
-    +UUID idDossier FK
-    +DateTime dateDebutRattachement
-    +DateTime dateFinRattachement?
-    +String typeRattachement
-    +String motif?
-    +UUID idActeur FK
+    -UUID idRattachement PK
+    -UUID idSignalement FK
+    -UUID idDossier FK
+    -DateTime dateDebutRattachement
+    -DateTime dateFinRattachement?
+    -String typeRattachement
+    -String motif?
+    -UUID idActeur FK
   }
   class ContenuDossier {
-    +UUID idDossier PK FK
-    +UUID idTypeDechet PK FK
-    +Decimal quantiteEstimee?
-    +String uniteQuantite?
-    +Decimal quantiteEstimeeLegacy?
-    +Decimal volumeEstime?
-    +String niveauRisqueQualifie?
-    +String remarque?
-    +UUID qualifiePar? FK
-    +DateTime dateQualification?
-    +String etatContenuDossier
-    +String etatPriseEnCharge
-    +DateTime dateAttenteEquipe?
-    +String motifAttenteEquipe?
-    +DateTime dateRetrait?
-    +UUID retirePar? FK
-    +String motifRetrait?
-    +String origineAjout
-    +String motifAjout?
+    -UUID idDossier PK FK
+    -UUID idTypeDechet PK FK
+    -Decimal quantiteEstimee?
+    -String uniteQuantite?
+    -Decimal quantiteEstimeeLegacy?
+    -Decimal volumeEstime?
+    -String niveauRisqueQualifie?
+    -String remarque?
+    -UUID qualifiePar? FK
+    -DateTime dateQualification?
+    -String etatContenuDossier
+    -String etatPriseEnCharge
+    -DateTime dateAttenteEquipe?
+    -String motifAttenteEquipe?
+    -DateTime dateRetrait?
+    -UUID retirePar? FK
+    -String motifRetrait?
+    -String origineAjout
+    -String motifAjout?
   }
   class ProvenanceContenuDossier {
-    +UUID idDossier PK FK
-    +UUID idTypeDechet PK FK
-    +UUID idQualification PK FK
-    +DateTime dateDebut PK
-    +UUID idSignalement FK
-    +UUID idRattachement FK
-    +UUID ajoutePar FK
-    +DateTime dateFin?
-    +String motif?
+    -UUID idDossier PK FK
+    -UUID idTypeDechet PK FK
+    -UUID idQualification PK FK
+    -DateTime dateDebut PK
+    -UUID idSignalement FK
+    -UUID idRattachement FK
+    -UUID ajoutePar FK
+    -DateTime dateFin?
+    -String motif?
   }
   class Affectation {
-    +UUID idAffectation PK
-    +UUID idDossier FK
-    +UUID idTypeDechet FK
-    +UUID idEquipe FK
-    +UUID idCompetenceEquipe FK
-    +DateTime dateHeureAffectation
-    +UUID idDecideur FK
-    +String etatAffectation
-    +String motif?
-    +String observation?
-    +DateTime dateFinAffectation?
-    +String decisionEquipe
-    +UUID reponduPar? FK
-    +DateTime dateReponseEquipe?
-    +String motifRefusEquipe?
-    +String referenceOperationUnique? UQ
+    -UUID idAffectation PK
+    -UUID idDossier FK
+    -UUID idTypeDechet FK
+    -UUID idEquipe FK
+    -UUID idCompetenceEquipe FK
+    -DateTime dateHeureAffectation
+    -UUID idDecideur FK
+    -String etatAffectation
+    -String motif?
+    -String observation?
+    -DateTime dateFinAffectation?
+    -String decisionEquipe
+    -UUID reponduPar? FK
+    -DateTime dateReponseEquipe?
+    -String motifRefusEquipe?
+    -String referenceOperationUnique? UQ
   }
   class Intervention {
-    +UUID idIntervention PK
-    +UUID idAffectation FK
-    +DateTime dateHeureDebut?
-    +DateTime dateHeureFin?
-    +DateTime dateSoumissionCompteRendu?
-    +String statutIntervention
-    +String resultatIntervention?
-    +String compteRendu?
-    +String motifException?
-    +UUID renseignePar FK
+    -UUID idIntervention PK
+    -UUID idAffectation FK
+    -DateTime dateHeureDebut?
+    -DateTime dateHeureFin?
+    -DateTime dateSoumissionCompteRendu?
+    -String statutIntervention
+    -String resultatIntervention?
+    -String compteRendu?
+    -String motifException?
+    -UUID renseignePar FK
   }
   class PhotoIntervention {
-    +UUID idPhotoIntervention PK
-    +UUID idIntervention FK
-    +String referencePhoto
-    +String contextePhoto
-    +String description?
-    +DateTime dateAjout
-    +DateTime dateExpiration
-    +DateTime mediaPurgeAt?
-    +Boolean mediaStockeeLocale
-    +String etatPublication
-    +String referencePhotoPublique?
-    +Boolean floutageConfirme
-    +UUID varianteSoumisePar? FK
-    +DateTime dateSoumissionVariante?
-    +UUID approuvePar? FK
-    +DateTime dateApprobation?
+    -UUID idPhotoIntervention PK
+    -UUID idIntervention FK
+    -String referencePhoto
+    -String contextePhoto
+    -String description?
+    -DateTime dateAjout
+    -DateTime dateExpiration
+    -DateTime mediaPurgeAt?
+    -Boolean mediaStockeeLocale
+    -String etatPublication
+    -String referencePhotoPublique?
+    -Boolean floutageConfirme
+    -UUID varianteSoumisePar? FK
+    -DateTime dateSoumissionVariante?
+    -UUID approuvePar? FK
+    -DateTime dateApprobation?
   }
   class VerificationResolution {
-    +UUID idVerification PK
-    +UUID idAffectation FK
-    +UUID idVerificateur FK
-    +DateTime dateVerification
-    +String resultatVerification
-    +String etatVerification
-    +String motif?
-    +String referencePreuve?
+    -UUID idVerification PK
+    -UUID idAffectation FK
+    -UUID idVerificateur FK
+    -DateTime dateVerification
+    -String resultatVerification
+    -String etatVerification
+    -String motif?
+    -String referencePreuve?
   }
   class HistoriqueLocalisationDossier {
-    +UUID idHistorique PK
-    +UUID idDossier FK
-    +UUID idCommune? FK
-    +Decimal latitude?
-    +Decimal longitude?
-    +Decimal precisionLocalisation?
-    +String descriptionLocalisation?
-    +UUID modifiePar FK
-    +DateTime dateModification
-    +String motif?
+    -UUID idHistorique PK
+    -UUID idDossier FK
+    -UUID idCommune? FK
+    -Decimal latitude?
+    -Decimal longitude?
+    -Decimal precisionLocalisation?
+    -String descriptionLocalisation?
+    -UUID modifiePar FK
+    -DateTime dateModification
+    -String motif?
   }
   class HistoriquePrioriteDossier {
-    +UUID idHistorique PK
-    +UUID idDossier FK
-    +String priorite
-    +UUID definiePar FK
-    +DateTime dateDefinition
-    +String justification
+    -UUID idHistorique PK
+    -UUID idDossier FK
+    -String priorite
+    -UUID definiePar FK
+    -DateTime dateDefinition
+    -String justification
   }
   DossierTraitement "1" -- "*" RattachementSignalement : rattachements
   DossierTraitement "1" -- "*" ContenuDossier : contenus
@@ -435,52 +439,52 @@ classDiagram
 ```mermaid
 classDiagram
   class EvenementMetier {
-    +UUID idEvenement PK
-    +String typeEvenement
-    +DateTime dateEvenement?
-    +DateTime dateEnregistrement
-    +String origine
-    +UUID idActeur? FK
-    +UUID idSignalementCible? FK
-    +UUID idDossierCible? FK
-    +UUID idRattachementCible? FK
-    +UUID idAffectationCible? FK
-    +UUID idInterventionCible? FK
-    +UUID idVerificationCible? FK
-    +UUID idUtilisateurCible? FK
-    +UUID idEquipeCible? FK
-    +UUID idTypeDechetCible? FK
-    +UUID idCompetenceEquipeCible? FK
-    +UUID idDossierContenuCible? FK
-    +UUID idTypeDechetContenuCible? FK
-    +UUID idEvenementCorrige? FK
-    +Json donneesAvant?
-    +Json donneesApres?
-    +String destinataireExterne?
-    +String motif?
-    +UUID correlationId?
-    +String referenceOperationUnique? UQ
-    +Int versionSchema
+    -UUID idEvenement PK
+    -String typeEvenement
+    -DateTime dateEvenement?
+    -DateTime dateEnregistrement
+    -String origine
+    -UUID idActeur? FK
+    -UUID idSignalementCible? FK
+    -UUID idDossierCible? FK
+    -UUID idRattachementCible? FK
+    -UUID idAffectationCible? FK
+    -UUID idInterventionCible? FK
+    -UUID idVerificationCible? FK
+    -UUID idUtilisateurCible? FK
+    -UUID idEquipeCible? FK
+    -UUID idTypeDechetCible? FK
+    -UUID idCompetenceEquipeCible? FK
+    -UUID idDossierContenuCible? FK
+    -UUID idTypeDechetContenuCible? FK
+    -UUID idEvenementCorrige? FK
+    -Json donneesAvant?
+    -Json donneesApres?
+    -String destinataireExterne?
+    -String motif?
+    -UUID correlationId?
+    -String referenceOperationUnique? UQ
+    -Int versionSchema
   }
   class PublicationFlux {
-    +UUID idPublication PK
-    +UUID idSignalement? FK
-    +UUID idDossier? FK
-    +UUID creePar FK
-    +DateTime dateCreation
-    +String etatPublication
-    +UUID approuvePar? FK
-    +DateTime dateApprobation?
-    +DateTime datePublication?
-    +String motifDecision?
+    -UUID idPublication PK
+    -UUID idSignalement? FK
+    -UUID idDossier? FK
+    -UUID creePar FK
+    -DateTime dateCreation
+    -String etatPublication
+    -UUID approuvePar? FK
+    -DateTime dateApprobation?
+    -DateTime datePublication?
+    -String motifDecision?
   }
   class PhotoPublication {
-    +UUID idPhotoPublication PK
-    +UUID idPublication FK UQ
-    +UUID idPhotoSignalement? FK UQ
-    +UUID idPhotoIntervention? FK UQ
-    +String rolePhoto
-    +DateTime dateAjout
+    -UUID idPhotoPublication PK
+    -UUID idPublication FK UQ
+    -UUID idPhotoSignalement? FK UQ
+    -UUID idPhotoIntervention? FK UQ
+    -String rolePhoto
+    -DateTime dateAjout
   }
   EvenementMetier "1" -- "*" EvenementMetier : corrections
   PublicationFlux "1" -- "*" PhotoPublication : photos
