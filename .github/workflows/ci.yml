@@ -1,0 +1,120 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Install, validate and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js LTS
+        uses: actions/setup-node@v7.1.0
+        with:
+          node-version-file: .nvmrc
+          check-latest: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6.1.0
+        with:
+          version: 12.16.1
+          run_install: false
+
+      - name: Validate Conventional Commits
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_BEFORE: ${{ github.event.before }}
+          EVENT_BASE: ${{ github.event.pull_request.base.sha }}
+          EVENT_HEAD: ${{ github.event.pull_request.head.sha }}
+          PUSH_HEAD: ${{ github.sha }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            BASE_SHA="$EVENT_BASE"
+            HEAD_SHA="$EVENT_HEAD"
+          else
+            BASE_SHA="$EVENT_BEFORE"
+            HEAD_SHA="$PUSH_HEAD"
+          fi
+
+          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            echo "No previous commit to validate."
+            exit 0
+          fi
+
+          git log --format=%s "$BASE_SHA..$HEAD_SHA" > "$RUNNER_TEMP/commit-subjects.txt"
+          node scripts/check-conventional-commits.mjs "$RUNNER_TEMP/commit-subjects.txt"
+
+      - name: Install workspace dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm db:generate
+        env:
+          DATABASE_URL: postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report?schema=public
+          DIRECT_URL: postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report?schema=public
+
+      - name: Build shared packages
+        run: pnpm build:packages
+
+      - name: Generate OpenAPI specification
+        run: pnpm api:openapi
+        env:
+          DATABASE_URL: postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report?schema=public
+          DIRECT_URL: postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report?schema=public
+          SUPABASE_URL: https://example.supabase.co
+          SUPABASE_ANON_KEY: ci-placeholder-public-key
+
+      - name: Validate generated OpenAPI JSON
+        run: node --input-type=module -e "import { readFileSync } from 'node:fs'; JSON.parse(readFileSync('docs/api/openapi.json', 'utf8')); console.log('OpenAPI JSON is valid.');"
+
+      - name: Upload OpenAPI specification
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: isieco-openapi-specification
+          path: docs/api/openapi.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: TypeScript checks
+        run: pnpm typecheck
+
+      - name: Run application tests
+        run: pnpm test
+
+      - name: Build Web, API and Mobile applications
+        run: pnpm build
+        env:
+          DATABASE_URL: postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report?schema=public
+          DIRECT_URL: postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report?schema=public
+          VITE_API_BASE_URL: https://api.example.invalid/api/v1
+          VITE_SUPABASE_URL: https://example.supabase.co
+          VITE_SUPABASE_ANON_KEY: ci-placeholder-public-key
+          EXPO_PUBLIC_API_BASE_URL: https://api.example.invalid/api/v1
+          EXPO_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-public-key
+
+      - name: Upload generated pnpm lockfile (bootstrap only)
+        if: always() && hashFiles('pnpm-lock.yaml') != ''
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: pnpm-lockfile
+          path: pnpm-lock.yaml
+          if-no-files-found: error
+          retention-days: 7

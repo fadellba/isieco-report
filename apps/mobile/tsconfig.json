@@ -1,0 +1,5 @@
+{
+  "extends":"../../tsconfig.base.json",
+  "compilerOptions":{"target":"ES2022","module":"ESNext","moduleResolution":"Bundler","jsx":"react-jsx","noEmit":true,"allowImportingTsExtensions":true,"types":["expo/types","nativewind/types"]},
+  "include":["**/*.ts","**/*.tsx",".expo/types/**/*.ts","expo-env.d.ts"],"exclude":["node_modules"]
+}

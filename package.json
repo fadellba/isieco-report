@@ -1,0 +1,30 @@
+{
+  "name": "isieco-report",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.16.1",
+  "engines": {"node": ">=22.13.0 <23", "pnpm": ">=12.0.0 <13"},
+  "scripts": {
+    "setup": "pnpm install && pnpm db:generate",
+    "dev": "pnpm build:packages && pnpm db:generate && pnpm --parallel --filter \"./apps/*\" dev",
+    "dev:web": "pnpm build:packages && pnpm --filter @isieco/web dev",
+    "dev:api": "pnpm build:packages && pnpm db:generate && pnpm --filter @isieco/api dev",
+    "dev:mobile": "pnpm build:packages && pnpm --filter @isieco/mobile start",
+    "build:packages": "pnpm --filter @isieco/shared build && pnpm --filter @isieco/api-client build",
+    "build": "pnpm build:packages && pnpm db:generate && pnpm --filter \"./apps/*\" build",
+    "typecheck": "pnpm build:packages && pnpm db:generate && pnpm --filter \"./apps/*\" typecheck",
+    "format": "prettier --write .",
+    "test": "pnpm test:repo && pnpm --filter \"./apps/*\" test",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:studio": "prisma studio",
+    "format:check": "prettier --check .",
+    "check:commits": "node scripts/check-conventional-commits.mjs",
+    "api:openapi": "pnpm --filter @isieco/api openapi:generate",
+    "test:repo": "node --test scripts/check-conventional-commits.test.mjs"
+  },
+  "devDependencies": {"prettier":"3.6.2","prisma":"7.10.1","typescript":"5.9.3","@types/node":"24.0.0"},
+  "dependencies": {"dotenv":"17.2.3"}
+}

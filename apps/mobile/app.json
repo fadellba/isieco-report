@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "ISI-Eco Report",
+    "slug": "isieco-report",
+    "scheme": "isiecoreport",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "plugins": ["expo-router"],
+    "android": {"package":"com.isieco.report","permissions":["CAMERA","ACCESS_FINE_LOCATION","ACCESS_COARSE_LOCATION"]},
+    "ios": {"bundleIdentifier":"com.isieco.report"},
+    "experiments": {"typedRoutes":true}
+  }
+}

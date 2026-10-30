@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../apps/api/src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Socle initial uniquement : le reste du MLD version 2.13 sera transcrit
+// dans les prochaines étapes après revue des contraintes et des noms physiques.
+// Les mots de passe et sessions sont gérés par Supabase Auth, pas par cette base.
+model Utilisateur {
+  idUtilisateur   String            @id @default(uuid()) @db.Uuid @map("id_utilisateur")
+  authUserId      String            @unique @db.Uuid @map("auth_user_id")
+  nom             String
+  prenom          String?
+  referenceAvatar String?           @map("reference_avatar")
+  email           String            @unique
+  telephone       String?
+  dateInscription DateTime          @default(now()) @map("date_inscription")
+  etatCompte      String            @default("ACTIF") @map("etat_compte")
+  roles           UtilisateurRole[]
+  rolesAttribues  UtilisateurRole[] @relation("RoleAttributedBy")
+
+  @@map("utilisateur")
+}
+
+model Role {
+  idRole       String            @id @default(uuid()) @db.Uuid @map("id_role")
+  codeRole     String            @unique @map("code_role")
+  libelleRole  String            @map("libelle_role")
+  description  String?
+  utilisateurs UtilisateurRole[]
+
+  @@map("role")
+}
+
+model UtilisateurRole {
+  idUtilisateur String      @db.Uuid @map("id_utilisateur")
+  idRole        String      @db.Uuid @map("id_role")
+  dateDebut     DateTime    @default(now()) @map("date_debut")
+  dateFin       DateTime?   @map("date_fin")
+  attribuePar   String?     @db.Uuid @map("attribue_par")
+  motif         String?
+  utilisateur   Utilisateur @relation(fields: [idUtilisateur], references: [idUtilisateur], onDelete: Cascade)
+  role          Role        @relation(fields: [idRole], references: [idRole], onDelete: Restrict)
+  attribuant    Utilisateur? @relation("RoleAttributedBy", fields: [attribuePar], references: [idUtilisateur], onDelete: SetNull)
+
+  @@id([idUtilisateur, idRole, dateDebut])
+  @@index([idRole, dateFin])
+  @@map("utilisateur_role")
+}
