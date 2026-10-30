@@ -1,0 +1,220 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../apps/api/src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// MLD v2.13: 38 tables métier. auth.users reste gérée par Supabase Auth.
+// Les codes d'état restent des String contrôlées en SQL/API pour préserver
+// l'alignement avec le dictionnaire métier sans figer prématurément des enums.
+model Utilisateur {
+  idUtilisateur String   @id @default(uuid()) @db.Uuid @map("id_utilisateur")
+  authUserId    String   @unique @db.Uuid @map("auth_user_id")
+  nom           String
+  prenom        String?
+  referenceAvatar String? @map("reference_avatar")
+  email         String   @unique
+  telephone     String?
+  dateInscription DateTime @default(now()) @map("date_inscription")
+  etatCompte    String   @default("ACTIF") @map("etat_compte")
+
+  roles                       UtilisateurRole[]
+  rolesAttribues              UtilisateurRole[] @relation("RoleAttributedBy")
+  appartenances               AppartenanceEquipe[]
+  competencesValidees         CompetenceEquipe[] @relation("CompetenceValidator")
+  signalements                Signalement[]
+  signalementsDecides         Signalement[] @relation("SignalementDecisionMaker")
+  photosSignalementSoumises   PhotoSignalement[] @relation("SignalementPhotoSubmitter")
+  photosSignalementApprouvees PhotoSignalement[] @relation("SignalementPhotoApprover")
+  dossiersCrees               DossierTraitement[]
+  rattachementsActes          RattachementSignalement[]
+  contenusQualifies           ContenuDossier[] @relation("ContentQualifier")
+  contenusRetires             ContenuDossier[] @relation("ContentRetirer")
+  affectationsDecidees        Affectation[] @relation("AssignmentDecider")
+  affectationsRepondues       Affectation[] @relation("AssignmentResponder")
+  interventionsRenseignees    Intervention[]
+  verificationsEffectuees     VerificationResolution[]
+  evenementsAgis              EvenementMetier[] @relation("EventActor")
+  evenementsUtilisateurCible  EvenementMetier[] @relation("EventUserTarget")
+  demandesComplement          DemandeComplement[] @relation("SupplementRequester")
+  reponsesComplement          ReponseComplement[]
+  qualifications              QualificationSignalement[]
+  provenancesAjoutees         ProvenanceContenuDossier[]
+  idempotences                IdempotenceSignalement[]
+  delegationsRecues           DelegationDecisionEquipe[] @relation("DelegatedUser")
+  delegationsPar              DelegationDecisionEquipe[] @relation("DelegationAuthor")
+  disponibilitesModifiees     DisponibiliteEquipe[]
+  historiquesDisponibilite    HistoriqueDisponibiliteEquipe[]
+  historiquesLocalisation     HistoriqueLocalisationDossier[]
+  historiquesPriorite         HistoriquePrioriteDossier[]
+  mouvementsPoints            HistoriquePoints[]
+  notifications               Notification[]
+  preferencesVisibilite       PreferencesVisibiliteCitoyen?
+  badgesAttribues             BadgeUtilisateur[] @relation("BadgeAttributionActor")
+  publicationsCreees          PublicationFlux[] @relation("PublicationCreator")
+  publicationsApprouvees      PublicationFlux[] @relation("PublicationApprover")
+  photosInterventionSoumises PhotoIntervention[] @relation("InterventionPhotoSubmitter")
+  photosInterventionApprouvees PhotoIntervention[] @relation("InterventionPhotoApprover")
+
+  @@map("utilisateur")
+}
+
+model Role {
+  idRole       String @id @default(uuid()) @db.Uuid @map("id_role")
+  codeRole     String @unique @map("code_role")
+  libelleRole  String @map("libelle_role")
+  description  String?
+  utilisateurs UtilisateurRole[]
+
+  @@map("role")
+}
+
+model UtilisateurRole {
+  idUtilisateur String @db.Uuid @map("id_utilisateur")
+  idRole        String @db.Uuid @map("id_role")
+  dateDebut     DateTime @default(now()) @map("date_debut")
+  dateFin       DateTime? @map("date_fin")
+  attribuePar   String? @db.Uuid @map("attribue_par")
+  motif         String?
+  utilisateur   Utilisateur @relation(fields: [idUtilisateur], references: [idUtilisateur], onDelete: Cascade)
+  role          Role @relation(fields: [idRole], references: [idRole], onDelete: Restrict)
+  attribuant    Utilisateur? @relation("RoleAttributedBy", fields: [attribuePar], references: [idUtilisateur], onDelete: SetNull)
+
+  @@id([idUtilisateur, idRole, dateDebut])
+  @@index([idRole, dateFin])
+  @@map("utilisateur_role")
+}
+
+model TypeDechet {
+  idTypeDechet             String @id @default(uuid()) @db.Uuid @map("id_type_dechet")
+  codeType                 String @unique @map("code_type")
+  libelle                  String
+  description              String?
+  orientationSpecialisee   Boolean @map("orientation_specialisee")
+  dateDebutValidite        DateTime @map("date_debut_validite")
+  dateFinValidite          DateTime? @map("date_fin_validite")
+  contenusSignalement      ContenuSignalement[]
+  contenusDossier          ContenuDossier[]
+  competences              CompetenceEquipe[]
+  qualifications           QualificationSignalement[]
+  affectations             Affectation[]
+  evenementsCible          EvenementMetier[] @relation("EventWasteTypeTarget")
+
+  @@map("type_dechet")
+}
+
+model Equipe {
+  idEquipe           String @id @default(uuid()) @db.Uuid @map("id_equipe")
+  nomEquipe          String @map("nom_equipe")
+  description        String?
+  etatEquipe         String @map("etat_equipe")
+  appartenances      AppartenanceEquipe[]
+  competences        CompetenceEquipe[]
+  affectations       Affectation[]
+  evenementsCible    EvenementMetier[] @relation("EventTeamTarget")
+  delegations        DelegationDecisionEquipe[]
+  disponibilite     DisponibiliteEquipe?
+  historiqueDisponibilite HistoriqueDisponibiliteEquipe[]
+
+  @@map("equipe")
+}
+
+model AppartenanceEquipe {
+  idUtilisateur String @db.Uuid @map("id_utilisateur")
+  idEquipe      String @db.Uuid @map("id_equipe")
+  dateDebut     DateTime @map("date_debut")
+  dateFin       DateTime? @map("date_fin")
+  fonction      String
+  utilisateur   Utilisateur @relation(fields: [idUtilisateur], references: [idUtilisateur], onDelete: Restrict)
+  equipe        Equipe @relation(fields: [idEquipe], references: [idEquipe], onDelete: Restrict)
+
+  @@id([idUtilisateur, idEquipe, dateDebut])
+  @@index([idEquipe, dateFin])
+  @@map("appartenance_equipe")
+}
+
+model CompetenceEquipe {
+  idCompetenceEquipe String @id @default(uuid()) @db.Uuid @map("id_competence_equipe")
+  idEquipe           String @db.Uuid @map("id_equipe")
+  idTypeDechet       String @db.Uuid @map("id_type_dechet")
+  dateDebut          DateTime @map("date_debut")
+  dateFin            DateTime? @map("date_fin")
+  commentaire        String?
+  valideePar         String? @db.Uuid @map("validee_par")
+  equipe             Equipe @relation(fields: [idEquipe], references: [idEquipe], onDelete: Restrict)
+  typeDechet         TypeDechet @relation(fields: [idTypeDechet], references: [idTypeDechet], onDelete: Restrict)
+  validateur         Utilisateur? @relation("CompetenceValidator", fields: [valideePar], references: [idUtilisateur], onDelete: SetNull)
+  affectations       Affectation[]
+  evenementsCible    EvenementMetier[] @relation("EventTeamSkillTarget")
+
+  @@unique([idEquipe, idTypeDechet, dateDebut])
+  @@unique([idCompetenceEquipe, idEquipe, idTypeDechet])
+  @@index([idEquipe, dateFin])
+  @@map("competence_equipe")
+}
+
+model Signalement {
+  idSignalement          String @id @default(uuid()) @db.Uuid @map("id_signalement")
+  idUtilisateur          String @db.Uuid @map("id_utilisateur")
+  dateConstat            DateTime? @map("date_constat")
+  dateSoumission         DateTime? @map("date_soumission")
+  description            String? @db.Text
+  idCommune              String? @db.Uuid @map("id_commune")
+  latitude               Decimal? @db.Decimal(9, 6)
+  longitude              Decimal? @db.Decimal(9, 6)
+  precisionLocalisation  Decimal? @db.Decimal(9, 2) @map("precision_localisation")
+  descriptionLocalisation String? @map("description_localisation")
+  statutSignalement      String @map("statut_signalement")
+  decisionPar            String? @db.Uuid @map("decision_par")
+  dateDecision           DateTime? @map("date_decision")
+  motifDecision          String? @map("motif_decision")
+  utilisateur            Utilisateur @relation(fields: [idUtilisateur], references: [idUtilisateur], onDelete: Restrict)
+  commune                Commune? @relation(fields: [idCommune], references: [idCommune], onDelete: SetNull)
+  decideur               Utilisateur? @relation("SignalementDecisionMaker", fields: [decisionPar], references: [idUtilisateur], onDelete: SetNull)
+  photos                 PhotoSignalement[]
+  contenus               ContenuSignalement[]
+  rattachements          RattachementSignalement[]
+  demandesComplement    DemandeComplement[]
+  qualifications         QualificationSignalement[]
+  idempotence            IdempotenceSignalement?
+  evenementsCible        EvenementMetier[] @relation("EventReportTarget")
+  mouvementsPoints      HistoriquePoints[]
+  publications           PublicationFlux[]
+
+  @@index([idUtilisateur, dateSoumission])
+  @@index([idCommune, statutSignalement])
+  @@map("signalement")
+}
+
+model PhotoSignalement {
+  idPhotoSignalement     String @id @default(uuid()) @db.Uuid @map("id_photo_signalement")
+  referencePhoto         String @map("reference_photo")
+  description            String?
+  dateAjout              DateTime @map("date_ajout")
+  idSignalement          String @db.Uuid @map("id_signalement")
+  dateExpiration         DateTime @map("date_expiration")
+  mediaPurgeAt           DateTime? @map("media_purge_at")
+  mediaStockeeLocale     Boolean @map("media_stockee_locale")
+  etatPublication        String @map("etat_publication")
+  referencePhotoPublique String? @map("reference_photo_publique")
+  floutageConfirme       Boolean @map("floutage_confirme")
+  varianteSoumisePar     String? @db.Uuid @map("variante_soumise_par")
+  dateSoumissionVariante DateTime? @map("date_soumission_variante")
+  approuvePar            String? @db.Uuid @map("approuve_par")
+  dateApprobation        DateTime? @map("date_approbation")
+  signalement            Signalement @relation(fields: [idSignalement], references: [idSignalement], onDelete: Restrict)
+  soumisePar             Utilisateur? @relation("SignalementPhotoSubmitter", fields: [varianteSoumisePar], references: [idUtilisateur], onDelete: SetNull)
+  approuveePar           Utilisateur? @relation("SignalementPhotoApprover", fields: [approuvePar], references: [idUtilisateur], onDelete: SetNull)
+  publications           PhotoPublication[]
+
+  @@index([idSignalement, dateAjout])
+  @@index([dateExpiration, mediaPurgeAt])
+  @@map("photo_signalement")
+}
+
+model ContenuSignalement {
+  idSignalement String @db.Uuid @map("id_signalement")
+  idTypeDechet  String @db.Uuid @map("id_type_dechet")
