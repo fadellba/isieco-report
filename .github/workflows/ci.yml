@@ -70,26 +70,26 @@ jobs:
           DATABASE_URL: postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report?schema=public
           DIRECT_URL: postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report?schema=public
 
-      - name: Generate SQL migration preview when the Prisma schema changes
+      - name: Generate full SQL schema snapshot when the Prisma schema changes
         if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
         env:
           BASE_SHA: ${{ github.event.before }}
           DATABASE_URL: postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report?schema=public
           DIRECT_URL: postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report?schema=public
         run: |
-          if git diff --quiet "$BASE_SHA" "$GITHUB_SHA" -- prisma/schema.prisma prisma/migrations; then
-            echo "Prisma schema and migration history unchanged; skipping migration preview."
+          if git diff --quiet "$BASE_SHA" "$GITHUB_SHA" -- prisma/schema.prisma; then
+            echo "Prisma schema unchanged; skipping SQL schema snapshot."
             exit 0
           fi
-          pnpm exec prisma migrate diff --from-migrations=prisma/migrations --to-schema=prisma/schema.prisma --script --output=prisma/migration-preview.sql
-          test -s "prisma/migration-preview.sql"
+          pnpm exec prisma migrate diff --from-empty --to-schema=prisma/schema.prisma --script --output=prisma/schema-snapshot.sql
+          test -s "prisma/schema-snapshot.sql"
 
       - name: Upload SQL migration preview
-        if: always() && hashFiles('prisma/migration-preview.sql') != ''
+        if: always() && hashFiles('prisma/schema-snapshot.sql') != ''
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: prisma-schema-migration-preview
-          path: prisma/migration-preview.sql
+          name: prisma-schema-sql-snapshot
+          path: prisma/schema-snapshot.sql
           if-no-files-found: ignore
           retention-days: 7
 
