@@ -57,7 +57,7 @@
 
 ## Politique d'évolution
 
-Pas de dépendances alpha, beta, canary ou rc dans les versions livrées. Épingler les versions directes et commiter pnpm-lock.yaml. Une mise à jour doit vérifier la compatibilité Expo SDK/React Native/NativeWind, générer Prisma, examiner SQL, exécuter les tests et construire les trois applications.
+Pas de dépendances alpha, beta, canary ou rc dans les versions livrées. Épingler les versions directes et commiter pnpm-lock.yaml. La CI utilise `pnpm install --frozen-lockfile` pour refuser toute dérive non committée du graphe de dépendances. Une mise à jour doit vérifier la compatibilité Expo SDK/React Native/NativeWind, générer Prisma, examiner SQL, exécuter les tests et construire les trois applications.
 
 ## Références
 

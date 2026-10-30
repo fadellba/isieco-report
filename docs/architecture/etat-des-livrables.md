@@ -1,15 +1,15 @@
 # État des livrables
 
-État observé dans main au 30 octobre 2026. Présent = versionné ; initialisé = squelette ; à faire = pas encore livré ou validé.
+État observé dans la branche de livraison au 30 octobre 2026. Présent = versionné ; initialisé = squelette ; à faire = pas encore livré ou validé.
 
 | Domaine | Livrable | État |
 |---|---|---|
 | Architecture | Architecture client-serveur et monolithe modulaire | Documentée dans architecture-applicative.md et decisions.md. |
 | Architecture | Structure cible du monorepo | Documentée ; le code sera aligné progressivement. |
 | Déploiement | Choix GitHub/Vercel/Render/Supabase | Documenté dans docs/deployment. |
-| CI | Workflow ci.yml | Présent ; les validations doivent rester liées aux commits qui les déclenchent. L’installation n’est pas encore reproductible tant que pnpm-lock.yaml n’est pas versionné. |
+| CI | Workflow ci.yml | Présent ; les validations s’exécutent sur les commits concernés et ignorent les commits de fusion générés par GitHub. |
 | CI/CD | web-deploy.yml et api-deploy.yml | À créer. |
-| Toolchain | Node.js et pnpm | Versions épinglées dans .nvmrc, .node-version et package.json ; lockfile pnpm à versionner avant d’activer --frozen-lockfile en CI. |
+| Toolchain | Node.js et pnpm | Versions épinglées dans .nvmrc, .node-version et package.json ; pnpm-lock.yaml versionné, CI configurée avec --frozen-lockfile. |
 | Web | Connexion, accueil admin et /telecharger | Initialisés ; parcours métier incomplets. |
 | Mobile | Expo, connexion, inscription, navigation initiale | Initialisés ; parcours citoyen et agent incomplets. |
 | Mobile | APK Android signé et GitHub Release | À faire ; aucun APK de release confirmé. |
