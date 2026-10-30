@@ -22,7 +22,7 @@ import type { SetTeamAvailabilityDto } from './dto/team-availability.dto.js';
 import type { CreateTeamDelegationDto, EndTeamDelegationDto } from './dto/team-delegation.dto.js';
 
 type Transaction = Prisma.TransactionClient;
-type EventTarget = { teamId?: string; wasteTypeId?: string };
+type EventTarget = { teamId?: string; wasteTypeId?: string; regionId?: string; departmentId?: string; communeId?: string };
 type EventPayload = {
   type: string;
   actorId: string;
@@ -67,6 +67,9 @@ export class ReferentialsService {
         origine: 'API',
         idActeur: payload.actorId,
         ...(payload.target.teamId ? { idEquipeCible: payload.target.teamId } : {}),
+        ...(payload.target.regionId ? { idRegionCible: payload.target.regionId } : {}),
+        ...(payload.target.departmentId ? { idDepartementCible: payload.target.departmentId } : {}),
+        ...(payload.target.communeId ? { idCommuneCible: payload.target.communeId } : {}),
         ...(payload.target.wasteTypeId ? { idTypeDechetCible: payload.target.wasteTypeId } : {}),
         ...(payload.before ? { donneesAvant: payload.before as Prisma.InputJsonObject } : {}),
         ...(payload.after ? { donneesApres: payload.after as Prisma.InputJsonObject } : {}),
@@ -217,73 +220,101 @@ export class ReferentialsService {
     });
   }
 
-  async createRegion(dto: CreateRegionDto) {
+  async createRegion(dto: CreateRegionDto, authUserId: string) {
+    const actorId = await this.actorId(authUserId);
     try {
-      return await this.prisma.region.create({
-        data: {
-          codeRegion: dto.codeRegion?.trim() || null,
-          nomRegion: dto.nomRegion.trim(),
-          actif: dto.actif ?? true,
-        },
+      return await this.prisma.$transaction(async (tx) => {
+        const region = await tx.region.create({
+          data: {
+            codeRegion: dto.codeRegion?.trim() || null,
+            nomRegion: dto.nomRegion.trim(),
+            actif: dto.actif ?? true,
+          },
+        });
+        await this.writeEvent(tx, {
+          type: 'REFERENTIEL_REGION_CREE',
+          actorId,
+          target: { regionId: region.idRegion },
+          after: { codeRegion: region.codeRegion, nomRegion: region.nomRegion, actif: region.actif },
+        });
+        return region;
       });
     } catch (error) {
       this.rethrowUniqueConflict(error, 'Une région avec ce code ou ce nom existe déjà.');
     }
   }
 
-  async updateRegion(id: string, dto: UpdateRegionDto) {
+  async updateRegion(id: string, dto: UpdateRegionDto, authUserId: string) {
+    const actorId = await this.actorId(authUserId);
     const current = await this.prisma.region.findUnique({ where: { idRegion: id } });
     if (!current) throw new NotFoundException('Région introuvable.');
-    if (Object.keys(dto).length === 0) return current;
-    try {
-      return await this.prisma.region.update({
-        where: { idRegion: id },
-        data: {
-          ...(dto.nomRegion !== undefined ? { nomRegion: dto.nomRegion.trim() } : {}),
-          ...(dto.actif !== undefined ? { actif: dto.actif } : {}),
-        },
+    if (dto.actif === undefined || dto.actif === current.actif) return current;
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.region.update({ where: { idRegion: id }, data: { actif: dto.actif } });
+      await this.writeEvent(tx, {
+        type: 'REFERENTIEL_REGION_ACTIVATION_MODIFIEE',
+        actorId,
+        target: { regionId: id },
+        before: { actif: current.actif },
+        after: { actif: updated.actif, nomRegion: updated.nomRegion },
       });
-    } catch (error) {
-      this.rethrowUniqueConflict(error, 'Une région avec ce nom existe déjà.');
-    }
+      return updated;
+    });
   }
 
-  async createDepartment(regionId: string, dto: CreateDepartmentDto) {
+  async createDepartment(regionId: string, dto: CreateDepartmentDto, authUserId: string) {
+    const actorId = await this.actorId(authUserId);
     const region = await this.prisma.region.findUnique({ where: { idRegion: regionId } });
     if (!region) throw new NotFoundException('Région introuvable.');
     if (!region.actif) throw new ConflictException('Une région inactive ne peut recevoir de nouveau département.');
     try {
-      return await this.prisma.departement.create({
-        data: {
-          idRegion: regionId,
-          codeDepartement: dto.codeDepartement?.trim() || null,
-          nomDepartement: dto.nomDepartement.trim(),
-          actif: dto.actif ?? true,
-        },
+      return await this.prisma.$transaction(async (tx) => {
+        const department = await tx.departement.create({
+          data: {
+            idRegion: regionId,
+            codeDepartement: dto.codeDepartement?.trim() || null,
+            nomDepartement: dto.nomDepartement.trim(),
+            actif: dto.actif ?? true,
+          },
+        });
+        await this.writeEvent(tx, {
+          type: 'REFERENTIEL_DEPARTEMENT_CREE',
+          actorId,
+          target: { departmentId: department.idDepartement },
+          after: {
+            codeDepartement: department.codeDepartement,
+            nomDepartement: department.nomDepartement,
+            regionId,
+            actif: department.actif,
+          },
+        });
+        return department;
       });
     } catch (error) {
       this.rethrowUniqueConflict(error, 'Un département avec ce code ou ce nom existe déjà dans cette région.');
     }
   }
 
-  async updateDepartment(id: string, dto: UpdateDepartmentDto) {
+  async updateDepartment(id: string, dto: UpdateDepartmentDto, authUserId: string) {
+    const actorId = await this.actorId(authUserId);
     const current = await this.prisma.departement.findUnique({ where: { idDepartement: id } });
     if (!current) throw new NotFoundException('Département introuvable.');
-    if (Object.keys(dto).length === 0) return current;
-    try {
-      return await this.prisma.departement.update({
-        where: { idDepartement: id },
-        data: {
-          ...(dto.nomDepartement !== undefined ? { nomDepartement: dto.nomDepartement.trim() } : {}),
-          ...(dto.actif !== undefined ? { actif: dto.actif } : {}),
-        },
+    if (dto.actif === undefined || dto.actif === current.actif) return current;
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.departement.update({ where: { idDepartement: id }, data: { actif: dto.actif } });
+      await this.writeEvent(tx, {
+        type: 'REFERENTIEL_DEPARTEMENT_ACTIVATION_MODIFIEE',
+        actorId,
+        target: { departmentId: id },
+        before: { actif: current.actif },
+        after: { actif: updated.actif, nomDepartement: updated.nomDepartement, regionId: updated.idRegion },
       });
-    } catch (error) {
-      this.rethrowUniqueConflict(error, 'Un département avec ce nom existe déjà dans cette région.');
-    }
+      return updated;
+    });
   }
 
-  async createCommune(departmentId: string, dto: CreateCommuneDto) {
+  async createCommune(departmentId: string, dto: CreateCommuneDto, authUserId: string) {
+    const actorId = await this.actorId(authUserId);
     const department = await this.prisma.departement.findUnique({
       where: { idDepartement: departmentId },
       include: { region: true },
@@ -293,34 +324,49 @@ export class ReferentialsService {
       throw new ConflictException('Une commune ne peut être ajoutée à une subdivision inactive.');
     }
     try {
-      return await this.prisma.commune.create({
-        data: {
-          idDepartement: departmentId,
-          codeCommune: dto.codeCommune?.trim() || null,
-          nomCommune: dto.nomCommune.trim(),
-          actif: dto.actif ?? true,
-        },
+      return await this.prisma.$transaction(async (tx) => {
+        const commune = await tx.commune.create({
+          data: {
+            idDepartement: departmentId,
+            codeCommune: dto.codeCommune?.trim() || null,
+            nomCommune: dto.nomCommune.trim(),
+            actif: dto.actif ?? true,
+          },
+        });
+        await this.writeEvent(tx, {
+          type: 'REFERENTIEL_COMMUNE_CREE',
+          actorId,
+          target: { communeId: commune.idCommune },
+          after: {
+            codeCommune: commune.codeCommune,
+            nomCommune: commune.nomCommune,
+            departmentId,
+            actif: commune.actif,
+          },
+        });
+        return commune;
       });
     } catch (error) {
       this.rethrowUniqueConflict(error, 'Une commune avec ce code ou ce nom existe déjà dans ce département.');
     }
   }
 
-  async updateCommune(id: string, dto: UpdateCommuneDto) {
+  async updateCommune(id: string, dto: UpdateCommuneDto, authUserId: string) {
+    const actorId = await this.actorId(authUserId);
     const current = await this.prisma.commune.findUnique({ where: { idCommune: id } });
     if (!current) throw new NotFoundException('Commune introuvable.');
-    if (Object.keys(dto).length === 0) return current;
-    try {
-      return await this.prisma.commune.update({
-        where: { idCommune: id },
-        data: {
-          ...(dto.nomCommune !== undefined ? { nomCommune: dto.nomCommune.trim() } : {}),
-          ...(dto.actif !== undefined ? { actif: dto.actif } : {}),
-        },
+    if (dto.actif === undefined || dto.actif === current.actif) return current;
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.commune.update({ where: { idCommune: id }, data: { actif: dto.actif } });
+      await this.writeEvent(tx, {
+        type: 'REFERENTIEL_COMMUNE_ACTIVATION_MODIFIEE',
+        actorId,
+        target: { communeId: id },
+        before: { actif: current.actif },
+        after: { actif: updated.actif, nomCommune: updated.nomCommune, departmentId: updated.idDepartement },
       });
-    } catch (error) {
-      this.rethrowUniqueConflict(error, 'Une commune avec ce nom existe déjà dans ce département.');
-    }
+      return updated;
+    });
   }
 
   // Teams and their temporal memberships, skills, availability and delegations.
