@@ -36,4 +36,6 @@ Une version de travail antérieure du MLD mentionnait encore un condensat de jet
 
 ## Vérifications
 
-La CI génère le client Prisma, exécute les contrôles TypeScript et les builds, puis génère un aperçu SQL lorsque `schema.prisma` change. L'aperçu doit être relu avant d'être enregistré comme migration versionnée. La réussite de la CI ne prouve pas à elle seule l'application des migrations sur une base Supabase ni le bon fonctionnement des parcours métier.
+La configuration Prisma accepte `SHADOW_DATABASE_URL`, qui doit pointer vers une base PostgreSQL distincte de la base applicative. En local, Docker Compose expose la base applicative sur le port 5432 et la base shadow sur le port 5433. En CI, deux services PostgreSQL isolés sont utilisés.
+
+La CI applique les migrations existantes sur une base vierge, vérifie leur statut, puis compare l'historique `prisma/migrations` au schéma Prisma avec `prisma migrate diff --from-migrations`. Le SQL additif est archivé comme artefact et doit être relu avant d'être enregistré comme migration versionnée. Ce diff n'inclut pas les invariants SQL non pris en charge par Prisma, qui doivent être ajoutés et testés explicitement. La réussite de la CI ne prouve pas à elle seule le bon fonctionnement des parcours métier ou la conformité d'un déploiement Supabase.
