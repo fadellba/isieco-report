@@ -1,14 +1,14 @@
 # Architecture
 
-## Décision d'ensemble
+## Architecture applicative cible
 
-ISI-Eco Report suit une architecture client-serveur : une application Web d'administration, une application Mobile unique pour les citoyens et agents de terrain, et une API REST NestJS déployée comme monolithe modulaire.
+![Schéma de l’architecture applicative](architecture-applicative.svg)
 
-Les modules partagent un backend et PostgreSQL. Aucun besoin mesuré ne justifie des microservices pour le MVP.
+La cible comprend une application Web d'administration, une application Mobile unique pour les citoyens et les agents de terrain, et une API REST NestJS déployée comme monolithe modulaire. Les modules partagent un backend et PostgreSQL. Aucun besoin mesuré ne justifie des microservices pour le MVP.
 
 ## Documents
 
-- [Architecture applicative](architecture-applicative.md)
+- [Architecture applicative détaillée](architecture-applicative.md)
 - [Organisation cible du monorepo](organisation-monorepo.md)
 - [Décisions d'architecture (ADR)](decisions.md)
 - [Sécurité et habilitations](securite-et-habilitations.md)

@@ -1,5 +1,7 @@
 # Contexte système
 
+![Diagramme de contexte ISI-Eco Report](contexte-systeme.svg)
+
 ISI-Eco Report couvre le signalement citoyen, la qualification, la création et le pilotage des dossiers, les affectations, les interventions et la vérification de résolution.
 
 ~~~mermaid

@@ -1,5 +1,11 @@
 # Déploiement et exploitation
 
+## Schéma de déploiement
+
+![Architecture de déploiement ISI-Eco Report](architecture-deploiement.svg)
+
+Voir [l'architecture de déploiement détaillée](architecture-deploiement.md) pour la description des flux, des plateformes et des limites.
+
 ## Cible MVP
 
 GitHub héberge le monorepo et les workflows. Vercel héberge le Web React/Vite, Render exécute l'API NestJS, Supabase fournit PostgreSQL, Auth et Storage. L'application Android Expo est compilée séparément ; l'APK signé sera publié dans une GitHub Release et lié depuis la page publique /telecharger.
@@ -16,33 +22,6 @@ GitHub héberge le monorepo et les workflows. Vercel héberge le Web React/Vite,
 | Distribution Android | GitHub Releases | APK signé, versionné, avec somme SHA-256. |
 
 Les offres gratuites sont destinées au développement, aux tests et à la démonstration. Elles ne garantissent ni disponibilité permanente, ni support, ni coût nul en exploitation réelle. Render Free peut mettre en veille un service inactif ; Supabase Free a des quotas et conditions de pause ; Vercel Hobby est soumis à ses conditions d'utilisation personnelle/non commerciale. Vérifier les conditions avant mise en service publique.
-
-## Vue de déploiement
-
-~~~mermaid
-flowchart TB
-  GH[GitHub monorepo]
-  CI[GitHub Actions]
-  WEB[Vercel - Web + /telecharger]
-  API[Render - NestJS API]
-  DB[(Supabase PostgreSQL)]
-  AUTH[Supabase Auth]
-  MEDIA[(Supabase Storage)]
-  APK[GitHub Release - APK signé]
-  MOB[App Expo sur Android]
-
-  GH --> CI
-  GH --> WEB
-  GH --> API
-  WEB -->|HTTPS / REST| API
-  MOB -->|HTTPS / REST| API
-  WEB --> AUTH
-  MOB --> AUTH
-  API -->|Validation JWT| AUTH
-  API --> DB
-  API --> MEDIA
-  WEB -->|Lien de téléchargement| APK
-~~~
 
 ## Parcours d'une requête
 

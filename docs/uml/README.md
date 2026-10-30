@@ -1,13 +1,27 @@
 # Livrables UML
 
-Les diagrammes de cette rubrique sont versionnés en texte Mermaid afin de permettre leur revue et leur évolution dans Git.
+Les diagrammes sont intégrés comme SVG vectoriels, affichables directement dans GitHub et lisibles au zoom. Les sources textuelles Mermaid restent présentes à côté des images.
 
-| Vue | Source |
-|---|---|
-| Contexte système | [contexte-systeme.md](contexte-systeme.md) |
-| Cas d'utilisation | [cas-utilisation.md](cas-utilisation.md) |
-| Modèle de données | [MLD v2.13 / Prisma](../merise/README.md) |
+## Diagramme de contexte
 
-Les livrables graphiques initiaux de conception comprenaient le contexte, le cas d'utilisation citoyen et plusieurs vues de classes principales/détaillées. Leur import graphique dans Git reste à faire après vérification de leur version et correspondance au MLD v2.13. Les diagrammes Mermaid présents sont les sources texte versionnées pour les vues essentielles.
+![Diagramme de contexte ISI-Eco Report](contexte-systeme.svg)
 
-Toute évolution des acteurs ou associations doit rester alignée sur les huit rôles et les 38 modèles métier. Un diagramme graphique obsolète ne prévaut pas sur le MLD validé et le schéma Prisma.
+Source et explications : [contexte-systeme.md](contexte-systeme.md).
+
+## Diagramme de cas d'utilisation
+
+![Diagramme UML des cas d'utilisation](cas-utilisation.svg)
+
+Source et préconditions : [cas-utilisation.md](cas-utilisation.md).
+
+## Diagramme de classes / données
+
+![Vue relationnelle des 38 modèles Prisma](modele-donnees.svg)
+
+Cette vue est générée à partir du schéma Prisma actuel et représente les 38 modèles métier et leurs relations. Le détail des colonnes, clés et contraintes demeure dans le schéma Prisma et le [MLD v2.13](../merise/README.md).
+
+## Note sur les livrables historiques
+
+Les fichiers de conception initiaux contiennent également des vues détaillées des cas d'utilisation par rôle et des diagrammes de classes historiques. La vue de données ci-dessus a été régénérée à partir du schéma Prisma actuel afin d'éviter qu'un ancien diagramme incomplet soit interprété comme le modèle définitif.
+
+Toute évolution des acteurs ou associations doit rester alignée sur les huit rôles et les 38 modèles métier.

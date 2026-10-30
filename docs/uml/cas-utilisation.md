@@ -1,5 +1,7 @@
 # Cas d'utilisation
 
+![Diagramme UML synthétique des cas d'utilisation](cas-utilisation.svg)
+
 ~~~mermaid
 flowchart TB
   C[Citoyen]

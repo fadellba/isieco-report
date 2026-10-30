@@ -4,6 +4,12 @@
 
 Le modèle de référence est le MLD v2.13. Le fichier prisma/schema.prisma contient 38 modèles métier. auth.users est géré en dehors du schéma métier par Supabase Auth. La table SESSION historique est exclue car les sessions et jetons sont gérés par Supabase Auth.
 
+## Vue graphique des données
+
+![Vue des 38 modèles et relations Prisma](../uml/modele-donnees.svg)
+
+Cette vue est générée à partir du schéma Prisma courant. Le détail des colonnes, relations et contraintes est conservé dans le fichier [schema.prisma](../../prisma/schema.prisma).
+
 ## Documents
 
 - [Traduction du MLD v2.13 vers Prisma](implementation-mld-v2.13.md)

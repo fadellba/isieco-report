@@ -1,5 +1,11 @@
 # Architecture applicative
 
+## Vue graphique
+
+![ISI-Eco Report - architecture applicative cible](architecture-applicative.svg)
+
+Le diagramme SVG est versionné dans le dépôt et s'affiche directement sur GitHub. Il est vectoriel et reste lisible au zoom.
+
 ## Décision
 
 Pour le MVP, la cible comprend une application Web d'administration, une application Mobile unique avec parcours citoyen et agent, et un backend NestJS commun exposant une API REST sous /api/v1. Les règles métier et contrôles d'autorisation sont exécutés côté backend.
