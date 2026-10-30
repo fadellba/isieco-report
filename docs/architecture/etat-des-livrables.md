@@ -17,7 +17,8 @@
 | Backend | Accounts | Première implémentation. |
 | Backend | Reports, cases, qualification, assignments, interventions, verification, referentials, audit | Squelettes ; règles et parcours à implémenter. |
 | Merise | MLD v2.13 dans Prisma | 38 modèles présents. |
-| Merise | Migrations SQL complètes | Incomplètes ; migration comptes/rôles initiale présente, reste à matérialiser et tester. |
+| Base de données | PostgreSQL local et base shadow | Deux services Docker distincts et configuration SHADOW_DATABASE_URL ajoutés ; à valider par la CI. |
+| Merise | Migrations SQL complètes | Incomplètes ; la migration comptes/rôles est appliquée sur PostgreSQL vierge en CI et le diff additif vers les 38 modèles est archivé ; contraintes complémentaires et migration générée restent à relire, compléter et tester. |
 | UML | Diagramme de cas d’utilisation détaillé | SVG avec 8 acteurs et relations `<<include>>` / `<<extend>>`, plus fiches par acteur. Spécification cible ; non équivalente à une implémentation. |
 | UML | Diagramme de classes détaillé | Source Mermaid versionnée avec les 38 classes, attributs, clés et associations par domaine ; générée depuis le schéma Prisma. |
 | UML | Diagrammes de contexte et vue relationnelle | SVG versionnés dans docs/uml. |
