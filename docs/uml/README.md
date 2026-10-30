@@ -1,6 +1,6 @@
 # Livrables UML
 
-Les diagrammes sont intégrés comme SVG vectoriels, affichables directement dans GitHub et lisibles au zoom.
+Les diagrammes sont intégrés dans la documentation sous forme de graphiques Mermaid ou SVG, avec leurs sources textuelles versionnées.
 
 ## Diagramme de contexte
 
@@ -15,14 +15,20 @@ Source et explications : [contexte-systeme.md](contexte-systeme.md).
 - [Présentation du diagramme et conventions UML](cas-utilisation.md)
 - [Description détaillée des cas d’utilisation par acteur](cas-utilisation-par-acteur.md)
 
-Le diagramme représente les huit rôles métier et explicite les relations `<<include>>` et `<<extend>>`. Les fiches décrivent les préconditions, objectifs, résultats et règles propres à chaque acteur. Ces spécifications décrivent le périmètre fonctionnel cible et ne valent pas preuve d’implémentation.
+Le diagramme représente les huit rôles métier et explicite les relations `<<include>>` et `<<extend>>`. Les fiches décrivent les préconditions, objectifs, résultats et règles propres à chaque acteur.
 
-## Diagramme de classes / données
+## Diagramme de classes UML
 
-![Vue relationnelle des 38 modèles Prisma](modele-donnees.svg)
+[Ouvrir le diagramme de classes détaillé](diagramme-classes.md).
 
-Cette vue est générée à partir du schéma Prisma actuel et représente les 38 modèles métier et leurs relations. Le détail des colonnes, clés et contraintes demeure dans le schéma Prisma et le [MLD v2.13](../merise/README.md).
+Cette source Mermaid contient les 38 classes métier, leurs attributs, les marqueurs PK/FK/UQ et les associations du schéma Prisma. Cinq vues par domaine métier sont proposées, suivies de l'inventaire des associations inter-domaines.
 
-## Note sur les livrables historiques
+## Vue relationnelle synthétique du modèle de données
 
-Les documents de conception initiaux contiennent également des vues historiques des cas d'utilisation par rôle. Les spécifications présentées ici sont la référence consolidée à maintenir avec les huit rôles métier, le MLD v2.13 et les règles de sécurité.
+![Vue relationnelle synthétique des 38 modèles Prisma](modele-donnees.svg)
+
+Cette vue SVG sert d'index visuel du MLD. Elle ne remplace pas le diagramme de classes détaillé. Les colonnes, clés et contraintes sont définies dans [schema.prisma](../../prisma/schema.prisma) et le [MLD v2.13](../merise/README.md).
+
+## Référence
+
+Le modèle métier actuel est défini par les 38 modèles Prisma. Les spécifications UML décrivent la conception cible et ne valent pas preuve d’implémentation de tous les parcours.

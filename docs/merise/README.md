@@ -2,13 +2,17 @@
 
 ## Référence
 
-Le modèle de référence est le MLD v2.13. Le fichier prisma/schema.prisma contient 38 modèles métier. auth.users est géré en dehors du schéma métier par Supabase Auth. La table SESSION historique est exclue car les sessions et jetons sont gérés par Supabase Auth.
+Le modèle de référence est le MLD v2.13. Le fichier [prisma/schema.prisma](../../prisma/schema.prisma) contient 38 modèles métier. `auth.users` est géré en dehors du schéma métier par Supabase Auth. La table SESSION historique est exclue car les sessions et jetons sont gérés par Supabase Auth.
 
-## Vue graphique des données
+## Vue relationnelle synthétique des données
 
-![Vue des 38 modèles et relations Prisma](../uml/modele-donnees.svg)
+![Vue relationnelle synthétique des 38 modèles Prisma](../uml/modele-donnees.svg)
 
-Cette vue est générée à partir du schéma Prisma courant. Le détail des colonnes, relations et contraintes est conservé dans le fichier [schema.prisma](../../prisma/schema.prisma).
+Cette vue donne une vision globale des modèles et de leurs regroupements. Elle ne constitue pas un diagramme de classes détaillé.
+
+## Diagramme de classes UML
+
+Voir le [diagramme de classes UML détaillé](../uml/diagramme-classes.md), qui présente les attributs, clés et associations par domaine métier.
 
 ## Documents
 
@@ -18,7 +22,7 @@ Cette vue est générée à partir du schéma Prisma courant. Le détail des col
 
 ## Inventaire des 38 modèles
 
-Utilisateur, Role, UtilisateurRole, TypeDechet, Equipe, AppartenanceEquipe, CompetenceEquipe, Signalement, PhotoSignalement, ContenuSignalement, DossierTraitement, RattachementSignalement, ContenuDossier, Affectation, Intervention, PhotoIntervention, VerificationResolution, EvenementMetier, DemandeComplement, ReponseComplement, QualificationSignalement, ProvenanceContenuDossier, IdempotenceSignalement, Region, Departement, Commune, DelegationDecisionEquipe, DisponibiliteEquipe, HistoriqueDisponibiliteEquipe, HistoriqueLocalisationDossier, HistoriquePrioriteDossier, HistoriquePoints, Notification, PreferencesVisibiliteCitoyen, Badge, BadgeUtilisateur, PublicationFlux et PhotoPublication.
+Utilisateur, Role, UtilisateurRole, PreferencesVisibiliteCitoyen, Badge, BadgeUtilisateur, HistoriquePoints, Notification, TypeDechet, Equipe, AppartenanceEquipe, CompetenceEquipe, Region, Departement, Commune, DelegationDecisionEquipe, DisponibiliteEquipe, HistoriqueDisponibiliteEquipe, Signalement, PhotoSignalement, ContenuSignalement, DemandeComplement, ReponseComplement, QualificationSignalement, IdempotenceSignalement, DossierTraitement, RattachementSignalement, ContenuDossier, ProvenanceContenuDossier, Affectation, Intervention, PhotoIntervention, VerificationResolution, HistoriqueLocalisationDossier, HistoriquePrioriteDossier, EvenementMetier, PublicationFlux, PhotoPublication.
 
 ## Modèle vs migrations
 

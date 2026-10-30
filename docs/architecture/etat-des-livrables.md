@@ -16,8 +16,9 @@
 | Backend | Reports, cases, qualification, assignments, interventions, verification, referentials, audit | Squelettes ; règles et parcours à implémenter. |
 | Merise | MLD v2.13 dans Prisma | 38 modèles présents. |
 | Merise | Migrations SQL complètes | Incomplètes ; migration comptes/rôles initiale présente, reste à matérialiser et tester. |
-| UML | Diagramme de cas d’utilisation détaillé | SVG avec 8 acteurs et relations `<<include>>` / `<<extend>>`, plus fiches de cas d’utilisation par acteur. Spécification cible ; non équivalente à une implémentation. |
-| UML | Diagramme de contexte et modèle de données | SVG versionnés dans docs/uml. |
+| UML | Diagramme de cas d’utilisation détaillé | SVG avec 8 acteurs et relations `<<include>>` / `<<extend>>`, plus fiches par acteur. Spécification cible ; non équivalente à une implémentation. |
+| UML | Diagramme de classes détaillé | Source Mermaid versionnée avec les 38 classes, attributs, clés et associations par domaine ; générée depuis le schéma Prisma. |
+| UML | Diagrammes de contexte et vue relationnelle | SVG versionnés dans docs/uml. |
 | API | OpenAPI | Générable et archivé comme artefact CI. |
 | Exploitation | Projet Supabase distant et déploiements | Non validés. |
 
