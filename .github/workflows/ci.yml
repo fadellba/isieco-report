@@ -19,6 +19,33 @@ jobs:
     name: Install, validate and build
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: isieco_report
+          POSTGRES_USER: isieco
+          POSTGRES_PASSWORD: isieco_dev_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U isieco -d isieco_report"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      postgres-shadow:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: isieco_shadow
+          POSTGRES_USER: isieco
+          POSTGRES_PASSWORD: isieco_dev_password
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U isieco -d isieco_shadow"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     steps:
       - name: Checkout source
         uses: actions/checkout@v7
@@ -71,6 +98,30 @@ jobs:
         env:
           DATABASE_URL: postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report?schema=public
           DIRECT_URL: postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report?schema=public
+
+      - name: Apply committed migrations to a clean PostgreSQL database
+        run: pnpm db:deploy
+        env:
+          DATABASE_URL: postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report?schema=public
+          DIRECT_URL: postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report?schema=public
+
+      - name: Verify migration history and generate additive SQL preview
+        run: |
+          pnpm exec prisma migrate status
+          pnpm exec prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --script --output=prisma/migration-preview.sql
+        env:
+          DATABASE_URL: postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report?schema=public
+          DIRECT_URL: postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report?schema=public
+          SHADOW_DATABASE_URL: postgresql://isieco:isieco_dev_password@localhost:5433/isieco_shadow?schema=public
+
+      - name: Upload additive SQL migration preview
+        if: always() && hashFiles('prisma/migration-preview.sql') != ''
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: prisma-additive-migration-preview
+          path: prisma/migration-preview.sql
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Generate full SQL schema snapshot when the Prisma schema changes
         if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
