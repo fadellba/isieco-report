@@ -86,15 +86,15 @@ jobs:
             --from-schema "$RUNNER_TEMP/schema-before.prisma" \\
             --to-schema prisma/schema.prisma \\
             --script \\
-            --output "$RUNNER_TEMP/prisma-migration.sql"
-          test -s "$RUNNER_TEMP/prisma-migration.sql"
+            --output "prisma/migration-preview.sql"
+          test -s "prisma/migration-preview.sql"
 
       - name: Upload SQL migration preview
-        if: always() && hashFiles('/home/runner/work/_temp/prisma-migration.sql') != ''
+        if: always() && hashFiles('prisma/migration-preview.sql') != ''
         uses: actions/upload-artifact@v7.0.2
         with:
           name: prisma-schema-migration-preview
-          path: ${{ runner.temp }}/prisma-migration.sql
+          path: prisma/migration-preview.sql
           if-no-files-found: ignore
           retention-days: 7
 
