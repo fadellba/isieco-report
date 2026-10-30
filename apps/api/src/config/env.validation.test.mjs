@@ -12,8 +12,9 @@ const validEnvironment = {
   NODE_ENV: 'test',
 };
 
-test('accepts a valid API environment', () => {
-  assert.equal(validateEnvironment({ ...validEnvironment }), validEnvironment);
+test('accepts a valid API environment without mutating it', () => {
+  const environment = { ...validEnvironment };
+  assert.deepEqual(validateEnvironment(environment), environment);
 });
 
 test('rejects missing required database and Supabase settings', () => {
