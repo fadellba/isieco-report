@@ -26,11 +26,11 @@ Utilisateur, Role, UtilisateurRole, PreferencesVisibiliteCitoyen, Badge, BadgeUt
 
 ## Modèle vs migrations
 
-Le schéma Prisma décrit 38 modèles, mais l'historique de migrations versionnées est encore incomplet : la migration initiale porte sur comptes et rôles. Un SQL snapshot CI généré depuis un schéma vide n'est pas une migration additive depuis la base existante.
+Le schéma Prisma décrit 38 modèles, mais l'historique de migrations versionnées est encore incomplet : les premières migrations portent sur comptes/rôles et les autres modèles métier. Un SQL snapshot CI généré depuis un schéma vide n'est pas une migration additive depuis la base existante.
 
-Le dépôt configure maintenant deux bases PostgreSQL locales distinctes : la base applicative et la base shadow utilisée par Prisma Migrate. La commande `pnpm db:migration:preview` compare l'historique de migrations existant au schéma Prisma et produit un SQL additif ; elle ne repart pas d'un schéma vide et ne modifie pas la base applicative.
+Le dépôt configure deux bases PostgreSQL locales distinctes : la base applicative et la base shadow utilisée par Prisma Migrate. La commande `pnpm db:migration:preview` compare l'historique de migrations existant au schéma Prisma et produit un SQL additif ; elle ne repart pas d'un schéma vide et ne modifie pas la base applicative.
 
-La migration `20261030230000_mld_v213_domain_models` matérialise les 35 tables métier manquantes. La migration `20261030231500_mld_v213_integrity_constraints` ajoute les contraintes SQL non représentables dans le schéma Prisma : périodes, dates de rétention, coordonnées, quantités, cibles exclusives d'événements/photos et unicités conditionnelles des relations courantes.
+Les migrations versionnées matérialisent les 38 modèles, puis ajoutent les contraintes SQL non représentables dans Prisma : périodes, dates de rétention, coordonnées, quantités, cibles exclusives d'événements/photos et unicités conditionnelles des relations courantes. La migration `20261030233000_geographic_audit_targets` ajoute les clés étrangères, index et cible exclusive des événements d'audit sur régions, départements et communes.
 
 La CI applique les migrations versionnées sur une base PostgreSQL vierge et exécute les tests d'intégrité négatifs sur PostgreSQL réel. La commande locale ciblée est `TEST_DATABASE_URL=postgresql://... pnpm db:test:invariants`. Les tests vérifient que les violations sont refusées par le moteur PostgreSQL, pas seulement par la validation cliente.
 
