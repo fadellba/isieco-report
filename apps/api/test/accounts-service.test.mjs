@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { UnauthorizedException } from '@nestjs/common';
 import test from 'node:test';
-import { AccountsService } from '../src/modules/accounts/accounts.service.ts';
+import { AccountsService } from '../dist/modules/accounts/accounts.service.js';
 
 const targetId = '11111111-1111-4111-8111-111111111111';
 const actorId = '22222222-2222-4222-8222-222222222222';
