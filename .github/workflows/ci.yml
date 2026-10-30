@@ -173,6 +173,8 @@ jobs:
 
       - name: Run application tests
         run: pnpm test
+        env:
+          TEST_DATABASE_URL: postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report
 
       - name: Build Web, API and Mobile applications
         run: pnpm build
