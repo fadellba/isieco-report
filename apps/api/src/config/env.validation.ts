@@ -1,11 +1,16 @@
 const POSTGRES_PROTOCOLS = new Set(['postgres:', 'postgresql:']);
 const HTTP_PROTOCOLS = new Set(['http:', 'https:']);
 
-function isNonEmptyString(value) {
+function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
-function parseUrl(value, key, allowedProtocols, errors) {
+function parseUrl(
+  value: unknown,
+  key: string,
+  allowedProtocols: ReadonlySet<string>,
+  errors: string[],
+): URL | null {
   if (!isNonEmptyString(value)) {
     errors.push(`${key} must be a non-empty URL.`);
     return null;
@@ -25,14 +30,13 @@ function parseUrl(value, key, allowedProtocols, errors) {
 }
 
 /**
- * Validate the runtime configuration before NestJS creates application providers.
+ * Validate runtime configuration before NestJS creates application providers.
  * Only variable names are included in errors; secret values are never echoed.
- *
- * @param {Record<string, unknown>} config
- * @returns {Record<string, unknown>}
  */
-export function validateEnvironment(config) {
-  const errors = [];
+export function validateEnvironment(
+  config: Record<string, unknown>,
+): Record<string, unknown> {
+  const errors: string[] = [];
 
   parseUrl(config.DATABASE_URL, 'DATABASE_URL', POSTGRES_PROTOCOLS, errors);
   parseUrl(config.SUPABASE_URL, 'SUPABASE_URL', HTTP_PROTOCOLS, errors);
@@ -41,8 +45,9 @@ export function validateEnvironment(config) {
     errors.push('SUPABASE_ANON_KEY must be configured.');
   }
 
-  if (config.DIRECT_URL !== undefined && config.DIRECT_URL !== '') {
-    parseUrl(config.DIRECT_URL, 'DIRECT_URL', POSTGRES_PROTOCOLS, errors);
+  const directUrl = config.DIRECT_URL;
+  if (directUrl !== undefined && directUrl !== null && directUrl !== '') {
+    parseUrl(directUrl, 'DIRECT_URL', POSTGRES_PROTOCOLS, errors);
   }
 
   const port = config.PORT === undefined ? 3000 : Number(config.PORT);
@@ -50,15 +55,22 @@ export function validateEnvironment(config) {
     errors.push('PORT must be an integer between 1 and 65535.');
   }
 
-  if (config.WEB_ORIGIN !== undefined && config.WEB_ORIGIN.trim() !== '') {
-    const origins = config.WEB_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean);
-    for (const origin of origins) {
-      const parsed = parseUrl(origin, 'WEB_ORIGIN', HTTP_PROTOCOLS, errors);
-      if (
-        parsed &&
-        (parsed.username || parsed.password || parsed.pathname !== '/' || parsed.search || parsed.hash)
-      ) {
-        errors.push('WEB_ORIGIN entries must be origins without paths, credentials, queries or fragments.');
+  const webOrigin = config.WEB_ORIGIN;
+  if (webOrigin !== undefined && webOrigin !== null && webOrigin !== '') {
+    if (!isNonEmptyString(webOrigin)) {
+      errors.push('WEB_ORIGIN must be a comma-separated list of HTTP(S) origins.');
+    } else {
+      const origins = webOrigin.split(',').map((origin) => origin.trim()).filter(Boolean);
+      for (const origin of origins) {
+        const parsed = parseUrl(origin, 'WEB_ORIGIN', HTTP_PROTOCOLS, errors);
+        if (
+          parsed &&
+          (parsed.username || parsed.password || parsed.pathname !== '/' || parsed.search || parsed.hash)
+        ) {
+          errors.push(
+            'WEB_ORIGIN entries must be origins without paths, credentials, queries or fragments.',
+          );
+        }
       }
     }
   }
