@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { validateEnvironment } from './env.validation.ts';
+import { validateEnvironment } from '../../dist/config/env.validation.js';
 
 const validEnvironment = {
   DATABASE_URL: 'postgresql://isieco:secret@localhost:5432/isieco_report?schema=public',

@@ -8,8 +8,8 @@
     "build": "nest build",
     "start": "node dist/main.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "node --experimental-strip-types --test",
-    "test:database:invariants": "node --experimental-strip-types --test test/database-invariants.test.mjs",
+    "test": "nest build && node --test",
+    "test:database:invariants": "node --test test/database-invariants.test.mjs",
     "openapi:generate": "nest build && node dist/openapi/generate-openapi.js"
   },
   "dependencies": {

@@ -26,6 +26,9 @@ Les secrets de session ne sont pas copiés dans PostgreSQL métier. La table SES
 - Le premier ADMINISTRATEUR_COMPTES est provisionné par une procédure contrôlée.
 - Les responsabilités qualification, affectation, intervention et vérification sont distinctes.
 - Chaque ressource (signalement, dossier, média, historique) fait l'objet d'un contrôle de propriété et de permission.
+- Les attributions et révocations de rôles sont exécutées dans une transaction sérialisable et journalisées dans `EvenementMetier` avec acteur, cible, date, motif et code du rôle.
+- L'attribution du même rôle actif est protégée par un index unique partiel PostgreSQL ; les conflits concurrents sont retournés comme `409 Conflict`.
+- La révocation du dernier compte `ADMINISTRATEUR_COMPTES` actif est interdite ; les opérations de rôle et leur événement d'audit sont atomiques.
 - Les décisions sensibles conservent acteur, date, motif et identifiant de corrélation lorsque disponible.
 - Les erreurs ne divulguent pas SQL, stack traces, jetons ou secrets.
 

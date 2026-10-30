@@ -100,19 +100,56 @@ export class AccountsService {
     if (!role) throw new NotFoundException('Rôle introuvable. Vérifiez les migrations.');
 
     const now = new Date();
-    const existing = await this.prisma.utilisateurRole.findFirst({
-      where: { idUtilisateur: targetId, idRole: role.idRole, ...activeRoleFilter(now) },
-    });
-    if (existing) throw new ConflictException('Ce rôle est déjà actif pour cet utilisateur.');
+    const motif = dto.motif?.trim() || 'Attribution par un administrateur des comptes.';
 
-    await this.prisma.utilisateurRole.create({
-      data: {
-        utilisateur: { connect: { idUtilisateur: targetId } },
-        role: { connect: { idRole: role.idRole } },
-        attribuant: { connect: { idUtilisateur: actor.idUtilisateur } },
-        motif: dto.motif?.trim() || 'Attribution par un administrateur des comptes.',
-      },
-    });
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        const existing = await tx.utilisateurRole.findFirst({
+          where: { idUtilisateur: targetId, idRole: role.idRole, ...activeRoleFilter(now) },
+        });
+        if (existing) {
+          throw new ConflictException('Ce rôle est déjà actif pour cet utilisateur.');
+        }
+
+        await tx.utilisateurRole.create({
+          data: {
+            utilisateur: { connect: { idUtilisateur: targetId } },
+            role: { connect: { idRole: role.idRole } },
+            attribuant: { connect: { idUtilisateur: actor.idUtilisateur } },
+            motif,
+          },
+        });
+
+        await tx.evenementMetier.create({
+          data: {
+            typeEvenement: 'ROLE_ATTRIBUE',
+            dateEvenement: now,
+            dateEnregistrement: now,
+            origine: 'API',
+            idActeur: actor.idUtilisateur,
+            idUtilisateurCible: targetId,
+            donneesApres: {
+              codeRole: dto.codeRole,
+              roleId: role.idRole,
+              dateDebut: now.toISOString(),
+            },
+            motif,
+            versionSchema: 1,
+          },
+        });
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    } catch (error) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        (error.code === 'P2002' || error.code === 'P2034')
+      ) {
+        throw new ConflictException('Attribution concurrente du rôle. Actualisez le compte puis réessayez.');
+      }
+      throw error;
+    }
+
     return this.findProfileById(targetId);
   }
 
@@ -145,16 +182,39 @@ export class AccountsService {
           if (adminCount <= 1) throw new ConflictException('Le dernier administrateur ne peut pas être révoqué.');
         }
 
+        const motif = 'Rôle révoqué par un administrateur des comptes.';
         const result = await tx.utilisateurRole.updateMany({
           where: {
             idUtilisateur: targetId,
             idRole: role.idRole,
             dateDebut: assignment.dateDebut,
-            dateFin: null,
+            dateFin: assignment.dateFin,
           },
-          data: { dateFin: now, motif: 'Rôle révoqué par un administrateur des comptes.' },
+          data: { dateFin: now, motif },
         });
         if (result.count !== 1) throw new ConflictException('Attribution modifiée simultanément. Réessayez.');
+
+        await tx.evenementMetier.create({
+          data: {
+            typeEvenement: 'ROLE_REVOQUE',
+            dateEvenement: now,
+            dateEnregistrement: now,
+            origine: 'API',
+            idActeur: actor.idUtilisateur,
+            idUtilisateurCible: targetId,
+            donneesAvant: {
+              codeRole,
+              roleId: role.idRole,
+              dateDebut: assignment.dateDebut.toISOString(),
+              dateFinPrevue: assignment.dateFin?.toISOString() ?? null,
+            },
+            donneesApres: {
+              dateFin: now.toISOString(),
+            },
+            motif,
+            versionSchema: 1,
+          },
+        });
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     } catch (error) {
       if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2034') {
