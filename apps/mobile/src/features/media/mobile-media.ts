@@ -19,8 +19,12 @@ export async function prepareMobilePhoto(
   asset: ImagePicker.ImagePickerAsset,
 ): Promise<PreparedMobilePhoto> {
   const context = ImageManipulator.manipulate(asset.uri);
-  if (asset.width > 1600) {
-    context.resize({ width: 1600, height: null });
+  if (Math.max(asset.width, asset.height) > 1600) {
+    if (asset.width >= asset.height) {
+      context.resize({ width: 1600, height: null });
+    } else {
+      context.resize({ width: null, height: 1600 });
+    }
   }
 
   const rendered = await context.renderAsync();
@@ -39,15 +43,6 @@ export async function prepareMobilePhoto(
     name: baseName + '.jpg',
     type: 'image/jpeg',
   };
-}
-
-/**
- * React Native's FormData implementation accepts the documented
- * { uri, name, type } file descriptor. The API client leaves Content-Type
- * unset so fetch can generate the correct multipart boundary.
- */
-export function appendMobilePhoto(form: FormData, photo: PreparedMobilePhoto): void {
-  form.append('file', photo as unknown as Blob);
 }
 
 export async function pickMobilePhotos(selectionLimit = 3): Promise<PreparedMobilePhoto[]> {
