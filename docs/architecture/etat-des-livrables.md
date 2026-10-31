@@ -1,14 +1,14 @@
 # État des livrables
 
-État de référence : **31 octobre 2026, après fusion de la PR #26 ; Phases 20 et 21 intégrées**. « Intégré » signifie fusionné dans `main`. « Initialisé » signifie que la structure existe sans parcours métier complet. « En cours » désigne une évolution sur une branche non fusionnée. Un build vert ne vaut pas recette utilisateur.
+État de référence : **31 octobre 2026, après fusion de la PR #27 ; Phases 20 et 21 intégrées et CI du commit `6bfc822` sur `main` verte**. « Intégré » signifie fusionné dans `main`. « Initialisé » signifie que la structure existe sans parcours métier complet. « En cours » désigne une évolution sur une branche non fusionnée. Un build vert ne vaut pas recette utilisateur.
 
 | Domaine | Livrable | État |
 |---|---|---|
 | Architecture | Monolithe modulaire et monorepo pnpm | Architecture documentée ; alignement structurel progressif, sans déplacement massif requis. |
 | Toolchain | Node.js, pnpm et lockfile | Versions épinglées ; installation CI en `--frozen-lockfile`. |
-| CI | `.github/workflows/ci.yml` | Présent ; CI complètes vertes sur les PR #22 à #26. Le run push de `main` après PR #26 est suivi séparément. |
+| CI | `.github/workflows/ci.yml` | Présent ; run push du commit `6bfc822` sur `main` vert (run #41248396450) : migrations PostgreSQL, OpenAPI, TypeScript, tests et builds Web/API/Mobile réussis. |
 | CI UML | `render-uml-class-diagrams.yml` | Présent pour régénérer les vues UML à partir de la source versionnée. |
-| CI/CD | Déploiements Web/API | En cours sur `feat/phase-20-deployment-workflows-v2` : workflows déclenchés sur push `main` ou manuellement, vérifiant la CI réussie sur le même SHA avant Deploy Hook. Secrets Vercel/Render, opt-in `PRODUCTION_DEPLOY_ENABLED=true` et smoke tests à configurer. Aucun déploiement de production confirmé. |
+| CI/CD | Déploiements Web/API | Intégrés (PR #25) : workflows sur push `main` ou lancement manuel, attente de la CI réussie sur le même SHA, opt-in `PRODUCTION_DEPLOY_ENABLED=true`, Deploy Hooks Vercel/Render et smoke tests conditionnels. Runs #41248396500/#41248396526 : appels de déploiement volontairement ignorés car opt-in et hooks non renseignés ; aucun déploiement ni smoke test de production confirmé. |
 | Backend | Accounts | Intégré : profils, provisionnement citoyen, administration des comptes/rôles, audit transactionnel et protection du dernier administrateur. |
 | Backend | Referentials | Intégré : types de déchets, régions/départements/communes, équipes, appartenances, compétences, disponibilité historisée et délégations. |
 | Backend | Reports | Intégré : soumission idempotente, validation des référentiels, suivi propriétaire et demandes/réponses de complément. Upload privé de photos intégré (PR #15). |
@@ -42,11 +42,11 @@
 
 ## Prochain ordre de livraison recommandé
 
-1. Phase 20 : valider les workflows de déploiement et configurer les secrets Vercel/Render.
-2. Recetter sur appareils Android/iOS réels les permissions, la galerie, la caméra, l'upload privé et la localisation ponctuelle.
-3. Finalisation opérationnelle des médias : bucket privé, politique de rétention validée, tests de droits et Cron de purge.
+1. Finaliser l'environnement médias : provisionner le bucket Supabase privé, configurer les secrets serveur, valider la politique de rétention et planifier `pnpm storage:purge`.
+2. Recetter sur appareils Android/iOS réels les permissions, la galerie, la caméra, l'upload privé, l'aperçu signé et la localisation ponctuelle.
+3. Préparer l'environnement de déploiement : renseigner les Deploy Hooks Vercel/Render et les URLs de smoke test, vérifier les domaines, variables d'environnement et migrations de production. N'activer `PRODUCTION_DEPLOY_ENABLED=true` qu'après validation de la sauvegarde, de la restauration et de la fenêtre de changement.
 4. Générer et signer l'APK Android, publier une GitHub Release et vérifier le lien de téléchargement.
-5. Recette fonctionnelle, sauvegardes/restauration et smoke tests de production.
+5. Exécuter la recette fonctionnelle de bout en bout, les tests de droits inter-comptes, la restauration et les smoke tests de production.
 
 ## Règle de clôture d'un livrable
 
