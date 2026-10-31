@@ -22,4 +22,20 @@ pnpm --filter @isieco/mobile exec expo install --check
 pnpm dev:mobile
 ```
 
-La page d'accueil et l'écran de connexion sont des placeholders. L'authentification Supabase, les parcours citoyens/agents, l'accès appareil photo, la géolocalisation, la synchronisation et le mode hors connexion restent à implémenter.
+L'authentification Supabase et le chargement du profil métier via l'API sont intégrés. L'accueil dirige un compte `CITOYEN` vers son espace signalements.
+
+## Parcours citoyen — Phase 18
+
+La branche `feat/phase-18-mobile-citizen-reports` ajoute :
+
+- `/(citizen)/reports` : liste paginée et suivi des seuls signalements du compte connecté ;
+- `/(citizen)/reports/new` : dépôt d'un signalement avec description obligatoire, date de constat facultative, description du lieu et coordonnées saisies manuellement facultatives ;
+- `/(citizen)/reports/[id]` : détail propriétaire, catégories qualifiées, demandes de complément et réponses.
+
+La soumission réutilise `POST /api/v1/reports` et l'en-tête `Idempotency-Key`. La clé est conservée pour une nouvelle tentative avec un contenu inchangé et renouvelée lorsque le formulaire change. Les demandes et réponses réutilisent les endpoints Reports existants.
+
+La liste et le détail sont filtrés par propriétaire côté API. Aucune route de référentiel réservée au rôle `GESTIONNAIRE_REFERENTIEL` n'est utilisée par le citoyen. La géolocalisation n'est pas demandée au système : la saisie de coordonnées reste manuelle et facultative dans cette première tranche.
+
+## Limites restantes
+
+La sélection depuis l'appareil photo / galerie et l'upload mobile des photos de signalement ne sont pas encore intégrés ; `expo-image-picker` doit être ajouté avec une version compatible SDK 57 et un lockfile généré/validé. La géolocalisation native, les parcours Mobile agent, les interventions, les notifications et le mode hors connexion restent à réaliser. Le MVP documenté exige une connexion réseau pour les opérations métier.
