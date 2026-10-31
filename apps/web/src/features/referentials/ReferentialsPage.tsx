@@ -104,6 +104,12 @@ function localDateTimeNow(): string {
   return date.toISOString().slice(0, 16);
 }
 
+function localDateTimeAfterDays(days: number): string {
+  const date = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+  return date.toISOString().slice(0, 16);
+}
+
 function dateLabel(value: string | null | undefined): string {
   if (!value) return '—';
   const date = new Date(value);
@@ -283,7 +289,6 @@ export function ReferentialsPage() {
         dateDebutValidite: isoDateTime(String(data.get('dateDebutValidite'))),
       }),
     }), 'Type de déchet créé.');
-    form.reset();
   }
 
   async function createRegion(event: FormEvent<HTMLFormElement>) {
@@ -298,7 +303,6 @@ export function ReferentialsPage() {
         actif: true,
       }),
     }), 'Région créée.');
-    form.reset();
   }
 
   async function createDepartment(event: FormEvent<HTMLFormElement>, regionId: string) {
@@ -313,7 +317,6 @@ export function ReferentialsPage() {
         actif: true,
       }),
     }), 'Département créé.');
-    form.reset();
   }
 
   async function createCommune(event: FormEvent<HTMLFormElement>, departmentId: string) {
@@ -328,7 +331,6 @@ export function ReferentialsPage() {
         actif: true,
       }),
     }), 'Commune créée.');
-    form.reset();
   }
 
   async function createTeam(event: FormEvent<HTMLFormElement>) {
@@ -343,7 +345,6 @@ export function ReferentialsPage() {
         etatEquipe: String(data.get('etatEquipe')).trim(),
       }),
     }), 'Équipe créée.');
-    form.reset();
   }
 
   async function updateTeam(event: FormEvent<HTMLFormElement>, teamId: string) {
@@ -372,7 +373,6 @@ export function ReferentialsPage() {
         fonction: String(data.get('fonction')).trim(),
       }),
     }), 'Membre ajouté à l’équipe.');
-    form.reset();
   }
 
   async function addSkill(event: FormEvent<HTMLFormElement>, teamId: string) {
@@ -387,7 +387,6 @@ export function ReferentialsPage() {
         commentaire: String(data.get('commentaire')).trim() || undefined,
       }),
     }), 'Compétence ajoutée à l’équipe.');
-    form.reset();
   }
 
   async function setAvailability(event: FormEvent<HTMLFormElement>, teamId: string) {
@@ -423,7 +422,6 @@ export function ReferentialsPage() {
         motif: String(data.get('motif')).trim() || undefined,
       }),
     }), 'Délégation créée.');
-    form.reset();
   }
 
   async function updateWasteType(event: FormEvent<HTMLFormElement>, wasteType: WasteType) {
@@ -759,7 +757,7 @@ export function ReferentialsPage() {
                           <option value="INDISPONIBLE">INDISPONIBLE</option>
                         </select>
                       </label>
-                      <label className={labelClass}>Valide jusqu'au<input name="valideJusqua" type="datetime-local" required defaultValue={localDateTimeNow()} className={inputClass()} /></label>
+                      <label className={labelClass}>Valide jusqu'au<input name="valideJusqua" type="datetime-local" required defaultValue={localDateTimeAfterDays(7)} className={inputClass()} /></label>
                       <label className={labelClass + ' sm:col-span-2'}>Commentaire<input name="commentaire" maxLength={1000} defaultValue={team.disponibilite?.commentaire || ''} className={inputClass()} /></label>
                       <div className="sm:col-span-2"><button type="submit" disabled={busyKey === 'availability-' + team.idEquipe} className={buttonClass}>Enregistrer la disponibilité</button></div>
                     </form>
