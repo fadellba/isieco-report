@@ -1,21 +1,29 @@
 # Module Reports
 
-Le module gère la soumission initiale et le suivi des signalements citoyens.
+Le module gère le dépôt initial, le suivi des signalements citoyens et les demandes/réponses de complément.
 
-## API livrée
+## API
 
-- `POST /api/v1/reports` : création d’un signalement par un compte `CITOYEN` actif ;
+- `POST /api/v1/reports` : création par un compte `CITOYEN` actif ;
 - `GET /api/v1/reports` : liste paginée des seuls signalements du citoyen connecté ;
-- `GET /api/v1/reports/:id` : détail accessible uniquement à son propriétaire.
+- `GET /api/v1/reports/:id` : détail réservé au propriétaire ;
+- `GET /api/v1/reports/:id/supplements` : demandes de complément du propriétaire ;
+- `POST /api/v1/reports/:id/supplements/:demandeId/responses` : réponse du propriétaire ;
+- `POST /api/v1/reports/:id/photos` : upload d'une photo privée ;
+- `GET /api/v1/reports/:id/photos/:photoId/url` : URL de consultation temporaire.
 
-La création exige un en-tête `Idempotency-Key` de 8 à 128 caractères. La clé est scoped par utilisateur et le corps canonique est empreint en SHA-256. Un retry identique renvoie le même signalement ; réutiliser la clé avec un corps différent renvoie HTTP 409.
+La création exige `Idempotency-Key` (8 à 128 caractères), scoped par utilisateur et associée à l'empreinte SHA-256 du corps canonique. Un retry identique retourne le signalement initial ; réutiliser la clé avec un corps différent retourne HTTP 409.
 
-Le service vérifie côté serveur l’état du compte, la validité des types de déchets transmis, l’activité de la commune et de ses parents géographiques, ainsi que la cohérence des coordonnées. La soumission, les contenus déclarés, l’enregistrement d’idempotence et l’événement `SIGNALEMENT_SOUMIS` sont écrits dans une transaction sérialisable.
+Le service vérifie l'état du compte, les types de déchets actifs, la commune et ses parents géographiques, ainsi que la cohérence des coordonnées. La soumission, les contenus, la clé d'idempotence et l'événement `SIGNALEMENT_SOUMIS` sont écrits dans une transaction sérialisable.
 
-Toutes les lectures sont filtrées par l’identifiant métier dérivé de l’identité Supabase. Un signalement appartenant à un autre compte retourne 404 afin de ne pas révéler son existence. Les payloads ne retournent pas les chemins privés des médias ni les notes internes d’autres modules.
+## Photos privées
 
-## Limites connues
+L'upload exige un signalement appartenant au citoyen connecté. L'API valide JPEG, PNG ou WebP par signature binaire (10 MiB maximum), génère le chemin Storage côté serveur et téléverse dans un bucket privé avec `upsert: false`. La ligne `PhotoSignalement` et l'événement `PHOTO_SIGNALEMENT_AJOUTEE` sont écrits après l'upload dans une transaction sérialisable. Si l'écriture échoue, l'API tente de supprimer l'objet temporaire.
 
-L’attachement effectif de photos n’est pas encore exposé. Il dépend du service Storage privé, de politiques RLS testées et d’un mécanisme d’URL signées courtes. Ne pas envoyer de chemin Storage arbitraire au client ni rendre le bucket public. Le flux de dépôt et d’approbation des variantes de photos sera livré avec l’infrastructure média.
+Les réponses ne divulguent jamais `referencePhoto` ni un chemin de bucket. L'URL temporaire est délivrée uniquement au propriétaire, après contrôle de la date d'expiration ; elle est valide 60 secondes.
 
-Les étapes qualification, demande/réponse de complément, rattachement à un dossier, affectation et intervention sont des modules métier distincts et ne sont pas déclenchées par ce module.
+L'upload est désactivé tant que `MEDIA_RETENTION_DAYS` n'est pas renseigné selon la politique métier. La configuration du bucket et du secret serveur est décrite dans [docs/storage/README.md](../../../../docs/storage/README.md).
+
+## Limites
+
+L'approbation des variantes, le floutage, le flux de publication, les URLs de médias publics et la purge automatique sont hors du périmètre de cette livraison. Ne jamais rendre le bucket public ni accepter un chemin Storage arbitraire depuis un client.

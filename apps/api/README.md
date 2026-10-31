@@ -18,9 +18,12 @@ Variables facultatives :
 - `SHADOW_DATABASE_URL` : URL d'une base PostgreSQL shadow séparée ;
 - `PORT` : port HTTP, compris entre 1 et 65535 (3000 par défaut) ;
 - `WEB_ORIGIN` : liste d’origines HTTP(S) autorisées, séparées par des virgules ;
-- `NODE_ENV` : `development`, `test` ou `production`.
+- `NODE_ENV` : `development`, `test` ou `production` ;
+- `SUPABASE_SECRET_KEY` : secret API réservé au serveur, facultatif tant que Storage n'est pas activé ;
+- `SUPABASE_STORAGE_BUCKET` : bucket Storage privé (par défaut `isieco-private-media`) ;
+- `MEDIA_RETENTION_DAYS` : durée métier validée, entier entre 1 et 3650 ; sans cette valeur, l'upload photo est refusé.
 
-Ne pas utiliser de clé Supabase `service_role` dans les clients ni la journaliser. Les variables publiques Web/Mobile ont leur propre préfixe et ne remplacent pas la configuration serveur.
+Ne jamais copier `SUPABASE_SECRET_KEY` dans les variables `VITE_*` ou `EXPO_PUBLIC_*), ni l'inclure dans un bundle, un log ou un artefact CI. Ne pas utiliser de clé Supabase privilégiée dans les clients.
 
 ## Documentation OpenAPI
 
@@ -51,6 +54,23 @@ Le module Accounts provisionne uniquement le rôle `CITOYEN` lors de l'initialis
 
 Le module Referentials expose les types de déchets, les subdivisions géographiques, les équipes, leurs appartenances, compétences, disponibilités et délégations. L'administration est réservée au rôle `GESTIONNAIRE_REFERENTIEL`. Les relations temporelles sont préservées, les mutations sensibles sont auditées dans la transaction et les références géographiques ne sont jamais supprimées physiquement. Voir [le guide Referentials](src/modules/referentials/README.md).
 
-## État des autres modules
+## Modules métier intégrés
 
-Reports, Qualification, Cases, Assignments, Interventions, Verification et Audit restent à implémenter ou à compléter à partir du MLD, des cas d'utilisation et des règles de gestion validées.
+- Accounts : profils, comptes et rôles avec audit transactionnel.
+- Referentials : types de déchets, géographie, équipes, appartenances, compétences, disponibilité et délégations.
+- Reports : soumission idempotente, suivi citoyen, compléments et médias (upload privé en phase 10).
+- Qualification : file, compléments, acceptation et rejet motivé.
+- Cases : création de dossiers, rattachements et historiques de priorité/localisation.
+- Assignments : affectation, acceptation/refus et réaffectation idempotente.
+- Interventions : démarrage, compte rendu, exceptions et preuves photo.
+- Verification : décision indépendante, reprise et clôture contrôlée.
+
+Audit écrit les événements au fil des transactions métier ; son interface centralisée de consultation et d'export reste à développer.
+
+## Stockage privé des médias
+
+Les routes de dépôt sont `POST /api/v1/reports/:id/photos` et `POST /api/v1/interventions/:idIntervention/photos`, en multipart/form-data avec le champ `file`. Les fichiers sont limités à 10 MiB et aux signatures JPEG, PNG ou WebP. Les métadonnées sont conservées dans les modèles photo existants. Les clients ne reçoivent jamais les chemins Storage.
+
+Les liens temporaires sont délivrés par `GET /api/v1/reports/:id/photos/:photoId/url` et `GET /api/v1/verification/assignments/:idAffectation/photos/:idPhotoIntervention/url`. Ils expirent après 60 secondes et sont précédés d'un contrôle de propriété/droit métier. Voir [la procédure Storage](../../docs/storage/README.md).
+
+La phase Médias ne comprend pas encore la purge planifiée des objets expirés, ni les interfaces de dépôt et de consultation dans Web/Mobile.

@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import {
   BadRequestException,
   ConflictException,
@@ -8,6 +8,8 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../database/prisma.service.js';
+import { SupabaseStorageService } from '../../infrastructure/storage/supabase-storage.service.js';
+import { validateImageFile } from '../../infrastructure/storage/media-file.js';
 import type { CreateReportDto } from './dto/create-report.dto.js';
 import type { ListReportsQueryDto } from './dto/list-reports-query.dto.js';
 
@@ -80,7 +82,10 @@ function fingerprint(payload: ReturnType<typeof canonicalPayload>): string {
 
 @Injectable()
 export class ReportsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: SupabaseStorageService,
+  ) {}
 
   private async actorId(authUserId: string): Promise<string> {
     const actor = await this.prisma.utilisateur.findUnique({
@@ -412,6 +417,123 @@ export class ReportsService {
       }
       throw error;
     }
+  }
+
+  async addPhoto(
+    idSignalement: string,
+    authUserId: string,
+    file: unknown,
+    description?: string,
+  ) {
+    const actorId = await this.actorId(authUserId);
+    const report = await this.prisma.signalement.findFirst({
+      where: { idSignalement, idUtilisateur: actorId },
+      select: { idSignalement: true },
+    });
+    if (!report) throw new NotFoundException('Signalement introuvable.');
+
+    const image = validateImageFile(file);
+    const cleanDescription = description?.trim() || null;
+    if (cleanDescription && cleanDescription.length > 500) {
+      throw new BadRequestException('La description de la photo ne peut dépasser 500 caractères.');
+    }
+
+    const now = new Date();
+    const photoId = randomUUID();
+    const storagePath = `${authUserId}/reports/${idSignalement}/${photoId}.${image.extension}`;
+    const dateExpiration = this.storage.getExpirationDate(now);
+
+    await this.storage.upload(storagePath, image);
+    try {
+      const photo = await this.prisma.$transaction(
+        async (tx) => {
+          const ownedReport = await tx.signalement.findFirst({
+            where: { idSignalement, idUtilisateur: actorId },
+            select: { idSignalement: true },
+          });
+          if (!ownedReport) throw new NotFoundException('Signalement introuvable.');
+
+          const created = await tx.photoSignalement.create({
+            data: {
+              idPhotoSignalement: photoId,
+              referencePhoto: storagePath,
+              description: cleanDescription,
+              dateAjout: now,
+              idSignalement,
+              dateExpiration,
+              mediaPurgeAt: null,
+              mediaStockeeLocale: false,
+              etatPublication: 'EN_ATTENTE',
+              referencePhotoPublique: null,
+              floutageConfirme: false,
+              varianteSoumisePar: null,
+              dateSoumissionVariante: null,
+              approuvePar: null,
+              dateApprobation: null,
+            },
+            select: {
+              idPhotoSignalement: true,
+              description: true,
+              dateAjout: true,
+              etatPublication: true,
+            },
+          });
+
+          await this.writeEvent(tx, {
+            reportId: idSignalement,
+            actorId,
+            type: 'PHOTO_SIGNALEMENT_AJOUTEE',
+            after: {
+              idPhotoSignalement: photoId,
+              contentType: image.contentType,
+              dateAjout: now.toISOString(),
+            },
+          });
+          return created;
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
+
+      return {
+        idPhoto: photo.idPhotoSignalement,
+        description: photo.description,
+        dateAjout: photo.dateAjout,
+        etatPublication: photo.etatPublication,
+      };
+    } catch (error) {
+      await this.storage.remove(storagePath).catch(() => undefined);
+      if (isPrismaCode(error, 'P2002') || isPrismaCode(error, 'P2034')) {
+        throw new ConflictException('Le signalement a été modifié simultanément. Réessayez.');
+      }
+      throw error;
+    }
+  }
+
+  async createPhotoUrl(
+    idSignalement: string,
+    idPhotoSignalement: string,
+    authUserId: string,
+  ) {
+    const actorId = await this.actorId(authUserId);
+    const photo = await this.prisma.photoSignalement.findFirst({
+      where: {
+        idPhotoSignalement,
+        idSignalement,
+        signalement: { idUtilisateur: actorId },
+      },
+      select: { referencePhoto: true, dateExpiration: true, mediaPurgeAt: true },
+    });
+
+    const now = new Date();
+    if (
+      !photo ||
+      photo.dateExpiration.getTime() <= now.getTime() ||
+      (photo.mediaPurgeAt !== null && photo.mediaPurgeAt.getTime() <= now.getTime())
+    ) {
+      throw new NotFoundException('Photo introuvable ou expirée.');
+    }
+
+    return this.storage.createSignedUrl(photo.referencePhoto);
   }
 
   private async writeEvent(

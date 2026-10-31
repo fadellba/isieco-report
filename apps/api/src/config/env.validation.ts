@@ -41,6 +41,24 @@ export function validateEnvironment(
     errors.push('SUPABASE_ANON_KEY must be configured.');
   }
 
+  const storageSecret = config.SUPABASE_SECRET_KEY;
+  if (storageSecret !== undefined && storageSecret !== null && storageSecret !== '' && !isNonEmptyString(storageSecret)) {
+    errors.push('SUPABASE_SECRET_KEY must be a non-empty server-side secret when provided.');
+  }
+
+  const storageBucket = config.SUPABASE_STORAGE_BUCKET;
+  if (storageBucket !== undefined && storageBucket !== null && storageBucket !== '' && !/^[a-z0-9][a-z0-9._-]{1,61}[a-z0-9]$/u.test(String(storageBucket))) {
+    errors.push('SUPABASE_STORAGE_BUCKET must be a valid bucket identifier when provided.');
+  }
+
+  const mediaRetentionDays = config.MEDIA_RETENTION_DAYS;
+  if (mediaRetentionDays !== undefined && mediaRetentionDays !== null && mediaRetentionDays !== '') {
+    const parsedRetentionDays = Number(mediaRetentionDays);
+    if (!Number.isInteger(parsedRetentionDays) || parsedRetentionDays < 1 || parsedRetentionDays > 3650) {
+      errors.push('MEDIA_RETENTION_DAYS must be an integer between 1 and 3650 when provided.');
+    }
+  }
+
   const directUrl = config.DIRECT_URL;
   if (directUrl !== undefined && directUrl !== null && directUrl !== '') {
     parseUrl(directUrl, 'DIRECT_URL', POSTGRES_PROTOCOLS, errors);

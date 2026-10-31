@@ -1,5 +1,19 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+export class VerificationPhotoDto {
+  @ApiProperty({ format: 'uuid' })
+  idPhotoIntervention!: string;
+
+  @ApiProperty({ type: 'string', nullable: true })
+  description!: string | null;
+
+  @ApiProperty({ format: 'date-time' })
+  dateAjout!: Date;
+
+  @ApiProperty({ example: 'EN_ATTENTE' })
+  etatPublication!: string;
+}
+
 export class VerificationInterventionDto {
   @ApiProperty({ format: 'uuid' })
   idIntervention!: string;
@@ -24,6 +38,9 @@ export class VerificationInterventionDto {
 
   @ApiProperty({ format: 'uuid' })
   renseignePar!: string;
+
+  @ApiProperty({ type: [VerificationPhotoDto] })
+  photos!: VerificationPhotoDto[];
 }
 
 export class VerificationContentDto {
