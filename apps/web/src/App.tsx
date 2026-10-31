@@ -8,6 +8,7 @@ import { QualificationQueuePage } from './features/qualification/QualificationQu
 import { QualificationDetailPage } from './features/qualification/QualificationDetailPage';
 import { CasesPage } from './features/cases/CasesPage';
 import { CaseDetailPage } from './features/cases/CaseDetailPage';
+import { ReferentialsPage } from './features/referentials/ReferentialsPage';
 import { AccessDeniedPage } from './pages/AccessDeniedPage';
 import { DownloadPage } from './pages/DownloadPage';
 import { SignInPage } from './pages/SignInPage';
@@ -48,6 +49,11 @@ export function App() {
         <Route path="dossiers/:idDossier" element={
           <ProtectedRoute roles={['RESPONSABLE_TRAITEMENT']}>
             <CaseDetailPage />
+          </ProtectedRoute>
+        } />
+        <Route path="referentiels" element={
+          <ProtectedRoute roles={['GESTIONNAIRE_REFERENTIEL']}>
+            <ReferentialsPage />
           </ProtectedRoute>
         } />
         <Route path="activite" element={<AuditPage />} />

@@ -27,6 +27,12 @@ export const navigationItems: NavigationItem[] = [
     roles: ['RESPONSABLE_TRAITEMENT'],
   },
   {
+    to: '/referentiels',
+    label: 'Référentiels',
+    description: 'Types de déchets, géographie et équipes',
+    roles: ['GESTIONNAIRE_REFERENTIEL'],
+  },
+  {
     to: '/activite',
     label: 'Mon activité',
     description: 'Événements métier liés à mon compte',

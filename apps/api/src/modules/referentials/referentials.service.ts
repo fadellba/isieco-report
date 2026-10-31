@@ -388,6 +388,11 @@ export class ReferentialsService {
           include: { typeDechet: true },
           orderBy: { dateDebut: 'desc' },
         },
+        delegations: {
+          where: { dateDebut: { lte: now }, OR: [{ dateFin: null }, { dateFin: { gt: now } }] },
+          include: { delegue: { select: { idUtilisateur: true, nom: true, prenom: true, email: true } } },
+          orderBy: { dateDebut: 'desc' },
+        },
         disponibilite: true,
       },
     });

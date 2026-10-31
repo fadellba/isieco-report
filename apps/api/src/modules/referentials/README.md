@@ -16,7 +16,9 @@ Toutes les routes sont protégées par Supabase Auth et exigent le rôle serveur
 | Appartenances | Ajout d'un membre pour une période, clôture de cette période |
 | Compétences | Attribution d'une compétence par type de déchet, clôture |
 | Disponibilité | Mise à jour de l'état courant, création d'une ligne d'historique, consultation de l'historique |
-| Délégations | Création limitée à une appartenance valide, clôture |
+| Délégations | Création limitée à une appartenance valide, clôture et consultation des délégations actives via la liste des équipes |
+
+`GET /api/v1/referentials/teams` retourne pour chaque équipe ses appartenances et compétences courantes, sa disponibilité courante et ses délégations actives. Chaque délégation inclut l'identité métier de son bénéficiaire (identifiant, nom, prénom et email) afin de permettre la consultation et la clôture par le gestionnaire des référentiels.
 
 Les routes géographiques ne modifient pas les codes ou noms après création : le MLD ne contient pas de table d'historique de libellés permettant de préserver leur ancienne valeur. La désactivation est utilisée plutôt que la suppression physique. Une correction de code ou de nom nécessitera un nouveau référentiel et une décision de migration fonctionnelle.
 

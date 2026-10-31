@@ -18,7 +18,7 @@ L'application utilise `VITE_API_BASE_URL`, `VITE_SUPABASE_URL` et `VITE_SUPABASE
 
 **Ces gardes client ne constituent pas la frontière de sécurité.** Chaque endpoint NestJS refait les contrôles d'authentification, d'état du compte, de rôle et de propriété côté serveur.
 
-## Routes présentes
+## Routes intégrées dans main
 
 | Route | Accès | Fonction |
 |---|---|---|
@@ -26,9 +26,25 @@ L'application utilise `VITE_API_BASE_URL`, `VITE_SUPABASE_URL` et `VITE_SUPABASE
 | `/telecharger` | Public | Page de distribution Android |
 | `/` | Session active | Vue d'ensemble et espaces autorisés |
 | `/administration/comptes` | `ADMINISTRATEUR_COMPTES` | Liste paginée, attribution et révocation des rôles |
+| `/qualification` et `/qualification/:idSignalement` | `AGENT_QUALIFICATION` | File, détail, photos signées, compléments et décisions |
+| `/dossiers` et `/dossiers/:idDossier` | `RESPONSABLE_TRAITEMENT` | Liste, création, rattachements, priorité et localisation |
 | `/activite` | Compte actif | Historique personnel, filtres de type et de dates |
 
-La gestion de comptes consomme les endpoints Accounts existants. L'écran d'activité consomme `GET /api/v1/audit/me`. Les erreurs d'autorisation sont affichées sans supposer que les boutons masqués suffisent à protéger les ressources.
+La gestion des comptes consomme les endpoints Accounts. L'écran d'activité consomme `GET /api/v1/audit/me`. Qualification et Cases réutilisent les services métier et leurs contrôles côté API ; les gardes Web ne servent qu'à adapter l'expérience.
+
+## Phase 14 en cours : Référentiels
+
+La branche `feat/phase-14-web-referentials` ajoute la route protégée `/referentiels`, réservée au rôle `GESTIONNAIRE_REFERENTIEL`. L'écran couvre :
+
+- types de déchets : création, modification des attributs descriptifs et clôture de validité ;
+- géographie : création de régions, départements et communes, activation/désactivation sans suppression physique ;
+- équipes : création et modification ;
+- appartenances : consultation des membres courants, ajout et clôture ;
+- compétences : consultation, attribution et clôture ;
+- disponibilités : mise à jour et consultation de l'historique ;
+- délégations : création, consultation des délégations actives et clôture.
+
+L'ajout d'un membre utilise actuellement son UUID métier, car l'API Referentials ne fournit pas encore de route de recherche des comptes. La validation de l'identifiant, de l'état actif du compte et des périodes reste effectuée côté API. Ces changements de Phase 14 sont en cours et ne sont pas encore intégrés dans main.
 
 ## Organisation
 
@@ -36,9 +52,12 @@ La gestion de comptes consomme les endpoints Accounts existants. L'écran d'acti
 - `src/features/accounts` : administration des comptes et rôles.
 - `src/features/audit` : historique d'activité.
 - `src/features/dashboard` : vue d'ensemble.
+- `src/features/qualification` : file et décisions de qualification.
+- `src/features/cases` : liste et gestion des dossiers.
+- `src/features/referentials` : administration des références, de la géographie et des équipes (branche Phase 14).
 - `src/lib` : client API et configuration Supabase.
 - `src/pages` : connexion, téléchargement et page d'accès refusé.
 
 ## Limites restantes
 
-Les écrans de qualification, dossiers, référentiels, affectations, interventions et vérification restent à développer. Le Web ne téléverse pas encore les médias ; l'API et l'infrastructure Storage privées sont disponibles. La recherche multi-critères de comptes, les détails d'événements et l'historique des rôles par compte ne sont pas encore exposés dans l'interface.
+Les écrans d'affectation, d'intervention et de vérification restent à développer. Le Web ne téléverse pas encore les photos de signalement ni les preuves d'intervention ; les interfaces API et l'infrastructure Storage privée sont disponibles. La recherche multi-critères de comptes, les détails d'événements et l'historique des rôles par compte ne sont pas encore exposés dans l'interface.

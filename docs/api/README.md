@@ -17,12 +17,21 @@ Swagger est une interface développeur. Il ne doit exposer aucun secret, chemin 
 
 Les routes métier sont groupées par comptes, référentiels, signalements, qualification, dossiers, affectations, interventions et vérification. Chaque contrôleur documente ses habilitations et DTO.
 
+### Qualification et constitution des dossiers (Phase 13)
+
+| Méthode | Route | Autorisation | Description |
+|---|---|---|---|
+| GET | `/cases/qualified-reports` | `RESPONSABLE_TRAITEMENT` | Liste paginée des signalements au statut `QUALIFIE` sans rattachement actif, avec catégories retenues et informations de propriétaire nécessaires à la constitution d'un dossier. |
+| GET | `/qualification/:idSignalement/photos/:idPhotoSignalement/url` | `AGENT_QUALIFICATION` | URL signée temporaire pour une photo appartenant au signalement demandé, encore dans la file de décision et non expirée/purgée. Le lien expire après 60 secondes. |
+
+Ces routes complètent les parcours Qualification et Cases. Elles n'accordent aucun accès direct aux chemins Storage : l'API vérifie l'état métier et l'association photo/signalement avant de signer l'URL.
+
 ### Audit (Phase 11)
 
 | Méthode | Route | Autorisation | Description |
 |---|---|---|---|
 | GET | `/audit/me` | Compte métier actif connecté | Historique paginé dont le compte est acteur ou cible, avec filtres de date et de type. |
-| GET | `/audit/accounts/:idUtilisateur/roles` | ADMINISTRATEUR_COMPTES | Historique des seules attributions et révocations de rôles du compte visé. |
+| GET | `/audit/accounts/:idUtilisateur/roles` | `ADMINISTRATEUR_COMPTES` | Historique des seules attributions et révocations de rôles du compte visé. |
 
 Les réponses exposent les métadonnées d'événement et sa cible, jamais `donneesAvant`, `donneesApres`, les motifs libres ou les informations de destinataire externe. Il n'existe pas de consultation globale du journal : aucun rôle d'auditeur global n'est défini dans le modèle d'habilitations.
 
@@ -30,10 +39,10 @@ Les réponses exposent les métadonnées d'événement et sa cible, jamais `donn
 
 | Méthode | Route | Autorisation | Description |
 |---|---|---|---|
-| POST | `/reports/:id/photos` | CITOYEN + propriétaire | Upload multipart `file`, description facultative. |
-| GET | `/reports/:id/photos/:photoId/url` | CITOYEN + propriétaire | URL signée 60 secondes. |
-| POST | `/interventions/:idIntervention/photos` | AGENT_TERRAIN + auteur de l'intervention + appartenance active | Upload multipart `file`, `contextePhoto` requis, description facultative ; avant soumission du compte rendu. |
-| GET | `/verification/assignments/:idAffectation/photos/:idPhotoIntervention/url` | VERIFICATEUR_CLOTURE | URL signée de la photo de la dernière soumission en attente ; auto-vérification interdite. |
+| POST | `/reports/:id/photos` | `CITOYEN` + propriétaire | Upload multipart `file`, description facultative. |
+| GET | `/reports/:id/photos/:photoId/url` | `CITOYEN` + propriétaire | URL signée 60 secondes. |
+| POST | `/interventions/:idIntervention/photos` | `AGENT_TERRAIN` + auteur de l'intervention + appartenance active | Upload multipart `file`, `contextePhoto` requis, description facultative ; avant soumission du compte rendu. |
+| GET | `/verification/assignments/:idAffectation/photos/:idPhotoIntervention/url` | `VERIFICATEUR_CLOTURE` | URL signée de la photo de la dernière soumission en attente ; auto-vérification interdite. |
 
 Les fichiers acceptés sont JPEG, PNG et WebP, avec vérification de la signature binaire et limite de 10 MiB par fichier. Les chemins Storage ne sont jamais renvoyés aux clients. La consultation passe par un contrôle de droit métier côté API puis une URL de courte durée. La configuration de bucket, du secret serveur et de la conservation est décrite dans [Stockage privé des médias](../storage/README.md).
 
