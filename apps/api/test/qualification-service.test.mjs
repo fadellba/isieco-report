@@ -33,10 +33,13 @@ function createHarness(options = {}) {
   const tx = {
     signalement: {
       findUnique: async () => report,
-      update: async ({ data }) => {
-        calls.reportUpdates.push(data);
+      updateMany: async ({ where, data }) => {
+        calls.reportUpdates.push({ where, data });
+        if (where.statutSignalement && where.statutSignalement !== report.statutSignalement) {
+          return { count: 0 };
+        }
         Object.assign(report, data);
-        return report;
+        return { count: 1 };
       },
     },
     demandeComplement: {
@@ -156,7 +159,7 @@ test('accepts a report with active waste types and stores qualification rows', a
   assert.equal(calls.qualificationCreates[0].idTypeDechet, wasteTypeId);
   assert.equal(calls.qualificationCreates[0].qualifiePar, actorId);
   assert.equal(calls.qualificationCreates[0].etatQualification, 'RETENU');
-  assert.equal(calls.reportUpdates[0].decisionPar, actorId);
+  assert.equal(calls.reportUpdates[0].data.decisionPar, actorId);
   assert.equal(calls.events[0].typeEvenement, 'SIGNALEMENT_QUALIFIE');
   assert.equal(result.length, 1);
 });
