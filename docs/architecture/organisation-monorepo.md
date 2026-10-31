@@ -125,6 +125,8 @@ isieco-report/
 | CI/CD | `ci.yml` et `render-uml-class-diagrams.yml` présents. | Créer `web-deploy.yml` et `api-deploy.yml` après validation des secrets et des environnements. |
 | Prisma | Schéma MLD v2.13 avec 38 modèles et quatre migrations versionnées. | Pas de migration identifiée pour les écrans Web restants ; toute évolution de schéma doit rester additive et testée. |
 
+La branche `feat/phase-14-web-referentials` ajoute en cours l'interface d'administration des référentiels et une lecture des délégations actives à l'API. Ces changements ne sont pas encore fusionnés dans `main`.
+
 La structure cible demeure un guide d'organisation et non une obligation de déplacer immédiatement tous les fichiers. En particulier, l'authentification et Prisma sont encore dans `src/auth` et `src/database` ; leur migration vers `src/infrastructure` devra être isolée, testée et faite sans changer les contrats métier.
 
 ## Règles de dépendance
