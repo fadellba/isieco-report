@@ -33,6 +33,14 @@ export class AssignmentContentTypeDto {
   libelle!: string;
 }
 
+export class AssignmentCaseDto {
+  @ApiProperty()
+  referenceDossier!: string;
+
+  @ApiProperty()
+  statutDossier!: string;
+}
+
 export class AssignmentContentDto {
   @ApiProperty({ format: 'uuid' })
   idDossier!: string;
@@ -49,8 +57,8 @@ export class AssignmentContentDto {
   @ApiProperty({ type: AssignmentContentTypeDto })
   typeDechet!: AssignmentContentTypeDto;
 
-  @ApiProperty()
-  dossier!: { referenceDossier: string; statutDossier: string };
+  @ApiProperty({ type: AssignmentCaseDto })
+  dossier!: AssignmentCaseDto;
 }
 
 export class AssignmentResponseDto {
