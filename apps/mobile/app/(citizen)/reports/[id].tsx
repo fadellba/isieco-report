@@ -55,7 +55,10 @@ export default function CitizenReportDetailScreen() {
   }, [params.photosFailed]);
 
   async function uploadSelectedPhotos(photos: PreparedMobilePhoto[]) {
-    if (!id || !photos.length) return;
+    if (!id || !photos.length) {
+      setPhotoBusy(false);
+      return;
+    }
     setPhotoBusy(true);
     setError(null);
     setNotice(null);
@@ -79,7 +82,8 @@ export default function CitizenReportDetailScreen() {
     setError(null);
     try {
       const photos = await pickMobilePhotos(3);
-      await uploadSelectedPhotos(photos);
+      if (photos.length) await uploadSelectedPhotos(photos);
+      else setPhotoBusy(false);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Impossible de sélectionner les photos.');
       setPhotoBusy(false);
