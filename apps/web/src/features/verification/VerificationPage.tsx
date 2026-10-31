@@ -262,7 +262,7 @@ export function VerificationPage() {
                       {item.affectation.contenuDossier.referenceDossier}
                     </h3>
                     <p className="mt-1 text-xs text-slate-500">
-                      Équipe {item.affectation.idEquipe} · démarrée le {dateLabel(item.intervention.dateHeureDebut)}
+                      Affectation acceptée · démarrée le {dateLabel(item.intervention.dateHeureDebut)}
                     </p>
                     <p className="mt-1 text-xs text-slate-500">
                       Compte rendu soumis le {dateLabel(item.intervention.dateSoumissionCompteRendu)}
