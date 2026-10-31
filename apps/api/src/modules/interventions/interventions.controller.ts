@@ -32,7 +32,7 @@ import { CurrentAuthUser } from '../../auth/current-auth-user.decorator.js';
 import { Roles } from '../../auth/roles.decorator.js';
 import { RolesGuard } from '../../auth/roles.guard.js';
 import { SupabaseAuthGuard } from '../../auth/supabase-auth.guard.js';
-import { InterventionResponseDto } from './dto/intervention-response.dto.js';
+import { AgentTeamResponseDto, InterventionResponseDto } from './dto/intervention-response.dto.js';
 import { SubmitInterventionDto } from './dto/submit-intervention.dto.js';
 import { UploadInterventionPhotoDto } from './dto/upload-intervention-photo.dto.js';
 import { InterventionsService } from './interventions.service.js';
@@ -44,6 +44,18 @@ import { InterventionsService } from './interventions.service.js';
 @Controller('interventions')
 export class InterventionsController {
   constructor(private readonly interventions: InterventionsService) {}
+
+  @Get('my-teams')
+  @ApiOperation({
+    summary: 'Liste les équipes actives auxquelles appartient l’agent connecté',
+    description: 'Ne retourne que les appartenances courantes du compte métier actif. Aucun identifiant d’équipe transmis par le client n’est utilisé pour établir cette liste.',
+  })
+  @ApiOkResponse({ type: [AgentTeamResponseDto] })
+  @ApiUnauthorizedResponse({ description: 'Jeton Supabase absent ou invalide.' })
+  @ApiForbiddenResponse({ description: 'Un compte métier actif est requis.' })
+  listMyTeams(@CurrentAuthUser() user: User) {
+    return this.interventions.listMyTeams(user.id);
+  }
 
   @Get('team/:idEquipe')
   @ApiOperation({ summary: 'Consulte les interventions des affectations actives de son équipe' })
