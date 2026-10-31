@@ -271,7 +271,8 @@ export function ReferentialsPage() {
 
   async function createWasteType(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
     await execute('create-waste-type', () => api.request('/referentials/waste-types', {
       method: 'POST',
       body: JSON.stringify({
@@ -282,12 +283,13 @@ export function ReferentialsPage() {
         dateDebutValidite: isoDateTime(String(data.get('dateDebutValidite'))),
       }),
     }), 'Type de déchet créé.');
-    event.currentTarget.reset();
+    form.reset();
   }
 
   async function createRegion(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
     await execute('create-region', () => api.request('/referentials/regions', {
       method: 'POST',
       body: JSON.stringify({
@@ -296,12 +298,13 @@ export function ReferentialsPage() {
         actif: true,
       }),
     }), 'Région créée.');
-    event.currentTarget.reset();
+    form.reset();
   }
 
   async function createDepartment(event: FormEvent<HTMLFormElement>, regionId: string) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
     await execute('create-department-' + regionId, () => api.request('/referentials/regions/' + regionId + '/departments', {
       method: 'POST',
       body: JSON.stringify({
@@ -310,12 +313,13 @@ export function ReferentialsPage() {
         actif: true,
       }),
     }), 'Département créé.');
-    event.currentTarget.reset();
+    form.reset();
   }
 
   async function createCommune(event: FormEvent<HTMLFormElement>, departmentId: string) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
     await execute('create-commune-' + departmentId, () => api.request('/referentials/departments/' + departmentId + '/communes', {
       method: 'POST',
       body: JSON.stringify({
@@ -324,12 +328,13 @@ export function ReferentialsPage() {
         actif: true,
       }),
     }), 'Commune créée.');
-    event.currentTarget.reset();
+    form.reset();
   }
 
   async function createTeam(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
     await execute('create-team', () => api.request('/referentials/teams', {
       method: 'POST',
       body: JSON.stringify({
@@ -338,12 +343,13 @@ export function ReferentialsPage() {
         etatEquipe: String(data.get('etatEquipe')).trim(),
       }),
     }), 'Équipe créée.');
-    event.currentTarget.reset();
+    form.reset();
   }
 
   async function updateTeam(event: FormEvent<HTMLFormElement>, teamId: string) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
     await execute('update-team-' + teamId, () => api.request('/referentials/teams/' + teamId, {
       method: 'PATCH',
       body: JSON.stringify({
@@ -356,7 +362,8 @@ export function ReferentialsPage() {
 
   async function addMembership(event: FormEvent<HTMLFormElement>, teamId: string) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
     await execute('add-membership-' + teamId, () => api.request('/referentials/teams/' + teamId + '/memberships', {
       method: 'POST',
       body: JSON.stringify({
@@ -365,12 +372,13 @@ export function ReferentialsPage() {
         fonction: String(data.get('fonction')).trim(),
       }),
     }), 'Membre ajouté à l’équipe.');
-    event.currentTarget.reset();
+    form.reset();
   }
 
   async function addSkill(event: FormEvent<HTMLFormElement>, teamId: string) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
     await execute('add-skill-' + teamId, () => api.request('/referentials/teams/' + teamId + '/skills', {
       method: 'POST',
       body: JSON.stringify({
@@ -379,12 +387,13 @@ export function ReferentialsPage() {
         commentaire: String(data.get('commentaire')).trim() || undefined,
       }),
     }), 'Compétence ajoutée à l’équipe.');
-    event.currentTarget.reset();
+    form.reset();
   }
 
   async function setAvailability(event: FormEvent<HTMLFormElement>, teamId: string) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
     await execute('availability-' + teamId, () => api.request('/referentials/teams/' + teamId + '/availability', {
       method: 'PUT',
       body: JSON.stringify({
@@ -397,7 +406,8 @@ export function ReferentialsPage() {
 
   async function addDelegation(event: FormEvent<HTMLFormElement>, teamId: string) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
     const membershipKey = String(data.get('membership'));
     const separator = membershipKey.indexOf('|');
     const idUtilisateurDelegue = membershipKey.slice(0, separator);
@@ -413,12 +423,13 @@ export function ReferentialsPage() {
         motif: String(data.get('motif')).trim() || undefined,
       }),
     }), 'Délégation créée.');
-    event.currentTarget.reset();
+    form.reset();
   }
 
   async function updateWasteType(event: FormEvent<HTMLFormElement>, wasteType: WasteType) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
     await execute('edit-waste-' + wasteType.idTypeDechet, () => api.request('/referentials/waste-types/' + wasteType.idTypeDechet, {
       method: 'PATCH',
       body: JSON.stringify({
@@ -431,7 +442,8 @@ export function ReferentialsPage() {
 
   async function closeWasteType(event: FormEvent<HTMLFormElement>, wasteType: WasteType) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
     await execute('close-waste-' + wasteType.idTypeDechet, () => api.request('/referentials/waste-types/' + wasteType.idTypeDechet + '/close', {
       method: 'POST',
       body: JSON.stringify({ dateFinValidite: isoDateTime(String(data.get('dateFinValidite'))) }),
