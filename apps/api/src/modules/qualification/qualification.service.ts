@@ -6,10 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client.js';
-import {
-  REPORT_STATUS_CODES,
-  type ReportStatus,
-} from '@isieco/shared';
+import type { ReportStatus } from '@isieco/shared';
 import { PrismaService } from '../../database/prisma.service.js';
 import type { AcceptReportDto } from './dto/accept-report.dto.js';
 import type { ListQualificationQueryDto } from './dto/list-qualification-query.dto.js';
@@ -249,10 +246,10 @@ export class QualificationService {
             data: dto.contenus.map((item) => ({
               idSignalement,
               idTypeDechet: item.idTypeDechet,
-              quantiteEstimee: item.quantiteEstimee,
+              quantiteEstimee: item.quantiteEstimee ?? null,
               uniteQuantite: item.uniteQuantite?.trim() || null,
-              quantiteEstimeeLegacy: item.quantiteEstimeeLegacy,
-              volumeEstime: item.volumeEstime,
+              quantiteEstimeeLegacy: item.quantiteEstimeeLegacy ?? null,
+              volumeEstime: item.volumeEstime ?? null,
               remarque: item.remarque?.trim() || null,
               qualifiePar: actorId,
               dateQualification: now,
