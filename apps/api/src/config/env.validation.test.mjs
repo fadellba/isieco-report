@@ -12,9 +12,12 @@ const validEnvironment = {
   NODE_ENV: 'test',
 };
 
-test('accepts a valid API environment without mutating it', () => {
+test('accepts a valid API environment and normalizes private media defaults', () => {
   const environment = { ...validEnvironment };
-  assert.deepEqual(validateEnvironment(environment), environment);
+  const validated = validateEnvironment(environment);
+  assert.equal(validated.SUPABASE_REPORTS_BUCKET, 'report-private');
+  assert.equal(validated.SUPABASE_INTERVENTIONS_BUCKET, 'intervention-private');
+  assert.equal(validated.MEDIA_RETENTION_DAYS, 365);
 });
 
 test('rejects missing required database and Supabase settings', () => {
@@ -99,5 +102,17 @@ test('never includes secret values in validation errors', () => {
       assert.match(error.message, /DATABASE_URL/u);
       return true;
     },
+  );
+});
+
+
+test('rejects invalid private bucket names and media retention windows', () => {
+  assert.throws(
+    () => validateEnvironment({ ...validEnvironment, SUPABASE_REPORTS_BUCKET: 'Public Bucket' }),
+    /SUPABASE_REPORTS_BUCKET/u,
+  );
+  assert.throws(
+    () => validateEnvironment({ ...validEnvironment, MEDIA_RETENTION_DAYS: '10' }),
+    /MEDIA_RETENTION_DAYS/u,
   );
 });
