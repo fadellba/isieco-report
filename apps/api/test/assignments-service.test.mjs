@@ -134,6 +134,10 @@ function createHarness(options = {}) {
       }),
     },
     equipe: {
+      findMany: async (args) => {
+        calls.eligibleTeamQueries.push(args);
+        return options.eligibleTeams ?? [];
+      },
       findUnique: async () => ({ idEquipe: teamId, etatEquipe: 'ACTIVE' }),
     },
     appartenanceEquipe: {
