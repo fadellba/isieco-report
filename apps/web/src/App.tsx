@@ -1,14 +1,34 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { AdminHomePage } from './pages/AdminHomePage';
+import { AppShell } from './app/AppShell';
+import { ProtectedRoute } from './app/ProtectedRoute';
+import { AccountsPage } from './features/accounts/AccountsPage';
+import { AuditPage } from './features/audit/AuditPage';
+import { DashboardPage } from './features/dashboard/DashboardPage';
+import { AccessDeniedPage } from './pages/AccessDeniedPage';
 import { DownloadPage } from './pages/DownloadPage';
 import { SignInPage } from './pages/SignInPage';
 
 export function App() {
   return (
     <Routes>
-      <Route path="/" element={<AdminHomePage />} />
       <Route path="/connexion" element={<SignInPage />} />
       <Route path="/telecharger" element={<DownloadPage />} />
+      <Route
+        element={
+          <ProtectedRoute>
+            <AppShell />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<DashboardPage />} />
+        <Route path="administration/comptes" element={
+          <ProtectedRoute roles={['ADMINISTRATEUR_COMPTES']}>
+            <AccountsPage />
+          </ProtectedRoute>
+        } />
+        <Route path="activite" element={<AuditPage />} />
+        <Route path="acces-refuse" element={<AccessDeniedPage />} />
+      </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

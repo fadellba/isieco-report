@@ -21,12 +21,13 @@ En cas de divergence, appliquer cet ordre : décisions acceptées dans les ADR, 
 ## État au 31 octobre 2026
 
 - Monorepo pnpm avec API NestJS, Web React, Mobile Expo et deux packages partagés.
-- Backend : Accounts, Referentials, Reports, Qualification, Cases, Assignments, Interventions et Verification intégrés à main.
+- Backend : Accounts, Referentials, Reports, Qualification, Cases, Assignments, Interventions, Verification, Médias privés (PR #15) et Audit à portée limitée (PR #16) intégrés à main.
 - Prisma : 38 modèles métier du MLD v2.13 ; Supabase Auth gère les identités et sessions.
 - Migrations : quatre migrations versionnées ; application sur PostgreSQL vierge, vérification du statut et tests d'intégrité dans la CI.
 - CI : ci.yml existe et le dernier run connu sur main a réussi.
-- Médias : upload privé, liens signés et commande de purge en cours de livraison sur la branche phase 10 ; provisionnement du bucket, décision de rétention et planification Cron restent nécessaires.
-- Web/Mobile : authentification et profil présents ; interfaces métier à réaliser.
+- Médias : upload privé, liens signés et commande de purge intégrés ; provisionnement du bucket, décision de rétention et planification Cron restent nécessaires.
+- Web : branche Phase 12 avec shell, navigation par rôle, administration des comptes et activité personnelle ; les autres écrans métier restent à réaliser.
+- Mobile : authentification, inscription et profil ; parcours citoyens/agents, médias et géolocalisation à réaliser.
 - web-deploy.yml et api-deploy.yml restent à créer ; aucun déploiement de production ni APK signé confirmé.
 
 Consulter [l'état des livrables](architecture/etat-des-livrables.md) avant de considérer une fonctionnalité comme terminée.

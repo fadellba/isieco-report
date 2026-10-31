@@ -52,9 +52,9 @@ Le schéma Prisma et les migrations versionnées sont appliqués sur une base Po
 
 ## État du projet au 31 octobre 2026
 
-Le backend a intégré les workflows Accounts, Referentials, Reports, Qualification, Cases, Assignments, Interventions et Verification. La dernière livraison intégrée est la vérification indépendante, la demande de reprise et la clôture contrôlée des dossiers (PR #14). La CI sur main valide les migrations PostgreSQL, OpenAPI, TypeScript, les tests et les builds Web/API/Mobile.
+Le backend a intégré les workflows Accounts, Referentials, Reports, Qualification, Cases, Assignments, Interventions et Verification. Les phases Médias (PR #15) et Audit à portée limitée (PR #16) sont également intégrées : upload privé, liens signés, purge bornée, journal personnel et historique des rôles réservé à l'administration des comptes. La CI sur main valide les migrations PostgreSQL, OpenAPI, TypeScript, les tests et les builds Web/API/Mobile.
 
-Les interfaces Web et Mobile restent des socles d'authentification et de profil : les écrans métier ne sont pas encore réalisés. L'infrastructure de stockage privé et le service de purge sont en cours de livraison sur la branche Phase 10 ; le bucket Supabase distant et sa planification Cron restent à configurer. L'audit centralisé consultable, les interfaces métier, les déploiements automatiques, le projet Supabase distant et l'APK Android signé restent à finaliser. L'état détaillé et les limites sont consignés dans docs/architecture/etat-des-livrables.md et docs/storage/README.md.
+La branche Phase 12 développe le premier back-office Web connecté : shell, navigation par habilitation, gestion des comptes et journal personnel. Les autres interfaces métier Web et les parcours citoyens/agents Mobile restent à développer. Le bucket Supabase distant, la politique de rétention, la planification Cron, les déploiements automatiques et l'APK Android signé restent à finaliser. L'état détaillé et les limites sont consignés dans docs/architecture/etat-des-livrables.md et docs/storage/README.md.
 
 ## CI
 

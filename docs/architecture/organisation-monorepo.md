@@ -119,7 +119,7 @@ isieco-report/
 | Zone | Présent dans main | Évolution nécessaire |
 |---|---|---|
 | API | NestJS, auth, database, common/pipes, accounts et modules métier vides. | Déplacer progressivement auth et database vers infrastructure ; ajouter config et les autres éléments transversaux au besoin. |
-| Web | React/Vite, pages connexion, accueil admin et téléchargement. | Organiser le back-office en features, composants UI/layout, hooks, routes et styles. |
+| Web | React/Vite, AuthProvider, shell, gardes par rôles, dashboard, gestion des comptes et journal d'activité (branche Phase 12). | Compléter progressivement les features métier (qualification, dossiers, référentiels, affectations, interventions et vérification), composants UI et tests d'interaction. |
 | Mobile | Expo Router, layout, index, connexion, inscription, client API et Supabase. | Créer les groupes de routes auth/citizen/agent et les features métier. |
 | Packages | shared et api-client initialisés. | Compléter types/schémas/endpoints sans créer de dépendances cycliques. |
 | CI/CD | ci.yml présent. | web-deploy.yml et api-deploy.yml non présents. |

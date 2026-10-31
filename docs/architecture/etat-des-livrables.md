@@ -16,11 +16,11 @@
 | Backend | Assignments | Intégré : affectation idempotente, vérification compétence/disponibilité, réponse d'équipe et réaffectation. |
 | Backend | Interventions | Intégré : démarrage, compte rendu, résultat/exception et reprise. Upload privé de preuves photo intégré (PR #15). |
 | Backend | Verification | Intégré : vérification indépendante, séparation des tâches, demande de reprise et clôture après achèvement des contenus actifs. |
-| Backend | Audit | Les événements sont écrits dans les transactions métier. La branche Phase 11 ajoute `GET /audit/me` et l'historique ciblé des rôles pour `ADMINISTRATEUR_COMPTES`, avec pagination et filtres. Aucun listing global ni export. CI à valider. |
+| Backend | Audit | Intégré (PR #16) : `GET /audit/me` et historique ciblé des rôles réservé à `ADMINISTRATEUR_COMPTES`, pagination/filtres, métadonnées sûres uniquement. Pas de listing global ni export. |
 | Médias | Infrastructure Storage privée | Intégrée (PR #15) : upload serveur, validation de signature JPEG/PNG/WebP, limite de 10 MiB, métadonnées, liens signés de 60 secondes et commande de purge bornée/auditée. CI complète verte. |
 | Médias | Bucket Supabase distant | À provisionner en privé ; secret serveur et durée de conservation à configurer dans l'environnement. Aucun projet distant n'a été modifié par cette branche. |
 | Médias | Purge des objets expirés | Intégrée (PR #15) : `pnpm storage:purge`, suppression Storage, `mediaPurgeAt`, événement atomique et reprise des échecs. Planification Cron à configurer. |
-| Web | Connexion, profil administratif et page `/telecharger` | Initialisés ; interfaces métier à réaliser. |
+| Web | Shell et authentification par rôle | Branche Phase 12 : contexte Supabase, profil API, gardes de routes et navigation filtrée par rôle. CI à valider. |\n| Web | Comptes et activité | Branche Phase 12 : liste de comptes, attribution/révocation de rôles et journal personnel paginé/filtrable. CI à valider. |
 | Mobile | Expo, connexion, inscription citoyenne et profil | Initialisés ; parcours métier citoyen/agent, médias et géolocalisation à réaliser. |
 | Packages | `shared` et `api-client` | Initialisés ; contrats métier et endpoints à compléter au rythme des clients. |
 | Base de données | MLD v2.13 | 38 modèles Prisma présents. |
@@ -33,7 +33,7 @@
 
 1. Terminer la configuration d'exploitation Médias : provisionner le bucket privé, configurer la rétention approuvée, tester les contrôles d'accès et planifier `pnpm storage:purge`.
 2. Finaliser la Phase 11 Audit : CI, revue de sécurité et recette des scopes. Toute consultation globale ou export attend une décision fonctionnelle et une habilitation explicite.
-3. Développer les écrans métier Web et les parcours citoyens/agents Mobile sur les contrats API.
+3. Compléter les écrans métier Web (qualification, dossiers, référentiels, affectations, interventions, vérification), puis les parcours citoyens/agents Mobile sur les contrats API.
 4. Mettre en place les déploiements, les smoke tests et la distribution Android signée.
 
 ## Règle de clôture d'un livrable
