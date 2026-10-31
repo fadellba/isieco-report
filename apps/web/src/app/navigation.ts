@@ -15,6 +15,18 @@ export const navigationItems: NavigationItem[] = [
     roles: ['ADMINISTRATEUR_COMPTES'],
   },
   {
+    to: '/qualification',
+    label: 'Qualification',
+    description: 'Examen et décision sur les signalements',
+    roles: ['AGENT_QUALIFICATION'],
+  },
+  {
+    to: '/dossiers',
+    label: 'Dossiers',
+    description: 'Constitution et pilotage des dossiers',
+    roles: ['RESPONSABLE_TRAITEMENT'],
+  },
+  {
     to: '/activite',
     label: 'Mon activité',
     description: 'Événements métier liés à mon compte',
