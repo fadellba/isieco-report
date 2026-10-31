@@ -90,6 +90,109 @@ export class AssignmentsService {
     return { items, page, pageSize, total };
   }
 
+  async listPendingContents(query: ListAssignmentsQueryDto) {
+    const page = Math.max(1, query.page ?? 1);
+    const pageSize = Math.min(100, Math.max(1, query.pageSize ?? 20));
+    const where: Prisma.ContenuDossierWhereInput = {
+      etatContenuDossier: 'ACTIF',
+      etatPriseEnCharge: 'EN_ATTENTE',
+      dossier: { statutDossier: { not: 'CLOTURE' } },
+      affectations: { none: { dateFinAffectation: null } },
+    };
+    const [total, items] = await this.prisma.$transaction([
+      this.prisma.contenuDossier.count({ where }),
+      this.prisma.contenuDossier.findMany({
+        where,
+        orderBy: [
+          { dossier: { dateCreationDossier: 'asc' } },
+          { idDossier: 'asc' },
+          { idTypeDechet: 'asc' },
+        ],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        select: {
+          idDossier: true,
+          idTypeDechet: true,
+          etatContenuDossier: true,
+          etatPriseEnCharge: true,
+          dossier: {
+            select: {
+              idDossier: true,
+              referenceDossier: true,
+              statutDossier: true,
+              priorite: true,
+            },
+          },
+          typeDechet: {
+            select: {
+              idTypeDechet: true,
+              codeType: true,
+              libelle: true,
+            },
+          },
+        },
+      }),
+    ]);
+    return { items, page, pageSize, total };
+  }
+
+  async listEligibleTeams(idTypeDechet: string) {
+    const now = new Date();
+    const teams = await this.prisma.equipe.findMany({
+      where: {
+        etatEquipe: 'ACTIVE',
+        competences: {
+          some: {
+            idTypeDechet,
+            dateDebut: { lte: now },
+            OR: [{ dateFin: null }, { dateFin: { gte: now } }],
+          },
+        },
+      },
+      orderBy: { nomEquipe: 'asc' },
+      select: {
+        idEquipe: true,
+        nomEquipe: true,
+        etatEquipe: true,
+        competences: {
+          where: {
+            idTypeDechet,
+            dateDebut: { lte: now },
+            OR: [{ dateFin: null }, { dateFin: { gte: now } }],
+          },
+          orderBy: { dateDebut: 'desc' },
+          take: 1,
+          select: {
+            idCompetenceEquipe: true,
+            dateDebut: true,
+            dateFin: true,
+          },
+        },
+        disponibilite: {
+          select: {
+            etatDisponibilite: true,
+            valideJusqua: true,
+          },
+        },
+      },
+    });
+
+    return teams
+      .filter((team) => !(
+        team.disponibilite &&
+        team.disponibilite.valideJusqua.getTime() >= now.getTime() &&
+        team.disponibilite.etatDisponibilite === 'INDISPONIBLE'
+      ))
+      .filter((team) => team.competences.length > 0)
+      .map((team) => ({
+        idEquipe: team.idEquipe,
+        nomEquipe: team.nomEquipe,
+        etatEquipe: team.etatEquipe,
+        competence: team.competences[0]!,
+        disponibilite: team.disponibilite,
+      }));
+  }
+
   async listTeamAssignments(idEquipe: string, authUserId: string) {
     const actorId = await this.actorId(authUserId);
     const now = new Date();
