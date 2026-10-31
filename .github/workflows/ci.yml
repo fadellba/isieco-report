@@ -149,8 +149,14 @@ jobs:
       - name: Build shared packages
         run: pnpm build:packages
 
+      - name: Diagnose API TypeScript compilation
+        run: pnpm --filter @isieco/api exec tsc --noEmit -p tsconfig.build.json
+
+      - name: Compile the NestJS API
+        run: pnpm --filter @isieco/api exec nest build --builder tsc
+
       - name: Generate OpenAPI specification
-        run: pnpm api:openapi
+        run: pnpm --filter @isieco/api exec node --trace-uncaught dist/openapi/generate-openapi.js
         env:
           DATABASE_URL: postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report?schema=public
           DIRECT_URL: postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report?schema=public

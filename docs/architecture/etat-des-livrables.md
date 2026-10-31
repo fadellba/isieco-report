@@ -16,7 +16,8 @@
 | Backend | Configuration API | Validation au démarrage des URL PostgreSQL/Supabase, du port, des origines CORS et de NODE_ENV. |
 | Backend | Accounts | Provisionnement citoyen, profil personnel, administration des comptes, attributions/révocations transactionnelles, audit métier et protection du dernier administrateur ; tests unitaires en CI. |
 | Backend | Referentials | Types de déchets, hiérarchie géographique, équipes, appartenances, compétences, disponibilité historisée et délégations ; habilitation GESTIONNAIRE_REFERENTIEL, événements d'audit atomiques et tests de service/PostgreSQL. |
-| Backend | Reports, qualification, cases, assignments, interventions, verification, audit | Squelettes ; règles et parcours à implémenter. |
+| Backend | Reports | Soumission citoyenne idempotente, validation des référentiels et coordonnées, audit atomique, liste/détail limités au propriétaire ; 9 tests unitaires/API de service. Photos et stockage privé signés à compléter. |
+| Backend | Qualification, cases, assignments, interventions, verification, audit | Squelettes ; règles et parcours à implémenter. |
 | Merise | MLD v2.13 dans Prisma | 38 modèles présents ; EvenementMetier possède des cibles explicites pour équipes, types de déchets et subdivisions géographiques. |
 | Base de données | PostgreSQL local et base shadow | Deux services Docker distincts et configuration SHADOW_DATABASE_URL ajoutés ; migrations appliquées et diff testé dans PostgreSQL CI. |
 | Merise | Migrations SQL MLD v2.13 | Quatre migrations versionnées : comptes/rôles, 35 modèles métier restants, contraintes d'intégrité et cibles géographiques d'audit. Application sur PostgreSQL vierge et tests négatifs d'intégrité en CI requis pour ce lot ; projet Supabase distant non migré. |
@@ -26,4 +27,4 @@
 | API | OpenAPI | Générable et archivé comme artefact CI. |
 | Exploitation | Projet Supabase distant et déploiements | Non validés. |
 
-La compilation et la génération Prisma ne prouvent pas que les migrations s'appliquent sur une base réelle, que les règles métier sont correctes ou que les parcours fonctionnent sur appareil. Un livrable est terminé seulement après code, tests, sécurité, documentation et procédure de livraison.
+La soumission Reports est une première tranche : l’attachement de médias privés et les parcours métier aval restent à livrer. La compilation et la génération Prisma ne prouvent pas que les migrations s'appliquent sur une base réelle, que les règles métier sont correctes ou que les parcours fonctionnent sur appareil. Un livrable est terminé seulement après code, tests, sécurité, documentation et procédure de livraison.
