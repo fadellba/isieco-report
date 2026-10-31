@@ -441,7 +441,7 @@ export function InterventionsPage() {
                     </div>
                   ) : null}
 
-                  {canStart && !latest || canStart ? (
+                  {canStart ? (
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <p className="text-xs text-slate-500">{latest ? 'Une reprise a été demandée par le vérificateur.' : 'L’équipe a accepté cette mission.'}</p>
                       <button type="button" onClick={() => void start(assignment)} disabled={busyKey === assignment.idAffectation} className={buttonClass}>
