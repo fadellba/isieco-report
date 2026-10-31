@@ -4,6 +4,10 @@ import { ProtectedRoute } from './app/ProtectedRoute';
 import { AccountsPage } from './features/accounts/AccountsPage';
 import { AuditPage } from './features/audit/AuditPage';
 import { DashboardPage } from './features/dashboard/DashboardPage';
+import { QualificationQueuePage } from './features/qualification/QualificationQueuePage';
+import { QualificationDetailPage } from './features/qualification/QualificationDetailPage';
+import { CasesPage } from './features/cases/CasesPage';
+import { CaseDetailPage } from './features/cases/CaseDetailPage';
 import { AccessDeniedPage } from './pages/AccessDeniedPage';
 import { DownloadPage } from './pages/DownloadPage';
 import { SignInPage } from './pages/SignInPage';
@@ -24,6 +28,26 @@ export function App() {
         <Route path="administration/comptes" element={
           <ProtectedRoute roles={['ADMINISTRATEUR_COMPTES']}>
             <AccountsPage />
+          </ProtectedRoute>
+        } />
+        <Route path="qualification" element={
+          <ProtectedRoute roles={['AGENT_QUALIFICATION']}>
+            <QualificationQueuePage />
+          </ProtectedRoute>
+        } />
+        <Route path="qualification/:idSignalement" element={
+          <ProtectedRoute roles={['AGENT_QUALIFICATION']}>
+            <QualificationDetailPage />
+          </ProtectedRoute>
+        } />
+        <Route path="dossiers" element={
+          <ProtectedRoute roles={['RESPONSABLE_TRAITEMENT']}>
+            <CasesPage />
+          </ProtectedRoute>
+        } />
+        <Route path="dossiers/:idDossier" element={
+          <ProtectedRoute roles={['RESPONSABLE_TRAITEMENT']}>
+            <CaseDetailPage />
           </ProtectedRoute>
         } />
         <Route path="activite" element={<AuditPage />} />
