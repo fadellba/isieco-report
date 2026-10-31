@@ -29,14 +29,15 @@ En cas de divergence, appliquer cet ordre : décisions acceptées dans les ADR, 
 - Phase 17 intégrée dans main (PR #22) : file de vérification, preuves signées, décision conforme ou demande de reprise motivée.
 - Phase 18 intégrée dans main (PR #23) : dépôt idempotent, liste paginée, détail et réponses aux demandes de complément sur les endpoints Reports existants.
 - Phase 19 intégrée dans main (PR #24) : équipes propres au compte, missions, acceptation/refus, démarrage, compte rendu et reprise après décision du vérificateur.
+- Phase 20 intégrée dans `main` (PR #25) : workflows Vercel/Render attendant la CI verte du même commit avant tout appel de Deploy Hook. Les workflows ont été exécutés sur le commit de référence ; la garde `PRODUCTION_DEPLOY_ENABLED` a empêché tout déploiement effectif.
 - Phase 21 intégrée dans `main` (PR #26) : caméra/galerie, upload privé citoyen et agent, aperçu par URL signée et localisation ponctuelle au premier plan. CI complète verte ; recette sur appareils Android/iOS réels restante.
 - Prisma : 38 modèles métier du MLD v2.13 ; Supabase Auth gère les identités et sessions.
 - Migrations : quatre migrations versionnées ; la CI les applique sur PostgreSQL vierge, vérifie l'historique, produit un aperçu additif et exécute les tests d'intégrité.
-- CI : ci.yml et render-uml-class-diagrams.yml sont présents ; la CI de la PR #24 a réussi. Le run push de `main` après sa fusion reste à confirmer.
+- CI : ci.yml et render-uml-class-diagrams.yml sont présents ; le run push de `main` sur le commit `6bfc822` (31 octobre 2026) est vert : migrations PostgreSQL, génération OpenAPI, TypeScript, tests et builds Web/API/Mobile (run #41248396450).
 - Médias : upload privé, liens signés et commande de purge intégrés ; provisionnement du bucket, décision de rétention et planification Cron restent nécessaires.
 - Web restant après la Phase 17 : aucun parcours métier Web principal ; restent la recette d'usage, la revue d'accessibilité et les fonctions secondaires de gestion.
 - Mobile : authentification Supabase, parcours citoyen et parcours Agent terrain intégrés ; photos natives et géolocalisation ponctuelle intégrées (PR #26). Notifications, mode hors connexion et recette appareils restent à réaliser.
-- Phase 20 en cours sur `feat/phase-20-deployment-workflows-v2` : workflows de déploiement Vercel/Render déclenchés sur `main` ou manuellement et bloqués tant que la CI du même commit n'est pas verte. Deploy Hooks et URLs de smoke test à configurer comme secrets GitHub ; le secret `PRODUCTION_DEPLOY_ENABLED=true` est requis pour autoriser tout appel de déploiement. Aucun déploiement de production confirmé.
+- Déploiement : les workflows Web/API de la Phase 20 sont intégrés (PR #25). Les runs #41248396500 et #41248396526 ont attendu la CI du commit `6bfc822`, puis ont explicitement ignoré l'appel Vercel/Render parce que `PRODUCTION_DEPLOY_ENABLED` et les URLs de Deploy Hook étaient absents. Les smoke tests ont donc été ignorés ; aucun déploiement de production n'est confirmé.
 - Aucun APK Android de release signé n'est confirmé.
 
 Consulter [l'état des livrables](architecture/etat-des-livrables.md) avant de considérer une fonctionnalité comme terminée.
