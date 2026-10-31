@@ -29,7 +29,6 @@ export default function NewCitizenReportScreen() {
 
   async function handleSubmit() {
     setError(null);
-    setNotice(null);
     const cleanDescription = description.trim();
     if (cleanDescription.length < 10 || cleanDescription.length > 5000) {
       setError('La description doit contenir entre 10 et 5000 caractères.');
