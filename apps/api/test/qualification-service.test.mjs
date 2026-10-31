@@ -213,7 +213,7 @@ test('rejects a report with a required reason and records the decision', async (
   assert.equal(result.statutSignalement, 'REJETE');
   assert.equal(result.motifDecision, 'Le signalement est hors du périmètre de la plateforme.');
   assert.equal(report.statutSignalement, 'REJETE');
-  assert.equal(calls.reportUpdates[0].decisionPar, actorId);
+  assert.equal(calls.reportUpdates[0].data.decisionPar, actorId);
   assert.equal(calls.events[0].typeEvenement, 'SIGNALEMENT_REJETE');
   assert.equal(calls.events[0].motif, result.motifDecision);
 });
