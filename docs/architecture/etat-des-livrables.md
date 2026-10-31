@@ -8,7 +8,7 @@
 | Toolchain | Node.js, pnpm et lockfile | Versions épinglées ; installation CI en `--frozen-lockfile`. |
 | CI | `.github/workflows/ci.yml` | Présent ; les CI des PR #22, #23 et #24 ont réussi. Le run push de main après PR #24 est à confirmer. |
 | CI UML | `render-uml-class-diagrams.yml` | Présent pour régénérer les vues UML à partir de la source versionnée. |
-| CI/CD | Déploiements Web/API | En cours sur `feat/phase-20-deployment-workflows-v2` : workflows déclenchés sur push `main` ou manuellement, vérifiant la CI réussie sur le même SHA avant Deploy Hook. Secrets Vercel/Render et smoke tests à configurer. Aucun déploiement de production confirmé. |
+| CI/CD | Déploiements Web/API | En cours sur `feat/phase-20-deployment-workflows-v2` : workflows déclenchés sur push `main` ou manuellement, vérifiant la CI réussie sur le même SHA avant Deploy Hook. Secrets Vercel/Render, opt-in `PRODUCTION_DEPLOY_ENABLED=true` et smoke tests à configurer. Aucun déploiement de production confirmé. |
 | Backend | Accounts | Intégré : profils, provisionnement citoyen, administration des comptes/rôles, audit transactionnel et protection du dernier administrateur. |
 | Backend | Referentials | Intégré : types de déchets, régions/départements/communes, équipes, appartenances, compétences, disponibilité historisée et délégations. |
 | Backend | Reports | Intégré : soumission idempotente, validation des référentiels, suivi propriétaire et demandes/réponses de complément. Upload privé de photos intégré (PR #15). |
