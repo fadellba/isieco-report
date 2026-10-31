@@ -99,6 +99,37 @@ jobs:
           DATABASE_URL: postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report?schema=public
           DIRECT_URL: postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report?schema=public
 
+      - name: Model Supabase Data API roles and default grants
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: isieco
+          PGPASSWORD: isieco_dev_password
+          PGDATABASE: isieco_report
+        run: |
+          psql --no-psqlrc --set ON_ERROR_STOP=1 <<'SQL'
+          DO $roles$
+          BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
+              CREATE ROLE anon NOLOGIN;
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+              CREATE ROLE authenticated NOLOGIN;
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
+              CREATE ROLE service_role NOLOGIN BYPASSRLS;
+            END IF;
+          END
+          $roles$;
+
+          ALTER DEFAULT PRIVILEGES FOR ROLE isieco IN SCHEMA public
+            GRANT ALL ON TABLES TO anon, authenticated, service_role;
+          ALTER DEFAULT PRIVILEGES FOR ROLE isieco IN SCHEMA public
+            GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
+          ALTER DEFAULT PRIVILEGES FOR ROLE isieco IN SCHEMA public
+            GRANT EXECUTE ON FUNCTIONS TO anon, authenticated, service_role;
+          SQL
+
       - name: Apply committed migrations to a clean PostgreSQL database
         run: pnpm db:deploy
         env:
