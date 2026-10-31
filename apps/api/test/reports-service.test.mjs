@@ -104,7 +104,7 @@ function createHarness(options = {}) {
       },
       findFirst: async (args) => {
         calls.detailReads.push(args);
-        return options.detail ?? report;
+        return Object.hasOwn(options, 'detail') ? options.detail : report;
       },
     },
     $transaction: async (operation, transactionOptions) => {
