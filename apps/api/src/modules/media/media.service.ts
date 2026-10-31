@@ -13,7 +13,7 @@ import { MediaStorageService } from './media-storage.service.js';
 
 type Transaction = Prisma.TransactionClient;
 
-type UploadedImage = {
+export type UploadedImage = {
   buffer: Buffer;
   size: number;
   mimetype: string;
@@ -200,7 +200,7 @@ export class MediaService {
             dateExpiration: photo.dateExpiration.toISOString(),
           },
         });
-        return { ...photo, referencePhoto: undefined };
+        return photo;
       });
     } catch (error) {
       await this.storage.removeUnregisteredObject(bucket, objectPath, accessToken).catch(() => undefined);
