@@ -1,19 +1,35 @@
 # Module Audit
 
-Historique métier, traçabilité et événements.
+Consultation contrôlée du journal métier `EvenementMetier`.
 
-## État
+## Source de données
 
-Les modules métier écrivent déjà leurs événements dans `EvenementMetier` au sein des mêmes transactions que les mutations sensibles. Les événements couvrent notamment les comptes et rôles, référentiels, signalements, qualification, dossiers, affectations, interventions, photos, vérification et clôture.
+Les modules métier écrivent les événements dans la même transaction que les mutations sensibles. Le journal couvre notamment les comptes et rôles, référentiels, signalements, qualification, dossiers, affectations, interventions, photos, vérification, purge et clôture.
 
-Le module NestJS Audit est initialisé mais ne propose pas encore d'API de consultation centralisée.
+Le module Audit est en lecture seule. Il ne permet ni modification ni suppression d'événements.
 
-## À développer
+## API de consultation
 
-- File paginée des événements, avec bornes temporelles et filtres par type et cible.
-- Détail d'un événement avec masquage des champs personnels et des secrets.
-- Contrôle des rôles autorisés à consulter les événements et séparation des informations internes.
-- Export filtré et borné, journalisation des exports et limites anti-abus.
-- Tests de non-divulgation, pagination, filtres, autorisations et volumes.
+| Méthode | Route | Accès | Périmètre |
+|---|---|---|---|
+| GET | `/api/v1/audit/me` | Compte métier actif connecté | Événements où l'utilisateur est l'acteur ou l'utilisateur cible. |
+| GET | `/api/v1/audit/accounts/:idUtilisateur/roles` | `ADMINISTRATEUR_COMPTES` | Uniquement `ROLE_ATTRIBUE` et `ROLE_REVOQUE` pour le compte ciblé. |
 
-Les données d'audit sont append-only du point de vue des modules consommateurs. Ne jamais permettre à une API générique de modifier ou supprimer les événements.
+Les deux routes acceptent `page`, `pageSize` (maximum 100), `dateDebut`, `dateFin` et `typeEvenement`. La période filtre `dateEnregistrement` et les bornes sont inclusives.
+
+## Limites de confidentialité
+
+Les réponses contiennent l'identifiant d'événement, le type, les dates, l'origine, l'acteur et la cible. Elles excluent :
+
+- `donneesAvant` et `donneesApres`, qui peuvent contenir des instantanés métier ;
+- `motif`, champ texte libre susceptible de contenir des données personnelles ;
+- `destinataireExterne` et les identifiants de corrélation ;
+- toute URL signée, référence de stockage ou secret.
+
+Il n'existe pas de route listant tous les événements du système. Le rôle `ADMINISTRATEUR_COMPTES` n'accorde pas de privilège métier général ; son accès d'audit est limité à l'historique des habilitations, responsabilité déjà comprise dans son périmètre. Aucun rôle global `AUDITEUR` n'est ajouté sans décision fonctionnelle et sécurité dédiée.
+
+La cible d'un contenu de dossier est représentée par la paire UUID dossier/type de déchet, conformément à la clé composite du MLD.
+
+## Tests
+
+Les tests couvrent le filtrage acteur/cible, les événements de rôles, les bornes temporelles, les comptes inactifs, les comptes inexistants, la clé composite des cibles et l'absence de snapshots et de champs libres dans les réponses.

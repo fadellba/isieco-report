@@ -10,16 +10,16 @@
 | CI/CD | Déploiements Web/API | `web-deploy.yml` et `api-deploy.yml` à créer. |
 | Backend | Accounts | Intégré : profils, provisionnement citoyen, administration des comptes et rôles, audit transactionnel et protection du dernier administrateur. |
 | Backend | Referentials | Intégré : types de déchets, régions/départements/communes, équipes, appartenances, compétences, disponibilité historisée et délégations. |
-| Backend | Reports | Intégré : soumission idempotente, validation de référentiels, suivi propriétaire, demandes/réponses de complément. Upload de photos sur la branche Phase 10. |
+| Backend | Reports | Intégré : soumission idempotente, validation de référentiels, suivi propriétaire, demandes/réponses de complément. Upload privé de photos intégré (PR #15). |
 | Backend | Qualification | Intégré : file, demandes de complément, acceptation, rejet motivé et transitions atomiques. |
 | Backend | Cases | Intégré : création, rattachements/détachements, provenance, priorité et localisation historisées. |
 | Backend | Assignments | Intégré : affectation idempotente, vérification compétence/disponibilité, réponse d'équipe et réaffectation. |
-| Backend | Interventions | Intégré : démarrage, compte rendu, résultat/exception et reprise. Upload de preuves photo sur la branche Phase 10. |
+| Backend | Interventions | Intégré : démarrage, compte rendu, résultat/exception et reprise. Upload privé de preuves photo intégré (PR #15). |
 | Backend | Verification | Intégré : vérification indépendante, séparation des tâches, demande de reprise et clôture après achèvement des contenus actifs. |
-| Backend | Audit | Les modules écrivent des événements métier dans la transaction. API centralisée de consultation, filtres et export à développer. |
-| Médias | Infrastructure Storage privée | Branche Phase 10 : upload serveur, validation binaire JPEG/PNG/WebP, limite de 10 MiB, métadonnées photo, liens signés de 60 secondes et commande de purge bornée/auditée. Validation CI et revue encore nécessaires. |
+| Backend | Audit | Les événements sont écrits dans les transactions métier. La branche Phase 11 ajoute `GET /audit/me` et l'historique ciblé des rôles pour `ADMINISTRATEUR_COMPTES`, avec pagination et filtres. Aucun listing global ni export. CI à valider. |
+| Médias | Infrastructure Storage privée | Intégrée (PR #15) : upload serveur, validation de signature JPEG/PNG/WebP, limite de 10 MiB, métadonnées, liens signés de 60 secondes et commande de purge bornée/auditée. CI complète verte. |
 | Médias | Bucket Supabase distant | À provisionner en privé ; secret serveur et durée de conservation à configurer dans l'environnement. Aucun projet distant n'a été modifié par cette branche. |
-| Médias | Purge des objets expirés | Service et commande `pnpm storage:purge` ajoutés sur la branche Phase 10 : suppression Storage, horodatage `mediaPurgeAt`, événement d'audit atomique et retry des éléments en échec. Planification Cron et validation d'environnement à configurer. |
+| Médias | Purge des objets expirés | Intégrée (PR #15) : `pnpm storage:purge`, suppression Storage, `mediaPurgeAt`, événement atomique et reprise des échecs. Planification Cron à configurer. |
 | Web | Connexion, profil administratif et page `/telecharger` | Initialisés ; interfaces métier à réaliser. |
 | Mobile | Expo, connexion, inscription citoyenne et profil | Initialisés ; parcours métier citoyen/agent, médias et géolocalisation à réaliser. |
 | Packages | `shared` et `api-client` | Initialisés ; contrats métier et endpoints à compléter au rythme des clients. |
@@ -31,8 +31,8 @@
 
 ## Ordre de livraison recommandé
 
-1. Terminer la Phase 10 Médias : valider la CI, provisionner le bucket privé, configurer la rétention approuvée, tester les contrôles d'accès et planifier `pnpm storage:purge`.
-2. Compléter Audit : consultation paginée, filtres autorisés, détail d'événement et export avec contrôle d'accès.
+1. Terminer la configuration d'exploitation Médias : provisionner le bucket privé, configurer la rétention approuvée, tester les contrôles d'accès et planifier `pnpm storage:purge`.
+2. Finaliser la Phase 11 Audit : CI, revue de sécurité et recette des scopes. Toute consultation globale ou export attend une décision fonctionnelle et une habilitation explicite.
 3. Développer les écrans métier Web et les parcours citoyens/agents Mobile sur les contrats API.
 4. Mettre en place les déploiements, les smoke tests et la distribution Android signée.
 

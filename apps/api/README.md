@@ -66,7 +66,7 @@ Le module Referentials expose les types de déchets, les subdivisions géographi
 - Interventions : démarrage, compte rendu, exceptions et preuves photo.
 - Verification : décision indépendante, reprise et clôture contrôlée.
 
-Audit écrit les événements au fil des transactions métier ; son interface centralisée de consultation et d'export reste à développer.
+Audit expose `GET /api/v1/audit/me` pour l'historique personnel (acteur ou compte cible) et `GET /api/v1/audit/accounts/:idUtilisateur/roles` pour l'historique des rôles, réservé à `ADMINISTRATEUR_COMPTES`. Les réponses sont paginées et filtrables ; snapshots JSON, motifs libres et données de destinataire sont exclus. Aucun endpoint global ni export n'est fourni. Cette API est sur la branche Phase 11 en attente de CI.
 
 ## Stockage privé des médias
 

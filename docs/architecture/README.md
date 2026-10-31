@@ -29,4 +29,4 @@ La cible comprend une application Web d'administration, une application Mobile u
 | referentials | Types de déchets, équipes, compétences, géographie. |
 | audit | Événements métier et historique. |
 
-Ce sont des frontières applicatives internes, pas des services déployés séparément. À la date du 31 octobre 2026, Accounts, Referentials, Reports, Qualification, Cases, Assignments, Interventions et Verification sont intégrés dans main. Audit est initialisé ; la consultation et l'export centralisés restent à développer. Les interfaces métier Web et Mobile restent également à réaliser.
+Ce sont des frontières applicatives internes, pas des services déployés séparément. À la date du 31 octobre 2026, Accounts, Referentials, Reports, Qualification, Cases, Assignments, Interventions, Verification et l'infrastructure Médias sont intégrés dans main. La branche Phase 11 ajoute une consultation d'audit à portée limitée : activité personnelle et historique de rôles réservé à ADMINISTRATEUR_COMPTES. Aucun listing global ni export n'est exposé. Les interfaces métier Web et Mobile restent à réaliser.

@@ -30,6 +30,8 @@ Les secrets de session ne sont pas copiés dans PostgreSQL métier. La table SES
 - L'attribution du même rôle actif est protégée par un index unique partiel PostgreSQL ; les conflits concurrents sont retournés comme `409 Conflict`.
 - La révocation du dernier compte `ADMINISTRATEUR_COMPTES` actif est interdite ; les opérations de rôle et leur événement d'audit sont atomiques.
 - Les décisions sensibles conservent acteur, date, motif et identifiant de corrélation lorsque disponible.
+- La consultation d'audit est elle-même limitée : un compte actif ne voit que les événements où il est acteur ou cible ; `ADMINISTRATEUR_COMPTES` ne voit que l'historique des attributions/révocations de rôles du compte demandé.
+- Aucune consultation globale du journal n'est accordée à `ADMINISTRATEUR_COMPTES` et aucun rôle `AUDITEUR` n'est créé sans décision d'architecture et validation fonctionnelle explicite.
 - Les erreurs ne divulguent pas SQL, stack traces, jetons ou secrets.
 
 ## Médias et RLS

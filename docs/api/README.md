@@ -17,6 +17,15 @@ Swagger est une interface développeur. Il ne doit exposer aucun secret, chemin 
 
 Les routes métier sont groupées par comptes, référentiels, signalements, qualification, dossiers, affectations, interventions et vérification. Chaque contrôleur documente ses habilitations et DTO.
 
+### Audit (Phase 11)
+
+| Méthode | Route | Autorisation | Description |
+|---|---|---|---|
+| GET | `/audit/me` | Compte métier actif connecté | Historique paginé dont le compte est acteur ou cible, avec filtres de date et de type. |
+| GET | `/audit/accounts/:idUtilisateur/roles` | ADMINISTRATEUR_COMPTES | Historique des seules attributions et révocations de rôles du compte visé. |
+
+Les réponses exposent les métadonnées d'événement et sa cible, jamais `donneesAvant`, `donneesApres`, les motifs libres ou les informations de destinataire externe. Il n'existe pas de consultation globale du journal : aucun rôle d'auditeur global n'est défini dans le modèle d'habilitations.
+
 ### Médias privés (Phase 10)
 
 | Méthode | Route | Autorisation | Description |
