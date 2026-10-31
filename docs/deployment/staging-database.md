@@ -8,7 +8,7 @@ Le bucket privé `isieco-private-media` existe déjà, avec limite 10 MiB et typ
 
 ## Pourquoi passer par Prisma Migrate
 
-La source de vérité du schéma métier est `prisma/schema.prisma` et les quatre migrations SQL versionnées dans `prisma/migrations/`. L'historique d'application est conservé dans `_prisma_migrations`.
+La source de vérité du schéma métier est `prisma/schema.prisma` et les cinq migrations SQL versionnées dans `prisma/migrations/`. L'historique d'application est conservé dans `_prisma_migrations`.
 
 Ne pas copier les fichiers SQL dans le Dashboard Supabase et ne pas appeler manuellement `apply_migration` pour ce schéma : cela ne mettrait pas à jour l'historique `_prisma_migrations` de Prisma et rendrait le déploiement suivant incohérent.
 
@@ -45,7 +45,7 @@ pnpm exec prisma migrate status
 Après réussite, vérifier dans Supabase :
 
 - les 38 tables métier attendues dans le schéma `public` ;
-- les quatre (puis cinq après ajout de la migration de sécurité) entrées de migration dans `_prisma_migrations` ;
+- les cinq entrées de migration dans `_prisma_migrations` ;
 - RLS activé sur les 38 tables ;
 - aucun privilège direct `SELECT/INSERT/UPDATE/DELETE` pour `anon`, `authenticated` et `service_role` sur les tables métier ;
 - absence de privilèges par défaut accordés à ces rôles sur les futures tables, séquences et fonctions.
