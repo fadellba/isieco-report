@@ -30,7 +30,7 @@ import { Roles } from '../../auth/roles.decorator.js';
 import { RolesGuard } from '../../auth/roles.guard.js';
 import { SupabaseAuthGuard } from '../../auth/supabase-auth.guard.js';
 import { AssignmentsService } from './assignments.service.js';
-import { AssignmentListResponseDto, AssignmentResponseDto } from './dto/assignment-response.dto.js';
+import { AssignmentListResponseDto, AssignmentResponseDto, EligibleTeamResponseDto, PendingAssignmentContentListResponseDto } from './dto/assignment-response.dto.js';
 import { CreateAssignmentDto } from './dto/create-assignment.dto.js';
 import { ListAssignmentsQueryDto } from './dto/list-assignments-query.dto.js';
 import { ReassignAssignmentDto } from './dto/reassign-assignment.dto.js';
@@ -48,7 +48,7 @@ export class AssignmentsController {
   @ApiOperation({ summary: 'Liste les contenus disponibles pour une nouvelle affectation' })
   @ApiQuery({ name: 'page', required: false, type: Number, minimum: 1 })
   @ApiQuery({ name: 'pageSize', required: false, type: Number, minimum: 1, maximum: 100 })
-  @ApiOkResponse({ description: 'Contenus actifs en attente, dossier ouvert et sans affectation active.' })
+  @ApiOkResponse({ type: PendingAssignmentContentListResponseDto })
   @ApiForbiddenResponse({ description: 'Rôle RESPONSABLE_AFFECTATION requis.' })
   listPendingContents(@Query() query: ListAssignmentsQueryDto) {
     return this.assignments.listPendingContents(query);
@@ -58,7 +58,7 @@ export class AssignmentsController {
   @Roles('RESPONSABLE_AFFECTATION')
   @ApiOperation({ summary: 'Liste les équipes actives compétentes et disponibles pour un type de déchet' })
   @ApiParam({ name: 'idTypeDechet', format: 'uuid' })
-  @ApiOkResponse({ description: 'Équipes ayant une compétence valide et ne déclarant pas une indisponibilité courante.' })
+  @ApiOkResponse({ type: [EligibleTeamResponseDto] })
   @ApiForbiddenResponse({ description: 'Rôle RESPONSABLE_AFFECTATION requis.' })
   listEligibleTeams(@Param('idTypeDechet', ParseUUIDPipe) idTypeDechet: string) {
     return this.assignments.listEligibleTeams(idTypeDechet);
