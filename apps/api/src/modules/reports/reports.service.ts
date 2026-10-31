@@ -230,8 +230,12 @@ export class ReportsService {
           await this.writeEvent(tx, {
             reportId: report.idSignalement,
             actorId,
-            contentCount: payload.contenus.length,
-            hasLocation: payload.latitude !== null || payload.idCommune !== null,
+            type: 'SIGNALEMENT_SOUMIS',
+            after: {
+              statut: 'SOUMIS',
+              nombreContenus: payload.contenus.length,
+              localisationFournie: payload.latitude !== null || payload.idCommune !== null,
+            },
           });
 
           return tx.signalement.findUniqueOrThrow({
@@ -281,24 +285,154 @@ export class ReportsService {
     return report;
   }
 
+
+  async listMySupplements(idSignalement: string, authUserId: string) {
+    const actorId = await this.actorId(authUserId);
+    const report = await this.prisma.signalement.findFirst({
+      where: { idSignalement, idUtilisateur: actorId },
+      select: { idSignalement: true },
+    });
+    if (!report) throw new NotFoundException('Signalement introuvable.');
+
+    const demandes = await this.prisma.demandeComplement.findMany({
+      where: { idSignalement },
+      orderBy: [{ dateDemande: 'desc' }, { idDemande: 'desc' }],
+      select: {
+        idDemande: true,
+        dateDemande: true,
+        motif: true,
+        etatDemande: true,
+        reponse: {
+          select: {
+            idReponse: true,
+            dateReponse: true,
+            contenu: true,
+          },
+        },
+      },
+    });
+    return { idSignalement, demandes };
+  }
+
+  async answerSupplement(
+    idSignalement: string,
+    idDemande: string,
+    contenu: string,
+    authUserId: string,
+  ) {
+    const actorId = await this.actorId(authUserId);
+    const cleanContent = contenu.trim();
+    if (cleanContent.length < 10 || cleanContent.length > 4000) {
+      throw new BadRequestException('La réponse doit contenir entre 10 et 4000 caractères.');
+    }
+
+    try {
+      return await this.prisma.$transaction(
+        async (tx) => {
+          const demande = await tx.demandeComplement.findFirst({
+            where: { idDemande, idSignalement },
+            include: {
+              signalement: {
+                select: {
+                  idSignalement: true,
+                  idUtilisateur: true,
+                  statutSignalement: true,
+                },
+              },
+            },
+          });
+
+          if (!demande || demande.signalement.idUtilisateur !== actorId) {
+            throw new NotFoundException('Demande de complément introuvable.');
+          }
+          if (
+            demande.etatDemande !== 'OUVERTE' ||
+            demande.signalement.statutSignalement !== 'EN_ATTENTE_COMPLEMENT'
+          ) {
+            throw new ConflictException('Cette demande de complément n’est plus ouverte.');
+          }
+
+          const now = new Date();
+          const closedRequest = await tx.demandeComplement.updateMany({
+            where: { idDemande, etatDemande: 'OUVERTE' },
+            data: { etatDemande: 'REPONDUE' },
+          });
+          if (closedRequest.count !== 1) {
+            throw new ConflictException('La demande de complément a été traitée simultanément.');
+          }
+
+          const updatedReport = await tx.signalement.updateMany({
+            where: {
+              idSignalement,
+              idUtilisateur: actorId,
+              statutSignalement: 'EN_ATTENTE_COMPLEMENT',
+            },
+            data: { statutSignalement: 'COMPLEMENT_REPONDU' },
+          });
+          if (updatedReport.count !== 1) {
+            throw new ConflictException('Le signalement a changé d’état simultanément.');
+          }
+
+          const reponse = await tx.reponseComplement.create({
+            data: {
+              idDemande,
+              reponduPar: actorId,
+              dateReponse: now,
+              contenu: cleanContent,
+            },
+            select: {
+              idReponse: true,
+              idDemande: true,
+              dateReponse: true,
+              contenu: true,
+            },
+          });
+
+          await this.writeEvent(tx, {
+            reportId: idSignalement,
+            actorId,
+            type: 'COMPLEMENT_REPONDU',
+            after: {
+              statutSignalement: 'COMPLEMENT_REPONDU',
+              etatDemande: 'REPONDUE',
+              idDemande,
+              dateReponse: now.toISOString(),
+            },
+          });
+          return reponse;
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
+    } catch (error) {
+      if (isPrismaCode(error, 'P2002')) {
+        throw new ConflictException('Une réponse a déjà été enregistrée pour cette demande.');
+      }
+      if (isPrismaCode(error, 'P2034')) {
+        throw new ConflictException('La demande a été modifiée simultanément. Rechargez le signalement.');
+      }
+      throw error;
+    }
+  }
+
   private async writeEvent(
     tx: Transaction,
-    payload: { reportId: string; actorId: string; contentCount: number; hasLocation: boolean },
+    payload: {
+      reportId: string;
+      actorId: string;
+      type: string;
+      after: Prisma.InputJsonValue;
+    },
   ): Promise<void> {
     const now = new Date();
     await tx.evenementMetier.create({
       data: {
-        typeEvenement: 'SIGNALEMENT_SOUMIS',
+        typeEvenement: payload.type,
         dateEvenement: now,
         dateEnregistrement: now,
         origine: 'API',
         idActeur: payload.actorId,
         idSignalementCible: payload.reportId,
-        donneesApres: {
-          statut: 'SOUMIS',
-          nombreContenus: payload.contentCount,
-          localisationFournie: payload.hasLocation,
-        },
+        donneesApres: payload.after,
         versionSchema: 1,
       },
     });

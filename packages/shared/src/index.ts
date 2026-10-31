@@ -45,3 +45,26 @@ export interface ApiErrorResponse {
   requestId?: string;
   details?: unknown;
 }
+
+/**
+ * Public lifecycle codes for citizen reports.
+ * These strings are persisted in the relational model; changing one requires
+ * a backward-compatible data migration and updates to all clients.
+ */
+export const REPORT_STATUS_CODES = [
+  'SOUMIS',
+  'EN_ATTENTE_COMPLEMENT',
+  'COMPLEMENT_REPONDU',
+  'QUALIFIE',
+  'REJETE',
+] as const;
+
+export type ReportStatus = (typeof REPORT_STATUS_CODES)[number];
+
+export const SUPPLEMENT_REQUEST_STATUS_CODES = ['OUVERTE', 'REPONDUE', 'CLOTUREE'] as const;
+
+export type SupplementRequestStatus = (typeof SUPPLEMENT_REQUEST_STATUS_CODES)[number];
+
+export const QUALIFICATION_STATE_CODES = ['RETENU', 'RETIRE'] as const;
+
+export type QualificationState = (typeof QUALIFICATION_STATE_CODES)[number];

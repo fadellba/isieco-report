@@ -8,6 +8,7 @@ const actorId = '22222222-2222-4222-8222-222222222222';
 const reportId = '33333333-3333-4333-8333-333333333333';
 const communeId = '44444444-4444-4444-8444-444444444444';
 const wasteTypeId = '55555555-5555-4555-8555-555555555555';
+const demandId = '66666666-6666-4666-8666-666666666666';
 
 function reportRow() {
   return {
@@ -239,4 +240,170 @@ test('does not reveal another citizen report when ownership does not match', asy
     (error) => error instanceof NotFoundException && error.getStatus() === 404,
   );
   assert.equal(calls.detailReads[0].where.idUtilisateur, actorId);
+});
+
+
+function createSupplementHarness(options = {}) {
+  const calls = {
+    demandReads: [],
+    demandUpdates: [],
+    reportUpdates: [],
+    responseCreates: [],
+    events: [],
+    detailReads: [],
+    supplementListReads: [],
+  };
+  const actor = options.actor ?? { idUtilisateur: actorId, etatCompte: 'ACTIF' };
+  const demand = options.demand === undefined
+    ? {
+        idDemande: demandId,
+        idSignalement: reportId,
+        demandePar: '66666666-6666-4666-8666-666666666666',
+        dateDemande: new Date('2026-10-30T12:00:00.000Z'),
+        motif: 'Merci de préciser le lieu exact.',
+        etatDemande: 'OUVERTE',
+        signalement: {
+          idSignalement: reportId,
+          idUtilisateur: options.ownerId ?? actorId,
+          statutSignalement: options.reportStatus ?? 'EN_ATTENTE_COMPLEMENT',
+        },
+      }
+    : options.demand;
+
+  const tx = {
+    demandeComplement: {
+      findFirst: async (args) => {
+        calls.demandReads.push(args);
+        return demand;
+      },
+      updateMany: async (args) => {
+        calls.demandUpdates.push(args);
+        return { count: options.demandUpdateCount ?? 1 };
+      },
+    },
+    signalement: {
+      updateMany: async (args) => {
+        calls.reportUpdates.push(args);
+        return { count: options.reportUpdateCount ?? 1 };
+      },
+    },
+    reponseComplement: {
+      create: async ({ data, select }) => {
+        calls.responseCreates.push({ data, select });
+        return {
+          idReponse: '77777777-7777-4777-8777-777777777777',
+          idDemande: data.idDemande,
+          dateReponse: data.dateReponse,
+          contenu: data.contenu,
+        };
+      },
+    },
+    evenementMetier: {
+      create: async ({ data }) => {
+        calls.events.push(data);
+        return data;
+      },
+    },
+  };
+
+  const prisma = {
+    utilisateur: {
+      findUnique: async () => actor,
+    },
+    signalement: {
+      findFirst: async (args) => {
+        calls.detailReads.push(args);
+        return options.reportOwner === false ? null : { idSignalement: reportId };
+      },
+    },
+    demandeComplement: {
+      findMany: async (args) => {
+        calls.supplementListReads.push(args);
+        return [];
+      },
+    },
+    $transaction: async (operation, transactionOptions) => {
+      calls.transactions ??= [];
+      calls.transactions.push(transactionOptions);
+      return operation(tx);
+    },
+  };
+
+  return { service: new ReportsService(prisma), calls };
+}
+
+test('answers an open supplement for the report owner in one atomic transaction', async () => {
+  const { service, calls } = createSupplementHarness();
+
+  const result = await service.answerSupplement(
+    reportId,
+    demandId,
+    'Le dépôt se trouve derrière le marché, à côté du portail bleu.',
+    authUserId,
+  );
+
+  assert.equal(result.idDemande, demandId);
+  assert.equal(result.contenu, 'Le dépôt se trouve derrière le marché, à côté du portail bleu.');
+  assert.equal(calls.transactions.length, 1);
+  assert.equal(calls.transactions[0].isolationLevel, 'Serializable');
+  assert.equal(calls.demandUpdates[0].where.etatDemande, 'OUVERTE');
+  assert.equal(calls.demandUpdates[0].data.etatDemande, 'REPONDUE');
+  assert.equal(calls.reportUpdates[0].where.idUtilisateur, actorId);
+  assert.equal(calls.reportUpdates[0].data.statutSignalement, 'COMPLEMENT_REPONDU');
+  assert.equal(calls.responseCreates[0].data.reponduPar, actorId);
+  assert.equal(calls.events[0].typeEvenement, 'COMPLEMENT_REPONDU');
+});
+
+test('does not allow a different citizen to answer a supplement request', async () => {
+  const { service, calls } = createSupplementHarness({ ownerId: '88888888-8888-4888-8888-888888888888' });
+
+  await assert.rejects(
+    service.answerSupplement(
+      reportId,
+      demandId,
+      'Le dépôt se trouve derrière le marché, à côté du portail bleu.',
+      authUserId,
+    ),
+    (error) => error instanceof NotFoundException && error.getStatus() === 404,
+  );
+  assert.equal(calls.demandUpdates.length, 0);
+  assert.equal(calls.reportUpdates.length, 0);
+  assert.equal(calls.responseCreates.length, 0);
+  assert.equal(calls.events.length, 0);
+});
+
+test('rejects invalid supplement response content before opening a transaction', async () => {
+  const { service, calls } = createSupplementHarness();
+
+  await assert.rejects(
+    service.answerSupplement(reportId, demandId, 'non', authUserId),
+    (error) => error instanceof BadRequestException && error.getStatus() === 400,
+  );
+  assert.equal(calls.transactions?.length ?? 0, 0);
+});
+
+test('does not create a duplicate answer when the request was already answered', async () => {
+  const { service, calls } = createSupplementHarness({
+    demand: {
+      idDemande: demandId,
+      etatDemande: 'REPONDUE',
+      signalement: {
+        idSignalement: reportId,
+        idUtilisateur: actorId,
+        statutSignalement: 'COMPLEMENT_REPONDU',
+      },
+    },
+  });
+
+  await assert.rejects(
+    service.answerSupplement(
+      reportId,
+      demandId,
+      'Le dépôt se trouve derrière le marché, à côté du portail bleu.',
+      authUserId,
+    ),
+    (error) => error instanceof ConflictException && error.getStatus() === 409,
+  );
+  assert.equal(calls.responseCreates.length, 0);
+  assert.equal(calls.events.length, 0);
 });
