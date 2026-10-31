@@ -10,6 +10,7 @@ interface AccountListResponse {
 }
 
 const PAGE_SIZE = 20;
+const DEFAULT_ROLE: FunctionalRole = 'AGENT_QUALIFICATION';
 
 function messageFromError(error: unknown): string {
   return error instanceof Error ? error.message : 'Une erreur inattendue est survenue.';
@@ -44,7 +45,7 @@ export function AccountsPage() {
 
   async function assignRole(event: FormEvent<HTMLFormElement>, account: AuthenticatedProfile) {
     event.preventDefault();
-    const codeRole = selectedRoles[account.utilisateurId] ?? 'CITOYEN';
+    const codeRole = selectedRoles[account.utilisateurId] ?? DEFAULT_ROLE;
     setSavingAccount(account.utilisateurId);
     setError(null);
     setNotice(null);
@@ -142,7 +143,7 @@ export function AccountsPage() {
                 <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Attribuer un rôle</p>
                 <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
                   <select
-                    value={selectedRoles[account.utilisateurId] ?? 'AGENT_QUALIFICATION'}
+                    value={selectedRoles[account.utilisateurId] ?? DEFAULT_ROLE}
                     onChange={(event) => setSelectedRoles((current) => ({
                       ...current,
                       [account.utilisateurId]: event.target.value as FunctionalRole,
