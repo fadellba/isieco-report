@@ -482,7 +482,7 @@ export class InterventionsService {
           await this.writeEvent(tx, {
             type: 'PHOTO_INTERVENTION_AJOUTEE',
             actorId,
-            interventionId,
+            interventionId: idIntervention,
             after: {
               idPhotoIntervention: photoId,
               contextePhoto: context,
