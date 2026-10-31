@@ -40,7 +40,7 @@ Exécuter tous les cas sur au moins un appareil Android physique et un appareil 
 | GEO-01 | Permission localisation | Déclencher la localisation par action explicite et accorder la permission | Une position ponctuelle est récupérée et affichée avec sa précision estimée. |
 | GEO-02 | Refus localisation | Refuser la permission puis refaire un signalement | Le formulaire reste utilisable et la saisie manuelle des coordonnées reste possible. |
 | GEO-03 | Portée localisation | Examiner les permissions système et le comportement au repos | Aucune permission de localisation en arrière-plan n'est demandée ; aucun relevé n'est déclenché sans action de l'utilisateur. |
-| SEC-01 | URL signée | Consulter une photo autorisée, puis attendre l'expiration du lien | Le lien est temporaire (60 secondes) ; l'application demande une nouvelle URL plutôt que de traiter l'ancienne comme permanente. |
+| SEC-01 | URL signée | Consulter une photo, attendre plus de 60 secondes, puis réouvrir l'écran du signalement | L'ancien lien n'est plus utilisable ; à la réouverture, le client récupère un nouveau lien signé au lieu de réutiliser le lien expiré. |
 | SEC-02 | Types et tailles | Envoyer une image permise et tenter un fichier invalide ou trop volumineux | L'API accepte les images valides, refuse le contenu non-image ou au-delà de 10 MiB et ne révèle aucun chemin Storage. |
 
 ## Contrôles complémentaires
