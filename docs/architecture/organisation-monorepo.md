@@ -114,18 +114,18 @@ isieco-report/
 └── README.md
 ~~~
 
-## État réel sur main après la Phase 19
+## État réel sur main après la Phase 21
 
 | Zone | Présent dans main | Évolution nécessaire |
 |---|---|---|
 | API | NestJS, configuration, auth, database, common/pipes, infrastructure/storage et les neuf modules métier avec contrôleurs, services et DTO. | Réorganiser progressivement les responsabilités auth/database vers infrastructure lors de changements isolés ; ajouter filters/interceptors/decorators uniquement lorsqu'un besoin concret apparaît. |
 | Web | React/Vite, AuthProvider, shell, routes par rôle, dashboard, comptes, audit, qualification, dossiers, référentiels, affectations, interventions et vérification (Phases 14–17 intégrées). | Recette utilisateur, accessibilité et fonctions secondaires de gestion à poursuivre. |
-| Mobile | Expo Router, authentification Supabase, parcours citoyen (Phase 18) et Agent terrain (Phase 19), intégrés dans main. | Ajouter image picker, géolocalisation native et finaliser la distribution Android signée. |
+| Mobile | Expo Router, authentification Supabase, parcours citoyen (Phase 18), Agent terrain (Phase 19), photos natives et géolocalisation ponctuelle (Phase 21), intégrés dans main. | Recette sur appareils réels, notifications/mode hors connexion et distribution Android signée. |
 | Packages | `shared` et `api-client` initialisés avec un client HTTP commun générique et des contrats encore limités. | Ajouter les types, schémas et endpoints partagés au rythme des consommateurs, sans dépendance circulaire. |
 | CI/CD | `ci.yml` et `render-uml-class-diagrams.yml` intégrés ; `web-deploy.yml` et `api-deploy.yml` en cours sur la Phase 20. | Configurer les secrets de Deploy Hooks Vercel/Render et les URLs de smoke test avant activation réelle. |
 | Prisma | Schéma MLD v2.13 avec 38 modèles et quatre migrations versionnées. | Pas de migration identifiée pour les écrans Web restants ; toute évolution de schéma doit rester additive et testée. |
 
-Les Phases 15 à 19 sont intégrées dans `main` (PR #20 à #24). La branche `feat/phase-20-deployment-workflows-v2` finalise l'automatisation des déploiements ; elle n'est pas encore fusionnée.
+Les Phases 15 à 21 sont intégrées dans `main` (PR #20 à #26). Les workflows de déploiement CI-gated sont présents (PR #25) ; l'activation de production reste protégée par le secret `PRODUCTION_DEPLOY_ENABLED=true`.
 
 La structure cible demeure un guide d'organisation et non une obligation de déplacer immédiatement tous les fichiers. En particulier, l'authentification et Prisma sont encore dans `src/auth` et `src/database` ; leur migration vers `src/infrastructure` devra être isolée, testée et faite sans changer les contrats métier.
 
