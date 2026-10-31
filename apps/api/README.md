@@ -70,6 +70,14 @@ Le module expose deux lectures réservées à `RESPONSABLE_AFFECTATION` afin d'a
 
 Ces lectures guident l'interface, mais ne constituent pas une autorisation ni une réservation. La création et la réaffectation revalident toutes les règles dans une transaction sérialisable.
 
+## Parcours Agent terrain
+
+Le rôle `AGENT_TERRAIN` dispose de `GET /api/v1/interventions/my-teams` pour obtenir les seules équipes actives auxquelles appartient son compte métier. La lecture filtre les périodes courantes, déduplique les appartenances multiples à une même équipe et ne prend pas d'identifiant d'équipe fourni par le client comme preuve d'appartenance.
+
+L'agent consulte ensuite `GET /api/v1/assignments/team/:idEquipe` et `GET /api/v1/interventions/team/:idEquipe`. Il peut répondre aux affectations, démarrer une intervention acceptée, joindre des photos avant soumission et soumettre un compte rendu. Les preuves et comptes rendus sont réservés à l'auteur initial de l'intervention. Une nouvelle intervention après soumission exige une décision `REPRISE` du vérificateur.
+
+Le listing des équipes ne remplace pas le contrôle d'appartenance de chaque endpoint métier. La lecture des interventions ne retourne que des métadonnées de la dernière vérification nécessaires à l'affichage du statut de reprise ; elle n'expose aucun motif de vérification ni chemin Storage.
+
 ## Stockage privé des médias
 
 Les routes de dépôt sont `POST /api/v1/reports/:id/photos` et `POST /api/v1/interventions/:idIntervention/photos`, en multipart/form-data avec le champ `file`. Les fichiers sont limités à 10 MiB et aux signatures JPEG, PNG ou WebP. Les chemins Storage ne sont jamais renvoyés aux clients.
