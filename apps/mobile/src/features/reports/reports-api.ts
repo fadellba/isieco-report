@@ -91,3 +91,38 @@ export async function answerSupplement(id: string, demandId: string, contenu: st
 export function createReportIdempotencyKey(): string {
   return 'report-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 14);
 }
+
+export interface ReportPhotoUploadResponse {
+  idPhoto: string;
+  description: string | null;
+  dateAjout: string;
+  etatPublication: string;
+}
+
+export interface SignedReportPhotoUrl {
+  signedUrl: string;
+  expiresInSeconds: number;
+}
+
+export async function uploadReportPhoto(
+  reportId: string,
+  photo: { uri: string; name: string; type: string },
+  description?: string,
+): Promise<ReportPhotoUploadResponse> {
+  const body = new FormData();
+  body.append('file', photo as unknown as Blob);
+  if (description?.trim()) body.append('description', description.trim());
+  return api.request<ReportPhotoUploadResponse>(
+    '/reports/' + encodeURIComponent(reportId) + '/photos',
+    { method: 'POST', body },
+  );
+}
+
+export async function getReportPhotoUrl(
+  reportId: string,
+  photoId: string,
+): Promise<SignedReportPhotoUrl> {
+  return api.request<SignedReportPhotoUrl>(
+    '/reports/' + encodeURIComponent(reportId) + '/photos/' + encodeURIComponent(photoId) + '/url',
+  );
+}

@@ -29,6 +29,7 @@ En cas de divergence, appliquer cet ordre : décisions acceptées dans les ADR, 
 - Phase 17 intégrée dans main (PR #22) : file de vérification, preuves signées, décision conforme ou demande de reprise motivée.
 - Phase 18 intégrée dans main (PR #23) : dépôt idempotent, liste paginée, détail et réponses aux demandes de complément sur les endpoints Reports existants.
 - Phase 19 intégrée dans main (PR #24) : équipes propres au compte, missions, acceptation/refus, démarrage, compte rendu et reprise après décision du vérificateur.
+- Phase 21 en cours sur `feat/phase-21-mobile-native-media` : caméra/galerie, upload privé citoyen et agent, aperçu par URL signée et localisation ponctuelle au premier plan. CI et recette sur appareils à valider.
 - Prisma : 38 modèles métier du MLD v2.13 ; Supabase Auth gère les identités et sessions.
 - Migrations : quatre migrations versionnées ; la CI les applique sur PostgreSQL vierge, vérifie l'historique, produit un aperçu additif et exécute les tests d'intégrité.
 - CI : ci.yml et render-uml-class-diagrams.yml sont présents ; la CI de la PR #24 a réussi. Le run push de `main` après sa fusion reste à confirmer.

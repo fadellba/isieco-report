@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useFocusEffect } from 'expo-router';
-import { ActivityIndicator, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import {
   getAgentProfile,
   listMyTeams,
@@ -9,12 +9,14 @@ import {
   respondToAssignment,
   startIntervention,
   submitIntervention,
+  uploadInterventionPhoto,
   type AgentTeam,
   type MobileAgentProfile,
   type TeamAssignment,
   type TeamIntervention,
 } from '../../../src/features/interventions/agent-api';
 import { dateLabel } from '../../../src/features/reports/report-format';
+import { captureMobilePhoto, pickMobilePhotos, type PreparedMobilePhoto } from '../../../src/features/media/mobile-media';
 
 const inputClass = 'mt-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900';
 const buttonClass = 'rounded-xl bg-eco-700 px-4 py-3 disabled:opacity-50';
@@ -35,6 +37,9 @@ export default function AgentMissionsScreen() {
   const [reports, setReports] = useState<Record<string, string>>({});
   const [results, setResults] = useState<Record<string, 'TERMINEE' | 'PARTIELLE' | 'IMPOSSIBLE'>>({});
   const [exceptions, setExceptions] = useState<Record<string, string>>({});
+  const [proofs, setProofs] = useState<Record<string, PreparedMobilePhoto>>({});
+  const [proofContexts, setProofContexts] = useState<Record<string, string>>({});
+  const [proofDescriptions, setProofDescriptions] = useState<Record<string, string>>({});
   const [loadingTeams, setLoadingTeams] = useState(true);
   const [loadingMissions, setLoadingMissions] = useState(false);
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -143,6 +148,57 @@ export default function AgentMissionsScreen() {
     }
   }
 
+  async function chooseProof(interventionId: string, source: 'gallery' | 'camera') {
+    setBusyKey('proof-pick-' + interventionId);
+    setError(null);
+    try {
+      const photo = source === 'camera'
+        ? await captureMobilePhoto()
+        : (await pickMobilePhotos(1))[0] ?? null;
+      if (photo) setProofs((current) => ({ ...current, [interventionId]: photo }));
+    } catch (reason) {
+      setError(errorMessage(reason));
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
+  async function uploadProof(intervention: TeamIntervention) {
+    const id = intervention.idIntervention;
+    const photo = proofs[id];
+    const context = proofContexts[id]?.trim() ?? '';
+    const description = proofDescriptions[id]?.trim() ?? '';
+    if (!photo) {
+      setError('Choisissez une photo ou prenez une photo avant de l’envoyer.');
+      return;
+    }
+    if (context.length < 3 || context.length > 100) {
+      setError('Le contexte de la preuve doit contenir entre 3 et 100 caractères.');
+      return;
+    }
+
+    setBusyKey('proof-upload-' + id);
+    setError(null);
+    setNotice(null);
+    try {
+      await uploadInterventionPhoto(id, photo, context, description || undefined);
+      setProofs((current) => {
+        const next = { ...current };
+        delete next[id];
+        return next;
+      });
+      setProofContexts((current) => ({ ...current, [id]: '' }));
+      setProofDescriptions((current) => ({ ...current, [id]: '' }));
+      await refresh('Preuve photo ajoutée à l’intervention.');
+    } catch (reason) {
+      const message = errorMessage(reason);
+      await loadMissions();
+      setError(message);
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
   async function submit(intervention: TeamIntervention) {
     const id = intervention.idIntervention;
     const compteRendu = reports[id]?.trim() ?? '';
@@ -226,6 +282,7 @@ export default function AgentMissionsScreen() {
                   {assignments.map((assignment) => {
                     const latest = latestByAssignment.get(assignment.idAffectation);
                     const verification = latest?.affectation.verifications[0];
+                    const selectedProof = latest ? proofs[latest.idIntervention] : undefined;
                     const canStart = assignment.decisionEquipe === 'ACCEPTEE' && (
                       !latest ||
                       (latest.statutIntervention === 'SOUMISE' &&
@@ -276,7 +333,53 @@ export default function AgentMissionsScreen() {
                             ) : null}
                             {latest.statutIntervention === 'EN_COURS' && isAuthor ? (
                               <View className="mt-3 gap-3">
-                                <Text className="text-xs text-slate-600">Cette intervention est démarrée par votre compte. Vous pouvez soumettre son compte rendu.</Text>
+                                <Text className="text-xs text-slate-600">Cette intervention est démarrée par votre compte. Vous pouvez joindre des preuves puis soumettre son compte rendu.</Text>
+                                <View className="rounded-xl border border-eco-100 bg-white p-4">
+                                  <Text className="text-xs font-bold text-slate-700">Preuve photo (facultatif)</Text>
+                                  <View className="mt-3 flex-row gap-2">
+                                    <TouchableOpacity
+                                      onPress={() => void chooseProof(latest.idIntervention, 'gallery')}
+                                      disabled={busyKey === 'proof-pick-' + latest.idIntervention || busyKey === 'proof-upload-' + latest.idIntervention}
+                                      className={secondaryClass + ' flex-1'}
+                                    >
+                                      <Text className="text-center text-xs font-bold text-slate-700">Galerie</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                      onPress={() => void chooseProof(latest.idIntervention, 'camera')}
+                                      disabled={busyKey === 'proof-pick-' + latest.idIntervention || busyKey === 'proof-upload-' + latest.idIntervention}
+                                      className={buttonClass + ' flex-1'}
+                                    >
+                                      <Text className="text-center text-xs font-bold text-white">Appareil photo</Text>
+                                    </TouchableOpacity>
+                                  </View>
+                                  {selectedProof ? (
+                                    <Image source={{ uri: selectedProof.uri }} resizeMode="cover" style={{ width: '100%', height: 170, borderRadius: 10, marginTop: 12 }} />
+                                  ) : null}
+                                  <TextInput
+                                    value={proofContexts[latest.idIntervention] ?? ''}
+                                    onChangeText={(value) => setProofContexts((current) => ({ ...current, [latest.idIntervention]: value }))}
+                                    maxLength={100}
+                                    placeholder="Contexte obligatoire : avant collecte, après intervention…"
+                                    className={inputClass + ' mt-3'}
+                                  />
+                                  <TextInput
+                                    value={proofDescriptions[latest.idIntervention] ?? ''}
+                                    onChangeText={(value) => setProofDescriptions((current) => ({ ...current, [latest.idIntervention]: value }))}
+                                    maxLength={500}
+                                    placeholder="Description (facultative)"
+                                    className={inputClass}
+                                  />
+                                  <TouchableOpacity
+                                    onPress={() => void uploadProof(latest)}
+                                    disabled={!proofs[latest.idIntervention] || busyKey === 'proof-upload-' + latest.idIntervention}
+                                    className={buttonClass + ' mt-3'}
+                                  >
+                                    <Text className="text-center text-xs font-bold text-white">
+                                      {busyKey === 'proof-upload-' + latest.idIntervention ? 'Envoi de la preuve…' : 'Envoyer la preuve privée'}
+                                    </Text>
+                                  </TouchableOpacity>
+                                  <Text className="mt-2 text-[10px] leading-4 text-slate-400">JPEG, PNG ou WebP après conversion JPEG · 10 Mo maximum côté serveur. Seul l’auteur de l’intervention peut joindre cette preuve.</Text>
+                                </View>
                                 <TextInput
                                   value={reports[latest.idIntervention] ?? ''}
                                   onChangeText={(value) => setReports((current) => ({ ...current, [latest.idIntervention]: value }))}

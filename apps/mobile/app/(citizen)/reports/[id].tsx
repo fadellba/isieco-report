@@ -1,23 +1,28 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import {
   answerSupplement,
   getMyReport,
   listReportSupplements,
+  getReportPhotoUrl,
+  uploadReportPhoto,
   type Report,
   type Supplement,
 } from '../../../src/features/reports/reports-api';
 import { dateLabel, reportStatusLabel } from '../../../src/features/reports/report-format';
+import { captureMobilePhoto, pickMobilePhotos, type PreparedMobilePhoto } from '../../../src/features/media/mobile-media';
 
 const inputClass = 'mt-2 min-h-[100px] rounded-xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900';
 
 export default function CitizenReportDetailScreen() {
-  const params = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams<{ id: string; photosFailed?: string }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const [report, setReport] = useState<Report | null>(null);
   const [supplements, setSupplements] = useState<Supplement[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [photoLinks, setPhotoLinks] = useState<Record<string, { url: string; expiresAt: number }>>({});
+  const [photoBusy, setPhotoBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +47,90 @@ export default function CitizenReportDetailScreen() {
   }, [id]);
 
   useEffect(() => { void load(); }, [load]);
+
+  useEffect(() => {
+    const failed = Number(params.photosFailed ?? 0);
+    if (Number.isFinite(failed) && failed > 0) {
+      setNotice(failed + ' photo(s) n’ont pas pu être envoyées. Vous pouvez réessayer depuis cette page.');
+    }
+  }, [params.photosFailed]);
+
+  async function uploadSelectedPhotos(photos: PreparedMobilePhoto[]) {
+    if (!id || !photos.length) {
+      setPhotoBusy(false);
+      return;
+    }
+    setPhotoBusy(true);
+    setError(null);
+    setNotice(null);
+    let failed = 0;
+    for (const photo of photos) {
+      try {
+        await uploadReportPhoto(id, photo);
+      } catch {
+        failed += 1;
+      }
+    }
+    await load();
+    setPhotoBusy(false);
+    setNotice(failed
+      ? failed + ' photo(s) n’ont pas été envoyées. Vérifiez le réseau et réessayez.'
+      : photos.length + ' photo(s) ajoutée(s) au signalement.');
+  }
+
+  async function choosePhotoGallery() {
+    setPhotoBusy(true);
+    setError(null);
+    try {
+      const remaining = Math.max(0, 3 - (report?.photos.length ?? 0));
+      if (remaining === 0) {
+        setError('Un signalement peut contenir au maximum 3 photos.');
+        setPhotoBusy(false);
+        return;
+      }
+      const photos = await pickMobilePhotos(remaining);
+      if (photos.length) await uploadSelectedPhotos(photos);
+      else setPhotoBusy(false);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Impossible de sélectionner les photos.');
+      setPhotoBusy(false);
+    }
+  }
+
+  async function takeReportPhoto() {
+    setPhotoBusy(true);
+    setError(null);
+    try {
+      if ((report?.photos.length ?? 0) >= 3) {
+        setError('Un signalement peut contenir au maximum 3 photos.');
+        setPhotoBusy(false);
+        return;
+      }
+      const photo = await captureMobilePhoto();
+      if (photo) await uploadSelectedPhotos([photo]);
+      else setPhotoBusy(false);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Impossible de prendre une photo.');
+      setPhotoBusy(false);
+    }
+  }
+
+  async function openPrivatePhoto(photoId: string) {
+    if (!id) return;
+    setPhotoBusy(true);
+    setError(null);
+    try {
+      const result = await getReportPhotoUrl(id, photoId);
+      setPhotoLinks((current) => ({
+        ...current,
+        [photoId]: { url: result.signedUrl, expiresAt: Date.now() + result.expiresInSeconds * 1000 },
+      }));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Impossible de charger cette photo.');
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
 
   async function sendAnswer(demand: Supplement) {
     const contenu = answers[demand.idDemande]?.trim() ?? '';
@@ -96,6 +185,42 @@ export default function CitizenReportDetailScreen() {
                 {report.contenus.map((item) => <Text key={item.idTypeDechet} className="mt-2 text-sm text-slate-600">• {item.typeDechet.libelle}</Text>)}
               </View>
             ) : null}
+          </View>
+
+          <View className="mt-6 rounded-2xl border border-eco-100 bg-white p-5">
+            <View className="flex-row items-center justify-between gap-3">
+              <Text className="text-base font-bold text-slate-900">Photos du signalement</Text>
+              <Text className="text-xs text-slate-500">{report.photos.length}</Text>
+            </View>
+            <Text className="mt-1 text-xs leading-5 text-slate-500">Les photos sont privées. Un lien temporaire est obtenu uniquement lorsque vous demandez à les afficher.</Text>
+            <View className="mt-3 flex-row gap-2">
+              <TouchableOpacity onPress={() => void choosePhotoGallery()} disabled={photoBusy} className="flex-1 rounded-lg border border-eco-200 bg-white px-3 py-3 disabled:opacity-50">
+                <Text className="text-center text-xs font-bold text-eco-800">Ajouter depuis la galerie</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => void takeReportPhoto()} disabled={photoBusy} className="flex-1 rounded-lg bg-eco-700 px-3 py-3 disabled:opacity-50">
+                <Text className="text-center text-xs font-bold text-white">Prendre une photo</Text>
+              </TouchableOpacity>
+            </View>
+            {photoBusy ? <Text className="mt-2 text-xs text-slate-500">Traitement…</Text> : null}
+            <View className="mt-3 gap-3">
+              {report.photos.map((photo) => {
+                const link = photoLinks[photo.idPhotoSignalement];
+                const active = link && link.expiresAt > Date.now() ? link : null;
+                return (
+                  <View key={photo.idPhotoSignalement} className="rounded-xl border border-slate-100 p-3">
+                    {active ? (
+                      <Image source={{ uri: active.url }} resizeMode="contain" style={{ width: '100%', height: 180, borderRadius: 8 }} />
+                    ) : null}
+                    <Text className="mt-2 text-xs text-slate-600">{photo.description || 'Photo du signalement'}</Text>
+                    <Text className="mt-1 text-[10px] text-slate-400">Ajoutée le {dateLabel(photo.dateAjout)} · {photo.etatPublication}</Text>
+                    <TouchableOpacity onPress={() => void openPrivatePhoto(photo.idPhotoSignalement)} disabled={photoBusy} className="mt-2 self-start">
+                      <Text className="text-xs font-bold text-eco-700">{active ? 'Renouveler le lien privé (60 s)' : 'Afficher la photo (60 s)'}</Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+              {!report.photos.length ? <Text className="text-xs text-slate-500">Aucune photo jointe pour le moment.</Text> : null}
+            </View>
           </View>
 
           <Text className="mt-7 text-lg font-extrabold text-eco-950">Demandes de complément</Text>

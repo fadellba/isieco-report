@@ -110,3 +110,26 @@ export async function submitIntervention(
     body: JSON.stringify(payload),
   });
 }
+
+export interface InterventionPhotoUploadResponse {
+  idPhoto: string;
+  description: string | null;
+  etatPublication: string;
+  dateAjout: string;
+}
+
+export async function uploadInterventionPhoto(
+  interventionId: string,
+  photo: { uri: string; name: string; type: string },
+  contextePhoto: string,
+  description?: string,
+): Promise<InterventionPhotoUploadResponse> {
+  const body = new FormData();
+  body.append('file', photo as unknown as Blob);
+  body.append('contextePhoto', contextePhoto.trim());
+  if (description?.trim()) body.append('description', description.trim());
+  return api.request<InterventionPhotoUploadResponse>(
+    '/interventions/' + encodeURIComponent(interventionId) + '/photos',
+    { method: 'POST', body },
+  );
+}
