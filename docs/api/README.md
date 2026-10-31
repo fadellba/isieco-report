@@ -26,6 +26,20 @@ Les routes métier sont groupées par comptes, référentiels, signalements, qua
 
 Ces routes complètent les parcours Qualification et Cases. Elles n'accordent aucun accès direct aux chemins Storage : l'API vérifie l'état métier et l'association photo/signalement avant de signer l'URL.
 
+### Affectations (Phase 15)
+
+| Méthode | Route | Autorisation | Description |
+|---|---|---|---|
+| GET | `/assignments/pending-contents` | `RESPONSABLE_AFFECTATION` | Contenus actifs, en attente, dans des dossiers non clôturés et sans affectation active. Pagination `page` / `pageSize`. |
+| GET | `/assignments/eligible-teams/:idTypeDechet` | `RESPONSABLE_AFFECTATION` | Équipes actives ayant une compétence courante valide pour le type demandé, hors indisponibilité courante explicite. |
+| GET | `/assignments` | `RESPONSABLE_AFFECTATION` | Historique paginé et filtrable des affectations. |
+| POST | `/assignments` | `RESPONSABLE_AFFECTATION` | Crée une affectation avec `Idempotency-Key`. Le service revalide le contenu, le dossier, l'équipe, la compétence, la disponibilité et l'unicité dans une transaction sérialisable. |
+| POST | `/assignments/:idAffectation/reassign` | `RESPONSABLE_AFFECTATION` | Réaffecte une affectation en attente ou refusée avec motif et clé idempotente. Une intervention déjà commencée bloque cette opération. |
+| GET | `/assignments/team/:idEquipe` | `AGENT_TERRAIN` + appartenance active | Consulte les affectations actives de sa propre équipe. |
+| POST | `/assignments/:idAffectation/response` | `AGENT_TERRAIN` + appartenance active | Accepte ou refuse une affectation ; le refus est motivé. |
+
+Les endpoints de découverte sont informatifs. Ils n'accordent pas d'accès aux endpoints Cases ou Referentials et ne remplacent jamais la validation transactionnelle lors d'une mutation.
+
 ### Audit (Phase 11)
 
 | Méthode | Route | Autorisation | Description |
