@@ -159,9 +159,12 @@ export class InterventionsService {
           const latestVerification = await tx.verificationResolution.findFirst({
             where: { idAffectation },
             orderBy: [{ dateVerification: 'desc' }, { idVerification: 'desc' }],
-            select: { etatVerification: true },
+            select: { etatVerification: true, dateVerification: true },
           });
-          if (latestVerification?.etatVerification !== 'REPRISE') {
+          if (
+            latestVerification?.etatVerification !== 'REPRISE' ||
+            latestVerification.dateVerification.getTime() < latestIntervention.dateSoumissionCompteRendu.getTime()
+          ) {
             throw new ConflictException('Une nouvelle intervention n’est autorisée qu’après une demande de reprise par le vérificateur.');
           }
         }
