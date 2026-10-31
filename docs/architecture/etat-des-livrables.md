@@ -1,6 +1,6 @@
 # État des livrables
 
-État de référence : **31 octobre 2026, après fusion de la PR #18**. « Intégré » signifie fusionné dans `main`. « Initialisé » signifie que la structure existe sans parcours métier complet. Un build vert ne vaut pas recette utilisateur.
+État de référence : **31 octobre 2026, après fusion de la PR #18**. « Intégré » signifie fusionné dans `main`. « Initialisé » signifie que la structure existe sans parcours métier complet. « En cours » désigne une évolution sur une branche non fusionnée. Un build vert ne vaut pas recette utilisateur.
 
 | Domaine | Livrable | État |
 |---|---|---|
@@ -24,7 +24,7 @@
 | Web | Shell et authentification par rôle | Intégrés (PR #17) : contexte Supabase, profil API, gardes et navigation par rôle. |
 | Web | Comptes et activité | Intégrés (PR #17) : gestion des rôles et journal personnel paginé/filtrable. |
 | Web | Qualification et dossiers | Intégrés (PR #18) : file/détail de qualification, photos signées, compléments, décisions, création et gestion des dossiers. CI post-fusion réussie. |
-| Web | Référentiels | À développer : types de déchets, géographie, équipes, appartenances, compétences, disponibilité et délégations. |
+| Web | Référentiels | En cours sur `feat/phase-14-web-referentials` : interface types de déchets, géographie, équipes, appartenances, compétences, disponibilité et délégations. Non fusionnée dans main. |
 | Web | Affectations | À développer sur les API Assignments existantes. |
 | Web | Interventions et vérification | À développer sur les API existantes. |
 | Web | Médias | Consultation des photos de qualification intégrée ; dépôt et consultation dans les autres parcours Web restent à réaliser. |
@@ -38,7 +38,7 @@
 
 ## Prochain ordre de livraison recommandé
 
-1. Phase 14 : administration Web des référentiels (types de déchets, géographie, équipes et relations temporelles).
+1. Finaliser et valider la Phase 14 sur son parcours complet (types de déchets, géographie, équipes et relations temporelles).
 2. Phase 15 : interface Web des affectations.
 3. Phase 16 : interface Web des interventions et preuves.
 4. Phase 17 : interface Web de vérification.
