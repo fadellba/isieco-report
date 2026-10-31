@@ -87,3 +87,10 @@ export type ReportAttachmentType = (typeof REPORT_ATTACHMENT_TYPE_CODES)[number]
 
 export const CASE_CONTENT_ORIGIN_CODES = ['QUALIFICATION'] as const;
 export type CaseContentOrigin = (typeof CASE_CONTENT_ORIGIN_CODES)[number];
+
+/** Persisted lifecycle and team response codes for operational assignments. */
+export const ASSIGNMENT_STATUS_CODES = ['ACTIVE', 'TERMINEE', 'ANNULEE'] as const;
+export type AssignmentStatus = (typeof ASSIGNMENT_STATUS_CODES)[number];
+
+export const ASSIGNMENT_TEAM_DECISION_CODES = ['EN_ATTENTE', 'ACCEPTEE', 'REFUSEE'] as const;
+export type AssignmentTeamDecision = (typeof ASSIGNMENT_TEAM_DECISION_CODES)[number];
