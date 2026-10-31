@@ -12,6 +12,7 @@ import { ReferentialsPage } from './features/referentials/ReferentialsPage';
 import { AssignmentsPage } from './features/assignments/AssignmentsPage';
 import { InterventionsPage } from './features/interventions/InterventionsPage';
 import { VerificationPage } from './features/verification/VerificationPage';
+import { VerificationPage } from './features/verification/VerificationPage';
 import { AccessDeniedPage } from './pages/AccessDeniedPage';
 import { DownloadPage } from './pages/DownloadPage';
 import { SignInPage } from './pages/SignInPage';
@@ -57,6 +58,11 @@ export function App() {
         <Route path="affectations" element={
           <ProtectedRoute roles={['RESPONSABLE_AFFECTATION']}>
             <AssignmentsPage />
+          </ProtectedRoute>
+        } />
+        <Route path="verification" element={
+          <ProtectedRoute roles={['VERIFICATEUR_CLOTURE']}>
+            <VerificationPage />
           </ProtectedRoute>
         } />
         <Route path="interventions" element={
