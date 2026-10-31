@@ -22,7 +22,7 @@ export class QualificationQueueItemDto {
   @ApiProperty({ type: 'string', nullable: true })
   prenomCitoyen!: string | null;
 
-  @ApiProperty({ isArray: true, type: 'object', additionalProperties: true })
+  @ApiProperty({ isArray: true, type: 'object' })
   contenus!: Array<Record<string, unknown>>;
 }
 
