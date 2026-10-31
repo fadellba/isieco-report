@@ -1,6 +1,6 @@
 # État des livrables
 
-État de référence : **31 octobre 2026, après fusion des PR #27 et #28 ; Phases 20 et 21 intégrées et CI du commit `ec1c7e08` sur `main` verte**. « Intégré » signifie fusionné dans `main`. « Initialisé » signifie que la structure existe sans parcours métier complet. « En cours » désigne une évolution sur une branche non fusionnée. Un build vert ne vaut pas recette utilisateur.
+État de référence : **31 octobre 2026, après fusion de la PR #29 ; Phases 20 et 21 intégrées et CI du commit `7b02e5a` sur `main` verte**. « Intégré » signifie fusionné dans `main`. « Initialisé » signifie que la structure existe sans parcours métier complet. « En cours » désigne une évolution sur une branche non fusionnée. Un build vert ne vaut pas recette utilisateur.
 
 | Domaine | Livrable | État |
 |---|---|---|
