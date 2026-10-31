@@ -71,3 +71,21 @@ export class InterventionResponseDto {
   @ApiProperty({ type: InterventionAssignmentDto })
   affectation!: InterventionAssignmentDto;
 }
+
+
+export class AgentTeamResponseDto {
+  @ApiProperty({ format: 'uuid' })
+  idEquipe!: string;
+
+  @ApiProperty()
+  nomEquipe!: string;
+
+  @ApiProperty({ example: 'ACTIVE' })
+  etatEquipe!: string;
+
+  @ApiProperty({ format: 'date-time' })
+  dateDebut!: Date;
+
+  @ApiProperty()
+  fonction!: string;
+}
