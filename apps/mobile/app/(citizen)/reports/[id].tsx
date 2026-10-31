@@ -11,6 +11,7 @@ import {
   type Supplement,
 } from '../../../src/features/reports/reports-api';
 import { dateLabel, reportStatusLabel } from '../../../src/features/reports/report-format';
+import { captureMobilePhoto, pickMobilePhotos, type PreparedMobilePhoto } from '../../../src/features/media/mobile-media';
 
 const inputClass = 'mt-2 min-h-[100px] rounded-xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900';
 
@@ -81,7 +82,13 @@ export default function CitizenReportDetailScreen() {
     setPhotoBusy(true);
     setError(null);
     try {
-      const photos = await pickMobilePhotos(3);
+      const remaining = Math.max(0, 3 - (report?.photos.length ?? 0));
+      if (remaining === 0) {
+        setError('Un signalement peut contenir au maximum 3 photos.');
+        setPhotoBusy(false);
+        return;
+      }
+      const photos = await pickMobilePhotos(remaining);
       if (photos.length) await uploadSelectedPhotos(photos);
       else setPhotoBusy(false);
     } catch (reason) {
@@ -94,6 +101,11 @@ export default function CitizenReportDetailScreen() {
     setPhotoBusy(true);
     setError(null);
     try {
+      if ((report?.photos.length ?? 0) >= 3) {
+        setError('Un signalement peut contenir au maximum 3 photos.');
+        setPhotoBusy(false);
+        return;
+      }
       const photo = await captureMobilePhoto();
       if (photo) await uploadSelectedPhotos([photo]);
       else setPhotoBusy(false);
