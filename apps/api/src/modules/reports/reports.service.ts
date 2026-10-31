@@ -230,7 +230,7 @@ export class ReportsService {
           await this.writeEvent(tx, {
             reportId: report.idSignalement,
             actorId,
-            description: payload.description,
+            contentCount: payload.contenus.length,
             hasLocation: payload.latitude !== null || payload.idCommune !== null,
           });
 
@@ -283,7 +283,7 @@ export class ReportsService {
 
   private async writeEvent(
     tx: Transaction,
-    payload: { reportId: string; actorId: string; description: string; hasLocation: boolean },
+    payload: { reportId: string; actorId: string; contentCount: number; hasLocation: boolean },
   ): Promise<void> {
     const now = new Date();
     await tx.evenementMetier.create({
@@ -296,7 +296,7 @@ export class ReportsService {
         idSignalementCible: payload.reportId,
         donneesApres: {
           statut: 'SOUMIS',
-          description: payload.description.slice(0, 240),
+          nombreContenus: payload.contentCount,
           localisationFournie: payload.hasLocation,
         },
         versionSchema: 1,
