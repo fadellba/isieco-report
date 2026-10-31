@@ -4,7 +4,7 @@
 
 Les photos de signalement et les preuves d'intervention sont conservées dans un bucket Supabase Storage privé. Les applications Web et Mobile envoient les fichiers à l'API NestJS ; elles ne reçoivent jamais de secret de stockage et ne choisissent jamais un chemin Storage arbitraire.
 
-La phase 10 ajoute les endpoints API d'upload et de création d'URL temporaire, la validation binaire des images et l'enregistrement des métadonnées dans `PhotoSignalement` et `PhotoIntervention`. La purge automatique, les écrans Web/Mobile et la configuration du projet Supabase distant restent à livrer.
+Les endpoints API d'upload et de création d'URL temporaire, la validation binaire des images et l'enregistrement des métadonnées dans `PhotoSignalement` et `PhotoIntervention` sont intégrés (PR #15). La commande bornée `pnpm storage:purge` est également disponible. La Phase 21 (PR #26) a ajouté la sélection galerie/caméra, la conversion JPEG, l'upload privé citoyen/agent et la géolocalisation ponctuelle dans le client Mobile. Le Web permet la consultation des photos de qualification et des preuves soumises à la vérification ; le dépôt et la consultation des médias dans les autres parcours Web ne sont pas tous couverts. Le bucket Supabase distant, la politique de conservation et la planification Cron restent à configurer dans chaque environnement.
 
 ## Provisionnement Supabase
 

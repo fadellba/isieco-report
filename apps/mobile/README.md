@@ -63,4 +63,4 @@ L'API reste l'autorité : elle vérifie le propriétaire du signalement ou l'aut
 
 ## Limites restantes
 
-Les notifications, le mode hors connexion, l'affichage des preuves d'intervention après upload et la recette sur appareils Android/iOS réels restent à réaliser. Le bucket Supabase distant, la rétention des médias et la planification Cron doivent être configurés indépendamment du client Mobile.
+Les notifications, le mode hors connexion et l'affichage des preuves d'intervention après upload restent à réaliser. La recette sur appareils Android/iOS réels est à effectuer avec le [protocole de recette](../../docs/mobile/recette-appareils.md), sur un environnement de test et avec des comptes fictifs. Le bucket Supabase distant, la rétention des médias et la planification Cron doivent être configurés indépendamment du client Mobile.
