@@ -153,7 +153,7 @@ jobs:
         run: pnpm --filter @isieco/api exec tsc --noEmit -p tsconfig.build.json
 
       - name: Compile the NestJS API
-        run: pnpm --filter @isieco/api exec nest build --debug
+        run: pnpm --filter @isieco/api exec nest build --builder tsc
 
       - name: Generate OpenAPI specification
         run: node --trace-uncaught apps/api/dist/openapi/generate-openapi.js
