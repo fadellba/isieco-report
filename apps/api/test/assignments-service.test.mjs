@@ -27,6 +27,8 @@ function createHarness(options = {}) {
     memberships: [],
     competenceReads: [],
     teamReads: [],
+    pendingContentQueries: [],
+    eligibleTeamQueries: [],
   };
   const content = options.content ?? {
     idDossier: caseId,
@@ -56,6 +58,10 @@ function createHarness(options = {}) {
       },
     },
     equipe: {
+      findMany: async (args) => {
+        calls.eligibleTeamQueries.push(args);
+        return options.eligibleTeams ?? [];
+      },
       findUnique: async ({ where }) => {
         calls.teamReads.push(where);
         if (options.teamMissing) return null;
@@ -132,6 +138,16 @@ function createHarness(options = {}) {
     },
     appartenanceEquipe: {
       findFirst: async () => ({ idUtilisateur: actorId, idEquipe: teamId }),
+    },
+    contenuDossier: {
+      count: async ({ where }) => {
+        calls.pendingContentQueries.push({ kind: 'count', where });
+        return options.pendingContentTotal ?? (options.pendingContents ?? []).length;
+      },
+      findMany: async (args) => {
+        calls.pendingContentQueries.push({ kind: 'findMany', ...args });
+        return options.pendingContents ?? [];
+      },
     },
     affectation: {
       count: async () => 1,
@@ -360,4 +376,71 @@ test('maps a serializable transaction conflict to HTTP 409', async () => {
     service.createAssignment(createDto, authUserId, idempotencyKey),
     (error) => error instanceof ConflictException && error.getStatus() === 409,
   );
+});
+
+
+test('lists only active pending contents without an active assignment in open cases', async () => {
+  const row = {
+    idDossier: caseId,
+    idTypeDechet: wasteTypeId,
+    etatContenuDossier: 'ACTIF',
+    etatPriseEnCharge: 'EN_ATTENTE',
+    dossier: { idDossier: caseId, referenceDossier: 'DOS-TEST', statutDossier: 'OUVERT', priorite: 'HAUTE' },
+    typeDechet: { idTypeDechet: wasteTypeId, codeType: 'PLASTIQUE', libelle: 'Plastique' },
+  };
+  const { service, calls } = createHarness({ pendingContents: [row], pendingContentTotal: 1 });
+  const result = await service.listPendingContents({ page: 1, pageSize: 20 });
+
+  assert.equal(result.total, 1);
+  assert.equal(result.items[0].idDossier, caseId);
+  const query = calls.pendingContentQueries.find((entry) => entry.kind === 'findMany');
+  assert.equal(query.where.etatContenuDossier, 'ACTIF');
+  assert.equal(query.where.etatPriseEnCharge, 'EN_ATTENTE');
+  assert.deepEqual(query.where.dossier, { statutDossier: { not: 'CLOTURE' } });
+  assert.deepEqual(query.where.affectations, { none: { dateFinAffectation: null } });
+  assert.equal(query.take, 20);
+});
+
+test('caps pending content page size at 100', async () => {
+  const { service, calls } = createHarness({ pendingContents: [] });
+  const result = await service.listPendingContents({ page: 1, pageSize: 1000 });
+  const query = calls.pendingContentQueries.find((entry) => entry.kind === 'findMany');
+  assert.equal(result.pageSize, 100);
+  assert.equal(query.take, 100);
+});
+
+test('lists only active teams with a current matching skill and filters current unavailability', async () => {
+  const currentCompetence = {
+    idCompetenceEquipe: competenceId,
+    dateDebut: new Date(Date.now() - 60_000),
+    dateFin: null,
+  };
+  const eligible = {
+    idEquipe: teamId,
+    nomEquipe: 'Équipe collecte',
+    etatEquipe: 'ACTIVE',
+    competences: [currentCompetence],
+    disponibilite: { etatDisponibilite: 'DISPONIBLE', valideJusqua: new Date(Date.now() + 60_000) },
+  };
+  const unavailable = {
+    ...eligible,
+    idEquipe: otherTeamId,
+    disponibilite: { etatDisponibilite: 'INDISPONIBLE', valideJusqua: new Date(Date.now() + 60_000) },
+  };
+  const expiredUnavailable = {
+    ...eligible,
+    idEquipe: '99999999-9999-4999-8999-999999999999',
+    disponibilite: { etatDisponibilite: 'INDISPONIBLE', valideJusqua: new Date(Date.now() - 60_000) },
+  };
+  const { service, calls } = createHarness({ eligibleTeams: [eligible, unavailable, expiredUnavailable] });
+  const result = await service.listEligibleTeams(wasteTypeId);
+
+  assert.equal(result.length, 2);
+  assert.deepEqual(result.map((team) => team.idEquipe), [teamId, expiredUnavailable.idEquipe]);
+  const query = calls.eligibleTeamQueries[0];
+  assert.equal(query.where.etatEquipe, 'ACTIVE');
+  assert.equal(query.where.competences.some.idTypeDechet, wasteTypeId);
+  assert.ok(query.where.competences.some.dateDebut.lte instanceof Date);
+  assert.deepEqual(query.where.competences.some.OR[0], { dateFin: null });
+  assert.deepEqual(query.include.competences.where.OR[0], { dateFin: null });
 });
