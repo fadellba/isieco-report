@@ -27,6 +27,12 @@ export const navigationItems: NavigationItem[] = [
     roles: ['RESPONSABLE_TRAITEMENT'],
   },
   {
+    to: '/affectations',
+    label: 'Affectations',
+    description: 'Répartition des dossiers aux équipes compétentes',
+    roles: ['RESPONSABLE_AFFECTATION'],
+  },
+  {
     to: '/referentiels',
     label: 'Référentiels',
     description: 'Types de déchets, géographie et équipes',

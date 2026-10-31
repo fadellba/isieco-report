@@ -19,10 +19,14 @@ Toutes les routes sont préfixées par `/api/v1`, utilisent Supabase Auth et les
 | Méthode | Route | Autorisation | Description |
 |---|---|---|---|
 | GET | `/assignments` | RESPONSABLE_AFFECTATION | Liste filtrable et paginée |
+| GET | `/assignments/pending-contents` | RESPONSABLE_AFFECTATION | Contenus actifs, en attente, dans un dossier non clôturé et sans affectation active ; pagination `page` / `pageSize` |
+| GET | `/assignments/eligible-teams/:idTypeDechet` | RESPONSABLE_AFFECTATION | Équipes actives avec compétence courante valide ; une indisponibilité courante explicite les exclut |
 | POST | `/assignments` | RESPONSABLE_AFFECTATION | Affecte un contenu à une équipe compétente |
 | GET | `/assignments/team/:idEquipe` | AGENT_TERRAIN + appartenance active | Consulte les affectations ouvertes de son équipe |
 | POST | `/assignments/:idAffectation/response` | AGENT_TERRAIN + appartenance active | Accepte ou refuse avec motif |
 | POST | `/assignments/:idAffectation/reassign` | RESPONSABLE_AFFECTATION | Annule une affectation en attente ou remplace une affectation refusée |
+
+Les routes de découverte ne sont qu'une aide à la sélection : le backend revalide toujours le contenu, l'équipe, la compétence, la disponibilité et l'unicité dans la transaction de création/réaffectation.
 
 Les créations et réaffectations exigent un en-tête `Idempotency-Key` de 8 à 128 caractères. Une affectation déjà acceptée ou ayant une intervention n’est pas réaffectable par ce parcours.
 

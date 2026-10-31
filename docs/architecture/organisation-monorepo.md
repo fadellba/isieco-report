@@ -114,18 +114,18 @@ isieco-report/
 └── README.md
 ~~~
 
-## État réel sur main après la Phase 13
+## État réel sur main après la Phase 14
 
 | Zone | Présent dans main | Évolution nécessaire |
 |---|---|---|
 | API | NestJS, configuration, auth, database, common/pipes, infrastructure/storage et les neuf modules métier avec contrôleurs, services et DTO. | Réorganiser progressivement les responsabilités auth/database vers infrastructure lors de changements isolés ; ajouter filters/interceptors/decorators uniquement lorsqu'un besoin concret apparaît. |
-| Web | React/Vite, AuthProvider, shell, routes par rôle, dashboard, comptes, audit personnel, qualification et dossiers. | Ajouter les écrans Référentiels, Affectations, Interventions et Vérification ; compléter composants UI et tests d'interaction. |
+| Web | React/Vite, AuthProvider, shell, routes par rôle, dashboard, comptes, audit personnel, qualification, dossiers et référentiels (Phase 14 intégrée). | Ajouter les écrans Affectations, Interventions et Vérification ; compléter composants UI et tests d'interaction. |
 | Mobile | Expo Router, layout, index, connexion, inscription, client API et Supabase. Les écrans restent des placeholders. | Construire les groupes auth/citizen/agent et les parcours métier, médias et géolocalisation. |
 | Packages | `shared` et `api-client` initialisés avec un client HTTP commun générique et des contrats encore limités. | Ajouter les types, schémas et endpoints partagés au rythme des consommateurs, sans dépendance circulaire. |
 | CI/CD | `ci.yml` et `render-uml-class-diagrams.yml` présents. | Créer `web-deploy.yml` et `api-deploy.yml` après validation des secrets et des environnements. |
 | Prisma | Schéma MLD v2.13 avec 38 modèles et quatre migrations versionnées. | Pas de migration identifiée pour les écrans Web restants ; toute évolution de schéma doit rester additive et testée. |
 
-La branche `feat/phase-14-web-referentials` ajoute en cours l'interface d'administration des référentiels et une lecture des délégations actives à l'API. Ces changements ne sont pas encore fusionnés dans `main`.
+La branche `feat/phase-15-web-assignments` développe le pilotage des affectations et les lectures métier minimales nécessaires à la découverte des contenus et équipes éligibles. Ces changements ne sont pas encore fusionnés dans `main`.
 
 La structure cible demeure un guide d'organisation et non une obligation de déplacer immédiatement tous les fichiers. En particulier, l'authentification et Prisma sont encore dans `src/auth` et `src/database` ; leur migration vers `src/infrastructure` devra être isolée, testée et faite sans changer les contrats métier.
 
