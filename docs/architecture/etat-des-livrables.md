@@ -1,12 +1,12 @@
 # État des livrables
 
-État de référence : **31 octobre 2026, après fusion de la PR #24 ; Phase 20 en cours**. « Intégré » signifie fusionné dans `main`. « Initialisé » signifie que la structure existe sans parcours métier complet. « En cours » désigne une évolution sur une branche non fusionnée. Un build vert ne vaut pas recette utilisateur.
+État de référence : **31 octobre 2026, après fusion de la PR #26 ; Phases 20 et 21 intégrées**. « Intégré » signifie fusionné dans `main`. « Initialisé » signifie que la structure existe sans parcours métier complet. « En cours » désigne une évolution sur une branche non fusionnée. Un build vert ne vaut pas recette utilisateur.
 
 | Domaine | Livrable | État |
 |---|---|---|
 | Architecture | Monolithe modulaire et monorepo pnpm | Architecture documentée ; alignement structurel progressif, sans déplacement massif requis. |
 | Toolchain | Node.js, pnpm et lockfile | Versions épinglées ; installation CI en `--frozen-lockfile`. |
-| CI | `.github/workflows/ci.yml` | Présent ; les CI des PR #22, #23 et #24 ont réussi. Le run push de main après PR #24 est à confirmer. |
+| CI | `.github/workflows/ci.yml` | Présent ; CI complètes vertes sur les PR #22 à #26. Le run push de `main` après PR #26 est suivi séparément. |
 | CI UML | `render-uml-class-diagrams.yml` | Présent pour régénérer les vues UML à partir de la source versionnée. |
 | CI/CD | Déploiements Web/API | En cours sur `feat/phase-20-deployment-workflows-v2` : workflows déclenchés sur push `main` ou manuellement, vérifiant la CI réussie sur le même SHA avant Deploy Hook. Secrets Vercel/Render, opt-in `PRODUCTION_DEPLOY_ENABLED=true` et smoke tests à configurer. Aucun déploiement de production confirmé. |
 | Backend | Accounts | Intégré : profils, provisionnement citoyen, administration des comptes/rôles, audit transactionnel et protection du dernier administrateur. |
@@ -29,21 +29,21 @@
 | Web | Interventions | Intégrées (PR #21) : équipes du compte connecté, réponses aux affectations, démarrage, preuves photo multipart et compte rendu, auteur et appartenance vérifiés côté API. |
 | Web | Vérification | Intégrée (PR #22) : file paginée, détail du compte rendu, photos privées signées à la demande, séparation des tâches, décision conforme et demande de reprise motivée. |
 | Web | Médias | Consultation des photos de qualification intégrée ; dépôt et consultation dans les autres parcours Web restent à réaliser. |
-| Mobile | Parcours citoyen | Intégré (PR #23) : liste paginée propriétaire, dépôt idempotent, détail et réponses aux demandes de complément. Pas de photo native ni géolocalisation système. |
-| Mobile | Parcours Agent terrain | Intégré (PR #24) : équipes propres au compte, affectations, réponses, démarrage, compte rendu et reprise. Pas d'upload photo natif ni de géolocalisation système. |
-| Mobile | Photos et géolocalisation natives | En cours sur `feat/phase-21-mobile-native-media` : image picker, capture caméra, conversion JPEG, upload privé citoyen/agent, aperçu par URL signée et localisation au premier plan sur demande. CI complète et tests appareils à valider. |
+| Mobile | Parcours citoyen | Intégré (PR #23) : liste paginée propriétaire, dépôt idempotent, détail, réponses aux compléments, ajout de photos natives et position ponctuelle (PR #26). |
+| Mobile | Parcours Agent terrain | Intégré (PR #24) : équipes propres au compte, affectations, réponses, démarrage, compte rendu, reprise et upload natif des preuves photo (PR #26). |
+| Mobile | Photos et géolocalisation natives | Intégrées (PR #26) : image picker, capture caméra, conversion JPEG, upload privé citoyen/agent, aperçu par URL signée et localisation au premier plan sur demande. CI complète verte. |
 | Packages | `shared` et `api-client` | Initialisés ; contrats et endpoints dédiés à compléter à mesure des besoins des clients. |
 | Base de données | MLD v2.13 | 38 modèles Prisma présents. |
 | Base de données | Migrations | Quatre migrations versionnées ; CI applique l'historique sur PostgreSQL vierge et teste les contraintes d'intégrité. Projet Supabase distant non migré. |
 | UML/Merise | Modèles et cas d'utilisation | Sources et vues versionnées ; elles décrivent le périmètre cible et ne remplacent pas la recette des écrans. |
 | Exploitation | Vercel, Render, Supabase distant | Architecture documentée ; configuration et déploiements de production non confirmés. |
-| Mobile | Médias et géolocalisation natives | À faire : image picker, upload mobile, permissions de localisation et tests sur appareils réels. |
+| Mobile | Recette native | À faire : tester permissions, galerie, caméra, conversion d'images et localisation sur appareils Android/iOS réels. |
 | Mobile | APK signé et GitHub Release | À faire ; aucun APK de release signé confirmé. |
 
 ## Prochain ordre de livraison recommandé
 
 1. Phase 20 : valider les workflows de déploiement et configurer les secrets Vercel/Render.
-2. Ajouter image picker et géolocalisation avec versions Expo compatibles, puis valider sur appareils réels.
+2. Recetter sur appareils Android/iOS réels les permissions, la galerie, la caméra, l'upload privé et la localisation ponctuelle.
 3. Finalisation opérationnelle des médias : bucket privé, politique de rétention validée, tests de droits et Cron de purge.
 4. Générer et signer l'APK Android, publier une GitHub Release et vérifier le lien de téléchargement.
 5. Recette fonctionnelle, sauvegardes/restauration et smoke tests de production.
