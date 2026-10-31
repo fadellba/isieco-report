@@ -29,4 +29,4 @@ La file de vérification expose uniquement les métadonnées photo, jamais le ch
 
 ## Limites
 
-Le vérificateur ne modifie pas les affectations opérationnelles directement en dehors de sa décision. Une demande de reprise ne réouvre pas une affectation refusée par l'équipe, et une décision conforme ne clôture pas un dossier ayant d'autres contenus actifs non terminés. La purge automatique et les workflows d'approbation/publication des variantes photo restent à développer.
+Le vérificateur ne modifie pas les affectations opérationnelles directement en dehors de sa décision. Une demande de reprise ne réouvre pas une affectation refusée par l'équipe, et une décision conforme ne clôture pas un dossier ayant d'autres contenus actifs non terminés. La commande de purge est disponible et doit être planifiée par Cron dans l'environnement d'hébergement. Les workflows d'approbation/publication des variantes photo restent à développer.

@@ -384,7 +384,7 @@ export class VerificationService {
       },
       intervention: {
         ...intervention,
-        photos: intervention.photos.map((photo) => ({
+        photos: (intervention.photos ?? []).map((photo) => ({
           idPhotoIntervention: photo.idPhotoIntervention,
           description: photo.description,
           dateAjout: photo.dateAjout,

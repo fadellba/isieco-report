@@ -26,4 +26,4 @@ L'upload est désactivé tant que `MEDIA_RETENTION_DAYS` n'est pas renseigné se
 
 ## Limites
 
-L'approbation des variantes, le floutage, le flux de publication, les URLs de médias publics et la purge automatique sont hors du périmètre de cette livraison. Ne jamais rendre le bucket public ni accepter un chemin Storage arbitraire depuis un client.
+L'approbation des variantes, le floutage, le flux de publication et les URLs de médias publics sont hors du périmètre de cette livraison. La commande de purge est disponible ; sa planification Cron reste à configurer. Ne jamais rendre le bucket public ni accepter un chemin Storage arbitraire depuis un client.

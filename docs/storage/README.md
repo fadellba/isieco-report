@@ -55,7 +55,11 @@ Les photos d'intervention restent invisibles dans la file de vérification aprè
 
 La colonne `dateExpiration` est déterminée au dépôt depuis `MEDIA_RETENTION_DAYS`. La colonne `mediaPurgeAt` est réservée au suivi de la suppression effective.
 
-**La suppression planifiée des objets expirés et des lignes/métadonnées associées n'est pas encore implémentée.** Avant la production, ajouter un processus de purge idempotent, audité, avec gestion des échecs et tests de reprise ; ne pas supposer que la seule présence de `dateExpiration` supprime un fichier du bucket.
+Le service `MediaPurgeService` et la commande `pnpm storage:purge` exécutent une purge bornée : 100 photos de signalement et 100 photos d'intervention au maximum par exécution. Pour chaque objet, l'API supprime le fichier du bucket privé, puis marque `mediaPurgeAt` et écrit un événement d'audit dans une transaction sérialisable. Les lignes photo sont conservées pour préserver les références historiques ; seule la métadonnée de purge est renseignée.
+
+Un échec Storage ou SQL laisse la ligne non purgée et incrémente `failed`. La commande renvoie un code de sortie non nul si une erreur est rencontrée. Le traitement peut être relancé ; il ne journalise ni chemins Storage ni données personnelles.
+
+La commande n'est pas planifiée par le dépôt. Configurer un job Cron dans l'environnement d'hébergement, avec le même code, `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SECRET_KEY` et `SUPABASE_STORAGE_BUCKET`. Choisir une fréquence compatible avec la politique de conservation et le volume attendu. Une exécution traite au plus 200 objets ; si le volume dépasse ce lot, prévoir une fréquence suffisante pour résorber la file.
 
 ## Vérifications avant mise en production
 
@@ -65,4 +69,4 @@ La colonne `dateExpiration` est déterminée au dépôt depuis `MEDIA_RETENTION_
 - Tester les fichiers falsifiés, MIME incohérent, fichier vide et dépassement de taille.
 - Tester les erreurs Storage, les échecs SQL après upload et le nettoyage compensatoire.
 - Tester les liens expirés, les photos expirées et l'absence de chemin Storage dans les réponses.
-- Définir la politique de conservation et déployer le job de purge avant tout usage opérationnel.
+- Définir la politique de conservation et configurer le planificateur qui exécute `pnpm storage:purge` ; vérifier les journaux de synthèse et les codes de sortie.

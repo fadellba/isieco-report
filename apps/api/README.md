@@ -40,6 +40,7 @@ Depuis la racine :
 ```bash
 pnpm dev:api
 pnpm api:openapi
+pnpm storage:purge
 pnpm --filter @isieco/api test
 TEST_DATABASE_URL="postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report" pnpm db:test:invariants
 ```
@@ -73,4 +74,6 @@ Les routes de dépôt sont `POST /api/v1/reports/:id/photos` et `POST /api/v1/in
 
 Les liens temporaires sont délivrés par `GET /api/v1/reports/:id/photos/:photoId/url` et `GET /api/v1/verification/assignments/:idAffectation/photos/:idPhotoIntervention/url`. Ils expirent après 60 secondes et sont précédés d'un contrôle de propriété/droit métier. Voir [la procédure Storage](../../docs/storage/README.md).
 
-La phase Médias ne comprend pas encore la purge planifiée des objets expirés, ni les interfaces de dépôt et de consultation dans Web/Mobile.
+La commande `pnpm storage:purge` supprime les objets dont la période de conservation est échue, conserve les lignes photo pour l'historique, renseigne `mediaPurgeAt` et écrit l'événement de purge. Elle traite au maximum 100 photos par type et doit être appelée par un job Cron externe. Voir [la procédure Storage](../../docs/storage/README.md).
+
+Les interfaces de dépôt et de consultation dans Web/Mobile, le bucket distant et la planification du job Cron restent à configurer/réaliser.

@@ -357,7 +357,7 @@ test('allows a separate verifier to obtain a signed URL for a pending interventi
 });
 
 test('prevents an intervention author from verifying their own photo evidence', async () => {
-  const { service, calls, storage } = verificationHarness({ author: authUserId });
+  const { service, calls, storage } = verificationHarness({ author: actorId });
 
   await assert.rejects(
     service.createInterventionPhotoUrl(assignmentId, photoId, authUserId),

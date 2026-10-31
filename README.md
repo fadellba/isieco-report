@@ -54,7 +54,7 @@ Le schéma Prisma et les migrations versionnées sont appliqués sur une base Po
 
 Le backend a intégré les workflows Accounts, Referentials, Reports, Qualification, Cases, Assignments, Interventions et Verification. La dernière livraison intégrée est la vérification indépendante, la demande de reprise et la clôture contrôlée des dossiers (PR #14). La CI sur main valide les migrations PostgreSQL, OpenAPI, TypeScript, les tests et les builds Web/API/Mobile.
 
-Les interfaces Web et Mobile restent des socles d'authentification et de profil : les écrans métier ne sont pas encore réalisés. Le stockage privé des photos, l'audit centralisé consultable, les déploiements automatiques, le projet Supabase distant et l'APK Android signé restent à finaliser. L'état détaillé et les limites sont consignés dans docs/architecture/etat-des-livrables.md et docs/storage/README.md.
+Les interfaces Web et Mobile restent des socles d'authentification et de profil : les écrans métier ne sont pas encore réalisés. L'infrastructure de stockage privé et le service de purge sont en cours de livraison sur la branche Phase 10 ; le bucket Supabase distant et sa planification Cron restent à configurer. L'audit centralisé consultable, les interfaces métier, les déploiements automatiques, le projet Supabase distant et l'APK Android signé restent à finaliser. L'état détaillé et les limites sont consignés dans docs/architecture/etat-des-livrables.md et docs/storage/README.md.
 
 ## CI
 

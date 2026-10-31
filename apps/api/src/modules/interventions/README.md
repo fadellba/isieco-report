@@ -32,4 +32,4 @@ L'objet est stocké dans le bucket privé ; le chemin ne sort pas de l'API. Les 
 
 ## Limites
 
-Les URLs de preuve ne sont délivrées qu'au vérificateur autorisé pendant l'attente de décision. Les variantes, le floutage, les médias publiables et la purge planifiée ne sont pas encore implémentés. L'agent terrain ne peut ni valider la résolution ni clôturer le dossier.
+Les URLs de preuve ne sont délivrées qu'au vérificateur autorisé pendant l'attente de décision. Les variantes, le floutage et les médias publiables ne sont pas encore implémentés. La purge est exécutée via `pnpm storage:purge` ; la planification Cron reste à configurer. L'agent terrain ne peut ni valider la résolution ni clôturer le dossier.

@@ -17,9 +17,9 @@
 | Backend | Interventions | Intégré : démarrage, compte rendu, résultat/exception et reprise. Upload de preuves photo sur la branche Phase 10. |
 | Backend | Verification | Intégré : vérification indépendante, séparation des tâches, demande de reprise et clôture après achèvement des contenus actifs. |
 | Backend | Audit | Les modules écrivent des événements métier dans la transaction. API centralisée de consultation, filtres et export à développer. |
-| Médias | Infrastructure Storage privée | Branche Phase 10 : upload serveur, validation binaire JPEG/PNG/WebP, limite de 10 MiB, métadonnées photo et liens signés de 60 secondes. Validation CI et revue encore nécessaires. |
+| Médias | Infrastructure Storage privée | Branche Phase 10 : upload serveur, validation binaire JPEG/PNG/WebP, limite de 10 MiB, métadonnées photo, liens signés de 60 secondes et commande de purge bornée/auditée. Validation CI et revue encore nécessaires. |
 | Médias | Bucket Supabase distant | À provisionner en privé ; secret serveur et durée de conservation à configurer dans l'environnement. Aucun projet distant n'a été modifié par cette branche. |
-| Médias | Purge des objets expirés | À développer : job idempotent, audit, reprise des échecs et tests. Le champ `dateExpiration` ne supprime pas automatiquement un objet. |
+| Médias | Purge des objets expirés | Service et commande `pnpm storage:purge` ajoutés sur la branche Phase 10 : suppression Storage, horodatage `mediaPurgeAt`, événement d'audit atomique et retry des éléments en échec. Planification Cron et validation d'environnement à configurer. |
 | Web | Connexion, profil administratif et page `/telecharger` | Initialisés ; interfaces métier à réaliser. |
 | Mobile | Expo, connexion, inscription citoyenne et profil | Initialisés ; parcours métier citoyen/agent, médias et géolocalisation à réaliser. |
 | Packages | `shared` et `api-client` | Initialisés ; contrats métier et endpoints à compléter au rythme des clients. |
@@ -31,7 +31,7 @@
 
 ## Ordre de livraison recommandé
 
-1. Terminer la Phase 10 Médias : valider la CI, provisionner le bucket privé dans l'environnement voulu, tester les contrôles inter-comptes et membres d'équipe, décider la rétention, puis implémenter la purge.
+1. Terminer la Phase 10 Médias : valider la CI, provisionner le bucket privé, configurer la rétention approuvée, tester les contrôles d'accès et planifier `pnpm storage:purge`.
 2. Compléter Audit : consultation paginée, filtres autorisés, détail d'événement et export avec contrôle d'accès.
 3. Développer les écrans métier Web et les parcours citoyens/agents Mobile sur les contrats API.
 4. Mettre en place les déploiements, les smoke tests et la distribution Android signée.
