@@ -446,5 +446,5 @@ test('lists only active teams with a current matching skill and filters current 
   assert.equal(query.where.competences.some.idTypeDechet, wasteTypeId);
   assert.ok(query.where.competences.some.dateDebut.lte instanceof Date);
   assert.deepEqual(query.where.competences.some.OR[0], { dateFin: null });
-  assert.deepEqual(query.include.competences.where.OR[0], { dateFin: null });
+  assert.deepEqual(query.select.competences.where.OR[0], { dateFin: null });
 });
