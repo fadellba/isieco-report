@@ -82,7 +82,7 @@ export class InterventionsService {
       where: {
         idUtilisateur: actorId,
         dateDebut: { lte: now },
-        OR: [{ dateFin: null }, { dateFin: { gt: now } }],
+        OR: [{ dateFin: null }, { dateFin: { gte: now } }],
         equipe: { etatEquipe: 'ACTIVE' },
       },
       orderBy: [{ dateDebut: 'desc' }],
