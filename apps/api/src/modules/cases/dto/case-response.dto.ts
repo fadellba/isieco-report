@@ -1,6 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CaseWasteTypeResponseDto {
+  @ApiProperty({ format: 'uuid' })
+  idTypeDechet!: string;
+
   @ApiProperty()
   codeType!: string;
 
