@@ -20,6 +20,7 @@ function createHarness(options = {}) {
     interventionUpdates: [],
     events: [],
     memberships: [],
+    myTeamQueries: [],
   };
   const assignment = options.assignment ?? {
     idAffectation: assignmentId,
@@ -104,6 +105,14 @@ function createHarness(options = {}) {
       findUnique: async () => ({ idEquipe: teamId }),
     },
     appartenanceEquipe: {
+      findMany: async (args) => {
+        calls.myTeamQueries.push(args);
+        return options.myTeams ?? [{
+          dateDebut: new Date('2026-10-01T00:00:00.000Z'),
+          fonction: 'Agent terrain',
+          equipe: { idEquipe: teamId, nomEquipe: 'Équipe A', etatEquipe: 'ACTIVE' },
+        }];
+      },
       findFirst: async () => ({ idEquipe: teamId, idUtilisateur: actorId }),
     },
     affectation: {
@@ -323,4 +332,38 @@ test('maps serializable write conflicts to HTTP 409', async () => {
     service.startIntervention(assignmentId, authUserId),
     (error) => error instanceof ConflictException && error.getStatus() === 409,
   );
+});
+
+
+test('lists only the connected agent active teams and deduplicates overlapping current memberships', async () => {
+  const earlier = new Date('2026-10-01T00:00:00.000Z');
+  const later = new Date('2026-10-15T00:00:00.000Z');
+  const { service, calls } = createHarness({
+    myTeams: [
+      { dateDebut: later, fonction: 'Chef d’équipe', equipe: { idEquipe: teamId, nomEquipe: 'Équipe A', etatEquipe: 'ACTIVE' } },
+      { dateDebut: earlier, fonction: 'Agent terrain', equipe: { idEquipe: teamId, nomEquipe: 'Équipe A', etatEquipe: 'ACTIVE' } },
+      { dateDebut: earlier, fonction: 'Agent terrain', equipe: { idEquipe: '66666666-6666-4666-8666-666666666666', nomEquipe: 'Équipe B', etatEquipe: 'ACTIVE' } },
+    ],
+  });
+
+  const result = await service.listMyTeams(authUserId);
+
+  assert.equal(result.length, 2);
+  assert.equal(result.find((team) => team.idEquipe === teamId).fonction, 'Chef d’équipe');
+  assert.deepEqual(result.map((team) => team.nomEquipe), ['Équipe A', 'Équipe B']);
+  const query = calls.myTeamQueries[0];
+  assert.equal(query.where.idUtilisateur, actorId);
+  assert.ok(query.where.dateDebut.lte instanceof Date);
+  assert.deepEqual(query.where.OR[0], { dateFin: null });
+  assert.deepEqual(query.where.equipe, { etatEquipe: 'ACTIVE' });
+  assert.equal(query.orderBy[0].dateDebut, 'desc');
+});
+
+test('does not list field agent teams when the business account is inactive', async () => {
+  const { service, calls } = createHarness({ accountState: 'SUSPENDU' });
+  await assert.rejects(
+    service.listMyTeams(authUserId),
+    (error) => error instanceof ForbiddenException && error.getStatus() === 403,
+  );
+  assert.equal(calls.myTeamQueries.length, 0);
 });
