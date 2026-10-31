@@ -1,0 +1,104 @@
+name: Staging Database Migrate
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply_staging_migrations:
+        description: "Select APPLY to run the committed Prisma migrations against staging."
+        required: true
+        type: choice
+        options:
+          - NO
+          - APPLY
+        default: NO
+
+permissions:
+  contents: read
+
+concurrency:
+  group: staging-prisma-migrations
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Apply versioned Prisma migrations to staging
+    if: github.ref == 'refs/heads/main' && inputs.apply_staging_migrations == 'APPLY'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: staging
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7.1.0
+        with:
+          node-version-file: .nvmrc
+          check-latest: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6.1.0
+        with:
+          version: 12.16.1
+          run_install: false
+
+      - name: Validate the staging database target
+        env:
+          DIRECT_URL: ${{ secrets.STAGING_PRISMA_URL }}
+        run: |
+          if [ -z "${DIRECT_URL:-}" ]; then
+            echo "The staging environment secret STAGING_PRISMA_URL is required."
+            exit 1
+          fi
+
+          node --input-type=module <<'NODE'
+          const connectionString = process.env.DIRECT_URL;
+          const url = new URL(connectionString);
+          const expectedProjectRef = 'mlhbdautaxufubaybzyt';
+          const expectedUsername = `postgres.${expectedProjectRef}`;
+          const sslMode = url.searchParams.get('sslmode');
+
+          if (!['postgres:', 'postgresql:'].includes(url.protocol)) {
+            throw new Error('STAGING_PRISMA_URL must be a PostgreSQL connection string.');
+          }
+          if (!url.hostname.endsWith('.pooler.supabase.com')) {
+            throw new Error('Use this project Supavisor Session Pooler connection string.');
+          }
+          if (url.port !== '5432') {
+            throw new Error('Use Supavisor Session Pooler on port 5432, not transaction mode.');
+          }
+          if (decodeURIComponent(url.username) !== expectedUsername) {
+            throw new Error('The connection string does not target the isieco-report-staging project.');
+          }
+          if (url.pathname !== '/postgres') {
+            throw new Error('The staging connection string must target the postgres database.');
+          }
+          if (!['require', 'verify-ca', 'verify-full'].includes(sslMode)) {
+            throw new Error('Set sslmode=require (or verify-ca/verify-full) on the connection string.');
+          }
+          if (!url.password) {
+            throw new Error('The staging connection string is missing its password.');
+          }
+
+          console.log(`Validated staging PostgreSQL host: ${url.hostname}:${url.port}. Credentials were not printed.`);
+          NODE
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm db:generate
+        env:
+          DIRECT_URL: ${{ secrets.STAGING_PRISMA_URL }}
+
+      - name: Apply committed migrations to staging
+        run: pnpm db:deploy
+        env:
+          DIRECT_URL: ${{ secrets.STAGING_PRISMA_URL }}
+
+      - name: Verify Prisma migration history
+        run: pnpm exec prisma migrate status
+        env:
+          DIRECT_URL: ${{ secrets.STAGING_PRISMA_URL }}
