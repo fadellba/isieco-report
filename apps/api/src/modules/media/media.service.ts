@@ -237,9 +237,9 @@ export class MediaService {
       },
     });
     return {
-      idSignalement,
+      resourceId: idSignalement,
       items: await Promise.all(photos.map(async (photo) => ({
-        idPhotoSignalement: photo.idPhotoSignalement,
+        idPhoto: photo.idPhotoSignalement,
         description: photo.description,
         dateAjout: photo.dateAjout,
         dateExpiration: photo.dateExpiration,
@@ -431,7 +431,7 @@ export class MediaService {
     return {
       idIntervention,
       items: await Promise.all(photos.map(async (photo) => ({
-        idPhotoIntervention: photo.idPhotoIntervention,
+        idPhoto: photo.idPhotoIntervention,
         contextePhoto: photo.contextePhoto,
         description: photo.description,
         dateAjout: photo.dateAjout,
