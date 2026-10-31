@@ -1,7 +1,6 @@
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
-import type * as ImagePicker from 'expo-image-picker';
 
 export interface PreparedMobilePhoto {
   uri: string;
@@ -50,7 +49,6 @@ export async function prepareMobilePhoto(
 export function appendMobilePhoto(form: FormData, photo: PreparedMobilePhoto): void {
   form.append('file', photo as unknown as Blob);
 }
-
 
 export async function pickMobilePhotos(selectionLimit = 3): Promise<PreparedMobilePhoto[]> {
   const result = await ImagePicker.launchImageLibraryAsync({
