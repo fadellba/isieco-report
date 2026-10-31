@@ -149,6 +149,9 @@ jobs:
       - name: Build shared packages
         run: pnpm build:packages
 
+      - name: Diagnose API TypeScript compilation
+        run: pnpm --filter @isieco/api exec tsc --noEmit -p tsconfig.build.json
+
       - name: Generate OpenAPI specification
         run: pnpm api:openapi
         env:
