@@ -17,7 +17,7 @@ Le Web et le Mobile consomment la même API HTTPS. Les clients ne se connectent 
 
 ## Documentation projet
 
-Commencer par [l'index de la documentation](docs/README.md). Les décisions structurantes sont consignées dans [les ADR](docs/architecture/decisions.md). Le registre [état des livrables](docs/architecture/etat-des-livrables.md) distingue les éléments présents, initialisés et restant à réaliser.
+Commencer par [l'index de la documentation](docs/README.md). Les décisions structurantes sont consignées dans [les ADR](docs/architecture/decisions.md). Le registre [état des livrables](docs/architecture/etat-des-livrables.md) distingue les éléments intégrés, initialisés et restant à réaliser.
 
 ## Versions et prérequis
 
@@ -52,10 +52,12 @@ Le schéma Prisma et les migrations versionnées sont appliqués sur une base Po
 
 ## État du projet au 31 octobre 2026
 
-Le backend a intégré les workflows Accounts, Referentials, Reports, Qualification, Cases, Assignments, Interventions et Verification. Les phases Médias (PR #15) et Audit à portée limitée (PR #16) sont également intégrées : upload privé, liens signés, purge bornée, journal personnel et historique des rôles réservé à l'administration des comptes. La CI sur main valide les migrations PostgreSQL, OpenAPI, TypeScript, les tests et les builds Web/API/Mobile.
+Le backend a intégré les workflows Accounts, Referentials, Reports, Qualification, Cases, Assignments, Interventions et Verification. Les phases Médias (PR #15) et Audit à portée limitée (PR #16) sont également intégrées : upload privé, liens signés, purge bornée et journal métier à portée limitée.
 
-La branche Phase 12 développe le premier back-office Web connecté : shell, navigation par habilitation, gestion des comptes et journal personnel. Les autres interfaces métier Web et les parcours citoyens/agents Mobile restent à développer. Le bucket Supabase distant, la politique de rétention, la planification Cron, les déploiements automatiques et l'APK Android signé restent à finaliser. L'état détaillé et les limites sont consignés dans docs/architecture/etat-des-livrables.md et docs/storage/README.md.
+Le back-office Web a intégré les phases 12 et 13 : shell et navigation par rôle, administration des comptes, journal personnel, qualification des signalements et gestion des dossiers (PR #17 et #18). Les interfaces Web des référentiels, affectations, interventions et vérification restent à réaliser. Le Mobile est encore au stade du squelette Expo et de ses écrans placeholders ; les parcours métier citoyens et agents restent à construire.
+
+La CI sur main valide les migrations PostgreSQL, OpenAPI, TypeScript, les tests et les builds Web/API/Mobile. Le bucket Supabase distant, la politique de rétention, la planification Cron, les déploiements automatiques et l'APK Android signé restent à finaliser. L'état détaillé et les limites sont consignés dans docs/architecture/etat-des-livrables.md et docs/storage/README.md.
 
 ## CI
 
-.github/workflows/ci.yml s'exécute sur les push vers main, les pull requests et les déclenchements manuels. Il installe les dépendances, génère Prisma et OpenAPI, vérifie TypeScript, exécute les tests du socle et construit Web/API/Mobile. La génération d'un aperçu SQL en CI ne remplace pas une migration additive versionnée.
+.github/workflows/ci.yml s'exécute sur les push vers main, les pull requests et les déclenchements manuels. Il installe les dépendances, génère Prisma et OpenAPI, vérifie TypeScript, exécute les tests du socle et construit Web/API/Mobile. Le workflow render-uml-class-diagrams.yml régénère les vues UML de classes. La génération d'un aperçu SQL en CI ne remplace pas une migration additive versionnée.
