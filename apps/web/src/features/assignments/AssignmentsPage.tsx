@@ -233,8 +233,9 @@ export function AssignmentsPage() {
       setReassignKeys((current) => ({ ...current, [id]: newIdempotencyKey() }));
       await loadAssignments();
     } catch (reason) {
-      setError(errorMessage(reason));
+      const message = errorMessage(reason);
       await loadAssignments();
+      setError(message);
     } finally {
       setBusyKey(null);
     }
