@@ -1,0 +1,61 @@
+name: Web Deploy
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Trigger Web production deployment
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Trigger Vercel deployment hook
+        env:
+          DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "${DEPLOY_HOOK_URL:-}" ]; then
+            echo "VERCEL_DEPLOY_HOOK_URL is not configured; Web deployment was skipped."
+            echo "Configure the Vercel production Deploy Hook as a GitHub Actions secret." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          curl --fail --silent --show-error --max-time 30 \
+            --request POST "$DEPLOY_HOOK_URL" \
+            --output /dev/null
+
+          echo "Vercel accepted the deployment request." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Smoke test deployed Web (optional)
+        if: ${{ secrets.WEB_SMOKE_URL != '' && secrets.VERCEL_DEPLOY_HOOK_URL != '' }}
+        env:
+          SMOKE_URL: ${{ secrets.WEB_SMOKE_URL }}
+        run: |
+          for attempt in $(seq 1 18); do
+            status="$(curl --silent --show-error --location --max-time 15 \
+              --output /dev/null --write-out '%{http_code}' "$SMOKE_URL" || true)"
+
+            case "$status" in
+              2*|3*)
+                echo "Web smoke test passed with HTTP $status."
+                exit 0
+                ;;
+            esac
+
+            echo "Web not ready yet (HTTP ${status:-000}), attempt $attempt/18."
+            sleep 10
+          done
+
+          echo "Web smoke test did not become healthy within the bounded retry window."
+          exit 1
