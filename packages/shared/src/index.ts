@@ -94,3 +94,17 @@ export type AssignmentStatus = (typeof ASSIGNMENT_STATUS_CODES)[number];
 
 export const ASSIGNMENT_TEAM_DECISION_CODES = ['EN_ATTENTE', 'ACCEPTEE', 'REFUSEE'] as const;
 export type AssignmentTeamDecision = (typeof ASSIGNMENT_TEAM_DECISION_CODES)[number];
+
+/** Persisted intervention lifecycle and field-result codes. */
+export const INTERVENTION_STATUS_CODES = ['EN_COURS', 'SOUMISE'] as const;
+export type InterventionStatus = (typeof INTERVENTION_STATUS_CODES)[number];
+
+export const INTERVENTION_RESULT_CODES = ['TERMINEE', 'PARTIELLE', 'IMPOSSIBLE'] as const;
+export type InterventionResult = (typeof INTERVENTION_RESULT_CODES)[number];
+
+/** Verification uses REPRISE to explicitly authorize another field intervention. */
+export const VERIFICATION_STATE_CODES = ['VALIDEE', 'REPRISE'] as const;
+export type VerificationState = (typeof VERIFICATION_STATE_CODES)[number];
+
+export const VERIFICATION_RESULT_CODES = ['CONFORME', 'A_REPRENDRE'] as const;
+export type VerificationResult = (typeof VERIFICATION_RESULT_CODES)[number];
