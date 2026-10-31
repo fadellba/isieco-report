@@ -248,7 +248,7 @@ export class AssignmentsService {
             ...(accepted ? {} : { etatAffectation: 'TERMINEE', dateFinAffectation: now }),
             reponduPar: actorId,
             dateReponseEquipe: now,
-            motifRefusEquipe: accepted ? null : refusalReason,
+            motifRefusEquipe: accepted ? null : (refusalReason ?? null),
             observation: dto.observation?.trim() || current.observation,
           },
         });
