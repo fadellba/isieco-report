@@ -114,7 +114,7 @@ export async function submitIntervention(
 export interface InterventionPhotoUploadResponse {
   idPhoto: string;
   description: string | null;
-  contextePhoto: string;
+  etatPublication: string;
   dateAjout: string;
 }
 
