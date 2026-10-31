@@ -70,4 +70,4 @@ Le client HTTP commun laisse le navigateur générer le `Content-Type` multipart
 
 ## Limites restantes
 
-Les affectations sont intégrées. L'espace Agent terrain est en cours dans la Phase 16 ; l'interface de vérification reste à développer. Le Web ne téléverse pas encore les photos de signalement ni les preuves d'intervention ; les interfaces API et l'infrastructure Storage privée sont disponibles. La recherche multi-critères de comptes, les détails d'événements et l'historique des rôles par compte ne sont pas encore exposés dans l'interface.
+Les affectations sont intégrées. L'espace Agent terrain est en cours dans la Phase 16 ; l'interface de vérification reste à développer. Le Web ne téléverse pas encore les photos de signalement. L'ajout des preuves photo d'intervention est en cours dans la Phase 16 via le bucket privé ; les contrôles d'auteur et d'appartenance restent côté API. La recherche multi-critères de comptes, les détails d'événements et l'historique des rôles par compte ne sont pas encore exposés dans l'interface.
