@@ -19,8 +19,9 @@
 | Backend | Reports | Soumission citoyenne idempotente, validation des référentiels et coordonnées, audit atomique, liste/détail limités au propriétaire ; 9 tests unitaires/API de service. Photos et stockage privé signés à compléter. |
 | Backend | Qualification | File de qualification, demande/réponse de complément, acceptation avec catégories actives, rejet motivé et événements atomiques ; tests de service et CI complète verte. Fusionnée dans main. |
 | Backend | Cases | Création de dossier depuis un signalement qualifié, rattachements/détachements avec provenance, consultation et historique, priorité/localisation historisées ; contrôles de concurrence et tests de service. Fusionnée dans main après CI complète verte. |
-| Backend | Assignments | Affectation idempotente, contrôle équipe/compétence/disponibilité, réponse par un membre actif et réaffectation après refus ; événements atomiques et tests. CI en cours. |
-| Backend | Interventions, verification, audit | Squelettes ; règles et parcours à implémenter.
+| Backend | Assignments | Affectation idempotente, contrôle équipe/compétence/disponibilité, réponse par un membre actif et réaffectation après refus ; événements atomiques et tests. Fusionnée dans main après CI complète verte. |
+| Backend | Interventions | Démarrage sur affectation acceptée, appartenance active, compte rendu obligatoire, résultat/motif d’exception, blocage d’une nouvelle intervention jusqu’à décision de reprise ; événements atomiques et tests. CI en cours. |
+| Backend | Verification, audit | Squelettes ; règles et parcours à implémenter.
 | Merise | MLD v2.13 dans Prisma | 38 modèles présents ; EvenementMetier possède des cibles explicites pour équipes, types de déchets et subdivisions géographiques. |
 | Base de données | PostgreSQL local et base shadow | Deux services Docker distincts et configuration SHADOW_DATABASE_URL ajoutés ; migrations appliquées et diff testé dans PostgreSQL CI. |
 | Merise | Migrations SQL MLD v2.13 | Quatre migrations versionnées : comptes/rôles, 35 modèles métier restants, contraintes d'intégrité et cibles géographiques d'audit. Application sur PostgreSQL vierge et tests négatifs d'intégrité en CI requis pour ce lot ; projet Supabase distant non migré. |
@@ -30,4 +31,4 @@
 | API | OpenAPI | Générable et archivé comme artefact CI. |
 | Exploitation | Projet Supabase distant et déploiements | Non validés. |
 
-La soumission Reports, Qualification et Cases sont intégrées à main. Assignments est en validation ; médias privés, interventions et vérification restent à livrer. La compilation et la génération Prisma ne prouvent pas que les migrations s'appliquent sur une base réelle, que les règles métier sont correctes ou que les parcours fonctionnent sur appareil. Un livrable est terminé seulement après code, tests, sécurité, documentation et procédure de livraison.
+La soumission Reports, Qualification, Cases et Assignments est intégrée à main. Interventions est en validation ; médias privés et vérification restent à livrer. La compilation et la génération Prisma ne prouvent pas que les migrations s'appliquent sur une base réelle, que les règles métier sont correctes ou que les parcours fonctionnent sur appareil. Un livrable est terminé seulement après code, tests, sécurité, documentation et procédure de livraison.
