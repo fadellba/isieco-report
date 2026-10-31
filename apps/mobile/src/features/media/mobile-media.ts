@@ -16,17 +16,18 @@ export interface PreparedMobilePhoto {
 export async function prepareMobilePhoto(
   asset: ImagePicker.ImagePickerAsset,
 ): Promise<PreparedMobilePhoto> {
-  const context = ImageManipulator.manipulate(asset.uri);
-  if (Math.max(asset.width, asset.height) > 1600) {
-    if (asset.width >= asset.height) {
-      context.resize({ width: 1600, height: null });
-    } else {
-      context.resize({ width: null, height: 1600 });
-    }
-  }
-
-  const rendered = await context.renderAsync();
-  const saved = await rendered.saveAsync({
+  const longestEdge = Math.max(asset.width, asset.height);
+  const resize = asset.width >= asset.height
+    ? {
+        width: 1600,
+        height: Math.max(1, Math.round(asset.height * 1600 / asset.width)),
+      }
+    : {
+        width: Math.max(1, Math.round(asset.width * 1600 / asset.height)),
+        height: 1600,
+      };
+  const actions = longestEdge > 1600 ? [{ resize }] : [];
+  const saved = await ImageManipulator.manipulateAsync(asset.uri, actions, {
     format: ImageManipulator.SaveFormat.JPEG,
     compress: 0.82,
   });
