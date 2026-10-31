@@ -43,19 +43,9 @@ isieco-report/
 │   │   ├── src/
 │   │   │   ├── app/
 │   │   │   ├── features/
-│   │   │   │   ├── authentication/
-│   │   │   │   ├── dashboard/
-│   │   │   │   ├── reports/
-│   │   │   │   ├── assignments/
-│   │   │   │   ├── interventions/
-│   │   │   │   └── administration/
-│   │   │   ├── components/
-│   │   │   │   ├── ui/
-│   │   │   │   └── layout/
-│   │   │   ├── hooks/
 │   │   │   ├── lib/
-│   │   │   ├── routes/
-│   │   │   └── styles/
+│   │   │   ├── pages/
+│   │   │   └── styles.css
 │   │   ├── public/
 │   │   └── package.json
 │   └── mobile/
@@ -66,38 +56,25 @@ isieco-report/
 │       │   └── (agent)/
 │       ├── src/
 │       │   ├── features/
-│       │   │   ├── authentication/
-│       │   │   ├── reports/
-│       │   │   ├── tracking/
-│       │   │   └── interventions/
-│       │   ├── components/
-│       │   ├── hooks/
-│       │   ├── lib/
-│       │   └── services/
+│       │   └── lib/
 │       └── package.json
 ├── packages/
 │   ├── shared/
 │   │   └── src/
-│   │       ├── constants/
-│   │       ├── enums/
-│   │       ├── schemas/
-│   │       ├── types/
 │   │       └── index.ts
 │   └── api-client/
 │       └── src/
-│           ├── client/
-│           ├── endpoints/
-│           ├── types/
 │           └── index.ts
 ├── prisma/
 │   ├── schema.prisma
-│   ├── migrations/
-│   └── seed.ts
+│   └── migrations/
 ├── docs/
 │   ├── architecture/
 │   ├── deployment/
 │   ├── merise/
 │   ├── technologies/
+│   ├── mobile/
+│   ├── storage/
 │   └── uml/
 ├── scripts/
 ├── .env.example
@@ -106,26 +83,26 @@ isieco-report/
 ├── .nvmrc
 ├── .npmrc
 ├── .prettierrc.json
-├── eslint.config.mjs
 ├── package.json
 ├── pnpm-lock.yaml
 ├── pnpm-workspace.yaml
-├── tsconfig.base.json
-└── README.md
+└── tsconfig.base.json
 ~~~
+
+L'arborescence ci-dessus est volontairement simplifiée : les fichiers de configuration et les sous-dossiers techniques existants restent décrits par le tree Git réel. Le fichier `prisma/seed.ts` et `eslint.config.mjs` ne sont pas présents dans `main` à la date de cette mise à jour.
 
 ## État réel sur main après la Phase 21
 
 | Zone | Présent dans main | Évolution nécessaire |
 |---|---|---|
-| API | NestJS, configuration, auth, database, common/pipes, infrastructure/storage et les neuf modules métier avec contrôleurs, services et DTO. | Réorganiser progressivement les responsabilités auth/database vers infrastructure lors de changements isolés ; ajouter filters/interceptors/decorators uniquement lorsqu'un besoin concret apparaît. |
-| Web | React/Vite, AuthProvider, shell, routes par rôle, dashboard, comptes, audit, qualification, dossiers, référentiels, affectations, interventions et vérification (Phases 14–17 intégrées). | Recette utilisateur, accessibilité et fonctions secondaires de gestion à poursuivre. |
-| Mobile | Expo Router, authentification Supabase, parcours citoyen (Phase 18), Agent terrain (Phase 19), photos natives et géolocalisation ponctuelle (Phase 21), intégrés dans main. | Recette sur appareils réels, notifications/mode hors connexion et distribution Android signée. |
-| Packages | `shared` et `api-client` initialisés avec un client HTTP commun générique et des contrats encore limités. | Ajouter les types, schémas et endpoints partagés au rythme des consommateurs, sans dépendance circulaire. |
-| CI/CD | `ci.yml` et `render-uml-class-diagrams.yml` intégrés ; `web-deploy.yml` et `api-deploy.yml` en cours sur la Phase 20. | Configurer les secrets de Deploy Hooks Vercel/Render et les URLs de smoke test avant activation réelle. |
-| Prisma | Schéma MLD v2.13 avec 38 modèles et quatre migrations versionnées. | Pas de migration identifiée pour les écrans Web restants ; toute évolution de schéma doit rester additive et testée. |
+| API | NestJS, configuration, `src/auth`, `src/database`, `common/pipes`, `infrastructure/storage` et les neuf modules métier avec contrôleurs, services, DTO et tests. | Réorganiser progressivement auth/database vers `infrastructure/authentication` et `infrastructure/database` lors de changements isolés ; ajouter filters/interceptors/decorators uniquement lorsqu'un besoin concret apparaît. |
+| Web | React/Vite, AuthProvider, shell, navigation par rôle, dashboard, comptes, audit, qualification, dossiers, référentiels, affectations, interventions et vérification (Phases 12 à 17 intégrées, PR #17 à #22). | Recette utilisateur, accessibilité, recherche avancée de comptes, détails d'événements et fonctions secondaires de gestion à poursuivre. |
+| Mobile | Expo Router, authentification Supabase, parcours citoyen (Phase 18), Agent terrain (Phase 19), photos natives et géolocalisation ponctuelle (Phase 21), intégrés dans main (PR #23, #24 et #26). | Recette sur appareils réels, notifications, mode hors connexion et distribution Android signée. |
+| Packages | `shared` et `api-client` initialisés ; le client HTTP commun et les contrats restent limités. | Ajouter les types, schémas et endpoints partagés au rythme des besoins réels des consommateurs, sans dépendance circulaire. |
+| CI/CD | `ci.yml`, `render-uml-class-diagrams.yml`, `web-deploy.yml` et `api-deploy.yml` intégrés (PR #25). La CI du commit de référence `ec1c7e0` est verte. | Configurer les secrets des Deploy Hooks Vercel/Render et les URLs de smoke test. Les exécutions du 31 octobre 2026 ont volontairement ignoré les déploiements : `PRODUCTION_DEPLOY_ENABLED` et les hooks ne sont pas configurés. |
+| Prisma | Schéma MLD v2.13 avec 38 modèles et quatre migrations versionnées. | Le projet Supabase distant n'est pas migré ; toute évolution de schéma doit rester additive, révisée et testée sur PostgreSQL. |
 
-Les Phases 15 à 21 sont intégrées dans `main` (PR #20 à #26). Les workflows de déploiement CI-gated sont présents (PR #25) ; l'activation de production reste protégée par le secret `PRODUCTION_DEPLOY_ENABLED=true`.
+Les Phases 12 à 21 sont intégrées dans `main` (PR #17 à #26). Les PR #27 et #28 ont synchronisé le registre des livrables, le guide de recette Mobile et les limites opérationnelles. La CI du dernier commit de référence `ec1c7e08` est verte ; cela ne confirme ni un déploiement de production ni une recette sur appareils réels.
 
 La structure cible demeure un guide d'organisation et non une obligation de déplacer immédiatement tous les fichiers. En particulier, l'authentification et Prisma sont encore dans `src/auth` et `src/database` ; leur migration vers `src/infrastructure` devra être isolée, testée et faite sans changer les contrats métier.
 

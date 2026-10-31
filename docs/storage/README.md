@@ -4,7 +4,7 @@
 
 Les photos de signalement et les preuves d'intervention sont conservées dans un bucket Supabase Storage privé. Les applications Web et Mobile envoient les fichiers à l'API NestJS ; elles ne reçoivent jamais de secret de stockage et ne choisissent jamais un chemin Storage arbitraire.
 
-Les endpoints API d'upload et de création d'URL temporaire, la validation binaire des images et l'enregistrement des métadonnées dans `PhotoSignalement` et `PhotoIntervention` sont intégrés (PR #15). La commande bornée `pnpm storage:purge` est également disponible. La Phase 21 (PR #26) a ajouté la sélection galerie/caméra, la conversion JPEG, l'upload privé citoyen/agent et la géolocalisation ponctuelle dans le client Mobile. Le Web permet la consultation des photos de qualification et des preuves soumises à la vérification ; le dépôt et la consultation des médias dans les autres parcours Web ne sont pas tous couverts. Le bucket Supabase distant, la politique de conservation et la planification Cron restent à configurer dans chaque environnement.
+Les endpoints API d'upload et de création d'URL temporaire, la validation binaire des images et l'enregistrement des métadonnées dans `PhotoSignalement` et `PhotoIntervention` sont intégrés (PR #15). La commande bornée `pnpm storage:purge` est également disponible. La Phase 21 (PR #26) a ajouté la sélection galerie/caméra, la conversion JPEG, l'upload privé citoyen/agent et la géolocalisation ponctuelle dans le client Mobile. Le Web permet la consultation des photos de qualification et l'upload des preuves d'intervention ; le dépôt Web de photos de signalement n'est pas un parcours livré. Le bucket du projet Supabase de staging est provisionné et contrôlé ; la politique de conservation, les secrets API, la migration du schéma staging et la planification Cron restent à finaliser.
 
 ## Provisionnement Supabase
 
@@ -17,6 +17,19 @@ Dans le projet Supabase de l'environnement :
 5. Ne créer aucune politique permettant à `anon` ou `authenticated` de lister, lire, ajouter, modifier ou supprimer librement les objets de ce bucket. Les opérations passent par l'API de confiance, après contrôle métier.
 
 Le bucket se provisionne via le Dashboard ou l'outil d'administration Storage. Ne pas créer ni modifier directement les tables internes du schéma `storage` par une migration SQL du projet applicatif.
+
+### État du projet staging vérifié le 31 octobre 2026
+
+Le projet Supabase `isieco-report-staging` contient le bucket `isieco-private-media` avec la configuration attendue :
+
+- accès privé (`public = false`) ;
+- limite par fichier de 10 MiB ;
+- types autorisés : `image/jpeg`, `image/png` et `image/webp` ;
+- RLS activé sur `storage.buckets` et `storage.objects` ;
+- aucune policy Storage accordant un accès direct aux rôles `anon` ou `authenticated` ;
+- aucun objet stocké au moment du contrôle.
+
+Les Security Advisors Supabase ne remontaient aucune alerte de sécurité lors de ce contrôle. Cette vérification confirme la configuration du bucket, pas encore le flux complet API → Storage : le secret serveur et `MEDIA_RETENTION_DAYS` restent à configurer dans l'environnement API. Le projet staging ne possède pas encore les migrations Prisma du dépôt ; les tests métier ne doivent pas être lancés avant l'application de l'historique par `prisma migrate deploy`.
 
 ## Configuration API
 
