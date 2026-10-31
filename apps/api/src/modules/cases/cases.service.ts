@@ -445,7 +445,7 @@ export class CasesService {
               idSignalement,
               typeRattachement: 'ASSOCIATION',
             },
-            reason: dto.motif?.trim(),
+            ...(dto.motif?.trim() ? { reason: dto.motif.trim() } : {}),
           });
           return tx.dossierTraitement.findUniqueOrThrow({ where: { idDossier }, select: caseDetailSelect });
         },
