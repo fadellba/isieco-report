@@ -10,7 +10,8 @@ isieco-report/
 │   └── workflows/
 │       ├── ci.yml
 │       ├── web-deploy.yml
-│       └── api-deploy.yml
+│       ├── api-deploy.yml
+│       └── staging-migrate.yml
 ├── apps/
 │   ├── api/
 │   │   ├── src/
@@ -99,8 +100,8 @@ L'arborescence ci-dessus est volontairement simplifiée : les fichiers de config
 | Web | React/Vite, AuthProvider, shell, navigation par rôle, dashboard, comptes, audit, qualification, dossiers, référentiels, affectations, interventions et vérification (Phases 12 à 17 intégrées, PR #17 à #22). | Recette utilisateur, accessibilité, recherche avancée de comptes, détails d'événements et fonctions secondaires de gestion à poursuivre. |
 | Mobile | Expo Router, authentification Supabase, parcours citoyen (Phase 18), Agent terrain (Phase 19), photos natives et géolocalisation ponctuelle (Phase 21), intégrés dans main (PR #23, #24 et #26). | Recette sur appareils réels, notifications, mode hors connexion et distribution Android signée. |
 | Packages | `shared` et `api-client` initialisés ; le client HTTP commun et les contrats restent limités. | Ajouter les types, schémas et endpoints partagés au rythme des besoins réels des consommateurs, sans dépendance circulaire. |
-| CI/CD | `ci.yml`, `render-uml-class-diagrams.yml`, `web-deploy.yml` et `api-deploy.yml` intégrés (PR #25). La CI du commit de référence `ec1c7e0` est verte. | Configurer les secrets des Deploy Hooks Vercel/Render et les URLs de smoke test. Les exécutions du 31 octobre 2026 ont volontairement ignoré les déploiements : `PRODUCTION_DEPLOY_ENABLED` et les hooks ne sont pas configurés. |
-| Prisma | Schéma MLD v2.13 avec 38 modèles et quatre migrations versionnées. | Le projet Supabase distant n'est pas migré ; toute évolution de schéma doit rester additive, révisée et testée sur PostgreSQL. |
+| CI/CD | `ci.yml`, `render-uml-class-diagrams.yml`, `web-deploy.yml` et `api-deploy.yml` intégrés (PR #25). Le workflow manuel `staging-migrate.yml` est ajouté pour appliquer l'historique Prisma au projet staging après configuration de `STAGING_PRISMA_URL`. | Configurer les secrets des Deploy Hooks Vercel/Render et les URLs de smoke test. Les déploiements production restent désactivés. |
+| Prisma | Schéma MLD v2.13 avec 38 modèles et cinq migrations versionnées, dont le verrouillage RLS/Data API. | Le projet Supabase staging reste vierge jusqu'à l'exécution du workflow manuel ; toute évolution de schéma doit rester additive, révisée et testée sur PostgreSQL. |
 
 Les Phases 12 à 21 sont intégrées dans `main` (PR #17 à #26). Les PR #27 et #28 ont synchronisé le registre des livrables, le guide de recette Mobile et les limites opérationnelles. La CI du dernier commit de référence `ec1c7e08` est verte ; cela ne confirme ni un déploiement de production ni une recette sur appareils réels.
 
