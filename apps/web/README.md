@@ -48,6 +48,12 @@ La PR #19 a intégré la route protégée `/referentiels`, réservée au rôle `
 
 L'ajout d'un membre utilise actuellement son UUID métier, car l'API Referentials ne fournit pas encore de route de recherche des comptes. La validation de l'identifiant, de l'état actif du compte et des périodes reste effectuée côté API. Ces fonctionnalités sont intégrées dans `main` depuis le 31 octobre 2026.
 
+## Phase 16 en cours : espace Agent terrain
+
+La branche `feat/phase-16-web-interventions` ajoute `/interventions`, réservée au rôle `AGENT_TERRAIN`. L'écran ne propose que les équipes courantes du compte connecté. Il permet de répondre aux affectations de ces équipes, démarrer une intervention acceptée, déposer une preuve JPEG/PNG/WebP via multipart et soumettre un compte rendu. Seul l'agent ayant démarré une intervention voit les commandes de preuve et de soumission ; l'API revérifie l'auteur et l'appartenance à chaque mutation. Une reprise n'est proposée qu'après une décision de vérification `REPRISE`. Ces changements sont en cours et pas encore intégrés dans `main`.
+
+Le client HTTP commun laisse le navigateur générer le `Content-Type` multipart et sa frontière lorsqu'un corps `FormData` est transmis.
+
 ## Organisation
 
 - `src/app` : contexte d'authentification, navigation, shell et gardes de routes.
@@ -57,10 +63,11 @@ L'ajout d'un membre utilise actuellement son UUID métier, car l'API Referential
 - `src/features/qualification` : file et décisions de qualification.
 - `src/features/cases` : liste et gestion des dossiers.
 - `src/features/referentials` : administration des références, de la géographie et des équipes (Phase 14 intégrée).
-- `src/features/assignments` : création, suivi et réaffectation des affectations (branche Phase 15).
+- `src/features/assignments` : création, suivi et réaffectation des affectations (Phase 15 intégrée).
+- `src/features/interventions` : espace Agent terrain, preuves privées et comptes rendus (branche Phase 16).
 - `src/lib` : client API et configuration Supabase.
 - `src/pages` : connexion, téléchargement et page d'accès refusé.
 
 ## Limites restantes
 
-Les affectations sont en cours dans la Phase 15. Les écrans d'intervention et de vérification restent à développer. Le Web ne téléverse pas encore les photos de signalement ni les preuves d'intervention ; les interfaces API et l'infrastructure Storage privée sont disponibles. La recherche multi-critères de comptes, les détails d'événements et l'historique des rôles par compte ne sont pas encore exposés dans l'interface.
+Les affectations sont intégrées. L'espace Agent terrain est en cours dans la Phase 16 ; l'interface de vérification reste à développer. Le Web ne téléverse pas encore les photos de signalement ni les preuves d'intervention ; les interfaces API et l'infrastructure Storage privée sont disponibles. La recherche multi-critères de comptes, les détails d'événements et l'historique des rôles par compte ne sont pas encore exposés dans l'interface.
