@@ -156,7 +156,7 @@ jobs:
         run: pnpm --filter @isieco/api exec nest build --builder tsc
 
       - name: Generate OpenAPI specification
-        run: node --trace-uncaught apps/api/dist/openapi/generate-openapi.js
+        run: pnpm --filter @isieco/api exec node --trace-uncaught dist/openapi/generate-openapi.js
         env:
           DATABASE_URL: postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report?schema=public
           DIRECT_URL: postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report?schema=public
