@@ -43,6 +43,27 @@ import { RespondAssignmentDto } from './dto/respond-assignment.dto.js';
 export class AssignmentsController {
   constructor(private readonly assignments: AssignmentsService) {}
 
+  @Get('pending-contents')
+  @Roles('RESPONSABLE_AFFECTATION')
+  @ApiOperation({ summary: 'Liste les contenus disponibles pour une nouvelle affectation' })
+  @ApiQuery({ name: 'page', required: false, type: Number, minimum: 1 })
+  @ApiQuery({ name: 'pageSize', required: false, type: Number, minimum: 1, maximum: 100 })
+  @ApiOkResponse({ description: 'Contenus actifs en attente, dossier ouvert et sans affectation active.' })
+  @ApiForbiddenResponse({ description: 'Rôle RESPONSABLE_AFFECTATION requis.' })
+  listPendingContents(@Query() query: ListAssignmentsQueryDto) {
+    return this.assignments.listPendingContents(query);
+  }
+
+  @Get('eligible-teams/:idTypeDechet')
+  @Roles('RESPONSABLE_AFFECTATION')
+  @ApiOperation({ summary: 'Liste les équipes actives compétentes et disponibles pour un type de déchet' })
+  @ApiParam({ name: 'idTypeDechet', format: 'uuid' })
+  @ApiOkResponse({ description: 'Équipes ayant une compétence valide et ne déclarant pas une indisponibilité courante.' })
+  @ApiForbiddenResponse({ description: 'Rôle RESPONSABLE_AFFECTATION requis.' })
+  listEligibleTeams(@Param('idTypeDechet', ParseUUIDPipe) idTypeDechet: string) {
+    return this.assignments.listEligibleTeams(idTypeDechet);
+  }
+
   @Get()
   @Roles('RESPONSABLE_AFFECTATION')
   @ApiOperation({ summary: 'Liste les affectations et leur état opérationnel' })
