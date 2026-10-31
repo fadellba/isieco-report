@@ -54,12 +54,21 @@ Le client Prisma doit être généré. Préparer le dépôt avec `pnpm install` 
 - Reports : soumission idempotente, suivi propriétaire, compléments et médias privés.
 - Qualification : file, compléments, acceptation, rejet motivé et accès temporaire aux photos de la file.
 - Cases : création, rattachements/détachements, priorité et localisation historisées ; file des signalements qualifiés non rattachés.
-- Assignments : affectation idempotente, contrôle compétence/disponibilité, réponse d'équipe et réaffectation.
+- Assignments : découverte des contenus affectables et équipes éligibles, affectation idempotente, contrôle compétence/disponibilité, réponse d'équipe et réaffectation.
 - Interventions : démarrage, compte rendu, exceptions et preuves photo privées.
 - Verification : vérification indépendante, reprise et clôture contrôlée.
 - Audit : journal personnel et historique ciblé des rôles réservé à l'administration des comptes.
 
 L'API Audit est intégrée dans main (PR #16). Elle n'expose ni listing global ni export. Les snapshots JSON, motifs libres, destinataires externes et identifiants de corrélation sont exclus des réponses.
+
+## Découverte des affectations
+
+Le module expose deux lectures réservées à `RESPONSABLE_AFFECTATION` afin d'alimenter le back-office sans ouvrir les routes Cases ou Referentials à ce rôle :
+
+- `GET /api/v1/assignments/pending-contents` : contenus `ACTIF`, `EN_ATTENTE`, dans un dossier non clôturé et sans affectation active ; pagination `page` / `pageSize`.
+- `GET /api/v1/assignments/eligible-teams/:idTypeDechet` : équipes actives possédant une compétence valide pour le type ; une indisponibilité courante explicite les exclut. Une indisponibilité échue ne bloque pas l'affectation.
+
+Ces lectures guident l'interface, mais ne constituent pas une autorisation ni une réservation. La création et la réaffectation revalident toutes les règles dans une transaction sérialisable.
 
 ## Stockage privé des médias
 
