@@ -41,6 +41,26 @@ export function validateEnvironment(
     errors.push('SUPABASE_ANON_KEY must be configured.');
   }
 
+  const reportBucket = config.SUPABASE_REPORTS_BUCKET ?? 'report-private';
+  const interventionBucket = config.SUPABASE_INTERVENTIONS_BUCKET ?? 'intervention-private';
+  for (const [key, value] of [
+    ['SUPABASE_REPORTS_BUCKET', reportBucket],
+    ['SUPABASE_INTERVENTIONS_BUCKET', interventionBucket],
+  ] as const) {
+    if (
+      typeof value !== 'string' ||
+      !/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(value)
+    ) {
+      errors.push(`${key} must be a lowercase bucket name containing 3 to 63 letters, digits or hyphens.`);
+    }
+  }
+  const retentionDays = config.MEDIA_RETENTION_DAYS === undefined
+    ? 365
+    : Number(config.MEDIA_RETENTION_DAYS);
+  if (!Number.isInteger(retentionDays) || retentionDays < 30 || retentionDays > 3650) {
+    errors.push('MEDIA_RETENTION_DAYS must be an integer between 30 and 3650.');
+  }
+
   const directUrl = config.DIRECT_URL;
   if (directUrl !== undefined && directUrl !== null && directUrl !== '') {
     parseUrl(directUrl, 'DIRECT_URL', POSTGRES_PROTOCOLS, errors);
@@ -86,5 +106,8 @@ export function validateEnvironment(
     throw new Error(`Invalid API environment configuration: ${errors.join(' ')}`);
   }
 
+  config.SUPABASE_REPORTS_BUCKET = reportBucket;
+  config.SUPABASE_INTERVENTIONS_BUCKET = interventionBucket;
+  config.MEDIA_RETENTION_DAYS = retentionDays;
   return config;
 }
