@@ -34,7 +34,7 @@ Le stockage métier ne doit jamais dépendre du disque local Render.
 
 ## Chaîne de livraison
 
-Le workflow CI valide le code avant fusion. Les workflows web-deploy.yml et api-deploy.yml restent à créer. Les migrations doivent être appliquées dans une étape dédiée, après tests sur PostgreSQL et sauvegarde de l'environnement cible.
+Le workflow CI valide le code avant fusion. Les workflows `web-deploy.yml` et `api-deploy.yml` sont en cours sur la branche Phase 20 : déclenchement sur push `main` ou manuel, vérification d'une CI `push` réussie pour le SHA exact, puis appel du Deploy Hook Vercel ou Render. Les secrets `VERCEL_DEPLOY_HOOK_URL` et `RENDER_DEPLOY_HOOK_URL` sont nécessaires ; le secret `PRODUCTION_DEPLOY_ENABLED` doit également valoir exactement `true`. Ce verrou est désactivé par défaut. `WEB_SMOKE_URL` et `API_SMOKE_URL` sont facultatifs. Sans opt-in ou sans secret de hook, aucun déploiement n'est envoyé. Les migrations doivent être appliquées dans une étape dédiée, après tests sur PostgreSQL et sauvegarde de l'environnement cible.
 
 ## État actuel
 
