@@ -181,7 +181,7 @@ export class AssignmentsService {
             idCompetenceEquipe: target.idCompetenceEquipe,
             decisionEquipe: 'EN_ATTENTE',
           },
-          reason: dto.motif?.trim(),
+          ...(dto.motif?.trim() ? { reason: dto.motif.trim() } : {}),
         });
         return tx.affectation.findUniqueOrThrow({
           where: { idAffectation: assignment.idAffectation },
