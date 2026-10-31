@@ -103,7 +103,7 @@ L'arborescence ci-dessus est volontairement simplifiée : les fichiers de config
 | CI/CD | `ci.yml`, `render-uml-class-diagrams.yml`, `web-deploy.yml` et `api-deploy.yml` intégrés (PR #25). Le workflow manuel `staging-migrate.yml` est ajouté pour appliquer l'historique Prisma au projet staging après configuration de `STAGING_PRISMA_URL`. | Configurer les secrets des Deploy Hooks Vercel/Render et les URLs de smoke test. Les déploiements production restent désactivés. |
 | Prisma | Schéma MLD v2.13 avec 38 modèles et cinq migrations versionnées, dont le verrouillage RLS/Data API. | Le projet Supabase staging reste vierge jusqu'à l'exécution du workflow manuel ; toute évolution de schéma doit rester additive, révisée et testée sur PostgreSQL. |
 
-Les Phases 12 à 21 sont intégrées dans `main` (PR #17 à #26). Les PR #27 et #28 ont synchronisé le registre des livrables, le guide de recette Mobile et les limites opérationnelles. La CI du dernier commit de référence `ec1c7e08` est verte ; cela ne confirme ni un déploiement de production ni une recette sur appareils réels.
+Les Phases 12 à 21 sont intégrées dans `main` (PR #17 à #26). Les PR #27 à #29 ont synchronisé le registre des livrables, le guide de recette Mobile, les limites opérationnelles et les statuts des parcours Web. La CI du commit de référence `7b02e5a` est verte (run #41253417586) ; cela ne confirme ni un déploiement de production ni une recette sur appareils réels.
 
 La structure cible demeure un guide d'organisation et non une obligation de déplacer immédiatement tous les fichiers. En particulier, l'authentification et Prisma sont encore dans `src/auth` et `src/database` ; leur migration vers `src/infrastructure` devra être isolée, testée et faite sans changer les contrats métier.
 
