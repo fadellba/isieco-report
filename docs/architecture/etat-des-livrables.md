@@ -1,6 +1,6 @@
 # État des livrables
 
-État de référence : **31 octobre 2026, après fusion de la PR #20 ; Phase 16 en cours**. « Intégré » signifie fusionné dans `main`. « Initialisé » signifie que la structure existe sans parcours métier complet. « En cours » désigne une évolution sur une branche non fusionnée. Un build vert ne vaut pas recette utilisateur.
+État de référence : **31 octobre 2026, après fusion de la PR #21 ; Phase 17 en cours**. « Intégré » signifie fusionné dans `main`. « Initialisé » signifie que la structure existe sans parcours métier complet. « En cours » désigne une évolution sur une branche non fusionnée. Un build vert ne vaut pas recette utilisateur.
 
 | Domaine | Livrable | État |
 |---|---|---|
@@ -26,8 +26,8 @@
 | Web | Qualification et dossiers | Intégrés (PR #18) : file/détail de qualification, photos signées, compléments, décisions, création et gestion des dossiers. CI post-fusion réussie. |
 | Web | Référentiels | Intégrés (PR #19) : types de déchets, géographie, équipes, appartenances, compétences, disponibilité et délégations. |
 | Web | Affectations | Intégrées (PR #20) : découverte paginée, sélection d'équipes éligibles, création, suivi filtrable et réaffectation. |
-| Web | Interventions | En cours sur `feat/phase-16-web-interventions` : équipes du compte connecté, réponses aux affectations, démarrage, preuves photo multipart et compte rendu. Non fusionnée dans main. |
-| Web | Vérification | À développer sur les API existantes. |
+| Web | Interventions | Intégrées (PR #21) : équipes du compte connecté, réponses aux affectations, démarrage, preuves photo multipart et compte rendu, auteur et appartenance vérifiés côté API. |
+| Web | Vérification | En cours sur `feat/phase-17-web-verification` : file paginée, détail du compte rendu, photos privées signées à la demande, séparation des tâches, décision conforme et demande de reprise motivée. Non fusionnée dans main. |
 | Web | Médias | Consultation des photos de qualification intégrée ; dépôt et consultation dans les autres parcours Web restent à réaliser. |
 | Mobile | Application citoyen/agent | Squelette Expo, configuration et écrans placeholders ; authentification intégrée, signalements, suivi, médias, géolocalisation et interventions restent à construire. |
 | Packages | `shared` et `api-client` | Initialisés ; contrats et endpoints dédiés à compléter à mesure des besoins des clients. |
@@ -39,11 +39,10 @@
 
 ## Prochain ordre de livraison recommandé
 
-1. Finaliser et valider la Phase 16 sur le parcours Agent terrain complet.
-2. Phase 17 : interface Web de vérification.
-3. Parcours Mobile citoyen et agent, avec contrats API existants.
-4. Finalisation opérationnelle des médias : bucket privé, politique de rétention validée, tests de droits et Cron de purge.
-5. Déploiements Web/API, smoke tests, sauvegardes/restauration et distribution Android signée.
+1. Finaliser et valider la Phase 17 sur le parcours de vérification indépendant.
+2. Parcours Mobile citoyen et agent, avec contrats API existants.
+3. Finalisation opérationnelle des médias : bucket privé, politique de rétention validée, tests de droits et Cron de purge.
+4. Déploiements Web/API, smoke tests, sauvegardes/restauration et distribution Android signée.
 
 ## Règle de clôture d'un livrable
 
