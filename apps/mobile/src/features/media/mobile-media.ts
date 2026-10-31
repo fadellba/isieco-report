@@ -8,11 +8,9 @@ export interface PreparedMobilePhoto {
   type: 'image/jpeg';
 }
 
-export const MOBILE_MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
-
 /**
- * Re-encodes picked assets as JPEG, strips source EXIF metadata, and bounds
- * the longest edge so HEIC photos from iOS can be accepted by the private
+ * Re-encodes picked assets as JPEG and bounds the longest edge so HEIC
+ * photos from iOS can be accepted by the private
  * JPEG/PNG/WebP API without uploading the original camera file.
  */
 export async function prepareMobilePhoto(
