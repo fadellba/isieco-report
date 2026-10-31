@@ -182,8 +182,9 @@ export function AssignmentsPage() {
       setSelectedTeamId('');
       await loadAssignments();
     } catch (reason) {
-      setError(errorMessage(reason));
+      const message = errorMessage(reason);
       await loadAssignments();
+      setError(message);
     } finally {
       setBusyKey(null);
     }
@@ -278,7 +279,7 @@ export function AssignmentsPage() {
               <option value="">Sélectionner une équipe</option>
               {createTeams.map((team) => (
                 <option key={team.idEquipe} value={team.idEquipe}>
-                  {team.nomEquipe} · {team.disponibilite?.etatDisponibilite ?? 'Disponibilité non renseignée'}
+                  {team.nomEquipe} · {team.disponibilite && new Date(team.disponibilite.valideJusqua).getTime() < Date.now() ? 'Disponibilité expirée' : team.disponibilite?.etatDisponibilite ?? 'Disponibilité non renseignée'}
                 </option>
               ))}
             </select>
