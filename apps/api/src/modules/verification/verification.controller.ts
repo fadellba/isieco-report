@@ -27,6 +27,7 @@ import { SupabaseAuthGuard } from '../../auth/supabase-auth.guard.js';
 import { DecideVerificationDto } from './dto/decide-verification.dto.js';
 import {
   VerificationDecisionResultDto,
+  VerificationQueueItemDto,
   VerificationQueueResponseDto,
 } from './dto/verification-response.dto.js';
 import { ListVerificationsQueryDto } from './dto/list-verifications-query.dto.js';
@@ -58,7 +59,7 @@ export class VerificationController {
   @Get('assignments/:idAffectation')
   @ApiOperation({ summary: 'Consulte le dernier compte rendu soumis pour vérification' })
   @ApiParam({ name: 'idAffectation', format: 'uuid' })
-  @ApiOkResponse({ description: 'Affectation, contenu du dossier et dernier compte rendu terrain soumis.' })
+  @ApiOkResponse({ type: VerificationQueueItemDto })
   @ApiConflictResponse({ description: 'Aucun compte rendu en attente de vérification.' })
   @ApiForbiddenResponse({ description: 'Rôle VERIFICATEUR_CLOTURE requis.' })
   getPending(
