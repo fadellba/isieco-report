@@ -26,14 +26,16 @@ En cas de divergence, appliquer cet ordre : décisions acceptées dans les ADR, 
 - Phase 14 intégrée dans main (PR #19) : administration Web des types de déchets, géographie, équipes, appartenances, compétences, disponibilité et délégations.
 - Phase 15 intégrée dans main (PR #20) : pilotage des affectations, découverte des contenus et équipes éligibles, création, réponse d'équipe et réaffectation idempotentes.
 - Phase 16 intégrée dans main (PR #21) : espace Agent terrain, équipes du compte connecté, réponse aux affectations, démarrage, preuves photo multipart et soumission des comptes rendus.
-- Phase 17 en cours sur `feat/phase-17-web-verification` : file des soumissions, consultation des preuves signées, validation conforme ou demande de reprise motivée. Non fusionnée dans main.\n- Phase 18 intégrée dans main (PR #23) : dépôt idempotent, liste paginée, détail et réponses aux demandes de complément sur les endpoints Reports existants.
-- Phase 19 en cours sur `feat/phase-19-mobile-agent-operations` : équipes propres au compte, missions, acceptation/refus, démarrage, compte rendu et reprise après décision du vérificateur. Non fusionnée.
+- Phase 17 intégrée dans main (PR #22) : file de vérification, preuves signées, décision conforme ou demande de reprise motivée.
+- Phase 18 intégrée dans main (PR #23) : dépôt idempotent, liste paginée, détail et réponses aux demandes de complément sur les endpoints Reports existants.
+- Phase 19 intégrée dans main (PR #24) : équipes propres au compte, missions, acceptation/refus, démarrage, compte rendu et reprise après décision du vérificateur.
 - Prisma : 38 modèles métier du MLD v2.13 ; Supabase Auth gère les identités et sessions.
 - Migrations : quatre migrations versionnées ; la CI les applique sur PostgreSQL vierge, vérifie l'historique, produit un aperçu additif et exécute les tests d'intégrité.
-- CI : ci.yml et render-uml-class-diagrams.yml sont présents. Le dernier run de main après la fusion de la PR #18 a réussi le 31 octobre 2026.
+- CI : ci.yml et render-uml-class-diagrams.yml sont présents ; la CI de la PR #24 a réussi. Le run push de `main` après sa fusion reste à confirmer.
 - Médias : upload privé, liens signés et commande de purge intégrés ; provisionnement du bucket, décision de rétention et planification Cron restent nécessaires.
 - Web restant après la Phase 17 : aucun parcours métier Web principal ; restent la recette d'usage, la revue d'accessibilité et les fonctions secondaires de gestion.
-- Mobile : authentification Supabase et parcours citoyen intégrés ; parcours Agent terrain en cours dans la Phase 19. Photo native et géolocalisation restent à réaliser.
-- web-deploy.yml et api-deploy.yml restent à créer ; aucun déploiement de production ni APK signé confirmé.
+- Mobile : authentification Supabase, parcours citoyen et parcours Agent terrain intégrés. Photo native et géolocalisation restent à réaliser.
+- Phase 20 en cours sur `feat/phase-20-deployment-workflows-v2` : workflows de déploiement Vercel/Render déclenchés sur `main` ou manuellement et bloqués tant que la CI du même commit n'est pas verte. Deploy Hooks et URLs de smoke test à configurer comme secrets GitHub. Aucun déploiement de production confirmé.
+- Aucun APK Android de release signé n'est confirmé.
 
 Consulter [l'état des livrables](architecture/etat-des-livrables.md) avant de considérer une fonctionnalité comme terminée.
