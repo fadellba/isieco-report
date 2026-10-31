@@ -48,6 +48,19 @@ Le formulaire de compte rendu n'est affiché que pour l'agent auteur de l'interv
 
 Le parcours est intégré dans `main`. Les endpoints réutilisés revérifient côté API le compte actif, l'appartenance, l'auteur et les états métier.
 
+## Médias et géolocalisation native — Phase 21 en cours
+
+La branche `feat/phase-21-mobile-native-media` ajoute :
+
+- sélection de photos depuis la galerie et capture caméra pour les signalements citoyens et les interventions Agent terrain ;
+- conversion en JPEG, limitation du bord long à 1600 px et envoi multipart vers les endpoints API privés déjà existants ;
+- aperçu des photos du signalement avec URL signée de courte durée, obtenue uniquement à la demande ;
+- limite de trois photos par signalement dans l'interface citoyenne ;
+- localisation ponctuelle au premier plan, uniquement après action explicite, avec précision estimée ; la saisie manuelle reste disponible ;
+- plugins Expo et permissions Android/iOS limités aux usages nécessaires.
+
+L'API reste l'autorité : elle vérifie le propriétaire du signalement ou l'auteur de l'intervention, les appartenances, les états métier, le type réel de l'image et la taille maximale de 10 MiB. Aucun chemin Storage ni clé privilégiée n'est exposé au Mobile. Les permissions peuvent être refusées sans bloquer le dépôt manuel d'un signalement.
+
 ## Limites restantes
 
-Le dépôt de photos depuis Mobile n'est pas encore intégré. Il nécessite l'ajout d'`expo-image-picker` dans une version compatible Expo SDK 57 et la mise à jour vérifiée de `pnpm-lock.yaml`. La géolocalisation native via `expo-location`, les notifications et le mode hors connexion restent à réaliser. Les coordonnées du signalement peuvent actuellement être saisies manuellement ; le MVP exige une connexion réseau pour les opérations métier.
+Les notifications, le mode hors connexion, l'affichage des preuves d'intervention après upload et la recette sur appareils Android/iOS réels restent à réaliser. Le bucket Supabase distant, la rétention des médias et la planification Cron doivent être configurés indépendamment du client Mobile.
