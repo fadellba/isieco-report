@@ -71,7 +71,7 @@ function createHarness(options = {}) {
       },
       create: async ({ data }) => {
         calls.interventionsCreated.push(data);
-        return { idIntervention };
+        return { idIntervention: interventionId };
       },
       findUnique: async () => options.interventionMissing ? null : currentIntervention,
       findUniqueOrThrow: async () => ({
