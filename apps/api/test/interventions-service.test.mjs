@@ -355,6 +355,7 @@ test('lists only the connected agent active teams and deduplicates overlapping c
   assert.equal(query.where.idUtilisateur, actorId);
   assert.ok(query.where.dateDebut.lte instanceof Date);
   assert.deepEqual(query.where.OR[0], { dateFin: null });
+  assert.ok(query.where.OR[1].dateFin.gt instanceof Date);
   assert.deepEqual(query.where.equipe, { etatEquipe: 'ACTIVE' });
   assert.equal(query.orderBy[0].dateDebut, 'desc');
 });
