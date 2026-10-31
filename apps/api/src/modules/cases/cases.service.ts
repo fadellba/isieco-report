@@ -185,7 +185,7 @@ export class CasesService {
               idTypeDechet: true,
               etatContenuDossier: true,
               etatPriseEnCharge: true,
-              typeDechet: { select: { codeType: true, libelle: true } },
+              typeDechet: { select: { idTypeDechet: true, codeType: true, libelle: true } },
             },
           },
           _count: { select: { rattachements: { where: { dateFinRattachement: null } } } },
