@@ -19,7 +19,7 @@
 | Backend | Verification | Intégré : vérification indépendante, séparation des tâches, demande de reprise et clôture après achèvement des contenus actifs. |
 | Backend | Audit | Intégré (PR #16) : journal personnel et historique des rôles à portée limitée, pagination/filtres, métadonnées sûres uniquement. Pas de listing global ni export. |
 | Médias | Infrastructure Storage privée | Intégrée (PR #15) : upload serveur, validation JPEG/PNG/WebP, limite 10 MiB, liens signés 60 secondes et purge bornée/auditée. |
-| Médias | Bucket Supabase distant | À provisionner en privé ; secret serveur et durée de conservation à configurer. Aucun projet distant n'a été modifié par la PR #15. |
+| Médias | Bucket Supabase staging | Provisionné sur `isieco-report-staging` et vérifié le 31 octobre 2026 : privé, 10 MiB, JPEG/PNG/WebP, RLS actif sur les tables Storage, aucune policy directe `anon`/`authenticated`, aucun objet. Secret serveur, politique de rétention et test d'upload API encore à configurer. |
 | Médias | Purge des objets expirés | Commande `pnpm storage:purge` intégrée ; planification Cron à configurer. |
 | Web | Shell et authentification par rôle | Intégrés (PR #17) : contexte Supabase, profil API, gardes et navigation par rôle. |
 | Web | Comptes et activité | Intégrés (PR #17) : gestion des rôles et journal personnel paginé/filtrable. |
@@ -34,7 +34,7 @@
 | Mobile | Photos et géolocalisation natives | Intégrées (PR #26) : image picker, capture caméra, conversion JPEG, upload privé citoyen/agent, aperçu par URL signée et localisation au premier plan sur demande. CI complète verte. |
 | Packages | `shared` et `api-client` | Initialisés ; contrats et endpoints dédiés à compléter à mesure des besoins des clients. |
 | Base de données | MLD v2.13 | 38 modèles Prisma présents. |
-| Base de données | Migrations | Quatre migrations versionnées ; CI applique l'historique sur PostgreSQL vierge et teste les contraintes d'intégrité. Projet Supabase distant non migré. |
+| Base de données | Migrations | Quatre migrations versionnées ; CI applique l'historique sur PostgreSQL vierge et teste les contraintes d'intégrité. Le projet staging créé le 31 octobre est encore vierge (aucune migration Prisma enregistrée, aucune table métier dans `public`) ; appliquer les migrations via `prisma migrate deploy`, pas par SQL manuel. |
 | UML/Merise | Modèles et cas d'utilisation | Sources et vues versionnées ; elles décrivent le périmètre cible et ne remplacent pas la recette des écrans. |
 | Exploitation | Vercel, Render, Supabase distant | Architecture documentée ; configuration et déploiements de production non confirmés. |
 | Mobile | Recette native | À faire : tester permissions, galerie, caméra, conversion d'images et localisation sur appareils Android/iOS réels. |
@@ -42,7 +42,7 @@
 
 ## Prochain ordre de livraison recommandé
 
-1. Finaliser l'environnement médias : provisionner le bucket Supabase privé, configurer les secrets serveur, valider la politique de rétention et planifier `pnpm storage:purge`.
+1. Finaliser l'environnement staging : appliquer les quatre migrations versionnées avec `prisma migrate deploy`, configurer les secrets API, faire valider `MEDIA_RETENTION_DAYS`, tester l'upload privé et planifier `pnpm storage:purge`.
 2. Recetter sur appareils Android/iOS réels les permissions, la galerie, la caméra, l'upload privé, l'aperçu signé et la localisation ponctuelle.
 3. Préparer l'environnement de déploiement : renseigner les Deploy Hooks Vercel/Render et les URLs de smoke test, vérifier les domaines, variables d'environnement et migrations de production. N'activer `PRODUCTION_DEPLOY_ENABLED=true` qu'après validation de la sauvegarde, de la restauration et de la fenêtre de changement.
 4. Générer et signer l'APK Android, publier une GitHub Release et vérifier le lien de téléchargement.
