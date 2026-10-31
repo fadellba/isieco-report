@@ -282,6 +282,7 @@ export default function AgentMissionsScreen() {
                   {assignments.map((assignment) => {
                     const latest = latestByAssignment.get(assignment.idAffectation);
                     const verification = latest?.affectation.verifications[0];
+                    const selectedProof = latest ? proofs[latest.idIntervention] : undefined;
                     const canStart = assignment.decisionEquipe === 'ACCEPTEE' && (
                       !latest ||
                       (latest.statutIntervention === 'SOUMISE' &&
@@ -351,8 +352,8 @@ export default function AgentMissionsScreen() {
                                       <Text className="text-center text-xs font-bold text-white">Appareil photo</Text>
                                     </TouchableOpacity>
                                   </View>
-                                  {proofs[latest.idIntervention] ? (
-                                    <Image source={{ uri: proofs[latest.idIntervention].uri }} resizeMode="cover" style={{ width: '100%', height: 170, borderRadius: 10, marginTop: 12 }} />
+                                  {selectedProof ? (
+                                    <Image source={{ uri: selectedProof.uri }} resizeMode="cover" style={{ width: '100%', height: 170, borderRadius: 10, marginTop: 12 }} />
                                   ) : null}
                                   <TextInput
                                     value={proofContexts[latest.idIntervention] ?? ''}
