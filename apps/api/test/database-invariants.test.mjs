@@ -174,6 +174,87 @@ test('PostgreSQL enforces MLD v2.13 integrity constraints', { skip: !databaseUrl
       new Set(expectedIndexes),
       'All active-period partial unique indexes must be installed.',
     );
+
+    const businessTables = [
+      'utilisateur', 'role', 'utilisateur_role', 'preferences_visibilite_citoyen',
+      'badge', 'badge_utilisateur', 'historique_points', 'notification',
+      'type_dechet', 'equipe', 'appartenance_equipe', 'competence_equipe',
+      'region', 'departement', 'commune', 'delegation_decision_equipe',
+      'disponibilite_equipe', 'historique_disponibilite_equipe', 'signalement',
+      'photo_signalement', 'contenu_signalement', 'demande_complement',
+      'reponse_complement', 'qualification_signalement', 'idempotence_signalement',
+      'dossier_traitement', 'rattachement_signalement', 'contenu_dossier',
+      'provenance_contenu_dossier', 'affectation', 'intervention',
+      'photo_intervention', 'verification_resolution', 'historique_localisation_dossier',
+      'historique_priorite_dossier', 'evenement_metier', 'publication_flux',
+      'photo_publication',
+    ];
+    const rlsTables = await client.query(
+      `SELECT c.relname, c.relrowsecurity
+       FROM pg_class c
+       JOIN pg_namespace n ON n.oid = c.relnamespace
+       WHERE n.nspname = 'public'
+         AND c.relkind IN ('r', 'p')
+         AND c.relname = ANY($1::text[])`,
+      [businessTables],
+    );
+    assert.equal(
+      rlsTables.rowCount,
+      businessTables.length,
+      'All 38 MLD business tables must exist after migrations.',
+    );
+    assert.ok(
+      rlsTables.rows.every((row) => row.relrowsecurity),
+      'Row-level security must be enabled on every business table.',
+    );
+
+    const apiRoles = ['anon', 'authenticated', 'service_role'];
+    const existingApiRoles = await client.query(
+      'SELECT rolname FROM pg_roles WHERE rolname = ANY($1::text[])',
+      [apiRoles],
+    );
+    if (existingApiRoles.rowCount > 0) {
+      const exposedTables = await client.query(
+        `SELECT r.rolname, c.relname, p.privilege_type
+         FROM pg_roles r
+         CROSS JOIN pg_class c
+         JOIN pg_namespace n ON n.oid = c.relnamespace
+         CROSS JOIN (VALUES ('SELECT'), ('INSERT'), ('UPDATE'), ('DELETE')) AS p(privilege_type)
+         WHERE r.rolname = ANY($1::text[])
+           AND n.nspname = 'public'
+           AND c.relkind IN ('r', 'p')
+           AND c.relname = ANY($2::text[])
+           AND has_table_privilege(r.rolname, c.oid, p.privilege_type)
+         ORDER BY r.rolname, c.relname, p.privilege_type`,
+        [existingApiRoles.rows.map((row) => row.rolname), businessTables],
+      );
+      assert.deepEqual(
+        exposedTables.rows,
+        [],
+        'Supabase Data API roles must not have direct privileges on business tables.',
+      );
+    }
+
+    const unsafeDefaults = await client.query(
+      `SELECT d.defaclobjtype, x.privilege_type,
+              CASE WHEN x.grantee = 0 THEN 'PUBLIC' ELSE r.rolname END AS grantee
+       FROM pg_default_acl d
+       CROSS JOIN LATERAL aclexplode(d.defaclacl) x
+       LEFT JOIN pg_roles r ON r.oid = x.grantee
+       WHERE d.defaclrole = (SELECT oid FROM pg_roles WHERE rolname = current_user)
+         AND d.defaclnamespace = 'public'::regnamespace
+         AND (
+           r.rolname = ANY($1::text[])
+           OR (x.grantee = 0 AND d.defaclobjtype IN ('r', 'S', 'f'))
+         )
+       ORDER BY d.defaclobjtype, grantee, x.privilege_type`,
+      [apiRoles],
+    );
+    assert.deepEqual(
+      unsafeDefaults.rows,
+      [],
+      'Future public tables, sequences and functions must not inherit API-role or PUBLIC access.',
+    );
   } finally {
     await client.query('ROLLBACK');
     client.release();

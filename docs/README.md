@@ -13,6 +13,7 @@ Cette documentation rassemble les décisions d'architecture, la stack technique,
 | [UML](uml/README.md) | Contexte, acteurs, cas d'utilisation et modèle conceptuel. |
 | [API](api/README.md) | Contrat OpenAPI, authentification et documentation des endpoints. |
 | [Stockage des médias](storage/README.md) | Bucket privé, upload API, liens signés, configuration et purge. |
+| [Initialisation Supabase staging](deployment/staging-database.md) | Secret de connexion, migration Prisma manuelle et vérifications de sécurité. |
 
 ## Références faisant autorité
 
@@ -32,13 +33,13 @@ En cas de divergence, appliquer cet ordre : décisions acceptées dans les ADR, 
 - Phase 20 intégrée dans `main` (PR #25) : workflows Vercel/Render attendant la CI verte du même commit avant tout appel de Deploy Hook. Les workflows ont été exécutés sur le commit de référence ; la garde `PRODUCTION_DEPLOY_ENABLED` a empêché tout déploiement effectif.
 - Phase 21 intégrée dans `main` (PR #26) : caméra/galerie, upload privé citoyen et agent, aperçu par URL signée et localisation ponctuelle au premier plan. CI complète verte ; recette sur appareils Android/iOS réels restante.
 - Prisma : 38 modèles métier du MLD v2.13 ; Supabase Auth gère les identités et sessions.
-- Staging : le projet Supabase `isieco-report-staging` est actif, mais sa base métier est vierge (aucune migration Prisma enregistrée) ; appliquer l'historique avec `prisma migrate deploy` avant les essais API de bout en bout.
-- Migrations : quatre migrations versionnées ; la CI les applique sur PostgreSQL vierge, vérifie l'historique, produit un aperçu additif et exécute les tests d'intégrité.
-- CI : ci.yml et render-uml-class-diagrams.yml sont présents ; le run push de `main` sur le commit `6bfc822` (31 octobre 2026) est vert : migrations PostgreSQL, génération OpenAPI, TypeScript, tests et builds Web/API/Mobile (run #41248396450).
-- Médias : upload privé, liens signés et commande de purge intégrés ; bucket privé du projet Supabase de staging provisionné et vérifié le 31 octobre 2026. La migration Prisma de staging, la configuration des secrets API, la politique de rétention et le Cron restent à finaliser.
+- Staging : le projet Supabase `isieco-report-staging` est actif, mais sa base métier reste vierge tant que le workflow manuel `Staging Database Migrate` n'a pas été lancé depuis `main` avec le secret `STAGING_PRISMA_URL`. Voir [la procédure détaillée](deployment/staging-database.md).
+- Migrations : cinq migrations Prisma versionnées ; la CI les applique sur PostgreSQL vierge, vérifie l'historique, produit un aperçu additif et teste les invariants ainsi que le verrouillage des accès Data API. Le workflow staging est manuel et n'est pas exécuté tant que `STAGING_PRISMA_URL` n'est pas configuré.
+- CI : ci.yml et render-uml-class-diagrams.yml sont présents ; le run push de `main` sur le commit `7b02e5a` (31 octobre 2026) est vert : migrations PostgreSQL, génération OpenAPI, TypeScript, tests et builds Web/API/Mobile (run #41253417586).
+- Médias : upload privé, liens signés et commande de purge intégrés ; bucket privé du projet Supabase de staging provisionné et vérifié le 31 octobre 2026. La migration Prisma de staging, les secrets API, la politique de rétention et le Cron restent à finaliser.
 - Web restant après la Phase 17 : aucun parcours métier Web principal ; restent la recette d'usage, la revue d'accessibilité et les fonctions secondaires de gestion.
 - Mobile : authentification Supabase, parcours citoyen et parcours Agent terrain intégrés ; photos natives et géolocalisation ponctuelle intégrées (PR #26). Notifications, mode hors connexion et recette appareils restent à réaliser.
-- Déploiement : les workflows Web/API de la Phase 20 sont intégrés (PR #25). Les runs #41248396500 et #41248396526 ont attendu la CI du commit `6bfc822`, puis ont explicitement ignoré l'appel Vercel/Render parce que `PRODUCTION_DEPLOY_ENABLED` et les URLs de Deploy Hook étaient absents. Les smoke tests ont donc été ignorés ; aucun déploiement de production n'est confirmé.
+- Déploiement : les workflows Web/API de la Phase 20 sont intégrés (PR #25). Les runs #41253417596 et #41253417593 ont attendu la CI du commit `7b02e5a`, puis ont explicitement ignoré l'appel Vercel/Render parce que `PRODUCTION_DEPLOY_ENABLED` et les URLs de Deploy Hook étaient absents. Les smoke tests ont donc été ignorés ; aucun déploiement de production n'est confirmé.
 - Aucun APK Android de release signé n'est confirmé.
 
 Consulter [l'état des livrables](architecture/etat-des-livrables.md) avant de considérer une fonctionnalité comme terminée.

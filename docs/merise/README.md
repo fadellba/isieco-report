@@ -30,9 +30,9 @@ Le schéma Prisma décrit 38 modèles, mais l'historique de migrations versionn�
 
 Le dépôt configure deux bases PostgreSQL locales distinctes : la base applicative et la base shadow utilisée par Prisma Migrate. La commande `pnpm db:migration:preview` compare l'historique de migrations existant au schéma Prisma et produit un SQL additif ; elle ne repart pas d'un schéma vide et ne modifie pas la base applicative.
 
-Les migrations versionnées matérialisent les 38 modèles, puis ajoutent les contraintes SQL non représentables dans Prisma : périodes, dates de rétention, coordonnées, quantités, cibles exclusives d'événements/photos et unicités conditionnelles des relations courantes. La migration `20261030233000_geographic_audit_targets` ajoute les clés étrangères, index et cible exclusive des événements d'audit sur régions, départements et communes.
+Les migrations versionnées matérialisent les 38 modèles, puis ajoutent les contraintes SQL non représentables dans Prisma : périodes, dates de rétention, coordonnées, quantités, cibles exclusives d'événements/photos et unicités conditionnelles des relations courantes. La migration `20261030233000_geographic_audit_targets` ajoute les clés étrangères, index et cible exclusive des événements d'audit sur régions, départements et communes. La migration `20261031000000_supabase_business_data_api_lockdown` active RLS sur les 38 tables métier, révoque les privilèges directs des rôles Data API Supabase et supprime les privilèges par défaut pour les futurs objets `public` créés par le rôle de migration.
 
-La CI applique les migrations versionnées sur une base PostgreSQL vierge et exécute les tests d'intégrité négatifs sur PostgreSQL réel. La commande locale ciblée est `TEST_DATABASE_URL=postgresql://... pnpm db:test:invariants`. Les tests vérifient que les violations sont refusées par le moteur PostgreSQL, pas seulement par la validation cliente.
+La CI applique les cinq migrations versionnées sur une base PostgreSQL vierge et exécute les tests d'intégrité négatifs, de RLS et de privilèges Data API sur PostgreSQL réel. La commande locale ciblée est `TEST_DATABASE_URL=postgresql://... pnpm db:test:invariants`. Les tests vérifient que les violations sont refusées par le moteur PostgreSQL, pas seulement par la validation cliente.
 
 ## Invariants à tester
 
