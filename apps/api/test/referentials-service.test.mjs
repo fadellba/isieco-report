@@ -372,3 +372,30 @@ test('createDelegation refuses a beneficiary whose account is inactive', async (
   );
   assert.equal(creates, 0);
 });
+
+test('listTeams returns current delegations with the delegated member identity', async () => {
+  let query;
+  const service = new ReferentialsService({
+    equipe: {
+      findMany: async (args) => {
+        query = args;
+        return [{
+          idEquipe: teamId,
+          nomEquipe: 'Équipe test',
+          delegations: [{
+            idDelegation: '77777777-7777-4777-8777-777777777777',
+            idUtilisateurDelegue: userId,
+            delegue: { idUtilisateur: userId, nom: 'Ba', prenom: 'Awa', email: 'awa@example.test' },
+          }],
+        }];
+      },
+    },
+  });
+
+  const result = await service.listTeams();
+  assert.equal(result[0].delegations[0].idUtilisateurDelegue, userId);
+  assert.equal(result[0].delegations[0].delegue.prenom, 'Awa');
+  assert.ok(query.include.delegations.where.dateDebut.lte instanceof Date);
+  assert.deepEqual(query.include.delegations.where.OR[0], { dateFin: null });
+  assert.ok(query.include.delegations.include.delegue.select.email);
+});
