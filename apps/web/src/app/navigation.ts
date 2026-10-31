@@ -45,6 +45,12 @@ export const navigationItems: NavigationItem[] = [
     roles: ['VERIFICATEUR_CLOTURE'],
   },
   {
+    to: '/verification',
+    label: 'Vérification',
+    description: 'Contrôle indépendant des comptes rendus',
+    roles: ['VERIFICATEUR_CLOTURE'],
+  },
+  {
     to: '/interventions',
     label: 'Interventions',
     description: 'Missions et comptes rendus de terrain',
