@@ -1,14 +1,14 @@
 # État des livrables
 
-État de référence : **31 octobre 2026, après fusion de la PR #27 ; Phases 20 et 21 intégrées et CI du commit `6bfc822` sur `main` verte**. « Intégré » signifie fusionné dans `main`. « Initialisé » signifie que la structure existe sans parcours métier complet. « En cours » désigne une évolution sur une branche non fusionnée. Un build vert ne vaut pas recette utilisateur.
+État de référence : **31 octobre 2026, après fusion des PR #27 et #28 ; Phases 20 et 21 intégrées et CI du commit `ec1c7e08` sur `main` verte**. « Intégré » signifie fusionné dans `main`. « Initialisé » signifie que la structure existe sans parcours métier complet. « En cours » désigne une évolution sur une branche non fusionnée. Un build vert ne vaut pas recette utilisateur.
 
 | Domaine | Livrable | État |
 |---|---|---|
 | Architecture | Monolithe modulaire et monorepo pnpm | Architecture documentée ; alignement structurel progressif, sans déplacement massif requis. |
 | Toolchain | Node.js, pnpm et lockfile | Versions épinglées ; installation CI en `--frozen-lockfile`. |
-| CI | `.github/workflows/ci.yml` | Présent ; run push du commit `6bfc822` sur `main` vert (run #41248396450) : migrations PostgreSQL, OpenAPI, TypeScript, tests et builds Web/API/Mobile réussis. |
+| CI | `.github/workflows/ci.yml` | Présent ; run push du commit `ec1c7e08` sur `main` vert (run #41249349801) : migrations PostgreSQL, OpenAPI, TypeScript, tests et builds Web/API/Mobile réussis. |
 | CI UML | `render-uml-class-diagrams.yml` | Présent pour régénérer les vues UML à partir de la source versionnée. |
-| CI/CD | Déploiements Web/API | Intégrés (PR #25) : workflows sur push `main` ou lancement manuel, attente de la CI réussie sur le même SHA, opt-in `PRODUCTION_DEPLOY_ENABLED=true`, Deploy Hooks Vercel/Render et smoke tests conditionnels. Runs #41248396500/#41248396526 : appels de déploiement volontairement ignorés car opt-in et hooks non renseignés ; aucun déploiement ni smoke test de production confirmé. |
+| CI/CD | Déploiements Web/API | Intégrés (PR #25) : workflows sur push `main` ou lancement manuel, attente de la CI réussie sur le même SHA, opt-in `PRODUCTION_DEPLOY_ENABLED=true`, Deploy Hooks Vercel/Render et smoke tests conditionnels. Runs #41249349926/#41249349921 : CI confirmée, mais appels de déploiement ignorés car opt-in et hooks non renseignés ; aucun déploiement ni smoke test de production confirmé. |
 | Backend | Accounts | Intégré : profils, provisionnement citoyen, administration des comptes/rôles, audit transactionnel et protection du dernier administrateur. |
 | Backend | Referentials | Intégré : types de déchets, régions/départements/communes, équipes, appartenances, compétences, disponibilité historisée et délégations. |
 | Backend | Reports | Intégré : soumission idempotente, validation des référentiels, suivi propriétaire et demandes/réponses de complément. Upload privé de photos intégré (PR #15). |
@@ -28,7 +28,7 @@
 | Web | Affectations | Intégrées (PR #20) : découverte paginée, sélection d'équipes éligibles, création, suivi filtrable et réaffectation. |
 | Web | Interventions | Intégrées (PR #21) : équipes du compte connecté, réponses aux affectations, démarrage, preuves photo multipart et compte rendu, auteur et appartenance vérifiés côté API. |
 | Web | Vérification | Intégrée (PR #22) : file paginée, détail du compte rendu, photos privées signées à la demande, séparation des tâches, décision conforme et demande de reprise motivée. |
-| Web | Médias | Consultation des photos de qualification intégrée ; dépôt et consultation dans les autres parcours Web restent à réaliser. |
+| Web | Médias | Consultation des photos de qualification et upload des preuves d'intervention intégrés dans leurs parcours respectifs ; le dépôt Web de photos de signalement n'est pas un parcours livré. |
 | Mobile | Parcours citoyen | Intégré (PR #23) : liste paginée propriétaire, dépôt idempotent, détail, réponses aux compléments, ajout de photos natives et position ponctuelle (PR #26). |
 | Mobile | Parcours Agent terrain | Intégré (PR #24) : équipes propres au compte, affectations, réponses, démarrage, compte rendu, reprise et upload natif des preuves photo (PR #26). |
 | Mobile | Photos et géolocalisation natives | Intégrées (PR #26) : image picker, capture caméra, conversion JPEG, upload privé citoyen/agent, aperçu par URL signée et localisation au premier plan sur demande. CI complète verte. |
