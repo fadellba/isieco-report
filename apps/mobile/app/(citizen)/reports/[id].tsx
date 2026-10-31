@@ -7,8 +7,8 @@ import {
   listReportSupplements,
   type Report,
   type Supplement,
-} from '../../../../src/features/reports/reports-api';
-import { dateLabel, reportStatusLabel } from '../../../../src/features/reports/report-format';
+} from '../../../src/features/reports/reports-api';
+import { dateLabel, reportStatusLabel } from '../../../src/features/reports/report-format';
 
 const inputClass = 'mt-2 min-h-[100px] rounded-xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900';
 
