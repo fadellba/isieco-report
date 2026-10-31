@@ -192,12 +192,37 @@ test('allows a new intervention after an explicit verifier reprise decision', as
   };
   const { service, calls } = createHarness({
     latestIntervention,
-    latestVerification: { etatVerification: 'REPRISE' },
+    latestVerification: {
+      etatVerification: 'REPRISE',
+      dateVerification: new Date('2026-10-30T16:00:00.000Z'),
+    },
   });
 
   await service.startIntervention(assignmentId, authUserId);
 
   assert.equal(calls.interventionsCreated.length, 1);
+});
+
+
+test('does not reuse an old reprise decision for a newer submitted intervention', async () => {
+  const latestIntervention = {
+    idIntervention: interventionId,
+    statutIntervention: 'SOUMISE',
+    dateSoumissionCompteRendu: new Date('2026-10-30T15:00:00.000Z'),
+  };
+  const { service, calls } = createHarness({
+    latestIntervention,
+    latestVerification: {
+      etatVerification: 'REPRISE',
+      dateVerification: new Date('2026-10-30T14:30:00.000Z'),
+    },
+  });
+
+  await assert.rejects(
+    service.startIntervention(assignmentId, authUserId),
+    (error) => error instanceof ConflictException && error.getStatus() === 409,
+  );
+  assert.equal(calls.interventionsCreated.length, 0);
 });
 
 test('requires a reason for partial or impossible intervention results', async () => {
