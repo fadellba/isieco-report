@@ -40,6 +40,18 @@ Ces routes complètent les parcours Qualification et Cases. Elles n'accordent au
 
 Les endpoints de découverte sont informatifs. Ils n'accordent pas d'accès aux endpoints Cases ou Referentials et ne remplacent jamais la validation transactionnelle lors d'une mutation.
 
+### Opérations terrain (Phase 16)
+
+| Méthode | Route | Autorisation | Description |
+|---|---|---|---|
+| GET | `/interventions/my-teams` | `AGENT_TERRAIN` + compte métier actif | Liste les équipes actives auxquelles appartient le compte connecté, avec l'appartenance courante. Aucune équipe n'est fournie par le client pour déterminer ce périmètre. |
+| GET | `/interventions/team/:idEquipe` | `AGENT_TERRAIN` + appartenance active | Consulte les interventions des affectations actives de cette équipe ; les métadonnées de la dernière vérification indiquent si une reprise a été demandée. |
+| POST | `/interventions/assignments/:idAffectation/start` | `AGENT_TERRAIN` + appartenance active | Démarre une intervention après acceptation de l'affectation et validation des états métier. Une reprise exige une décision de vérification `REPRISE`. |
+| POST | `/interventions/:idIntervention/photos` | Auteur de l'intervention + `AGENT_TERRAIN` + appartenance active | Upload multipart `file`, `contextePhoto` obligatoire et description facultative. JPEG/PNG/WebP, 10 MiB maximum. |
+| POST | `/interventions/:idIntervention/submit` | Auteur de l'intervention + `AGENT_TERRAIN` + appartenance active | Soumet un compte rendu (20 caractères minimum). Les résultats `PARTIELLE` et `IMPOSSIBLE` exigent un motif d'exception. |
+
+Le listing `my-teams` ne retourne que les équipes correspondant à une appartenance dont la période est courante et dont l'équipe est active. La liste de missions et les mutations conservent leurs propres contrôles d'appartenance, d'auteur et d'état métier côté API.
+
 ### Audit (Phase 11)
 
 | Méthode | Route | Autorisation | Description |
