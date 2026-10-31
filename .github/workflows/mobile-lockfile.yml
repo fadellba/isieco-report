@@ -1,0 +1,42 @@
+name: Mobile Lockfile Resolver
+
+on:
+  push:
+    branches:
+      - feat/phase-21-mobile-native-media
+    paths:
+      - apps/mobile/package.json
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    name: Resolve pnpm lockfile with pinned workspace toolchain
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.16.1
+          run_install: false
+
+      - name: Resolve lockfile without installing workspace packages
+        run: pnpm install --lockfile-only --no-frozen-lockfile
+
+      - name: Upload resolved lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-21-pnpm-lock
+          path: pnpm-lock.yaml
+          if-no-files-found: error
+          retention-days: 1
