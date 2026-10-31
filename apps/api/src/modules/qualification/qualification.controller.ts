@@ -24,6 +24,7 @@ import {
 } from '@nestjs/swagger';
 import type { User } from '@supabase/supabase-js';
 import { CurrentAuthUser } from '../../auth/current-auth-user.decorator.js';
+import { SignedMediaUrlResponseDto } from '../../infrastructure/storage/dto/media-response.dto.js';
 import { Roles } from '../../auth/roles.decorator.js';
 import { RolesGuard } from '../../auth/roles.guard.js';
 import { SupabaseAuthGuard } from '../../auth/supabase-auth.guard.js';
@@ -54,6 +55,22 @@ export class QualificationController {
   @ApiForbiddenResponse({ description: 'Rôle AGENT_QUALIFICATION requis.' })
   listQueue(@Query() query: ListQualificationQueryDto) {
     return this.qualification.listQueue(query);
+  }
+
+  @Get(':idSignalement/photos/:idPhotoSignalement/url')
+  @ApiOperation({
+    summary: 'Obtient une URL temporaire vers une photo d’un signalement en attente de qualification',
+    description: 'Accès réservé au rôle AGENT_QUALIFICATION. Le lien signé expire après 60 secondes.',
+  })
+  @ApiParam({ name: 'idSignalement', format: 'uuid' })
+  @ApiParam({ name: 'idPhotoSignalement', format: 'uuid' })
+  @ApiOkResponse({ type: SignedMediaUrlResponseDto })
+  @ApiNotFoundResponse({ description: 'Photo absente de la file de qualification ou expirée.' })
+  createPhotoUrl(
+    @Param('idSignalement', ParseUUIDPipe) idSignalement: string,
+    @Param('idPhotoSignalement', ParseUUIDPipe) idPhotoSignalement: string,
+  ) {
+    return this.qualification.createPhotoUrl(idSignalement, idPhotoSignalement);
   }
 
   @Get(':idSignalement')

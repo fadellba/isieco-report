@@ -161,6 +161,51 @@ export class CasesService {
     }
   }
 
+  async listQualifiedUnassignedReports(query: ListCasesQueryDto) {
+    const page = Math.max(1, query.page ?? 1);
+    const pageSize = Math.min(100, Math.max(1, query.pageSize ?? 20));
+    const where: Prisma.SignalementWhereInput = {
+      statutSignalement: 'QUALIFIE',
+      rattachements: { none: { dateFinRattachement: null } },
+    };
+    const [total, items] = await this.prisma.$transaction([
+      this.prisma.signalement.count({ where }),
+      this.prisma.signalement.findMany({
+        where,
+        orderBy: [{ dateSoumission: 'asc' }, { idSignalement: 'asc' }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        select: {
+          idSignalement: true,
+          dateSoumission: true,
+          description: true,
+          idCommune: true,
+          latitude: true,
+          longitude: true,
+          precisionLocalisation: true,
+          descriptionLocalisation: true,
+          utilisateur: {
+            select: { idUtilisateur: true, nom: true, prenom: true },
+          },
+          qualifications: {
+            where: { etatQualification: 'RETENU' },
+            orderBy: { idTypeDechet: 'asc' },
+            select: {
+              idTypeDechet: true,
+              quantiteEstimee: true,
+              uniteQuantite: true,
+              volumeEstime: true,
+              remarque: true,
+              typeDechet: { select: { codeType: true, libelle: true } },
+            },
+          },
+        },
+      }),
+    ]);
+
+    return { items, page, pageSize, total };
+  }
+
   async listCases(query: ListCasesQueryDto) {
     const page = Math.max(1, query.page ?? 1);
     const pageSize = Math.min(100, Math.max(1, query.pageSize ?? 20));

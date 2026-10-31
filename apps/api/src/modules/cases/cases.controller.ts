@@ -44,6 +44,17 @@ import { UpdateCasePriorityDto } from './dto/update-case-priority.dto.js';
 export class CasesController {
   constructor(private readonly cases: CasesService) {}
 
+  @Get('qualified-reports')
+  @ApiOperation({
+    summary: 'Liste les signalements qualifiés et non encore rattachés à un dossier',
+    description: 'File réservée au responsable de traitement pour constituer de nouveaux dossiers.',
+  })
+  @ApiOkResponse({ description: 'Signalements qualifiés disponibles, avec les catégories retenues et le propriétaire.' })
+  @ApiForbiddenResponse({ description: 'Rôle RESPONSABLE_TRAITEMENT requis.' })
+  listQualifiedReports(@Query() query: ListCasesQueryDto) {
+    return this.cases.listQualifiedUnassignedReports(query);
+  }
+
   @Get()
   @ApiOperation({ summary: 'Liste les dossiers de traitement' })
   @ApiOkResponse({ type: CaseListResponseDto })

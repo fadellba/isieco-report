@@ -8,6 +8,7 @@ import {
 import { Prisma } from '../../generated/prisma/client.js';
 import type { ReportStatus } from '@isieco/shared';
 import { PrismaService } from '../../database/prisma.service.js';
+import { SupabaseStorageService } from '../../infrastructure/storage/supabase-storage.service.js';
 import type { AcceptReportDto } from './dto/accept-report.dto.js';
 import type { ListQualificationQueryDto } from './dto/list-qualification-query.dto.js';
 import type { RejectReportDto } from './dto/reject-report.dto.js';
@@ -23,7 +24,10 @@ function isPrismaCode(error: unknown, code: string): boolean {
 
 @Injectable()
 export class QualificationService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: SupabaseStorageService,
+  ) {}
 
   private async actorId(authUserId: string): Promise<string> {
     const actor = await this.prisma.utilisateur.findUnique({
@@ -148,6 +152,37 @@ export class QualificationService {
     });
     if (!report) throw new NotFoundException('Signalement absent de la file de qualification.');
     return report;
+  }
+
+  async createPhotoUrl(
+    idSignalement: string,
+    idPhotoSignalement: string,
+  ) {
+    const photo = await this.prisma.photoSignalement.findFirst({
+      where: {
+        idPhotoSignalement,
+        idSignalement,
+        signalement: {
+          statutSignalement: { in: [...DECISIONABLE_STATUSES] },
+        },
+      },
+      select: {
+        referencePhoto: true,
+        dateExpiration: true,
+        mediaPurgeAt: true,
+      },
+    });
+
+    const now = new Date();
+    if (
+      !photo ||
+      photo.dateExpiration.getTime() <= now.getTime() ||
+      (photo.mediaPurgeAt !== null && photo.mediaPurgeAt.getTime() <= now.getTime())
+    ) {
+      throw new NotFoundException('Photo absente de la file de qualification ou expirée.');
+    }
+
+    return this.storage.createSignedUrl(photo.referencePhoto);
   }
 
   async requestSupplement(
