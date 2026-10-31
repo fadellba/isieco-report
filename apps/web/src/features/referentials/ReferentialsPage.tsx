@@ -766,12 +766,12 @@ export function ReferentialsPage() {
                     </button>
                     {availabilityHistory[team.idEquipe] ? (
                       <div className="mt-2 space-y-2 border-l-2 border-slate-100 pl-3">
-                        {availabilityHistory[team.idEquipe].map((entry, index) => (
+                        {availabilityHistory[team.idEquipe]?.map((entry, index) => (
                           <div key={entry.idHistorique || entry.dateMiseAJour + index} className="text-[10px] text-slate-500">
                             <span className="font-bold text-slate-700">{entry.etatDisponibilite}</span> · {dateLabel(entry.dateMiseAJour)} · valable jusqu'au {dateLabel(entry.valideJusqua)}
                           </div>
                         ))}
-                        {!availabilityHistory[team.idEquipe].length ? <p className="text-xs text-slate-500">Aucun historique.</p> : null}
+                        {!availabilityHistory[team.idEquipe]?.length ? <p className="text-xs text-slate-500">Aucun historique.</p> : null}
                       </div>
                     ) : null}
                   </section>
