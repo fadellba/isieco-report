@@ -114,18 +114,18 @@ isieco-report/
 └── README.md
 ~~~
 
-## État réel sur main après la Phase 16
+## État réel sur main après la Phase 19
 
 | Zone | Présent dans main | Évolution nécessaire |
 |---|---|---|
 | API | NestJS, configuration, auth, database, common/pipes, infrastructure/storage et les neuf modules métier avec contrôleurs, services et DTO. | Réorganiser progressivement les responsabilités auth/database vers infrastructure lors de changements isolés ; ajouter filters/interceptors/decorators uniquement lorsqu'un besoin concret apparaît. |
-| Web | React/Vite, AuthProvider, shell, routes par rôle, dashboard, comptes, audit, qualification, dossiers, référentiels, affectations et espace Agent terrain (Phase 16 intégrée). | Interface de vérification en cours sur `feat/phase-17-web-verification` ; recette utilisateur et tests d'interaction à poursuivre. |
-| Mobile | Expo Router, layout, authentification Supabase, parcours citoyen (Phase 18 intégrée) et espace Agent terrain en cours sur `feat/phase-19-mobile-agent-operations`. | Finaliser l'espace agent, ajouter image picker/géolocalisation compatibles SDK et compléter les parcours métier restants. |
+| Web | React/Vite, AuthProvider, shell, routes par rôle, dashboard, comptes, audit, qualification, dossiers, référentiels, affectations, interventions et vérification (Phases 14–17 intégrées). | Recette utilisateur, accessibilité et fonctions secondaires de gestion à poursuivre. |
+| Mobile | Expo Router, authentification Supabase, parcours citoyen (Phase 18) et Agent terrain (Phase 19), intégrés dans main. | Ajouter image picker, géolocalisation native et finaliser la distribution Android signée. |
 | Packages | `shared` et `api-client` initialisés avec un client HTTP commun générique et des contrats encore limités. | Ajouter les types, schémas et endpoints partagés au rythme des consommateurs, sans dépendance circulaire. |
-| CI/CD | `ci.yml` et `render-uml-class-diagrams.yml` présents. | Créer `web-deploy.yml` et `api-deploy.yml` après validation des secrets et des environnements. |
+| CI/CD | `ci.yml` et `render-uml-class-diagrams.yml` intégrés ; `web-deploy.yml` et `api-deploy.yml` en cours sur la Phase 20. | Configurer les secrets de Deploy Hooks Vercel/Render et les URLs de smoke test avant activation réelle. |
 | Prisma | Schéma MLD v2.13 avec 38 modèles et quatre migrations versionnées. | Pas de migration identifiée pour les écrans Web restants ; toute évolution de schéma doit rester additive et testée. |
 
-La Phase 15 (PR #20), la Phase 16 (PR #21), le parcours citoyen Mobile (PR #23) et la vérification Web (PR #22) sont intégrés dans `main`. La branche `feat/phase-19-mobile-agent-operations` développe le parcours Agent terrain Mobile ; elle n'est pas encore fusionnée.
+Les Phases 15 à 19 sont intégrées dans `main` (PR #20 à #24). La branche `feat/phase-20-deployment-workflows-v2` finalise l'automatisation des déploiements ; elle n'est pas encore fusionnée.
 
 La structure cible demeure un guide d'organisation et non une obligation de déplacer immédiatement tous les fichiers. En particulier, l'authentification et Prisma sont encore dans `src/auth` et `src/database` ; leur migration vers `src/infrastructure` devra être isolée, testée et faite sans changer les contrats métier.
 
