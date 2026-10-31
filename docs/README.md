@@ -26,13 +26,13 @@ En cas de divergence, appliquer cet ordre : décisions acceptées dans les ADR, 
 - Phase 14 intégrée dans main (PR #19) : administration Web des types de déchets, géographie, équipes, appartenances, compétences, disponibilité et délégations.
 - Phase 15 intégrée dans main (PR #20) : pilotage des affectations, découverte des contenus et équipes éligibles, création, réponse d'équipe et réaffectation idempotentes.
 - Phase 16 intégrée dans main (PR #21) : espace Agent terrain, équipes du compte connecté, réponse aux affectations, démarrage, preuves photo multipart et soumission des comptes rendus.
-- Phase 17 en cours sur `feat/phase-17-web-verification` : file des soumissions, consultation des preuves signées, validation conforme ou demande de reprise motivée. Non fusionnée dans main.
+- Phase 17 en cours sur `feat/phase-17-web-verification` : file des soumissions, consultation des preuves signées, validation conforme ou demande de reprise motivée. Non fusionnée dans main.\n- Phase 18 en cours sur `feat/phase-18-mobile-citizen-reports` : dépôt idempotent, liste paginée, détail et réponse aux demandes de complément sur les endpoints Reports existants.
 - Prisma : 38 modèles métier du MLD v2.13 ; Supabase Auth gère les identités et sessions.
 - Migrations : quatre migrations versionnées ; la CI les applique sur PostgreSQL vierge, vérifie l'historique, produit un aperçu additif et exécute les tests d'intégrité.
 - CI : ci.yml et render-uml-class-diagrams.yml sont présents. Le dernier run de main après la fusion de la PR #18 a réussi le 31 octobre 2026.
 - Médias : upload privé, liens signés et commande de purge intégrés ; provisionnement du bucket, décision de rétention et planification Cron restent nécessaires.
 - Web restant après la Phase 17 : aucun parcours métier Web principal ; restent la recette d'usage, la revue d'accessibilité et les fonctions secondaires de gestion.
-- Mobile : squelette Expo, configuration et écrans placeholders ; parcours métier citoyen/agent, médias et géolocalisation à réaliser.
+- Mobile : socle d'authentification Supabase intégré ; premier parcours citoyen en cours dans la Phase 18. Parcours agent, sélection d'images native et géolocalisation restent à réaliser.
 - web-deploy.yml et api-deploy.yml restent à créer ; aucun déploiement de production ni APK signé confirmé.
 
 Consulter [l'état des livrables](architecture/etat-des-livrables.md) avant de considérer une fonctionnalité comme terminée.
