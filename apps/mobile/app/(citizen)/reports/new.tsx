@@ -4,11 +4,11 @@ import { Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'reac
 import {
   createReportIdempotencyKey,
   submitReport,
+  uploadReportPhoto,
   type CreateReportPayload,
 } from '../../../src/features/reports/reports-api';
 import { localDateTimeToIso, parseOptionalCoordinate } from '../../../src/features/reports/report-format';
-import { uploadReportPhoto } from '../../../src/features/reports/reports-api';
-import { captureMobilePhoto, pickMobilePhotos, prepareMobilePhoto, requestCurrentForegroundCoordinates, type PreparedMobilePhoto } from '../../../src/features/media/mobile-media';
+import { captureMobilePhoto, pickMobilePhotos, requestCurrentForegroundCoordinates, type PreparedMobilePhoto } from '../../../src/features/media/mobile-media';
 
 const inputClass = 'mt-1 rounded-xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900';
 
@@ -25,7 +25,6 @@ export default function NewCitizenReportScreen() {
   const [gettingLocation, setGettingLocation] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const idempotencyRef = useRef<{ fingerprint: string; key: string } | null>(null);
 
   async function handleSubmit() {
@@ -211,7 +210,6 @@ export default function NewCitizenReportScreen() {
         </View>
       </View>
 
-      {notice ? <Text className="mt-5 rounded-xl bg-eco-100 p-4 text-sm text-eco-900">{notice}</Text> : null}
       {error ? <Text className="mt-5 rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</Text> : null}
       <TouchableOpacity onPress={() => void handleSubmit()} disabled={busy} className="mt-7 rounded-xl bg-eco-700 px-5 py-4 disabled:opacity-50">
         <Text className="text-center font-bold text-white">{busy ? 'Envoi en cours…' : 'Envoyer le signalement'}</Text>
