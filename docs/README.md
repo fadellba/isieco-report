@@ -24,7 +24,8 @@ En cas de divergence, appliquer cet ordre : décisions acceptées dans les ADR, 
 - Backend intégré dans main : Accounts, Referentials, Reports, Qualification, Cases, Assignments, Interventions, Verification, Médias privés (PR #15) et Audit à portée limitée (PR #16).
 - Web intégré dans main : shell et authentification par rôle, gestion des comptes et activité personnelle (PR #17), file/détail de qualification et gestion des dossiers (PR #18).
 - Phase 14 intégrée dans main (PR #19) : administration Web des types de déchets, géographie, équipes, appartenances, compétences, disponibilité et délégations.
-- Phase 15 en cours sur `feat/phase-15-web-assignments` : tableau de pilotage, découverte des contenus affectables, sélection d'équipes éligibles, création et réaffectation idempotentes. Non fusionnée dans main.
+- Phase 15 intégrée dans main (PR #20) : pilotage des affectations, découverte des contenus et équipes éligibles, création, réponse d'équipe et réaffectation idempotentes.
+- Phase 16 en cours sur `feat/phase-16-web-interventions` : espace Agent terrain, découverte des équipes du compte connecté, réponse aux affectations, démarrage, preuves photo multipart et soumission des comptes rendus. Non fusionnée dans main.
 - Prisma : 38 modèles métier du MLD v2.13 ; Supabase Auth gère les identités et sessions.
 - Migrations : quatre migrations versionnées ; la CI les applique sur PostgreSQL vierge, vérifie l'historique, produit un aperçu additif et exécute les tests d'intégrité.
 - CI : ci.yml et render-uml-class-diagrams.yml sont présents. Le dernier run de main après la fusion de la PR #18 a réussi le 31 octobre 2026.

@@ -39,6 +39,12 @@ export const navigationItems: NavigationItem[] = [
     roles: ['GESTIONNAIRE_REFERENTIEL'],
   },
   {
+    to: '/interventions',
+    label: 'Interventions',
+    description: 'Missions et comptes rendus de terrain',
+    roles: ['AGENT_TERRAIN'],
+  },
+  {
     to: '/activite',
     label: 'Mon activité',
     description: 'Événements métier liés à mon compte',
