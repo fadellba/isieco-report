@@ -28,13 +28,15 @@ L'application utilise `VITE_API_BASE_URL`, `VITE_SUPABASE_URL` et `VITE_SUPABASE
 | `/administration/comptes` | `ADMINISTRATEUR_COMPTES` | Liste paginée, attribution et révocation des rôles |
 | `/qualification` et `/qualification/:idSignalement` | `AGENT_QUALIFICATION` | File, détail, photos signées, compléments et décisions |
 | `/dossiers` et `/dossiers/:idDossier` | `RESPONSABLE_TRAITEMENT` | Liste, création, rattachements, priorité et localisation |
+| `/referentiels` | `GESTIONNAIRE_REFERENTIEL` | Types de déchets, géographie, équipes et relations temporelles |
+| `/affectations` | `RESPONSABLE_AFFECTATION` | Création, suivi, filtres et réaffectation |
 | `/activite` | Compte actif | Historique personnel, filtres de type et de dates |
 
 La gestion des comptes consomme les endpoints Accounts. L'écran d'activité consomme `GET /api/v1/audit/me`. Qualification et Cases réutilisent les services métier et leurs contrôles côté API ; les gardes Web ne servent qu'à adapter l'expérience.
 
-## Phase 14 en cours : Référentiels
+## Phase 14 intégrée : Référentiels
 
-La branche `feat/phase-14-web-referentials` ajoute la route protégée `/referentiels`, réservée au rôle `GESTIONNAIRE_REFERENTIEL`. L'écran couvre :
+La PR #19 a intégré la route protégée `/referentiels`, réservée au rôle `GESTIONNAIRE_REFERENTIEL`. L'écran couvre :
 
 - types de déchets : création, modification des attributs descriptifs et clôture de validité ;
 - géographie : création de régions, départements et communes, activation/désactivation sans suppression physique ;
@@ -44,7 +46,7 @@ La branche `feat/phase-14-web-referentials` ajoute la route protégée `/referen
 - disponibilités : mise à jour et consultation de l'historique ;
 - délégations : création, consultation des délégations actives et clôture.
 
-L'ajout d'un membre utilise actuellement son UUID métier, car l'API Referentials ne fournit pas encore de route de recherche des comptes. La validation de l'identifiant, de l'état actif du compte et des périodes reste effectuée côté API. Ces changements de Phase 14 sont en cours et ne sont pas encore intégrés dans main.
+L'ajout d'un membre utilise actuellement son UUID métier, car l'API Referentials ne fournit pas encore de route de recherche des comptes. La validation de l'identifiant, de l'état actif du compte et des périodes reste effectuée côté API. Ces fonctionnalités sont intégrées dans `main` depuis le 31 octobre 2026.
 
 ## Organisation
 
@@ -54,10 +56,11 @@ L'ajout d'un membre utilise actuellement son UUID métier, car l'API Referential
 - `src/features/dashboard` : vue d'ensemble.
 - `src/features/qualification` : file et décisions de qualification.
 - `src/features/cases` : liste et gestion des dossiers.
-- `src/features/referentials` : administration des références, de la géographie et des équipes (branche Phase 14).
+- `src/features/referentials` : administration des références, de la géographie et des équipes (Phase 14 intégrée).
+- `src/features/assignments` : création, suivi et réaffectation des affectations (branche Phase 15).
 - `src/lib` : client API et configuration Supabase.
 - `src/pages` : connexion, téléchargement et page d'accès refusé.
 
 ## Limites restantes
 
-Les écrans d'affectation, d'intervention et de vérification restent à développer. Le Web ne téléverse pas encore les photos de signalement ni les preuves d'intervention ; les interfaces API et l'infrastructure Storage privée sont disponibles. La recherche multi-critères de comptes, les détails d'événements et l'historique des rôles par compte ne sont pas encore exposés dans l'interface.
+Les affectations sont en cours dans la Phase 15. Les écrans d'intervention et de vérification restent à développer. Le Web ne téléverse pas encore les photos de signalement ni les preuves d'intervention ; les interfaces API et l'infrastructure Storage privée sont disponibles. La recherche multi-critères de comptes, les détails d'événements et l'historique des rôles par compte ne sont pas encore exposés dans l'interface.
