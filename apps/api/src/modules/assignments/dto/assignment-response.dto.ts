@@ -130,3 +130,99 @@ export class AssignmentListResponseDto {
   @ApiProperty({ minimum: 0 })
   total!: number;
 }
+
+
+export class PendingAssignmentCaseResponseDto {
+  @ApiProperty({ format: 'uuid' })
+  idDossier!: string;
+
+  @ApiProperty()
+  referenceDossier!: string;
+
+  @ApiProperty()
+  statutDossier!: string;
+
+  @ApiProperty()
+  priorite!: string;
+}
+
+export class PendingAssignmentWasteTypeResponseDto {
+  @ApiProperty({ format: 'uuid' })
+  idTypeDechet!: string;
+
+  @ApiProperty()
+  codeType!: string;
+
+  @ApiProperty()
+  libelle!: string;
+}
+
+export class PendingAssignmentContentResponseDto {
+  @ApiProperty({ format: 'uuid' })
+  idDossier!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  idTypeDechet!: string;
+
+  @ApiProperty({ enum: ['ACTIF'] })
+  etatContenuDossier!: string;
+
+  @ApiProperty({ enum: ['EN_ATTENTE'] })
+  etatPriseEnCharge!: string;
+
+  @ApiProperty({ type: PendingAssignmentCaseResponseDto })
+  dossier!: PendingAssignmentCaseResponseDto;
+
+  @ApiProperty({ type: PendingAssignmentWasteTypeResponseDto })
+  typeDechet!: PendingAssignmentWasteTypeResponseDto;
+}
+
+export class PendingAssignmentContentListResponseDto {
+  @ApiProperty({ type: [PendingAssignmentContentResponseDto] })
+  items!: PendingAssignmentContentResponseDto[];
+
+  @ApiProperty({ minimum: 1 })
+  page!: number;
+
+  @ApiProperty({ minimum: 1, maximum: 100 })
+  pageSize!: number;
+
+  @ApiProperty({ minimum: 0 })
+  total!: number;
+}
+
+export class EligibleTeamAvailabilityResponseDto {
+  @ApiProperty()
+  etatDisponibilite!: string;
+
+  @ApiProperty({ format: 'date-time' })
+  valideJusqua!: Date;
+}
+
+export class EligibleTeamSkillResponseDto {
+  @ApiProperty({ format: 'uuid' })
+  idCompetenceEquipe!: string;
+
+  @ApiProperty({ format: 'date-time' })
+  dateDebut!: Date;
+
+  @ApiProperty({ type: 'string', format: 'date-time', nullable: true })
+  dateFin!: Date | null;
+}
+
+export class EligibleTeamResponseDto {
+  @ApiProperty({ format: 'uuid' })
+  idEquipe!: string;
+
+  @ApiProperty()
+  nomEquipe!: string;
+
+  @ApiProperty()
+  etatEquipe!: string;
+
+  @ApiProperty({ type: EligibleTeamSkillResponseDto })
+  competence!: EligibleTeamSkillResponseDto;
+
+  @ApiProperty({ type: EligibleTeamAvailabilityResponseDto, nullable: true })
+  disponibilite!: EligibleTeamAvailabilityResponseDto | null;
+}
