@@ -6,7 +6,7 @@
 |---|---|---|
 | Architecture | Monolithe modulaire et monorepo pnpm | Architecture documentée ; alignement structurel progressif, sans déplacement massif requis. |
 | Toolchain | Node.js, pnpm et lockfile | Versions épinglées ; installation CI en `--frozen-lockfile`. |
-| CI | `.github/workflows/ci.yml` | Présent ; run push du commit `ec1c7e08` sur `main` vert (run #41249349801) : migrations PostgreSQL, OpenAPI, TypeScript, tests et builds Web/API/Mobile réussis. |
+| CI | `.github/workflows/ci.yml` | Présent ; run push du commit `7b02e5a` sur `main` vert (run #41253417586) : migrations PostgreSQL, OpenAPI, TypeScript, tests et builds Web/API/Mobile réussis. |
 | CI UML | `render-uml-class-diagrams.yml` | Présent pour régénérer les vues UML à partir de la source versionnée. |
 | CI/CD | Déploiements Web/API | Intégrés (PR #25) : workflows sur push `main` ou lancement manuel, attente de la CI réussie sur le même SHA, opt-in `PRODUCTION_DEPLOY_ENABLED=true`, Deploy Hooks Vercel/Render et smoke tests conditionnels. Les appels production restent désactivés. Workflow staging `staging-migrate.yml` ajouté : déclenchement manuel sur `main`, confirmation `APPLY`, environnement `staging` et secret dédié. |
 | Backend | Accounts | Intégré : profils, provisionnement citoyen, administration des comptes/rôles, audit transactionnel et protection du dernier administrateur. |
