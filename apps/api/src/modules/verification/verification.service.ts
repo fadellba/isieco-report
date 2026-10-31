@@ -262,6 +262,7 @@ export class VerificationService {
               dossierId: assignment.contenuDossier.idDossier,
               verificationId: verification.idVerification,
               interventionId: intervention.idIntervention,
+              previousStatus: assignment.contenuDossier.dossier.statutDossier,
               dateCloture: now,
             });
           }
@@ -369,6 +370,7 @@ export class VerificationService {
       dossierId: string;
       verificationId: string;
       interventionId: string;
+      previousStatus: string;
       dateCloture: Date;
     },
   ): Promise<void> {
@@ -382,7 +384,7 @@ export class VerificationService {
         idActeur: payload.actorId,
         idDossierCible: payload.dossierId,
         donneesAvant: {
-          statutDossier: 'EN_COURS',
+          statutDossier: payload.previousStatus,
           verificationId: payload.verificationId,
           interventionId: payload.interventionId,
         },
