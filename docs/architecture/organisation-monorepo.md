@@ -120,12 +120,12 @@ isieco-report/
 |---|---|---|
 | API | NestJS, configuration, auth, database, common/pipes, infrastructure/storage et les neuf modules métier avec contrôleurs, services et DTO. | Réorganiser progressivement les responsabilités auth/database vers infrastructure lors de changements isolés ; ajouter filters/interceptors/decorators uniquement lorsqu'un besoin concret apparaît. |
 | Web | React/Vite, AuthProvider, shell, routes par rôle, dashboard, comptes, audit, qualification, dossiers, référentiels, affectations et espace Agent terrain (Phase 16 intégrée). | Interface de vérification en cours sur `feat/phase-17-web-verification` ; recette utilisateur et tests d'interaction à poursuivre. |
-| Mobile | Expo Router, layout, index, connexion, inscription, client API et Supabase. Les écrans restent des placeholders. | Construire les groupes auth/citizen/agent et les parcours métier, médias et géolocalisation. |
+| Mobile | Expo Router, layout, connexion, inscription, Supabase, client API et premiers écrans citoyens (Phase 18 en cours sur `feat/phase-18-mobile-citizen-reports`). | Compléter le parcours citoyen, ajouter image picker/géolocalisation compatibles SDK, puis construire les parcours agent dans les groupes `(citizen)` et `(agent)`. |
 | Packages | `shared` et `api-client` initialisés avec un client HTTP commun générique et des contrats encore limités. | Ajouter les types, schémas et endpoints partagés au rythme des consommateurs, sans dépendance circulaire. |
 | CI/CD | `ci.yml` et `render-uml-class-diagrams.yml` présents. | Créer `web-deploy.yml` et `api-deploy.yml` après validation des secrets et des environnements. |
 | Prisma | Schéma MLD v2.13 avec 38 modèles et quatre migrations versionnées. | Pas de migration identifiée pour les écrans Web restants ; toute évolution de schéma doit rester additive et testée. |
 
-La Phase 15 (PR #20) et la Phase 16 (PR #21) sont intégrées dans `main`. La branche `feat/phase-17-web-verification` développe la file de vérification indépendante ; ces changements ne sont pas encore fusionnés.
+La Phase 15 (PR #20) et la Phase 16 (PR #21) sont intégrées dans `main`. Les branches `feat/phase-17-web-verification` et `feat/phase-18-mobile-citizen-reports` développent respectivement la vérification Web et les parcours citoyens Mobile ; elles ne sont pas encore fusionnées.
 
 La structure cible demeure un guide d'organisation et non une obligation de déplacer immédiatement tous les fichiers. En particulier, l'authentification et Prisma sont encore dans `src/auth` et `src/database` ; leur migration vers `src/infrastructure` devra être isolée, testée et faite sans changer les contrats métier.
 
