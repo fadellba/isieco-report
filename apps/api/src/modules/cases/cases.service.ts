@@ -188,7 +188,7 @@ export class CasesService {
               typeDechet: { select: { codeType: true, libelle: true } },
             },
           },
-          _count: { select: { rattachements: true } },
+          _count: { select: { rattachements: { where: { dateFinRattachement: null } } } },
         },
       }),
     ]);
