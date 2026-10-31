@@ -7,7 +7,23 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "plugins": ["expo-router"],
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Autorisez ISI-Eco Report à joindre des photos à vos signalements et interventions.",
+          "cameraPermission": "Autorisez ISI-Eco Report à prendre des photos de preuves.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Autorisez ISI-Eco Report à associer votre position à un signalement lorsque vous le demandez."
+        }
+      ]
+    ],
     "android": {"package":"com.isieco.report","permissions":["CAMERA","ACCESS_FINE_LOCATION","ACCESS_COARSE_LOCATION"]},
     "ios": {"bundleIdentifier":"com.isieco.report"},
     "experiments": {"typedRoutes":true}
