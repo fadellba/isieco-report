@@ -48,9 +48,9 @@ Le formulaire de compte rendu n'est affiché que pour l'agent auteur de l'interv
 
 Le parcours est intégré dans `main`. Les endpoints réutilisés revérifient côté API le compte actif, l'appartenance, l'auteur et les états métier.
 
-## Médias et géolocalisation native — Phase 21 en cours
+## Médias et géolocalisation native — Phase 21 intégrée (PR #26)
 
-La branche `feat/phase-21-mobile-native-media` ajoute :
+La PR #26 a intégré :
 
 - sélection de photos depuis la galerie et capture caméra pour les signalements citoyens et les interventions Agent terrain ;
 - conversion en JPEG, limitation du bord long à 1600 px et envoi multipart vers les endpoints API privés déjà existants ;
@@ -59,7 +59,7 @@ La branche `feat/phase-21-mobile-native-media` ajoute :
 - localisation ponctuelle au premier plan, uniquement après action explicite, avec précision estimée ; la saisie manuelle reste disponible ;
 - plugins Expo et permissions Android/iOS limités aux usages nécessaires.
 
-L'API reste l'autorité : elle vérifie le propriétaire du signalement ou l'auteur de l'intervention, les appartenances, les états métier, le type réel de l'image et la taille maximale de 10 MiB. Aucun chemin Storage ni clé privilégiée n'est exposé au Mobile. Les permissions peuvent être refusées sans bloquer le dépôt manuel d'un signalement.
+L'API reste l'autorité : elle vérifie le propriétaire du signalement ou l'auteur de l'intervention, les appartenances, les états métier, le type réel de l'image et la taille maximale de 10 MiB. Aucun chemin Storage ni clé privilégiée n'est exposé au Mobile. Les permissions peuvent être refusées sans bloquer le dépôt manuel d'un signalement. La CI complète de la PR #26 est verte ; la recette sur appareils réels reste à effectuer.
 
 ## Limites restantes
 
