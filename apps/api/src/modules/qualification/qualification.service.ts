@@ -183,10 +183,16 @@ export class QualificationService {
               etatDemande: 'OUVERTE',
             },
           });
-          await tx.signalement.update({
-            where: { idSignalement },
+          const reportUpdate = await tx.signalement.updateMany({
+            where: {
+              idSignalement,
+              statutSignalement: report.statutSignalement,
+            },
             data: { statutSignalement: 'EN_ATTENTE_COMPLEMENT' },
           });
+          if (reportUpdate.count !== 1) {
+            throw new ConflictException('Le signalement a changé d’état simultanément.');
+          }
           await this.writeEvent(tx, {
             type: 'COMPLEMENT_DEMANDE',
             actorId,
@@ -258,8 +264,11 @@ export class QualificationService {
             })),
           });
 
-          await tx.signalement.update({
-            where: { idSignalement },
+          const reportUpdate = await tx.signalement.updateMany({
+            where: {
+              idSignalement,
+              statutSignalement: report.statutSignalement,
+            },
             data: {
               statutSignalement: 'QUALIFIE',
               decisionPar: actorId,
@@ -267,6 +276,9 @@ export class QualificationService {
               motifDecision: null,
             },
           });
+          if (reportUpdate.count !== 1) {
+            throw new ConflictException('Le signalement a changé d’état simultanément.');
+          }
 
           await this.writeEvent(tx, {
             type: 'SIGNALEMENT_QUALIFIE',
@@ -312,8 +324,11 @@ export class QualificationService {
           const report = await this.requireDecisionableReport(tx, idSignalement);
           await this.assertNoOpenSupplement(tx, idSignalement);
           const now = new Date();
-          await tx.signalement.update({
-            where: { idSignalement },
+          const reportUpdate = await tx.signalement.updateMany({
+            where: {
+              idSignalement,
+              statutSignalement: report.statutSignalement,
+            },
             data: {
               statutSignalement: 'REJETE',
               decisionPar: actorId,
@@ -321,6 +336,9 @@ export class QualificationService {
               motifDecision: motif,
             },
           });
+          if (reportUpdate.count !== 1) {
+            throw new ConflictException('Le signalement a changé d’état simultanément.');
+          }
           await this.writeEvent(tx, {
             type: 'SIGNALEMENT_REJETE',
             actorId,
