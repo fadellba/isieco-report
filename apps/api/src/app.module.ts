@@ -13,6 +13,7 @@ import { InterventionsModule } from './modules/interventions/interventions.modul
 import { VerificationModule } from './modules/verification/verification.module.js';
 import { ReferentialsModule } from './modules/referentials/referentials.module.js';
 import { AuditModule } from './modules/audit/audit.module.js';
+import { MediaModule } from './modules/media/media.module.js';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { AuditModule } from './modules/audit/audit.module.js';
     VerificationModule,
     ReferentialsModule,
     AuditModule,
+    MediaModule,
   ],
 })
 export class AppModule {}
