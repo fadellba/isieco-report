@@ -12,7 +12,6 @@ import { ReferentialsPage } from './features/referentials/ReferentialsPage';
 import { AssignmentsPage } from './features/assignments/AssignmentsPage';
 import { InterventionsPage } from './features/interventions/InterventionsPage';
 import { VerificationPage } from './features/verification/VerificationPage';
-import { VerificationPage } from './features/verification/VerificationPage';
 import { AccessDeniedPage } from './pages/AccessDeniedPage';
 import { DownloadPage } from './pages/DownloadPage';
 import { SignInPage } from './pages/SignInPage';
