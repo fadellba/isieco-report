@@ -25,7 +25,8 @@ export function createApiClient(options: ApiClientOptions) {
       const token = await options.getAccessToken?.();
       const headers = new Headers(init.headers);
       headers.set('Accept', 'application/json');
-      if (init.body && !headers.has('Content-Type')) {
+      const isFormData = typeof FormData !== 'undefined' && init.body instanceof FormData;
+      if (init.body && !headers.has('Content-Type') && !isFormData) {
         headers.set('Content-Type', 'application/json');
       }
       if (token) headers.set('Authorization', `Bearer ${token}`);
