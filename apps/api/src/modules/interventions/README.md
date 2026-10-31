@@ -20,10 +20,10 @@ Toutes les routes sont préfixées par `/api/v1`, authentifiées par Supabase Au
 | Méthode | Route | Fonction |
 |---|---|---|
 | GET | `/interventions/my-teams` | Liste les équipes actives auxquelles appartient le compte métier connecté ; les appartenances sont filtrées par période courante et les équipes dédupliquées. |
-| GET | `/interventions/my-teams` | Liste les équipes actives du compte connecté selon ses appartenances courantes ; déduplique les équipes |\n| GET | `/interventions/team/:idEquipe` | Liste les interventions de l'équipe (appartenance active requise), avec les métadonnées de la dernière décision de vérification |
-| POST | `/interventions/assignments/:idAffectation/start` | Démarre une intervention |
-| POST | `/interventions/:idIntervention/photos` | Ajoute une preuve privée avant soumission |
-| POST | `/interventions/:idIntervention/submit` | Soumet le résultat et le compte rendu |
+| GET | `/interventions/team/:idEquipe` | Liste les interventions de l'équipe ; une appartenance active est requise. Les réponses incluent les métadonnées minimales de la dernière décision de vérification. |
+| POST | `/interventions/assignments/:idAffectation/start` | Démarre une intervention. |
+| POST | `/interventions/:idIntervention/photos` | Ajoute une preuve privée avant soumission. |
+| POST | `/interventions/:idIntervention/submit` | Soumet le résultat et le compte rendu. |
 
 ## Preuves privées
 
