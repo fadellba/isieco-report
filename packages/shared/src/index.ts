@@ -68,3 +68,22 @@ export type SupplementRequestStatus = (typeof SUPPLEMENT_REQUEST_STATUS_CODES)[n
 export const QUALIFICATION_STATE_CODES = ['RETENU', 'RETIRE'] as const;
 
 export type QualificationState = (typeof QUALIFICATION_STATE_CODES)[number];
+
+/** Persisted case lifecycle codes used by the first case-management slice. */
+export const CASE_STATUS_CODES = ['OUVERT', 'EN_COURS', 'EN_ATTENTE', 'CLOTURE'] as const;
+export type CaseStatus = (typeof CASE_STATUS_CODES)[number];
+
+export const CASE_PRIORITY_CODES = ['BASSE', 'NORMALE', 'HAUTE', 'CRITIQUE'] as const;
+export type CasePriority = (typeof CASE_PRIORITY_CODES)[number];
+
+export const CASE_CONTENT_STATUS_CODES = ['ACTIF', 'RETIRE'] as const;
+export type CaseContentStatus = (typeof CASE_CONTENT_STATUS_CODES)[number];
+
+export const CASE_CONTENT_HANDLING_STATUS_CODES = ['EN_ATTENTE', 'EN_COURS', 'TERMINE'] as const;
+export type CaseContentHandlingStatus = (typeof CASE_CONTENT_HANDLING_STATUS_CODES)[number];
+
+export const REPORT_ATTACHMENT_TYPE_CODES = ['INITIAL', 'ASSOCIATION'] as const;
+export type ReportAttachmentType = (typeof REPORT_ATTACHMENT_TYPE_CODES)[number];
+
+export const CASE_CONTENT_ORIGIN_CODES = ['QUALIFICATION'] as const;
+export type CaseContentOrigin = (typeof CASE_CONTENT_ORIGIN_CODES)[number];
