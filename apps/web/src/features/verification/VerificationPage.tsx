@@ -305,8 +305,11 @@ export function VerificationPage() {
 
                     <div>
                       <h4 className="text-xs font-bold text-slate-700">Preuves photo privées</h4>
-                      {!item.intervention.photos.length ? <p className="mt-2 text-xs text-slate-500">Aucune preuve photo jointe.</p> : null}
-                      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {ownIntervention ? (
+                        <p className="mt-2 text-xs text-amber-800">Les preuves d’une intervention ne sont pas consultables par son propre auteur dans le parcours de vérification.</p>
+                      ) : null}
+                      {!ownIntervention && !item.intervention.photos.length ? <p className="mt-2 text-xs text-slate-500">Aucune preuve photo jointe.</p> : null}
+                      {!ownIntervention ? <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                         {item.intervention.photos.map((photo) => {
                           const link = photoLinks[photo.idPhotoIntervention];
                           const activeLink = link && link.expiresAt > Date.now() ? link : null;
@@ -337,7 +340,7 @@ export function VerificationPage() {
                             </div>
                           );
                         })}
-                      </div>
+                      </div> : null}
                     </div>
 
                     {ownIntervention ? (
