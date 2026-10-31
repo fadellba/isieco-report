@@ -113,3 +113,11 @@ export class VerificationDecisionResponseDto {
   @ApiProperty({ type: 'string', nullable: true })
   referencePreuve!: string | null;
 }
+
+export class VerificationDecisionResultDto {
+  @ApiProperty({ type: VerificationDecisionResponseDto })
+  verification!: VerificationDecisionResponseDto;
+
+  @ApiProperty({ description: 'Vrai lorsque tous les contenus actifs du dossier sont terminés et que le dossier a été clôturé.' })
+  dossierCloture!: boolean;
+}
