@@ -35,7 +35,7 @@ En cas de divergence, appliquer cet ordre : décisions acceptées dans les ADR, 
 - Médias : upload privé, liens signés et commande de purge intégrés ; provisionnement du bucket, décision de rétention et planification Cron restent nécessaires.
 - Web restant après la Phase 17 : aucun parcours métier Web principal ; restent la recette d'usage, la revue d'accessibilité et les fonctions secondaires de gestion.
 - Mobile : authentification Supabase, parcours citoyen et parcours Agent terrain intégrés. Photo native et géolocalisation restent à réaliser.
-- Phase 20 en cours sur `feat/phase-20-deployment-workflows-v2` : workflows de déploiement Vercel/Render déclenchés sur `main` ou manuellement et bloqués tant que la CI du même commit n'est pas verte. Deploy Hooks et URLs de smoke test à configurer comme secrets GitHub. Aucun déploiement de production confirmé.
+- Phase 20 en cours sur `feat/phase-20-deployment-workflows-v2` : workflows de déploiement Vercel/Render déclenchés sur `main` ou manuellement et bloqués tant que la CI du même commit n'est pas verte. Deploy Hooks et URLs de smoke test à configurer comme secrets GitHub ; le secret `PRODUCTION_DEPLOY_ENABLED=true` est requis pour autoriser tout appel de déploiement. Aucun déploiement de production confirmé.
 - Aucun APK Android de release signé n'est confirmé.
 
 Consulter [l'état des livrables](architecture/etat-des-livrables.md) avant de considérer une fonctionnalité comme terminée.
