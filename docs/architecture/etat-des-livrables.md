@@ -36,7 +36,8 @@
 | Base de données | Migrations | Quatre migrations versionnées ; CI applique l'historique sur PostgreSQL vierge et teste les contraintes d'intégrité. Projet Supabase distant non migré. |
 | UML/Merise | Modèles et cas d'utilisation | Sources et vues versionnées ; elles décrivent le périmètre cible et ne remplacent pas la recette des écrans. |
 | Exploitation | Vercel, Render, Supabase distant | Architecture documentée ; configuration et déploiements de production non confirmés. |
-| Mobile | Médias et géolocalisation natives | À faire : image picker, upload mobile, permissions de localisation et tests sur appareils réels. |\n| Mobile | APK signé et GitHub Release | À faire ; aucun APK de release signé confirmé. |
+| Mobile | Médias et géolocalisation natives | À faire : image picker, upload mobile, permissions de localisation et tests sur appareils réels. |
+| Mobile | APK signé et GitHub Release | À faire ; aucun APK de release signé confirmé. |
 
 ## Prochain ordre de livraison recommandé
 
