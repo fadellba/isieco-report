@@ -20,14 +20,14 @@ Toutes les routes sont préfixées par `/api/v1`, authentifiées par Supabase Au
 | Méthode | Route | Fonction |
 |---|---|---|
 | GET | `/interventions/my-teams` | Liste les équipes actives auxquelles appartient le compte métier connecté ; les appartenances sont filtrées par période courante et les équipes dédupliquées. |
-| GET | `/interventions/team/:idEquipe` | Liste les interventions de l'équipe (appartenance active requise) |
+| GET | `/interventions/my-teams` | Liste les équipes actives du compte connecté selon ses appartenances courantes ; déduplique les équipes |\n| GET | `/interventions/team/:idEquipe` | Liste les interventions de l'équipe (appartenance active requise), avec les métadonnées de la dernière décision de vérification |
 | POST | `/interventions/assignments/:idAffectation/start` | Démarre une intervention |
 | POST | `/interventions/:idIntervention/photos` | Ajoute une preuve privée avant soumission |
 | POST | `/interventions/:idIntervention/submit` | Soumet le résultat et le compte rendu |
 
 ## Preuves privées
 
-Le champ multipart `file` accepte JPEG, PNG ou WebP vérifiés par signature binaire, jusqu'à 10 MiB. `contextePhoto` est obligatoire (3 à 100 caractères) ; la description est facultative (500 caractères maximum). L'API vérifie l'auteur initial, l'appartenance active, l'état ouvert de l'intervention, l'affectation acceptée et le contenu actif.
+Le champ multipart `file` accepte JPEG, PNG ou WebP vérifiés par signature binaire, jusqu'à 10 MiB. `contextePhoto` est obligatoire (3 à 100 caractères) ; la description est facultative (500 caractères maximum). L'API vérifie l'auteur initial, l'appartenance active, l'état ouvert de l'intervention, l'affectation acceptée et le contenu actif. La route `GET /interventions/my-teams` sert uniquement à afficher les équipes de l'agent ; chaque opération métier refait son propre contrôle d'accès.
 
 L'objet est stocké dans le bucket privé ; le chemin ne sort pas de l'API. Les métadonnées et l'événement `PHOTO_INTERVENTION_AJOUTEE` sont écrits atomiquement. La configuration Storage est décrite dans [docs/storage/README.md](../../../../docs/storage/README.md).
 
