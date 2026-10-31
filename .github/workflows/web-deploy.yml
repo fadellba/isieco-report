@@ -63,8 +63,15 @@ jobs:
       - name: Trigger Vercel production deployment
         id: deploy
         env:
+          DEPLOY_ENABLED: ${{ secrets.PRODUCTION_DEPLOY_ENABLED }}
           DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
         run: |
+          if [ "${DEPLOY_ENABLED:-}" != "true" ]; then
+            echo "PRODUCTION_DEPLOY_ENABLED is not true; production deployment was intentionally skipped."
+            echo "deployed=false" >> "$GITHUB_OUTPUT"
+            echo "Production deployment is disabled. Set PRODUCTION_DEPLOY_ENABLED=true only after production readiness has been approved." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
           if [ -z "${DEPLOY_HOOK_URL:-}" ]; then
             echo "VERCEL_DEPLOY_HOOK_URL is not configured; deployment was skipped."
             echo "deployed=false" >> "$GITHUB_OUTPUT"
