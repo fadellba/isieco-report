@@ -90,6 +90,44 @@ test('accepts comma-separated HTTP(S) origins and rejects URL paths', () => {
   );
 });
 
+test('accepts optional private media configuration when values are valid', () => {
+  assert.doesNotThrow(() =>
+    validateEnvironment({
+      ...validEnvironment,
+      SUPABASE_SECRET_KEY: 'server-only-test-secret',
+      SUPABASE_STORAGE_BUCKET: 'isieco-private-media',
+      MEDIA_RETENTION_DAYS: '365',
+    }),
+  );
+});
+
+test('rejects invalid media retention and bucket configuration', () => {
+  assert.throws(
+    () =>
+      validateEnvironment({
+        ...validEnvironment,
+        MEDIA_RETENTION_DAYS: '0',
+      }),
+    /MEDIA_RETENTION_DAYS/u,
+  );
+  assert.throws(
+    () =>
+      validateEnvironment({
+        ...validEnvironment,
+        MEDIA_RETENTION_DAYS: 'many days',
+      }),
+    /MEDIA_RETENTION_DAYS/u,
+  );
+  assert.throws(
+    () =>
+      validateEnvironment({
+        ...validEnvironment,
+        SUPABASE_STORAGE_BUCKET: 'Bad Bucket Name',
+      }),
+    /SUPABASE_STORAGE_BUCKET/u,
+  );
+});
+
 test('never includes secret values in validation errors', () => {
   const secret = 'very-secret-value';
   assert.throws(

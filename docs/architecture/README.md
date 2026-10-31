@@ -29,4 +29,4 @@ La cible comprend une application Web d'administration, une application Mobile u
 | referentials | Types de déchets, équipes, compétences, géographie. |
 | audit | Événements métier et historique. |
 
-Ce sont des frontières applicatives internes, pas des services déployés séparément. Le module accounts dispose d'une première implémentation ; les autres modules NestJS sont actuellement des squelettes.
+Ce sont des frontières applicatives internes, pas des services déployés séparément. À la date du 31 octobre 2026, Accounts, Referentials, Reports, Qualification, Cases, Assignments, Interventions et Verification sont intégrés dans main. Audit est initialisé ; la consultation et l'export centralisés restent à développer. Les interfaces métier Web et Mobile restent également à réaliser.

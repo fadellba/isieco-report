@@ -21,6 +21,7 @@ import {
 } from '@nestjs/swagger';
 import type { User } from '@supabase/supabase-js';
 import { CurrentAuthUser } from '../../auth/current-auth-user.decorator.js';
+import { SignedMediaUrlResponseDto } from '../../infrastructure/storage/dto/media-response.dto.js';
 import { Roles } from '../../auth/roles.decorator.js';
 import { RolesGuard } from '../../auth/roles.guard.js';
 import { SupabaseAuthGuard } from '../../auth/supabase-auth.guard.js';
@@ -67,6 +68,24 @@ export class VerificationController {
     @CurrentAuthUser() user: User,
   ) {
     return this.verification.getPending(idAffectation, user.id);
+  }
+
+  @Get('assignments/:idAffectation/photos/:idPhotoIntervention/url')
+  @ApiOperation({
+    summary: 'Obtient une URL temporaire vers une preuve photo du dernier compte rendu en attente',
+    description: 'L’accès est vérifié côté API. Un agent ne peut pas consulter les preuves de sa propre intervention comme vérificateur.',
+  })
+  @ApiParam({ name: 'idAffectation', format: 'uuid' })
+  @ApiParam({ name: 'idPhotoIntervention', format: 'uuid' })
+  @ApiOkResponse({ type: SignedMediaUrlResponseDto })
+  @ApiForbiddenResponse({ description: 'Auto-vérification interdite.' })
+  @ApiConflictResponse({ description: 'Aucun compte rendu en attente de vérification.' })
+  createPhotoUrl(
+    @Param('idAffectation', ParseUUIDPipe) idAffectation: string,
+    @Param('idPhotoIntervention', ParseUUIDPipe) idPhotoIntervention: string,
+    @CurrentAuthUser() user: User,
+  ) {
+    return this.verification.createInterventionPhotoUrl(idAffectation, idPhotoIntervention, user.id);
   }
 
   @Post('assignments/:idAffectation/decision')

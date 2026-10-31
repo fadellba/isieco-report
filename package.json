@@ -25,6 +25,7 @@
     "format:check": "prettier --check .",
     "check:commits": "node scripts/check-conventional-commits.mjs",
     "api:openapi": "pnpm --filter @isieco/api openapi:generate",
+    "storage:purge": "pnpm --filter @isieco/api storage:purge",
     "test:repo": "node --test scripts/check-conventional-commits.test.mjs"
   },
   "devDependencies": {"prettier":"3.6.2","prisma":"7.10.1","typescript":"5.9.3","@types/node":"24.0.0"},

@@ -8,10 +8,14 @@ import {
   Post,
   Query,
   UseGuards,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiForbiddenResponse,
@@ -25,6 +29,9 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import type { User } from '@supabase/supabase-js';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { MAX_IMAGE_SIZE_BYTES } from '../../infrastructure/storage/media-file.js';
+import { PhotoUploadResponseDto, SignedMediaUrlResponseDto } from '../../infrastructure/storage/dto/media-response.dto.js';
 import { CurrentAuthUser } from '../../auth/current-auth-user.decorator.js';
 import { Roles } from '../../auth/roles.decorator.js';
 import { RolesGuard } from '../../auth/roles.guard.js';
@@ -34,6 +41,7 @@ import { ListReportsQueryDto } from './dto/list-reports-query.dto.js';
 import { ReportsService } from './reports.service.js';
 import { ReportListResponseDto, ReportResponseDto } from './dto/report-response.dto.js';
 import { CreateSupplementResponseDto } from './dto/create-supplement-response.dto.js';
+import { UploadReportPhotoDto } from './dto/upload-report-photo.dto.js';
 import { ReportSupplementListResponseDto, SupplementAnswerDto } from './dto/report-supplement-response.dto.js';
 
 @ApiTags('reports')
@@ -87,6 +95,48 @@ export class ReportsController {
   getMine(@Param('id', ParseUUIDPipe) id: string, @CurrentAuthUser() user: User) {
     return this.reports.getMine(id, user.id);
   }
+  @Post(':id/photos')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_IMAGE_SIZE_BYTES, files: 1 } }))
+  @ApiOperation({ summary: 'Ajoute une photo privée à un signalement appartenant au citoyen connecté' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        description: { type: 'string', maxLength: 500 },
+      },
+      required: ['file'],
+    },
+  })
+  @ApiCreatedResponse({ type: PhotoUploadResponseDto })
+  @ApiBadRequestResponse({ description: 'Fichier absent, trop volumineux ou image JPEG, PNG ou WebP invalide.' })
+  @ApiNotFoundResponse({ description: 'Signalement introuvable.' })
+  @ApiForbiddenResponse({ description: 'Le signalement doit appartenir à un compte citoyen actif.' })
+  addPhoto(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UploadReportPhotoDto,
+    @UploadedFile() file: unknown,
+    @CurrentAuthUser() user: User,
+  ) {
+    return this.reports.addPhoto(id, user.id, file, dto.description);
+  }
+
+  @Get(':id/photos/:photoId/url')
+  @ApiOperation({ summary: 'Obtient une URL de consultation temporaire pour une photo de son signalement' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiParam({ name: 'photoId', format: 'uuid' })
+  @ApiOkResponse({ type: SignedMediaUrlResponseDto })
+  @ApiNotFoundResponse({ description: 'Photo introuvable ou expirée.' })
+  createPhotoUrl(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('photoId', ParseUUIDPipe) photoId: string,
+    @CurrentAuthUser() user: User,
+  ) {
+    return this.reports.createPhotoUrl(id, photoId, user.id);
+  }
+
   @Get(':id/supplements')
   @ApiOperation({ summary: 'Liste les demandes de complément liées à un signalement du citoyen connecté' })
   @ApiParam({ name: 'id', format: 'uuid' })

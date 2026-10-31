@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../database/prisma.service.js';
+import { SupabaseStorageService } from '../../infrastructure/storage/supabase-storage.service.js';
 import type { DecideVerificationDto } from './dto/decide-verification.dto.js';
 import type { ListVerificationsQueryDto } from './dto/list-verifications-query.dto.js';
 
@@ -44,6 +45,15 @@ const reviewSelect = {
       compteRendu: true,
       motifException: true,
       renseignePar: true,
+      photos: {
+        orderBy: [{ dateAjout: 'asc' }, { idPhotoIntervention: 'asc' }],
+        select: {
+          idPhotoIntervention: true,
+          description: true,
+          dateAjout: true,
+          etatPublication: true,
+        },
+      },
     },
   },
   verifications: {
@@ -64,7 +74,10 @@ function isPrismaCode(error: unknown, code: string): boolean {
 
 @Injectable()
 export class VerificationService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: SupabaseStorageService,
+  ) {}
 
   private async actorId(authUserId: string): Promise<string> {
     const actor = await this.prisma.utilisateur.findUnique({
@@ -128,6 +141,45 @@ export class VerificationService {
       throw new ConflictException('Cette affectation ne possède pas de compte rendu soumis en attente de vérification.');
     }
     return item;
+  }
+
+  async createInterventionPhotoUrl(
+    idAffectation: string,
+    idPhotoIntervention: string,
+    authUserId: string,
+  ) {
+    const actorId = await this.actorId(authUserId);
+    const assignment = await this.prisma.affectation.findUnique({
+      where: { idAffectation },
+      select: reviewSelect,
+    });
+    if (!assignment) throw new NotFoundException('Affectation introuvable.');
+
+    const pending = this.toPendingItem(assignment);
+    if (!pending) {
+      throw new ConflictException('Ce compte rendu n’est plus en attente de vérification.');
+    }
+    if (pending.intervention.renseignePar === actorId) {
+      throw new ForbiddenException('Le vérificateur ne peut pas consulter les preuves de sa propre intervention.');
+    }
+
+    const photo = await this.prisma.photoIntervention.findFirst({
+      where: {
+        idPhotoIntervention,
+        idIntervention: pending.intervention.idIntervention,
+      },
+      select: { referencePhoto: true, dateExpiration: true, mediaPurgeAt: true },
+    });
+    const now = new Date();
+    if (
+      !photo ||
+      photo.dateExpiration.getTime() <= now.getTime() ||
+      (photo.mediaPurgeAt !== null && photo.mediaPurgeAt.getTime() <= now.getTime())
+    ) {
+      throw new NotFoundException('Photo introuvable ou expirée.');
+    }
+
+    return this.storage.createSignedUrl(photo.referencePhoto);
   }
 
   async decide(
@@ -330,7 +382,15 @@ export class VerificationService {
           statutDossier: assignment.contenuDossier.dossier.statutDossier,
         },
       },
-      intervention,
+      intervention: {
+        ...intervention,
+        photos: (intervention.photos ?? []).map((photo) => ({
+          idPhotoIntervention: photo.idPhotoIntervention,
+          description: photo.description,
+          dateAjout: photo.dateAjout,
+          etatPublication: photo.etatPublication,
+        })),
+      },
       derniereVerification: latestVerification?.dateVerification ?? null,
     };
   }

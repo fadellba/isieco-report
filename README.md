@@ -48,11 +48,13 @@ Ne jamais exposer dans le Web ou le Mobile une clé Supabase service_role, un se
 
 prisma/schema.prisma traduit les 38 tables métier du MLD v2.13. auth.users est géré par Supabase Auth ; utilisateur.auth_user_id référence l'identité externe. Les mots de passe, sessions et bearer tokens ne sont pas copiés dans la base métier.
 
-Le schéma Prisma complet ne signifie pas que toutes les migrations sont déjà versionnées et validées sur PostgreSQL. Voir docs/merise/README.md et le registre des livrables.
+Le schéma Prisma et les migrations versionnées sont appliqués sur une base PostgreSQL vierge et contrôlés par la CI. Voir docs/merise/README.md et le registre des livrables.
 
-## État du projet
+## État du projet au 31 octobre 2026
 
-Le socle du monorepo, les trois applications, deux packages partagés, le module initial de comptes et rôles, le schéma Prisma et la CI sont présents. Les autres modules métier sont des squelettes. Les parcours complets, les migrations intégrales testées, les déploiements automatiques, le projet Supabase distant et l'APK Android signé ne sont pas considérés comme livrés.
+Le backend a intégré les workflows Accounts, Referentials, Reports, Qualification, Cases, Assignments, Interventions et Verification. La dernière livraison intégrée est la vérification indépendante, la demande de reprise et la clôture contrôlée des dossiers (PR #14). La CI sur main valide les migrations PostgreSQL, OpenAPI, TypeScript, les tests et les builds Web/API/Mobile.
+
+Les interfaces Web et Mobile restent des socles d'authentification et de profil : les écrans métier ne sont pas encore réalisés. L'infrastructure de stockage privé et le service de purge sont en cours de livraison sur la branche Phase 10 ; le bucket Supabase distant et sa planification Cron restent à configurer. L'audit centralisé consultable, les interfaces métier, les déploiements automatiques, le projet Supabase distant et l'APK Android signé restent à finaliser. L'état détaillé et les limites sont consignés dans docs/architecture/etat-des-livrables.md et docs/storage/README.md.
 
 ## CI
 
