@@ -37,14 +37,16 @@ export class InterventionAssignmentDto {
   contenuDossier!: InterventionAssignmentContentDto;
 
   @ApiProperty({
-    type: 'object',
-    nullable: true,
-    properties: {
-      dateVerification: { type: 'string', format: 'date-time' },
-      etatVerification: { type: 'string', enum: ['VALIDEE', 'REPRISE'] },
+    type: 'array',
+    items: {
+      type: 'object',
+      properties: {
+        dateVerification: { type: 'string', format: 'date-time' },
+        etatVerification: { type: 'string', enum: ['VALIDEE', 'REPRISE'] },
+      },
     },
   })
-  derniereVerification!: { dateVerification: Date; etatVerification: string } | null;
+  verifications!: Array<{ dateVerification: Date; etatVerification: string }>;
 }
 
 export class InterventionResponseDto {
