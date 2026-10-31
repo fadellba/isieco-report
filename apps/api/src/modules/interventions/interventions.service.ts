@@ -41,6 +41,14 @@ const interventionDetailSelect = {
           dossier: { select: { referenceDossier: true, statutDossier: true } },
         },
       },
+      verifications: {
+        orderBy: [{ dateVerification: 'desc' }, { idVerification: 'desc' }],
+        take: 1,
+        select: {
+          dateVerification: true,
+          etatVerification: true,
+        },
+      },
     },
   },
 } satisfies Prisma.InterventionSelect;
