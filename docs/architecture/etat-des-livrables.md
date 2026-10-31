@@ -31,6 +31,7 @@
 | Web | Médias | Consultation des photos de qualification intégrée ; dépôt et consultation dans les autres parcours Web restent à réaliser. |
 | Mobile | Parcours citoyen | Intégré (PR #23) : liste paginée propriétaire, dépôt idempotent, détail et réponses aux demandes de complément. Pas de photo native ni géolocalisation système. |
 | Mobile | Parcours Agent terrain | Intégré (PR #24) : équipes propres au compte, affectations, réponses, démarrage, compte rendu et reprise. Pas d'upload photo natif ni de géolocalisation système. |
+| Mobile | Photos et géolocalisation natives | En cours sur `feat/phase-21-mobile-native-media` : image picker, capture caméra, conversion JPEG, upload privé citoyen/agent, aperçu par URL signée et localisation au premier plan sur demande. CI complète et tests appareils à valider. |
 | Packages | `shared` et `api-client` | Initialisés ; contrats et endpoints dédiés à compléter à mesure des besoins des clients. |
 | Base de données | MLD v2.13 | 38 modèles Prisma présents. |
 | Base de données | Migrations | Quatre migrations versionnées ; CI applique l'historique sur PostgreSQL vierge et teste les contraintes d'intégrité. Projet Supabase distant non migré. |
