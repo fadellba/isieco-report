@@ -67,6 +67,51 @@ export class InterventionsService {
     return actor.idUtilisateur;
   }
 
+  async listMyTeams(authUserId: string) {
+    const actorId = await this.actorId(authUserId);
+    const now = new Date();
+    const memberships = await this.prisma.appartenanceEquipe.findMany({
+      where: {
+        idUtilisateur: actorId,
+        dateDebut: { lte: now },
+        OR: [{ dateFin: null }, { dateFin: { gte: now } }],
+        equipe: { etatEquipe: 'ACTIVE' },
+      },
+      orderBy: [{ dateDebut: 'desc' }],
+      select: {
+        dateDebut: true,
+        fonction: true,
+        equipe: {
+          select: {
+            idEquipe: true,
+            nomEquipe: true,
+            etatEquipe: true,
+          },
+        },
+      },
+    });
+
+    const currentTeams = new Map<string, {
+      idEquipe: string;
+      nomEquipe: string;
+      etatEquipe: string;
+      dateDebut: Date;
+      fonction: string;
+    }>();
+    for (const membership of memberships) {
+      if (!currentTeams.has(membership.equipe.idEquipe)) {
+        currentTeams.set(membership.equipe.idEquipe, {
+          ...membership.equipe,
+          dateDebut: membership.dateDebut,
+          fonction: membership.fonction,
+        });
+      }
+    }
+    return [...currentTeams.values()].sort((left, right) =>
+      left.nomEquipe.localeCompare(right.nomEquipe, 'fr'),
+    );
+  }
+
   async listTeamInterventions(idEquipe: string, authUserId: string) {
     const actorId = await this.actorId(authUserId);
     const now = new Date();
