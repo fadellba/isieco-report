@@ -46,7 +46,14 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </Link>
           ) : null}
-          {!profile.roles.some((role) => role.code === 'CITOYEN') ? (
+          {profile.roles.some((role) => role.code === 'AGENT_TERRAIN') ? (
+            <Link href="/(agent)/missions" asChild>
+              <TouchableOpacity className="mt-4 rounded-xl border border-eco-200 bg-white px-5 py-4">
+                <Text className="text-center font-bold text-eco-800">Mes missions terrain</Text>
+              </TouchableOpacity>
+            </Link>
+          ) : null}
+          {!profile.roles.some((role) => role.code === 'CITOYEN' || role.code === 'AGENT_TERRAIN') ? (
             <View className="mt-6 rounded-xl border border-eco-100 bg-white p-4">
               <Text className="text-sm leading-6 text-slate-600">Votre parcours mobile n’est pas encore disponible pour ce rôle. Les écrans métier Web restent accessibles sur le back-office.</Text>
             </View>
