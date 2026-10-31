@@ -158,6 +158,7 @@ export function InterventionsPage() {
 
   async function respond(assignment: Assignment, decisionEquipe: 'ACCEPTEE' | 'REFUSEE') {
     const reason = refusalReasons[assignment.idAffectation]?.trim() ?? '';
+    const observation = observations[assignment.idAffectation]?.trim() ?? '';
     if (decisionEquipe === 'REFUSEE' && reason.length < 5) {
       setError('Le motif de refus doit contenir au moins 5 caractères.');
       return;
@@ -171,9 +172,7 @@ export function InterventionsPage() {
         body: JSON.stringify({
           decisionEquipe,
           ...(decisionEquipe === 'REFUSEE' ? { motifRefusEquipe: reason } : {}),
-          ...(observations[assignment.idAffectation]?.trim()
-            ? { observation: observations[assignment.idAffectation].trim() }
-            : {}),
+          ...(observation ? { observation } : {}),
         }),
       });
       await refreshAfterMutation(
