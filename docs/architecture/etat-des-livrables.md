@@ -1,6 +1,6 @@
 # État des livrables
 
-État de référence : **31 octobre 2026, après fusion de la PR #21 ; Phase 17 en cours**. « Intégré » signifie fusionné dans `main`. « Initialisé » signifie que la structure existe sans parcours métier complet. « En cours » désigne une évolution sur une branche non fusionnée. Un build vert ne vaut pas recette utilisateur.
+État de référence : **31 octobre 2026, après fusion de la PR #21 ; Phase 17 intégrée dans sa branche de livraison et Phase 18 en cours**. « Intégré » signifie fusionné dans `main`. « Initialisé » signifie que la structure existe sans parcours métier complet. « En cours » désigne une évolution sur une branche non fusionnée. Un build vert ne vaut pas recette utilisateur.
 
 | Domaine | Livrable | État |
 |---|---|---|
@@ -29,7 +29,7 @@
 | Web | Interventions | Intégrées (PR #21) : équipes du compte connecté, réponses aux affectations, démarrage, preuves photo multipart et compte rendu, auteur et appartenance vérifiés côté API. |
 | Web | Vérification | En cours sur `feat/phase-17-web-verification` : file paginée, détail du compte rendu, photos privées signées à la demande, séparation des tâches, décision conforme et demande de reprise motivée. Non fusionnée dans main. |
 | Web | Médias | Consultation des photos de qualification intégrée ; dépôt et consultation dans les autres parcours Web restent à réaliser. |
-| Mobile | Application citoyen/agent | Squelette Expo, configuration et écrans placeholders ; authentification intégrée, signalements, suivi, médias, géolocalisation et interventions restent à construire. |
+| Mobile | Parcours citoyen | En cours sur `feat/phase-18-mobile-citizen-reports` : liste paginée et propriétaire, dépôt idempotent, détail et réponses aux demandes de complément. Pas de photo native ni géolocalisation système dans ce lot. |\n| Mobile | Parcours agent | À développer sur les endpoints Assignments et Interventions existants. |
 | Packages | `shared` et `api-client` | Initialisés ; contrats et endpoints dédiés à compléter à mesure des besoins des clients. |
 | Base de données | MLD v2.13 | 38 modèles Prisma présents. |
 | Base de données | Migrations | Quatre migrations versionnées ; CI applique l'historique sur PostgreSQL vierge et teste les contraintes d'intégrité. Projet Supabase distant non migré. |
@@ -39,8 +39,8 @@
 
 ## Prochain ordre de livraison recommandé
 
-1. Finaliser et valider la Phase 17 sur le parcours de vérification indépendant.
-2. Parcours Mobile citoyen et agent, avec contrats API existants.
+1. Finaliser et fusionner la Phase 17 sur le parcours de vérification indépendant.
+2. Finaliser Phase 18 : parcours citoyen, puis parcours Mobile agent sur les API existantes ; ajouter image picker et géolocalisation avec versions Expo compatibles.
 3. Finalisation opérationnelle des médias : bucket privé, politique de rétention validée, tests de droits et Cron de purge.
 4. Déploiements Web/API, smoke tests, sauvegardes/restauration et distribution Android signée.
 

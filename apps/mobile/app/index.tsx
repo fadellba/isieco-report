@@ -30,7 +30,29 @@ export default function HomeScreen() {
   return (
     <View className="flex-1 justify-center bg-eco-50 px-7 py-10">
       <Text className="text-xs font-extrabold uppercase tracking-[0.18em] text-eco-600">ISI-ECO REPORT</Text>
-      {profile ? <><Text className="mt-4 text-3xl font-extrabold text-eco-950">Bonjour {profile.prenom ? `${profile.prenom} ` : ''}{profile.nom}</Text><Text className="mt-2 text-base text-slate-600">{profile.email}</Text><View className="mt-8 rounded-2xl border border-eco-100 bg-white p-5"><Text className="text-sm font-bold uppercase tracking-wide text-eco-700">Vos rôles</Text>{profile.roles.map((role) => <Text className="mt-2 text-base text-eco-950" key={role.code}>• {role.libelle}</Text>)}<Text className="mt-4 text-sm leading-6 text-slate-600">Les fonctionnalités disponibles dépendront des habilitations accordées à votre compte.</Text></View></> : null}
+      {profile ? (
+        <>
+          <Text className="mt-4 text-3xl font-extrabold text-eco-950">Bonjour {profile.prenom ? `${profile.prenom} ` : ''}{profile.nom}</Text>
+          <Text className="mt-2 text-base text-slate-600">{profile.email}</Text>
+          <View className="mt-8 rounded-2xl border border-eco-100 bg-white p-5">
+            <Text className="text-sm font-bold uppercase tracking-wide text-eco-700">Vos rôles</Text>
+            {profile.roles.map((role) => <Text className="mt-2 text-base text-eco-950" key={role.code}>• {role.libelle}</Text>)}
+            <Text className="mt-4 text-sm leading-6 text-slate-600">Les fonctionnalités affichées suivent les habilitations de votre compte. L’API revérifie chaque droit à chaque opération.</Text>
+          </View>
+          {profile.roles.some((role) => role.code === 'CITOYEN') ? (
+            <Link href="/(citizen)/reports" asChild>
+              <TouchableOpacity className="mt-6 rounded-xl bg-eco-700 px-5 py-4">
+                <Text className="text-center font-bold text-white">Mes signalements</Text>
+              </TouchableOpacity>
+            </Link>
+          ) : null}
+          {!profile.roles.some((role) => role.code === 'CITOYEN') ? (
+            <View className="mt-6 rounded-xl border border-eco-100 bg-white p-4">
+              <Text className="text-sm leading-6 text-slate-600">Votre parcours mobile n’est pas encore disponible pour ce rôle. Les écrans métier Web restent accessibles sur le back-office.</Text>
+            </View>
+          ) : null}
+        </>
+      ) : null}
       {error ? <Text className="mt-6 rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</Text> : null}
       <TouchableOpacity className="mt-8 rounded-xl bg-eco-700 px-5 py-4" onPress={signOut}><Text className="text-center font-bold text-white">Se déconnecter</Text></TouchableOpacity>
       <Link className="mt-6 text-center font-semibold text-eco-700" href="/sign-in">Écran de connexion</Link>
