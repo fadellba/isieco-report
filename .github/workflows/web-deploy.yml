@@ -23,10 +23,10 @@ jobs:
     steps:
       - name: Wait for successful CI on this commit
         env:
-          GH_TOKEN: \${{ github.token }}
-          GH_API_URL: \${{ github.api_url }}
-          GH_REPOSITORY: \${{ github.repository }}
-          TARGET_SHA: \${{ github.sha }}
+          GH_TOKEN: ${{ github.token }}
+          GH_API_URL: ${{ github.api_url }}
+          GH_REPOSITORY: ${{ github.repository }}
+          TARGET_SHA: ${{ github.sha }}
         run: |
           for attempt in $(seq 1 40); do
             response="$(curl --fail --silent --show-error \
@@ -63,9 +63,9 @@ jobs:
       - name: Trigger Vercel production deployment
         id: deploy
         env:
-          DEPLOY_HOOK_URL: \${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+          DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
         run: |
-          if [ -z "\${DEPLOY_HOOK_URL:-}" ]; then
+          if [ -z "${DEPLOY_HOOK_URL:-}" ]; then
             echo "VERCEL_DEPLOY_HOOK_URL is not configured; deployment was skipped."
             echo "deployed=false" >> "$GITHUB_OUTPUT"
             echo "Configure the Vercel production Deploy Hook as a repository or environment secret." >> "$GITHUB_STEP_SUMMARY"
@@ -83,9 +83,9 @@ jobs:
       - name: Smoke test deployed Web
         if: steps.deploy.outputs.deployed == 'true'
         env:
-          SMOKE_URL: \${{ secrets.WEB_SMOKE_URL }}
+          SMOKE_URL: ${{ secrets.WEB_SMOKE_URL }}
         run: |
-          if [ -z "\${SMOKE_URL:-}" ]; then
+          if [ -z "${SMOKE_URL:-}" ]; then
             echo "WEB_SMOKE_URL is not configured; smoke test was skipped."
             exit 0
           fi
@@ -99,7 +99,7 @@ jobs:
             case "$status" in
               2*|3*) echo "Web smoke test passed with HTTP $status."; exit 0 ;;
             esac
-            echo "Web not ready yet (HTTP \${status:-000}), attempt $attempt/18."
+            echo "Web not ready yet (HTTP ${status:-000}), attempt $attempt/18."
             sleep 10
           done
           echo "Web smoke test did not become healthy within the bounded retry window."
