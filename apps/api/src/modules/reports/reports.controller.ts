@@ -32,6 +32,7 @@ import { SupabaseAuthGuard } from '../../auth/supabase-auth.guard.js';
 import { CreateReportDto } from './dto/create-report.dto.js';
 import { ListReportsQueryDto } from './dto/list-reports-query.dto.js';
 import { ReportsService } from './reports.service.js';
+import { ReportListResponseDto, ReportResponseDto } from './dto/report-response.dto.js';
 
 @ApiTags('reports')
 @ApiBearerAuth()
@@ -52,7 +53,7 @@ export class ReportsController {
     required: true,
     description: 'Clé opaque de 8 à 128 caractères générée par le client et conservée en cas de retry.',
   })
-  @ApiCreatedResponse({ description: 'Signalement créé, contenus liés et événement métier journalisé.' })
+  @ApiCreatedResponse({ type: ReportResponseDto, description: 'Signalement créé, contenus liés et événement métier journalisé.' })
   @ApiBadRequestResponse({ description: 'Données invalides, localisation incohérente ou référentiel inactif.' })
   @ApiConflictResponse({ description: 'Clé idempotente réutilisée avec un autre contenu ou conflit concurrent.' })
   @ApiUnauthorizedResponse({ description: 'Jeton Supabase absent ou invalide.' })
@@ -69,7 +70,7 @@ export class ReportsController {
   @ApiOperation({ summary: 'Liste les signalements du citoyen connecté' })
   @ApiQuery({ name: 'page', required: false, type: Number, minimum: 1 })
   @ApiQuery({ name: 'pageSize', required: false, type: Number, minimum: 1, maximum: 100 })
-  @ApiOkResponse({ description: 'Page de signalements appartenant exclusivement au compte connecté.' })
+  @ApiOkResponse({ type: ReportListResponseDto, description: 'Page de signalements appartenant exclusivement au compte connecté.' })
   @ApiUnauthorizedResponse({ description: 'Jeton Supabase absent ou invalide.' })
   listMine(@Query() query: ListReportsQueryDto, @CurrentAuthUser() user: User) {
     return this.reports.listMine(user.id, query);
@@ -78,7 +79,7 @@ export class ReportsController {
   @Get(':id')
   @ApiOperation({ summary: 'Consulte un signalement appartenant au citoyen connecté' })
   @ApiParam({ name: 'id', format: 'uuid' })
-  @ApiOkResponse({ description: 'Détail du signalement et contenus communicables à son auteur.' })
+  @ApiOkResponse({ type: ReportResponseDto, description: 'Détail du signalement et contenus communicables à son auteur.' })
   @ApiNotFoundResponse({ description: 'Signalement introuvable.' })
   @ApiUnauthorizedResponse({ description: 'Jeton Supabase absent ou invalide.' })
   getMine(@Param('id', ParseUUIDPipe) id: string, @CurrentAuthUser() user: User) {
