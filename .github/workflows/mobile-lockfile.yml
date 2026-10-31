@@ -8,7 +8,7 @@ on:
       - apps/mobile/package.json
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   resolve:
@@ -33,10 +33,17 @@ jobs:
       - name: Resolve lockfile without installing workspace packages
         run: pnpm install --lockfile-only --no-frozen-lockfile
 
-      - name: Upload resolved lockfile
-        uses: actions/upload-artifact@v4
-        with:
-          name: phase-21-pnpm-lock
-          path: pnpm-lock.yaml
-          if-no-files-found: error
-          retention-days: 1
+      - name: Commit resolved lockfile to feature branch
+        env:
+          BRANCH_NAME: ${{ github.ref_name }}
+        run: |
+          if git diff --quiet -- pnpm-lock.yaml; then
+            echo "pnpm-lock.yaml is already up to date."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pnpm-lock.yaml
+          git commit -m "chore(mobile): resolve Expo SDK 57 native media dependencies"
+          git push origin "HEAD:${BRANCH_NAME}"
