@@ -38,10 +38,15 @@ jobs:
           echo "Render accepted the deployment request." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Smoke test deployed API (optional)
-        if: ${{ secrets.API_SMOKE_URL != '' && secrets.RENDER_DEPLOY_HOOK_URL != '' }}
         env:
           SMOKE_URL: ${{ secrets.API_SMOKE_URL }}
+          DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         run: |
+          if [ -z "${SMOKE_URL:-}" ] || [ -z "${DEPLOY_HOOK_URL:-}" ]; then
+            echo "Smoke URL or deploy hook is not configured; smoke test was skipped."
+            exit 0
+          fi
+
           for attempt in $(seq 1 24); do
             status="$(curl --silent --show-error --location --max-time 15 \
               --output /dev/null --write-out '%{http_code}' "$SMOKE_URL" || true)"
