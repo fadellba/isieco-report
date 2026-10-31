@@ -102,8 +102,8 @@ export class VerificationService {
       .map((assignment) => this.toPendingItem(assignment))
       .filter((item): item is NonNullable<typeof item> => item !== null)
       .sort((left, right) =>
-        right.intervention.dateSoumissionCompteRendu.getTime() -
-        left.intervention.dateSoumissionCompteRendu.getTime(),
+        (right.intervention.dateSoumissionCompteRendu?.getTime() ?? 0) -
+        (left.intervention.dateSoumissionCompteRendu?.getTime() ?? 0),
       );
 
     const total = pending.length;
