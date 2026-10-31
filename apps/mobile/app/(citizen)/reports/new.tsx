@@ -5,8 +5,8 @@ import {
   createReportIdempotencyKey,
   submitReport,
   type CreateReportPayload,
-} from '../../../../src/features/reports/reports-api';
-import { localDateTimeToIso, parseOptionalCoordinate } from '../../../../src/features/reports/report-format';
+} from '../../../src/features/reports/reports-api';
+import { localDateTimeToIso, parseOptionalCoordinate } from '../../../src/features/reports/report-format';
 
 const inputClass = 'mt-1 rounded-xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900';
 
@@ -38,6 +38,9 @@ export default function NewCitizenReportScreen() {
       const precisionNumber = precision.trim() ? Number(precision.trim().replace(',', '.')) : undefined;
       if ((lat === undefined) !== (lon === undefined)) {
         throw new Error('Renseignez la latitude et la longitude ensemble, ou laissez les deux vides.');
+      }
+      if (precisionNumber !== undefined && lat === undefined) {
+        throw new Error('La précision ne peut être renseignée que si les coordonnées sont fournies.');
       }
       if (precisionNumber !== undefined && (!Number.isFinite(precisionNumber) || precisionNumber < 0 || precisionNumber > 100000)) {
         throw new Error('La précision doit être comprise entre 0 et 100000 mètres.');
