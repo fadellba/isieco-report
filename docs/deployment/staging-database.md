@@ -8,11 +8,11 @@ Le bucket privé `isieco-private-media` existe déjà, avec limite 10 MiB et typ
 
 ## Pourquoi passer par Prisma Migrate
 
-La source de vérité du schéma métier est `prisma/schema.prisma` et les cinq migrations SQL versionnées dans `prisma/migrations/`. L'historique d'application est conservé dans `_prisma_migrations`.
+La source de vérité du schéma métier est `prisma/schema.prisma` et les six migrations SQL versionnées dans `prisma/migrations/`. L'historique d'application est conservé dans `_prisma_migrations`.
 
 Ne pas copier les fichiers SQL dans le Dashboard Supabase et ne pas appeler manuellement `apply_migration` pour ce schéma : cela ne mettrait pas à jour l'historique `_prisma_migrations` de Prisma et rendrait le déploiement suivant incohérent.
 
-La migration `20261031000000_supabase_business_data_api_lockdown` ajoute également une protection importante pour Supabase : RLS sur les 38 tables métier, révocation des privilèges des rôles `anon`, `authenticated` et `service_role`, et suppression de leurs privilèges par défaut sur les futurs objets du schéma `public`. Les clients ISI-Eco ne consomment pas PostgreSQL directement ; ils passent par NestJS.
+La migration `20261031000000_supabase_business_data_api_lockdown` ajoute une protection importante pour Supabase : RLS sur les 38 tables métier, révocation des privilèges des rôles `anon`, `authenticated` et `service_role`, et suppression de leurs privilèges par défaut sur les futurs objets créés par le rôle de migration. La migration corrective `20261101000000_supabase_prisma_migration_history_lockdown` protège également `public._prisma_migrations`, que Prisma crée automatiquement avant d'appliquer les migrations versionnées : RLS y est activé et les privilèges des rôles Data API lui sont retirés. Les clients ISI-Eco ne consomment pas PostgreSQL directement ; ils passent par NestJS.
 
 Cette protection est nécessaire car les privilèges par défaut observés sur le projet staging accordaient encore des droits aux rôles Data API sur les tables futures. La configuration réelle du projet prime sur les valeurs par défaut supposées.
 
@@ -45,9 +45,9 @@ pnpm exec prisma migrate status
 Après réussite, vérifier dans Supabase :
 
 - les 38 tables métier attendues dans le schéma `public` ;
-- les cinq entrées de migration dans `_prisma_migrations` ;
-- RLS activé sur les 38 tables ;
-- aucun privilège direct `SELECT/INSERT/UPDATE/DELETE` pour `anon`, `authenticated` et `service_role` sur les tables métier ;
+- les six entrées de migration dans `_prisma_migrations` ;
+- RLS activé sur les 38 tables métier et sur `public._prisma_migrations` ;
+- aucun privilège direct `SELECT/INSERT/UPDATE/DELETE` pour `anon`, `authenticated` et `service_role` sur les tables métier ou sur `public._prisma_migrations` ;
 - absence de privilèges par défaut accordés à ces rôles sur les futures tables, séquences et fonctions.
 
 Le Security Advisor doit être relancé après l'application. Les tests d'API et d'upload ne doivent commencer qu'après configuration des variables serveur, notamment `DATABASE_URL`, `DIRECT_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SECRET_KEY` et une valeur approuvée pour `MEDIA_RETENTION_DAYS`.
