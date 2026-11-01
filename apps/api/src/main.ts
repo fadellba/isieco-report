@@ -18,7 +18,14 @@ async function bootstrap(): Promise<void> {
   app.setGlobalPrefix('api/v1');
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
   const document = createOpenApiDocument(app);
-  SwaggerModule.setup('docs', app, document, { swaggerOptions: { displayRequestDuration: true } });
+  SwaggerModule.setup('docs', app, document, {
+    swaggerOptions: {
+      displayRequestDuration: true,
+      tryItOutEnabled: true,
+      supportedSubmitMethods: ['get', 'post', 'put', 'patch', 'delete'],
+      persistAuthorization: true,
+    },
+  });
   const port = Number(process.env.PORT ?? 3000);
   await app.listen(port, '0.0.0.0');
 }
