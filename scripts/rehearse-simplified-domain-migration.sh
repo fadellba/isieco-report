@@ -12,8 +12,8 @@ fi
 
 node --input-type=module <<'NODE'
 const target = new URL(process.env.LEGACY_DATABASE_URL);
-const host = target.hostname.replace(/^\\[|\\]$/g, "").toLowerCase();
-const database = decodeURIComponent(target.pathname.replace(/^\\/+/, "").split("/")[0]);
+const host = target.hostname.replace("[", "").replace("]", "").toLowerCase();
+const database = decodeURIComponent(target.pathname.slice(1).split("/")[0]);
 
 if (!["postgres:", "postgresql:"].includes(target.protocol)) {
   throw new Error("LEGACY_DATABASE_URL must be a PostgreSQL connection string.");
