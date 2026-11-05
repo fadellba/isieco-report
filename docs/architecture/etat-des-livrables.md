@@ -1,53 +1,37 @@
 # État des livrables
 
-État de référence : **5 novembre 2026, après fusion de la PR #33 dans `main`. La CI #184 sur le commit `2db03a7b1443a35e96dd06daee032fa00ed73bcd` est verte.** « Intégré » signifie fusionné dans `main`. « Initialisé » signifie que la structure existe sans parcours métier complet. « En cours » désigne une évolution sur une branche non fusionnée. Un build vert ne vaut pas recette utilisateur.
+État de référence : **5 novembre 2026**. La simplification du modèle est dans main via la PR #33. La CI #184 du commit 2db03a7b1443a35e96dd06daee032fa00ed73bcd est verte sur base vierge. La PR #34 apporte les tests de répétition de migration, les corrections de génération UML et les verrous de sauvegarde staging.
 
-| Domaine | Livrable | État |
-|---|---|---|
-| Architecture | Monolithe modulaire et monorepo pnpm | Architecture documentée ; alignement structurel progressif, sans déplacement massif requis. |
-| Toolchain | Node.js, pnpm et lockfile | Versions épinglées ; installation CI en `--frozen-lockfile`. |
-| CI | `.github/workflows/ci.yml` | Présent ; run push du commit `7b02e5a` sur `main` vert (run #41253417586) : migrations PostgreSQL, OpenAPI, TypeScript, tests et builds Web/API/Mobile réussis. |
-| CI UML | `render-uml-class-diagrams.yml` | Présent pour régénérer les vues UML à partir de la source versionnée. |
-| CI/CD | Déploiements Web/API | Intégrés (PR #25) : workflows sur push `main` ou lancement manuel, attente de la CI réussie sur le même SHA, opt-in `PRODUCTION_DEPLOY_ENABLED=true`, Deploy Hooks Vercel/Render et smoke tests conditionnels. Les appels production restent désactivés. Les runs #41253417596/#41253417593 ont confirmé la CI sur le même SHA, puis ignoré les appels Vercel/Render car `PRODUCTION_DEPLOY_ENABLED` et les Deploy Hooks sont absents. Workflow staging `staging-migrate.yml` ajouté : déclenchement manuel sur `main`, confirmation `APPLY`, environnement `staging` et secret dédié. |
-| Backend | Accounts | Intégré : profils, provisionnement citoyen, administration des comptes/rôles, audit transactionnel et protection du dernier administrateur. |
-| Backend | Referentials | Intégré : types de déchets, régions/départements/communes, équipes, appartenances, compétences, disponibilité historisée et délégations. |
-| Backend | Reports | Intégré : soumission idempotente, validation des référentiels, suivi propriétaire et demandes/réponses de complément. Upload privé de photos intégré (PR #15). |
-| Backend | Qualification | Intégré : file, compléments, acceptation, rejet motivé et transitions atomiques. |
-| Backend | Cases | Intégré : création, rattachements/détachements, provenance, priorité et localisation historisées. |
-| Backend | Assignments | Intégré : affectation idempotente, contrôle de compétence/disponibilité, réponse d'équipe et réaffectation. |
-| Backend | Interventions | Intégré : démarrage, compte rendu, résultat/exception et reprise. Upload privé de preuves photo intégré (PR #15). |
-| Backend | Verification | Intégré : vérification indépendante, séparation des tâches, demande de reprise et clôture après achèvement des contenus actifs. |
-| Backend | Audit | Intégré (PR #16) : journal personnel et historique des rôles à portée limitée, pagination/filtres, métadonnées sûres uniquement. Pas de listing global ni export. |
-| Médias | Infrastructure Storage privée | Intégrée (PR #15) : upload serveur, validation JPEG/PNG/WebP, limite 10 MiB, liens signés 60 secondes et purge bornée/auditée. |
-| Médias | Bucket Supabase staging | Provisionné sur `isieco-report-staging` et vérifié le 31 octobre 2026 : privé, 10 MiB, JPEG/PNG/WebP, RLS actif sur les tables Storage, aucune policy directe `anon`/`authenticated`, aucun objet. Secret serveur, politique de rétention et test d'upload API encore à configurer. |
-| Médias | Purge des objets expirés | Commande `pnpm storage:purge` intégrée ; planification Cron à configurer. |
-| Web | Shell et authentification par rôle | Intégrés (PR #17) : contexte Supabase, profil API, gardes et navigation par rôle. |
-| Web | Comptes et activité | Intégrés (PR #17) : gestion des rôles et journal personnel paginé/filtrable. |
-| Web | Qualification et dossiers | Intégrés (PR #18) : file/détail de qualification, photos signées, compléments, décisions, création et gestion des dossiers. CI post-fusion réussie. |
-| Web | Référentiels | Intégrés (PR #19) : types de déchets, géographie, équipes, appartenances, compétences, disponibilité et délégations. |
-| Web | Affectations | Intégrées (PR #20) : découverte paginée, sélection d'équipes éligibles, création, suivi filtrable et réaffectation. |
-| Web | Interventions | Intégrées (PR #21) : équipes du compte connecté, réponses aux affectations, démarrage, preuves photo multipart et compte rendu, auteur et appartenance vérifiés côté API. |
-| Web | Vérification | Intégrée (PR #22) : file paginée, détail du compte rendu, photos privées signées à la demande, séparation des tâches, décision conforme et demande de reprise motivée. |
-| Web | Médias | Consultation des photos de qualification et upload des preuves d'intervention intégrés dans leurs parcours respectifs ; le dépôt Web de photos de signalement n'est pas un parcours livré. |
-| Mobile | Parcours citoyen | Intégré (PR #23) : liste paginée propriétaire, dépôt idempotent, détail, réponses aux compléments, ajout de photos natives et position ponctuelle (PR #26). |
-| Mobile | Parcours Agent terrain | Intégré (PR #24) : équipes propres au compte, affectations, réponses, démarrage, compte rendu, reprise et upload natif des preuves photo (PR #26). |
-| Mobile | Photos et géolocalisation natives | Intégrées (PR #26) : image picker, capture caméra, conversion JPEG, upload privé citoyen/agent, aperçu par URL signée et localisation au premier plan sur demande. CI complète verte. |
-| Packages | `shared` et `api-client` | Initialisés ; contrats et endpoints dédiés à compléter à mesure des besoins des clients. |
-| Base de données | MLD v2.13 | 18 modèles Prisma présents ; l'ancien schéma de 38 modèles est converti par la migration de simplification. |
-| Base de données | Migrations | Sept migrations Prisma versionnées, dont la dernière est destructive ; la CI #184 a validé la base vierge. La répétition de la migration depuis les six migrations historiques avec données synthétiques est en cours dans une branche de suivi. Le projet staging reste vierge jusqu'à l'exécution du workflow manuel `Staging Database Migrate` avec `STAGING_PRISMA_URL`. |
-| UML/Merise | Modèles et cas d'utilisation | Le diagramme de classes décrit désormais 18 modèles ; le workflow UML #3 a échoué car son générateur attendait encore 38 classes. Correctif du générateur et mise à jour des PNG/SVG en cours. |
-| Exploitation | Vercel, Render, Supabase distant | Architecture documentée ; configuration et déploiements de production non confirmés. |
-| Mobile | Recette native | À faire : tester permissions, galerie, caméra, conversion d'images et localisation sur appareils Android/iOS réels. |
-| Mobile | APK signé et GitHub Release | À faire ; aucun APK de release signé confirmé. |
+| Domaine | État vérifié |
+|---|---|
+| Architecture | Monorepo pnpm, API NestJS, Web React et Mobile Expo. |
+| Modèle métier | 18 modèles Prisma : identité/rôles, référentiels/équipes, signalements, dossiers, affectations, interventions et vérifications. |
+| Migration | Sept migrations versionnées. La dernière transforme l'ancien schéma de 38 tables en 18 tables et supprime volontairement des historiques/modules hors périmètre. |
+| CI de base | CI #184 sur main réussie : migrations à blanc, OpenAPI, TypeScript, tests et builds Web/API/Mobile. |
+| Répétition historique | La PR #34 ajoute le replay des six anciennes migrations sur une base PostgreSQL jetable, des fixtures synthétiques, l'application de la migration simplifiée et des assertions de conservation. La validation couvre aussi l'insertion d'un contenu absent et une vérification ancienne non appariable. |
+| UML/Merise | Le générateur cible 18 classes, 32 associations et six artefacts graphiques : vue d'ensemble, quatre vues de domaine et SVG relationnel. Les sources Mermaid et matrices de correspondance ont été mises à jour. |
+| API | Les modules Accounts, Reports, Qualification, Cases, Assignments, Interventions et Verification ont été adaptés au modèle simplifié. OpenAPI, tests et compilation passent dans la CI de suivi. |
+| Web/Mobile | Les clients Web et Mobile ont été adaptés au schéma simplifié. Les builds passent ; la recette utilisateur et les tests sur appareils Android/iOS réels restent à faire. |
+| Médias | Upload privé, liens signés et commande de purge présents. Configuration des secrets serveur, politique de rétention, Cron de purge et recette Storage staging encore requis. |
+| Staging Supabase | Projet isieco-report-staging, six anciennes migrations enregistrées. Données observées : 3 utilisateurs, 8 rôles, 1 signalement, 1 photo et 6 événements ; aucun dossier, équipe, affectation, intervention ou vérification. Dataset non représentatif des migrations métier complexes. |
+| Sauvegarde | Offre Supabase Free : pas de backup quotidien géré. Une exportation logique via Supabase CLI est à effectuer, conserver hors dépôt et restaurer dans un projet isolé. Aucune sauvegarde restaurable n'a été vérifiée durant cet audit. |
+| Workflow staging | staging-migrate.yml reste manuel, limité à main, et exige deux confirmations : APPLY et YES pour attester qu'une sauvegarde a été restaurée. Ce verrou ne remplace pas la preuve opérateur. |
+| Production | Les workflows Vercel/Render existent, mais les appels de déploiement de production sont désactivés. Aucun déploiement ni smoke test production n'est confirmé. |
+| PFE | Diagramme UML, matrice conceptuel/Prisma/PostgreSQL, documentation de migration et pertes d'historique sont synchronisés dans la branche de suivi. Figer le dossier après validation staging. |
+| Mobile natif | Permissions, caméra, galerie, upload, localisation et parcours métier à recetter sur appareils réels. APK Android signé et GitHub Release à produire. |
 
-## Prochain ordre de livraison recommandé
+## Ordre restant
 
-1. Terminer et valider le test CI de répétition sur les anciennes migrations avec données synthétiques ; auditer les pertes de données et vérifier les mappings. Configurer ensuite les secrets API, faire valider `MEDIA_RETENTION_DAYS`, tester l'upload privé et planifier `pnpm storage:purge`.
-2. Obtenir une sauvegarde restaurable ou un clone isolé, comparer les volumes historiques puis faire appliquer la migration en staging après validation explicite.
-3. Recetter les parcours Web/Mobile et l'API sur staging, puis tester Android/iOS réels, RLS, uploads et droits inter-comptes. N'activer `PRODUCTION_DEPLOY_ENABLED=true` qu'après validation de la sauvegarde, de la restauration et de la fenêtre de changement.
-4. Préparer la production uniquement après preuve de sauvegarde/restauration et validation de staging ; conserver les Deploy Hooks désactivés jusque-là.
-5. Figer les livrables PFE : diagramme UML, modèle physique, dictionnaire de données et rapport de migration avec pertes/écarts.
+1. Obtenir un export logique de staging, le conserver hors du dépôt et vérifier sa restauration dans un environnement isolé. Les exports de base n'incluent pas les comptes Supabase Auth ni les objets binaires Storage ; traiter ces éléments séparément lorsqu'une restauration applicative complète est requise.
+2. Comparer les volumes réels et les cas historiques sur une restauration isolée, puis valider explicitement les données supprimées et les vérifications non appariées.
+3. Après validation de la PR #34 et du backup, configurer le secret GitHub STAGING_PRISMA_URL et exécuter manuellement le workflow staging. Vérifier les 18 tables, sept migrations, RLS, privilèges, volumes et relations.
+4. Recetter les parcours API/Web/Mobile, les droits inter-comptes, Storage, puis Android/iOS réels.
+5. N'envisager la production qu'après restauration éprouvée, fenêtre de changement, variables/Deploy Hooks et smoke tests.
+6. Figer les livrables du PFE et préparer l'APK signé.
 
-## Règle de clôture d'un livrable
+## Conditions de clôture
 
-Un livrable n'est terminé qu'après implémentation, tests positifs et négatifs, sécurité, contrat OpenAPI, documentation synchronisée et validation de son environnement cible. La CI de compilation ne valide pas à elle seule les écrans, le bucket distant, les RLS, les secrets de l'environnement ni le processus de purge.
+- Une migration sur base vierge ne prouve pas la préservation des données historiques.
+- Le scénario CI synthétique ne remplace pas une sauvegarde réelle restaurée.
+- La présence d'un workflow de déploiement ne prouve pas une mise en production.
+- La compilation ne remplace pas la recette utilisateur ni les tests d'autorisation.
