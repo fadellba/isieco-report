@@ -11,8 +11,8 @@ on:
           - NO
           - APPLY
         default: NO
-      confirm_backup_restore:
-        description: "Confirm the public database backup was restored in isolation and Auth identities / Storage objects are separately accounted for."
+      confirm_staging_data_disposable:
+        description: "Confirm that all existing staging data and the legacy schema may be permanently transformed or deleted. This is staging-only, never production."
         required: true
         type: choice
         options:
@@ -30,7 +30,7 @@ concurrency:
 jobs:
   migrate:
     name: Apply versioned Prisma migrations to staging
-    if: github.ref == 'refs/heads/main' && inputs.apply_staging_migrations == 'APPLY' && inputs.confirm_backup_restore == 'YES'
+    if: github.ref == 'refs/heads/main' && inputs.apply_staging_migrations == 'APPLY' && inputs.confirm_staging_data_disposable == 'YES'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: staging
