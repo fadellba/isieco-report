@@ -34,6 +34,18 @@ BEGIN
     RAISE EXCEPTION 'The latest qualification was not merged into ContenuSignalement.';
   END IF;
 
+  IF NOT EXISTS (
+    SELECT 1 FROM public.contenu_signalement
+    WHERE id_signalement = '00000000-0000-4000-8000-000000000012'
+      AND id_type_dechet = '00000000-0000-4000-8000-000000000031'
+      AND quantite_estimee = 1.250
+      AND volume_estime = 0.500
+      AND remarque = 'Qualification sans contenu initial'
+      AND etat_qualification = 'CONFIRME'
+  ) THEN
+    RAISE EXCEPTION 'A qualification without a declared content row was not inserted.';
+  END IF;
+
   SELECT count(*) INTO v_count
   FROM public.contenu_signalement
   WHERE id_signalement = '00000000-0000-4000-8000-000000000011';
@@ -66,6 +78,16 @@ BEGIN
   WHERE id_intervention IS NOT NULL;
   IF v_count <> 2 THEN
     RAISE EXCEPTION 'Expected two verifications linked to interventions, found %.', v_count;
+  END IF;
+
+  SELECT count(*) INTO v_count FROM public.verification
+  WHERE id_intervention IS NULL;
+  IF v_count <> 1 OR NOT EXISTS (
+    SELECT 1 FROM public.verification
+    WHERE id_verification = '00000000-0000-4000-8000-000000000123'
+      AND id_intervention IS NULL
+  ) THEN
+    RAISE EXCEPTION 'The legacy verification without a matching intervention was not kept nullable.';
   END IF;
 
   IF NOT EXISTS (
