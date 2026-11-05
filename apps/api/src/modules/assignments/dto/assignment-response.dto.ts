@@ -136,3 +136,74 @@ export class EligibleTeamResponseDto {
   @ApiProperty()
   etatEquipe!: string;
 }
+
+export class AssignmentListResponseDto {
+  @ApiProperty({ type: [AssignmentResponseDto] })
+  items!: AssignmentResponseDto[];
+
+  @ApiProperty({ minimum: 1 })
+  page!: number;
+
+  @ApiProperty({ minimum: 1, maximum: 100 })
+  pageSize!: number;
+
+  @ApiProperty({ minimum: 0 })
+  total!: number;
+}
+
+export class PendingAssignmentContentDto {
+  @ApiProperty({ format: 'uuid' })
+  idContenuDossier!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  idDossier!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  idTypeDechet!: string;
+
+  @ApiProperty({ enum: ['ACTIF', 'RETIRE'] })
+  etatContenuDossier!: string;
+
+  @ApiProperty({ enum: ['EN_ATTENTE', 'EN_COURS', 'TERMINE'] })
+  etatPriseEnCharge!: string;
+
+  @ApiProperty({
+    type: 'object',
+    properties: {
+      idDossier: { type: 'string', format: 'uuid' },
+      referenceDossier: { type: 'string' },
+      statutDossier: { type: 'string' },
+      priorite: { type: 'string' },
+    },
+  })
+  dossier!: {
+    idDossier: string;
+    referenceDossier: string;
+    statutDossier: string;
+    priorite: string;
+  };
+
+  @ApiProperty({
+    type: 'object',
+    properties: {
+      idTypeDechet: { type: 'string', format: 'uuid' },
+      codeType: { type: 'string' },
+      libelle: { type: 'string' },
+    },
+  })
+  typeDechet!: { idTypeDechet: string; codeType: string; libelle: string };
+}
+
+export class PendingAssignmentContentListResponseDto {
+  @ApiProperty({ type: [PendingAssignmentContentDto] })
+  items!: PendingAssignmentContentDto[];
+
+  @ApiProperty({ minimum: 1 })
+  page!: number;
+
+  @ApiProperty({ minimum: 1, maximum: 100 })
+  pageSize!: number;
+
+  @ApiProperty({ minimum: 0 })
+  total!: number;
+}
