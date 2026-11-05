@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-ROOT_DIR="$(cd "$(dirname "\${BASH_SOURCE[0]}")/.." && pwd)"
-: "\${LEGACY_DATABASE_URL:?LEGACY_DATABASE_URL must point to a disposable, empty PostgreSQL database}"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+: "${LEGACY_DATABASE_URL:?LEGACY_DATABASE_URL must point to a disposable, empty PostgreSQL database}"
 
 PSQL=(psql "$LEGACY_DATABASE_URL" --no-psqlrc --set ON_ERROR_STOP=1 --quiet)
 
 echo "Preparing PostgreSQL roles and Prisma migration metadata for the legacy replay."
-"\${PSQL[@]}" <<'SQL'
+"${PSQL[@]}" <<'SQL'
 DO $roles$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
@@ -43,23 +43,23 @@ migrations=(
   20261101000000_supabase_prisma_migration_history_lockdown
 )
 
-for migration in "\${migrations[@]}"; do
+for migration in "${migrations[@]}"; do
   sql_file="$ROOT_DIR/prisma/migrations/$migration/migration.sql"
   if [[ ! -s "$sql_file" ]]; then
     echo "Missing legacy migration: $sql_file" >&2
     exit 1
   fi
   echo "Replaying $migration"
-  "\${PSQL[@]}" --file "$sql_file"
+  "${PSQL[@]}" --file "$sql_file"
 done
 
 echo "Seeding representative legacy business data."
-"\${PSQL[@]}" --file "$ROOT_DIR/scripts/fixtures/simplified-domain-legacy-seed.sql"
+"${PSQL[@]}" --file "$ROOT_DIR/scripts/fixtures/simplified-domain-legacy-seed.sql"
 
 echo "Applying the simplified-domain migration to populated legacy data."
-"\${PSQL[@]}" --file "$ROOT_DIR/prisma/migrations/20261105000000_simplified_domain_model/migration.sql"
+"${PSQL[@]}" --file "$ROOT_DIR/prisma/migrations/20261105000000_simplified_domain_model/migration.sql"
 
 echo "Checking preservation and transformation invariants."
-"\${PSQL[@]}" --file "$ROOT_DIR/scripts/fixtures/simplified-domain-migration-assertions.sql"
+"${PSQL[@]}" --file "$ROOT_DIR/scripts/fixtures/simplified-domain-migration-assertions.sql"
 
 echo "Legacy-to-simplified migration rehearsal passed."
