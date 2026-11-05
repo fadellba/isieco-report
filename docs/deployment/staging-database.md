@@ -58,7 +58,7 @@ Le Security Advisor doit être relancé après l'application. Les tests d'API et
 - Ne pas ajouter de policy RLS permissive « pour que le client fonctionne » ; les clients ne doivent pas lire ou écrire ces tables via PostgREST.
 - Ne pas activer les déploiements Vercel/Render de production dans le cadre de cette opération.
 - Les migrations Prisma sont versionnées et immuables après application. La migration simplifiée est destructive : elle supprime des tables et colonnes historiques et ne possède pas de rollback automatique. Pour corriger un problème après déploiement, préparer une migration corrective ; ne pas supprimer ou modifier les migrations déjà appliquées.
-- Le staging contrôlé le 5 novembre 2026 contient déjà des données (3 profils, 8 rôles, 1 signalement, 1 photo et 6 événements métier). Ne pas le traiter comme une base vierge ; sauvegarder et vérifier les données avant toute migration.
+- Le staging contrôlé le 5 novembre 2026 contient un petit jeu de données de test (3 profils, 8 rôles, 1 signalement, 1 photo et 6 événements métier). Ces données sont déclarées jetables ; la confirmation `YES` autorise explicitement leur perte ou transformation.
 
 
 ## Précondition de sauvegarde pour la migration destructive
