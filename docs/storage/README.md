@@ -41,7 +41,7 @@ L'authentification des utilisateurs continue d'utiliser \`SUPABASE_ANON_KEY\`. L
 
 Le client envoie un multipart/form-data à l'API avec le champ \`file\`.
 
-- Signalement : \`POST /api/v1/reports/:id/photos\) ; le citoyen doit posséder le signalement et avoir un compte actif.
+- Signalement : \`POST /api/v1/reports/:id/photos` ; le citoyen doit posséder le signalement et avoir un compte actif.
 - Intervention : \`POST /api/v1/interventions/:idIntervention/photos\` ; seul l'agent qui a démarré l'intervention, membre actif de l'équipe, peut ajouter une preuve avant la soumission du compte rendu.
 
 L'API limite chaque requête à un fichier de 10 MiB, détecte JPEG/PNG/WebP à partir de la signature binaire et vérifie la cohérence du MIME déclaré. Le nom original du fichier n'est pas conservé. Un identifiant aléatoire et le contexte métier déterminent le chemin de stockage.
