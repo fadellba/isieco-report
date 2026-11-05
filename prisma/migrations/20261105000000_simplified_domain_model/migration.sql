@@ -38,32 +38,6 @@ SET "cle_idempotence" = i."cle_idempotence",
 FROM "idempotence_signalement" i
 WHERE i."id_signalement" = s."id_signalement";
 
--- 4. Les tables héritées ne sont plus utilisées après la copie ci-dessus.
--- Les supprimer avant de remplacer les clés primaires composites qu'elles référencent.
-ALTER TABLE "affectation"
-  DROP CONSTRAINT IF EXISTS "affectation_id_dossier_id_type_dechet_fkey";
-
--- 9. Supprimer les tables secondaires qui ne font plus partie du périmètre simplifié.
-DROP TABLE IF EXISTS "photo_publication" CASCADE;
-DROP TABLE IF EXISTS "publication_flux" CASCADE;
-DROP TABLE IF EXISTS "badge_utilisateur" CASCADE;
-DROP TABLE IF EXISTS "badge" CASCADE;
-DROP TABLE IF EXISTS "historique_points" CASCADE;
-DROP TABLE IF EXISTS "notification" CASCADE;
-DROP TABLE IF EXISTS "preferences_visibilite_citoyen" CASCADE;
-DROP TABLE IF EXISTS "historique_localisation_dossier" CASCADE;
-DROP TABLE IF EXISTS "historique_priorite_dossier" CASCADE;
-DROP TABLE IF EXISTS "historique_disponibilite_equipe" CASCADE;
-DROP TABLE IF EXISTS "disponibilite_equipe" CASCADE;
-DROP TABLE IF EXISTS "delegation_decision_equipe" CASCADE;
-DROP TABLE IF EXISTS "provenance_contenu_dossier" CASCADE;
-DROP TABLE IF EXISTS "rattachement_signalement" CASCADE;
-DROP TABLE IF EXISTS "evenement_metier" CASCADE;
-DROP TABLE IF EXISTS "reponse_complement" CASCADE;
-DROP TABLE IF EXISTS "qualification_signalement" CASCADE;
-DROP TABLE IF EXISTS "idempotence_signalement" CASCADE;
-
-
 -- 3. Fusionner QualificationSignalement dans ContenuSignalement.
 ALTER TABLE "contenu_signalement"
   ADD COLUMN "id_contenu_signalement" UUID,
@@ -136,6 +110,14 @@ CREATE UNIQUE INDEX "contenu_signalement_id_signalement_id_type_dechet_key"
 -- 4. Donner un identifiant propre aux contenus de dossier et simplifier Affectation.
 ALTER TABLE "contenu_dossier"
   ADD COLUMN "id_contenu_dossier" UUID;
+
+-- Retirer les dépendances vers l'ancienne clé composite sans supprimer les tables source.
+ALTER TABLE "affectation"
+  DROP CONSTRAINT IF EXISTS "affectation_id_dossier_id_type_dechet_fkey";
+ALTER TABLE "evenement_metier"
+  DROP CONSTRAINT IF EXISTS "evenement_metier_id_dossier_contenu_cible_id_type_dechet_c_fkey";
+ALTER TABLE "provenance_contenu_dossier"
+  DROP CONSTRAINT IF EXISTS "provenance_contenu_dossier_id_dossier_id_type_dechet_fkey";
 
 UPDATE "contenu_dossier" SET "id_contenu_dossier" = gen_random_uuid() WHERE "id_contenu_dossier" IS NULL;
 ALTER TABLE "contenu_dossier" ALTER COLUMN "id_contenu_dossier" SET NOT NULL;
@@ -228,6 +210,29 @@ SET "actif" = (
   AND ("date_fin" IS NULL OR "date_fin" >= CURRENT_TIMESTAMP)
 ),
     "date_attribution" = "date_debut";
+
+-- Les copies sont terminées : supprimer les tables qui ne font plus partie du modèle.
+-- 9. Supprimer les tables secondaires qui ne font plus partie du périmètre simplifié.
+DROP TABLE IF EXISTS "photo_publication" CASCADE;
+DROP TABLE IF EXISTS "publication_flux" CASCADE;
+DROP TABLE IF EXISTS "badge_utilisateur" CASCADE;
+DROP TABLE IF EXISTS "badge" CASCADE;
+DROP TABLE IF EXISTS "historique_points" CASCADE;
+DROP TABLE IF EXISTS "notification" CASCADE;
+DROP TABLE IF EXISTS "preferences_visibilite_citoyen" CASCADE;
+DROP TABLE IF EXISTS "historique_localisation_dossier" CASCADE;
+DROP TABLE IF EXISTS "historique_priorite_dossier" CASCADE;
+DROP TABLE IF EXISTS "historique_disponibilite_equipe" CASCADE;
+DROP TABLE IF EXISTS "disponibilite_equipe" CASCADE;
+DROP TABLE IF EXISTS "delegation_decision_equipe" CASCADE;
+DROP TABLE IF EXISTS "provenance_contenu_dossier" CASCADE;
+DROP TABLE IF EXISTS "rattachement_signalement" CASCADE;
+DROP TABLE IF EXISTS "evenement_metier" CASCADE;
+DROP TABLE IF EXISTS "reponse_complement" CASCADE;
+DROP TABLE IF EXISTS "qualification_signalement" CASCADE;
+DROP TABLE IF EXISTS "idempotence_signalement" CASCADE;
+
+
 
 -- 10. Enlever les relations et colonnes géographiques non représentées dans le MCD simplifié.
 ALTER TABLE "signalement" DROP CONSTRAINT IF EXISTS "signalement_id_commune_fkey";
