@@ -195,19 +195,23 @@ classDiagram
 
   Utilisateur "1" -- "*" UtilisateurRole : habilitations
   Role "1" -- "*" UtilisateurRole : attribution
+  Utilisateur "0..*" -- "0..1" UtilisateurRole : attribuant
   Utilisateur "1" -- "*" AppartenanceEquipe : appartenances
   Equipe "1" -- "*" AppartenanceEquipe : membres
   Equipe "1" -- "*" CompetenceEquipe : compétences
   TypeDechet "1" -- "*" CompetenceEquipe : domaine
   Utilisateur "1" -- "*" Signalement : auteur
+  Utilisateur "0..*" -- "0..1" Signalement : décideur
   DossierTraitement "0..1" -- "*" Signalement : dossier courant
   Signalement "1" -- "*" PhotoSignalement : photos
   Signalement "1" -- "*" ContenuSignalement : catégories déclarées
   TypeDechet "1" -- "*" ContenuSignalement : catégorie
+  Utilisateur "0..*" -- "0..1" ContenuSignalement : qualificateur
   Signalement "1" -- "*" HistoriqueStatutSignalement : transitions
   Utilisateur "0..1" -- "*" HistoriqueStatutSignalement : acteur
   Signalement "1" -- "*" DemandeComplement : demandes
   Utilisateur "1" -- "*" DemandeComplement : demandeur
+  Utilisateur "0..*" -- "0..1" DemandeComplement : répondant
   DossierTraitement "1" -- "*" ContenuDossier : contenus
   TypeDechet "1" -- "*" ContenuDossier : catégorie
   Utilisateur "1" -- "*" DossierTraitement : créateur
@@ -215,6 +219,7 @@ classDiagram
   Equipe "1" -- "*" Affectation : équipe
   CompetenceEquipe "1" -- "*" Affectation : compétence
   Utilisateur "1" -- "*" Affectation : décideur
+  Utilisateur "0..*" -- "0..1" Affectation : répondant
   Affectation "1" -- "*" Intervention : interventions
   Utilisateur "1" -- "*" Intervention : agent
   Intervention "1" -- "*" PhotoIntervention : photos
