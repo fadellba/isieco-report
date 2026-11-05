@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsDateString, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class CreateWasteTypeDto {
   @ApiProperty({ maxLength: 80 })
@@ -19,12 +19,4 @@ export class CreateWasteTypeDto {
   @IsString()
   @MaxLength(2000)
   description?: string;
-
-  @ApiProperty()
-  @IsBoolean()
-  orientationSpecialisee!: boolean;
-
-  @ApiProperty({ format: 'date-time' })
-  @IsDateString()
-  dateDebutValidite!: string;
 }

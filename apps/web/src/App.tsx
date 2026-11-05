@@ -2,7 +2,6 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppShell } from './app/AppShell';
 import { ProtectedRoute } from './app/ProtectedRoute';
 import { AccountsPage } from './features/accounts/AccountsPage';
-import { AuditPage } from './features/audit/AuditPage';
 import { DashboardPage } from './features/dashboard/DashboardPage';
 import { QualificationQueuePage } from './features/qualification/QualificationQueuePage';
 import { QualificationDetailPage } from './features/qualification/QualificationDetailPage';
@@ -69,17 +68,11 @@ export function App() {
             <InterventionsPage />
           </ProtectedRoute>
         } />
-        <Route path="verification" element={
-          <ProtectedRoute roles={['VERIFICATEUR_CLOTURE']}>
-            <VerificationPage />
-          </ProtectedRoute>
-        } />
         <Route path="referentiels" element={
           <ProtectedRoute roles={['GESTIONNAIRE_REFERENTIEL']}>
             <ReferentialsPage />
           </ProtectedRoute>
         } />
-        <Route path="activite" element={<AuditPage />} />
         <Route path="acces-refuse" element={<AccessDeniedPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

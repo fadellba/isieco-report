@@ -35,14 +35,8 @@ export const navigationItems: NavigationItem[] = [
   {
     to: '/referentiels',
     label: 'Référentiels',
-    description: 'Types de déchets, géographie et équipes',
+    description: 'Types de déchets, équipes et compétences',
     roles: ['GESTIONNAIRE_REFERENTIEL'],
-  },
-  {
-    to: '/verification',
-    label: 'Vérification',
-    description: 'Contrôle indépendant des comptes rendus',
-    roles: ['VERIFICATEUR_CLOTURE'],
   },
   {
     to: '/verification',
@@ -55,20 +49,5 @@ export const navigationItems: NavigationItem[] = [
     label: 'Interventions',
     description: 'Missions et comptes rendus de terrain',
     roles: ['AGENT_TERRAIN'],
-  },
-  {
-    to: '/activite',
-    label: 'Mon activité',
-    description: 'Événements métier liés à mon compte',
-    roles: [
-      'CITOYEN',
-      'AGENT_QUALIFICATION',
-      'RESPONSABLE_TRAITEMENT',
-      'RESPONSABLE_AFFECTATION',
-      'AGENT_TERRAIN',
-      'VERIFICATEUR_CLOTURE',
-      'GESTIONNAIRE_REFERENTIEL',
-      'ADMINISTRATEUR_COMPTES',
-    ],
   },
 ];

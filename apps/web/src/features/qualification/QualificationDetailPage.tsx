@@ -28,7 +28,6 @@ interface ReportDetail {
   dateConstat: string | null;
   dateSoumission: string | null;
   description: string | null;
-  idCommune: string | null;
   latitude: string | null;
   longitude: string | null;
   precisionLocalisation: string | null;
@@ -42,7 +41,6 @@ interface ContentForm {
   idTypeDechet: string;
   selected: boolean;
   quantiteEstimee: string;
-  uniteQuantite: string;
   volumeEstime: string;
   remarque: string;
 }
@@ -75,7 +73,6 @@ export function QualificationDetailPage() {
         idTypeDechet: item.idTypeDechet,
         selected: true,
         quantiteEstimee: item.quantiteEstimee ?? '',
-        uniteQuantite: '',
         volumeEstime: item.volumeEstime ?? '',
         remarque: item.remarque ?? '',
       })));
@@ -135,7 +132,6 @@ export function QualificationDetailPage() {
       const payload = selected.map((item) => ({
         idTypeDechet: item.idTypeDechet,
         ...(item.quantiteEstimee.trim() ? { quantiteEstimee: Number(item.quantiteEstimee) } : {}),
-        ...(item.uniteQuantite.trim() ? { uniteQuantite: item.uniteQuantite.trim() } : {}),
         ...(item.volumeEstime.trim() ? { volumeEstime: Number(item.volumeEstime) } : {}),
         ...(item.remarque.trim() ? { remarque: item.remarque.trim() } : {}),
       }));
@@ -181,7 +177,6 @@ export function QualificationDetailPage() {
           <h2 className="font-bold text-slate-900">Description et localisation</h2>
           <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">{report.description || 'Aucune description fournie.'}</p>
           <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-            <p><span className="block text-xs font-bold text-slate-400">Commune</span><span className="mt-1 block break-all">{report.idCommune || 'Non renseignée'}</span></p>
             <p><span className="block text-xs font-bold text-slate-400">Coordonnées</span><span className="mt-1 block">{report.latitude && report.longitude ? `${report.latitude}, ${report.longitude}` : 'Non renseignées'}</span></p>
             <p><span className="block text-xs font-bold text-slate-400">Description du lieu</span><span className="mt-1 block">{report.descriptionLocalisation || '—'}</span></p>
             <p><span className="block text-xs font-bold text-slate-400">Précision (m)</span><span className="mt-1 block">{report.precisionLocalisation || '—'}</span></p>
@@ -223,9 +218,8 @@ export function QualificationDetailPage() {
               const declared = report.contenus.find((content) => content.idTypeDechet === item.idTypeDechet);
               return <article key={item.idTypeDechet} className="rounded-xl border border-slate-200 p-4">
                 <label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={item.selected} onChange={(event) => patchContent(index, { selected: event.target.checked })} />{declared?.typeDechet.libelle || declared?.typeDechet.codeType}</label>
-                <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   <label className="text-xs font-semibold text-slate-600">Quantité<input type="number" min="0" step="0.001" value={item.quantiteEstimee} onChange={(event) => patchContent(index, { quantiteEstimee: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal" /></label>
-                  <label className="text-xs font-semibold text-slate-600">Unité<input maxLength={40} value={item.uniteQuantite} onChange={(event) => patchContent(index, { uniteQuantite: event.target.value })} placeholder="kg, sac…" className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal" /></label>
                   <label className="text-xs font-semibold text-slate-600">Volume<input type="number" min="0" step="0.001" value={item.volumeEstime} onChange={(event) => patchContent(index, { volumeEstime: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal" /></label>
                 </div>
                 <label className="mt-3 block text-xs font-semibold text-slate-600">Remarque<input maxLength={1000} value={item.remarque} onChange={(event) => patchContent(index, { remarque: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal" /></label>

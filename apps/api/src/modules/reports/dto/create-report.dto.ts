@@ -1,6 +1,8 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
+  ArrayMinSize,
   ArrayUnique,
   IsArray,
   IsDateString,
@@ -50,10 +52,6 @@ export class CreateReportDto {
   dateConstat?: string;
 
   @IsOptional()
-  @IsUUID()
-  idCommune?: string;
-
-  @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 6 })
   @Min(-90)
@@ -79,11 +77,12 @@ export class CreateReportDto {
   @MaxLength(1000)
   descriptionLocalisation?: string;
 
-  @IsOptional()
+  @ApiProperty({ type: () => [CreateReportContentDto], minItems: 1, maxItems: 20 })
   @IsArray()
+  @ArrayMinSize(1)
   @ArrayMaxSize(20)
   @ArrayUnique((content: CreateReportContentDto) => content.idTypeDechet)
   @ValidateNested({ each: true })
   @Type(() => CreateReportContentDto)
-  contenus?: CreateReportContentDto[];
+  contenus!: CreateReportContentDto[];
 }

@@ -14,9 +14,9 @@ export class CreateTeamDto {
   @MaxLength(2000)
   description?: string;
 
-  @ApiProperty({ description: 'Code d’état métier conservé comme chaîne selon le dictionnaire de référence.' })
+  @ApiProperty({ default: 'ACTIVE' })
   @IsString()
   @IsNotEmpty()
   @MaxLength(50)
-  etatEquipe!: string;
+  etatEquipe = 'ACTIVE';
 }

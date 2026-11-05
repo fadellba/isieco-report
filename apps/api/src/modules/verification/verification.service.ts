@@ -13,60 +13,42 @@ import type { ListVerificationsQueryDto } from './dto/list-verifications-query.d
 
 type Transaction = Prisma.TransactionClient;
 
-const reviewSelect = {
+const pendingInterventionSelect = {
+  idIntervention: true,
   idAffectation: true,
-  idEquipe: true,
-  etatAffectation: true,
-  decisionEquipe: true,
-  dateFinAffectation: true,
-  contenuDossier: {
+  dateHeureDebut: true,
+  dateSoumissionCompteRendu: true,
+  statutIntervention: true,
+  resultatIntervention: true,
+  compteRendu: true,
+  motifException: true,
+  renseignePar: true,
+  photos: {
+    orderBy: [{ dateAjout: 'asc' as const }, { idPhotoIntervention: 'asc' as const }],
+    select: { idPhotoIntervention: true, description: true, dateAjout: true },
+  },
+  affectation: {
     select: {
-      idDossier: true,
-      idTypeDechet: true,
-      etatContenuDossier: true,
-      etatPriseEnCharge: true,
-      dossier: {
+      idAffectation: true,
+      idEquipe: true,
+      etatAffectation: true,
+      decisionEquipe: true,
+      dateFinAffectation: true,
+      contenuDossier: {
         select: {
-          referenceDossier: true,
-          statutDossier: true,
+          idContenuDossier: true,
+          idDossier: true,
+          idTypeDechet: true,
+          etatContenuDossier: true,
+          etatPriseEnCharge: true,
+          dossier: { select: { referenceDossier: true, statutDossier: true } },
         },
       },
     },
   },
-  interventions: {
-    orderBy: [{ dateHeureDebut: 'desc' }, { idIntervention: 'desc' }],
-    take: 1,
-    select: {
-      idIntervention: true,
-      dateHeureDebut: true,
-      dateSoumissionCompteRendu: true,
-      statutIntervention: true,
-      resultatIntervention: true,
-      compteRendu: true,
-      motifException: true,
-      renseignePar: true,
-      photos: {
-        orderBy: [{ dateAjout: 'asc' }, { idPhotoIntervention: 'asc' }],
-        select: {
-          idPhotoIntervention: true,
-          description: true,
-          dateAjout: true,
-          etatPublication: true,
-        },
-      },
-    },
-  },
-  verifications: {
-    orderBy: [{ dateVerification: 'desc' }, { idVerification: 'desc' }],
-    take: 1,
-    select: {
-      idVerification: true,
-      dateVerification: true,
-      resultatVerification: true,
-      etatVerification: true,
-    },
-  },
-} satisfies Prisma.AffectationSelect;
+} satisfies Prisma.InterventionSelect;
+
+type PendingIntervention = Prisma.InterventionGetPayload<{ select: typeof pendingInterventionSelect }>;
 
 function isPrismaCode(error: unknown, code: string): boolean {
   return typeof error === 'object' && error !== null && 'code' in error && error.code === code;
@@ -90,38 +72,76 @@ export class VerificationService {
     return actor.idUtilisateur;
   }
 
+  private toPendingItem(intervention: PendingIntervention) {
+    if (
+      intervention.statutIntervention !== 'SOUMISE' ||
+      !intervention.dateSoumissionCompteRendu ||
+      !intervention.dateHeureDebut ||
+      !intervention.resultatIntervention ||
+      !intervention.compteRendu ||
+      intervention.affectation.dateFinAffectation ||
+      intervention.affectation.etatAffectation !== 'ACTIVE' ||
+      intervention.affectation.decisionEquipe !== 'ACCEPTEE'
+    ) return null;
+
+    return {
+      affectation: {
+        idAffectation: intervention.affectation.idAffectation,
+        idEquipe: intervention.affectation.idEquipe,
+        etatAffectation: intervention.affectation.etatAffectation,
+        decisionEquipe: intervention.affectation.decisionEquipe,
+        contenuDossier: {
+          idDossier: intervention.affectation.contenuDossier.idDossier,
+          idTypeDechet: intervention.affectation.contenuDossier.idTypeDechet,
+          etatContenuDossier: intervention.affectation.contenuDossier.etatContenuDossier,
+          etatPriseEnCharge: intervention.affectation.contenuDossier.etatPriseEnCharge,
+          referenceDossier: intervention.affectation.contenuDossier.dossier.referenceDossier,
+          statutDossier: intervention.affectation.contenuDossier.dossier.statutDossier,
+        },
+      },
+      intervention: {
+        ...intervention,
+        photos: intervention.photos.map((photo) => ({ ...photo, etatPublication: 'PRIVEE' })),
+      },
+    };
+  }
+
   async listPending(query: ListVerificationsQueryDto, authUserId: string) {
     await this.actorId(authUserId);
     const page = Math.max(1, query.page ?? 1);
     const pageSize = Math.min(100, Math.max(1, query.pageSize ?? 20));
-
-    const candidates = await this.prisma.affectation.findMany({
-      where: {
-        dateFinAffectation: null,
-        etatAffectation: 'ACTIVE',
-        decisionEquipe: 'ACCEPTEE',
-        interventions: {
-          some: {
-            statutIntervention: 'SOUMISE',
-            dateSoumissionCompteRendu: { not: null },
+    const [total, rows] = await this.prisma.$transaction([
+      this.prisma.intervention.count({
+        where: {
+          statutIntervention: 'SOUMISE',
+          dateSoumissionCompteRendu: { not: null },
+          verification: null,
+          affectation: {
+            dateFinAffectation: null,
+            etatAffectation: 'ACTIVE',
+            decisionEquipe: 'ACCEPTEE',
           },
         },
-      },
-      orderBy: [{ dateHeureAffectation: 'desc' }, { idAffectation: 'desc' }],
-      select: reviewSelect,
-    });
-
-    const pending = candidates
-      .map((assignment) => this.toPendingItem(assignment))
-      .filter((item): item is NonNullable<typeof item> => item !== null)
-      .sort((left, right) =>
-        (right.intervention.dateSoumissionCompteRendu?.getTime() ?? 0) -
-        (left.intervention.dateSoumissionCompteRendu?.getTime() ?? 0),
-      );
-
-    const total = pending.length;
+      }),
+      this.prisma.intervention.findMany({
+        where: {
+          statutIntervention: 'SOUMISE',
+          dateSoumissionCompteRendu: { not: null },
+          verification: null,
+          affectation: {
+            dateFinAffectation: null,
+            etatAffectation: 'ACTIVE',
+            decisionEquipe: 'ACCEPTEE',
+          },
+        },
+        orderBy: [{ dateSoumissionCompteRendu: 'asc' }, { idIntervention: 'asc' }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        select: pendingInterventionSelect,
+      }),
+    ]);
     return {
-      items: pending.slice((page - 1) * pageSize, page * pageSize),
+      items: rows.map((row) => this.toPendingItem(row)).filter((item) => item !== null),
       page,
       pageSize,
       total,
@@ -130,344 +150,190 @@ export class VerificationService {
 
   async getPending(idAffectation: string, authUserId: string) {
     await this.actorId(authUserId);
-    const assignment = await this.prisma.affectation.findUnique({
-      where: { idAffectation },
-      select: reviewSelect,
+    const intervention = await this.prisma.intervention.findFirst({
+      where: {
+        idAffectation,
+        statutIntervention: 'SOUMISE',
+        dateSoumissionCompteRendu: { not: null },
+        verification: null,
+      },
+      orderBy: [{ dateSoumissionCompteRendu: 'desc' }, { idIntervention: 'desc' }],
+      select: pendingInterventionSelect,
     });
-    if (!assignment) throw new NotFoundException('Affectation introuvable.');
-
-    const item = this.toPendingItem(assignment);
-    if (!item) {
+    if (!intervention) {
       throw new ConflictException('Cette affectation ne possède pas de compte rendu soumis en attente de vérification.');
     }
+    const item = this.toPendingItem(intervention);
+    if (!item) throw new ConflictException('Ce compte rendu n’est plus éligible à la vérification.');
     return item;
   }
 
-  async createInterventionPhotoUrl(
-    idAffectation: string,
-    idPhotoIntervention: string,
-    authUserId: string,
-  ) {
+  async createInterventionPhotoUrl(idAffectation: string, idPhotoIntervention: string, authUserId: string) {
     const actorId = await this.actorId(authUserId);
-    const assignment = await this.prisma.affectation.findUnique({
-      where: { idAffectation },
-      select: reviewSelect,
+    const pending = await this.prisma.intervention.findFirst({
+      where: {
+        idAffectation,
+        statutIntervention: 'SOUMISE',
+        dateSoumissionCompteRendu: { not: null },
+        verification: null,
+      },
+      orderBy: [{ dateSoumissionCompteRendu: 'desc' }, { idIntervention: 'desc' }],
+      select: pendingInterventionSelect,
     });
-    if (!assignment) throw new NotFoundException('Affectation introuvable.');
-
-    const pending = this.toPendingItem(assignment);
-    if (!pending) {
-      throw new ConflictException('Ce compte rendu n’est plus en attente de vérification.');
-    }
-    if (pending.intervention.renseignePar === actorId) {
+    if (!pending) throw new ConflictException('Ce compte rendu n’est plus en attente de vérification.');
+    if (pending.renseignePar === actorId) {
       throw new ForbiddenException('Le vérificateur ne peut pas consulter les preuves de sa propre intervention.');
     }
 
     const photo = await this.prisma.photoIntervention.findFirst({
-      where: {
-        idPhotoIntervention,
-        idIntervention: pending.intervention.idIntervention,
-      },
+      where: { idPhotoIntervention, idIntervention: pending.idIntervention },
       select: { referencePhoto: true, dateExpiration: true, mediaPurgeAt: true },
     });
     const now = new Date();
-    if (
-      !photo ||
-      photo.dateExpiration.getTime() <= now.getTime() ||
-      (photo.mediaPurgeAt !== null && photo.mediaPurgeAt.getTime() <= now.getTime())
-    ) {
+    if (!photo || photo.dateExpiration <= now || (photo.mediaPurgeAt && photo.mediaPurgeAt <= now)) {
       throw new NotFoundException('Photo introuvable ou expirée.');
     }
-
     return this.storage.createSignedUrl(photo.referencePhoto);
   }
 
-  async decide(
-    idAffectation: string,
-    dto: DecideVerificationDto,
-    authUserId: string,
-  ) {
+  async decide(idAffectation: string, dto: DecideVerificationDto, authUserId: string) {
     const actorId = await this.actorId(authUserId);
     const result = dto.resultatVerification;
-    const motif = dto.motif?.trim();
-    const referencePreuve = dto.referencePreuve?.trim();
+    const motif = dto.motif?.trim() || null;
     if (result === 'A_REPRENDRE' && (!motif || motif.length < 5)) {
       throw new BadRequestException('Un motif d’au moins 5 caractères est obligatoire pour demander une reprise.');
     }
-    if (result === 'CONFORME' && motif && motif.length > 2000) {
-      throw new BadRequestException('Le motif ne peut dépasser 2000 caractères.');
-    }
 
-    return this.serializableWrite(
-      async (tx) => {
-        const assignment = await tx.affectation.findUnique({
-          where: { idAffectation },
-          select: reviewSelect,
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const intervention = await tx.intervention.findFirst({
+          where: {
+            idAffectation,
+            statutIntervention: 'SOUMISE',
+            dateSoumissionCompteRendu: { not: null },
+            verification: null,
+          },
+          orderBy: [{ dateSoumissionCompteRendu: 'desc' }, { idIntervention: 'desc' }],
+          select: {
+            idIntervention: true,
+            idAffectation: true,
+            renseignePar: true,
+            resultatIntervention: true,
+            affectation: {
+              select: {
+                idAffectation: true,
+                dateFinAffectation: true,
+                etatAffectation: true,
+                decisionEquipe: true,
+                contenuDossier: {
+                  select: {
+                    idContenuDossier: true,
+                    idDossier: true,
+                    etatContenuDossier: true,
+                    etatPriseEnCharge: true,
+                    dossier: { select: { statutDossier: true } },
+                  },
+                },
+              },
+            },
+          },
         });
-        if (!assignment) throw new NotFoundException('Affectation introuvable.');
-
-        const pending = this.toPendingItem(assignment);
-        if (!pending) {
-          throw new ConflictException('Le dernier compte rendu a déjà été vérifié ou ne peut plus être vérifié.');
+        if (!intervention) {
+          throw new ConflictException('Le compte rendu a déjà été vérifié ou ne peut plus être vérifié.');
         }
-        const intervention = pending.intervention;
         if (intervention.renseignePar === actorId) {
           throw new ForbiddenException('Le vérificateur ne peut pas valider sa propre intervention.');
         }
         if (
-          assignment.contenuDossier.dossier.statutDossier === 'CLOTURE' ||
-          assignment.contenuDossier.etatContenuDossier !== 'ACTIF' ||
-          assignment.contenuDossier.etatPriseEnCharge !== 'EN_COURS'
+          intervention.affectation.dateFinAffectation ||
+          intervention.affectation.etatAffectation !== 'ACTIVE' ||
+          intervention.affectation.decisionEquipe !== 'ACCEPTEE' ||
+          intervention.affectation.contenuDossier.dossier.statutDossier === 'CLOTURE' ||
+          intervention.affectation.contenuDossier.etatContenuDossier !== 'ACTIF' ||
+          intervention.affectation.contenuDossier.etatPriseEnCharge !== 'EN_COURS'
         ) {
           throw new ConflictException('Le dossier ou le contenu n’est plus éligible à la vérification.');
         }
-
         if (result === 'CONFORME' && intervention.resultatIntervention !== 'TERMINEE') {
           throw new ConflictException('Seul un résultat terrain TERMINEE peut être validé conforme. Un résultat partiel ou impossible doit faire l’objet d’une reprise.');
         }
 
         const now = new Date();
-        const verification = await tx.verificationResolution.create({
+        const verification = await tx.verification.create({
           data: {
-            idAffectation,
+            idIntervention: intervention.idIntervention,
             idVerificateur: actorId,
             dateVerification: now,
             resultatVerification: result,
-            etatVerification: result === 'CONFORME' ? 'VALIDEE' : 'REPRISE',
-            motif: motif || null,
-            referencePreuve: referencePreuve || null,
+            motif,
           },
         });
 
         let dossierCloture = false;
         if (result === 'CONFORME') {
-          const assignmentUpdate = await tx.affectation.updateMany({
+          const closedAssignment = await tx.affectation.updateMany({
             where: {
               idAffectation,
               dateFinAffectation: null,
               etatAffectation: 'ACTIVE',
               decisionEquipe: 'ACCEPTEE',
             },
-            data: {
-              etatAffectation: 'TERMINEE',
-              dateFinAffectation: now,
-            },
+            data: { etatAffectation: 'TERMINEE', dateFinAffectation: now },
           });
-          if (assignmentUpdate.count !== 1) {
+          if (closedAssignment.count !== 1) {
             throw new ConflictException('L’affectation a été modifiée simultanément.');
           }
 
-          const contentUpdate = await tx.contenuDossier.updateMany({
+          const finishedContent = await tx.contenuDossier.updateMany({
             where: {
-              idDossier: assignment.contenuDossier.idDossier,
-              idTypeDechet: assignment.contenuDossier.idTypeDechet,
+              idContenuDossier: intervention.affectation.contenuDossier.idContenuDossier,
               etatContenuDossier: 'ACTIF',
               etatPriseEnCharge: 'EN_COURS',
             },
             data: { etatPriseEnCharge: 'TERMINE' },
           });
-          if (contentUpdate.count !== 1) {
+          if (finishedContent.count !== 1) {
             throw new ConflictException('Le contenu n’est plus en cours de prise en charge.');
           }
 
-          await this.writeVerificationEvent(tx, {
-            type: 'RESOLUTION_VALIDEE',
-            actorId,
-            verificationId: verification.idVerification,
-            before: {
-              interventionId: intervention.idIntervention,
-              resultatIntervention: intervention.resultatIntervention,
-              etatPriseEnCharge: 'EN_COURS',
-            },
-            after: {
-              resultatVerification: 'CONFORME',
-              etatVerification: 'VALIDEE',
-              dateVerification: now.toISOString(),
-              etatPriseEnCharge: 'TERMINE',
-            },
-            ...(motif ? { reason: motif } : {}),
-          });
-
           const remaining = await tx.contenuDossier.count({
             where: {
-              idDossier: assignment.contenuDossier.idDossier,
+              idDossier: intervention.affectation.contenuDossier.idDossier,
               etatContenuDossier: 'ACTIF',
               etatPriseEnCharge: { not: 'TERMINE' },
             },
           });
-
           if (remaining === 0) {
             const closed = await tx.dossierTraitement.updateMany({
               where: {
-                idDossier: assignment.contenuDossier.idDossier,
+                idDossier: intervention.affectation.contenuDossier.idDossier,
                 statutDossier: { not: 'CLOTURE' },
                 dateCloture: null,
               },
               data: { statutDossier: 'CLOTURE', dateCloture: now },
             });
-            if (closed.count !== 1) {
-              throw new ConflictException('Le dossier a été clôturé ou modifié simultanément.');
-            }
-            dossierCloture = true;
-            await this.writeCaseClosureEvent(tx, {
-              actorId,
-              dossierId: assignment.contenuDossier.idDossier,
-              verificationId: verification.idVerification,
-              interventionId: intervention.idIntervention,
-              previousStatus: assignment.contenuDossier.dossier.statutDossier,
-              dateCloture: now,
-            });
+            dossierCloture = closed.count === 1;
           }
-        } else {
-          await this.writeVerificationEvent(tx, {
-            type: 'REPRISE_DEMANDEE',
-            actorId,
-            verificationId: verification.idVerification,
-            before: {
-              interventionId: intervention.idIntervention,
-              resultatIntervention: intervention.resultatIntervention,
-            },
-            after: {
-              resultatVerification: 'A_REPRENDRE',
-              etatVerification: 'REPRISE',
-              dateVerification: now.toISOString(),
-            },
-            reason: motif!,
-          });
         }
 
         return {
-          verification,
+          verification: {
+            ...verification,
+            idAffectation,
+            etatVerification: result === 'CONFORME' ? 'VALIDEE' : 'REPRISE',
+          },
           dossierCloture,
         };
-      },
-      'Une vérification a été enregistrée ou l’affectation a changé simultanément.',
-    );
-  }
-
-  private toPendingItem(assignment: Prisma.AffectationGetPayload<{ select: typeof reviewSelect }>) {
-    if (
-      assignment.dateFinAffectation ||
-      assignment.etatAffectation !== 'ACTIVE' ||
-      assignment.decisionEquipe !== 'ACCEPTEE'
-    ) return null;
-
-    const intervention = assignment.interventions[0];
-    if (
-      !intervention ||
-      intervention.statutIntervention !== 'SOUMISE' ||
-      !intervention.dateSoumissionCompteRendu ||
-      !intervention.dateHeureDebut ||
-      !intervention.resultatIntervention ||
-      !intervention.compteRendu
-    ) return null;
-
-    const latestVerification = assignment.verifications[0] ?? null;
-    if (latestVerification && latestVerification.dateVerification.getTime() >= intervention.dateSoumissionCompteRendu.getTime()) {
-      return null;
-    }
-
-    return {
-      affectation: {
-        idAffectation: assignment.idAffectation,
-        idEquipe: assignment.idEquipe,
-        etatAffectation: assignment.etatAffectation,
-        decisionEquipe: assignment.decisionEquipe,
-        contenuDossier: {
-          idDossier: assignment.contenuDossier.idDossier,
-          idTypeDechet: assignment.contenuDossier.idTypeDechet,
-          etatContenuDossier: assignment.contenuDossier.etatContenuDossier,
-          etatPriseEnCharge: assignment.contenuDossier.etatPriseEnCharge,
-          referenceDossier: assignment.contenuDossier.dossier.referenceDossier,
-          statutDossier: assignment.contenuDossier.dossier.statutDossier,
-        },
-      },
-      intervention: {
-        ...intervention,
-        photos: (intervention.photos ?? []).map((photo) => ({
-          idPhotoIntervention: photo.idPhotoIntervention,
-          description: photo.description,
-          dateAjout: photo.dateAjout,
-          etatPublication: photo.etatPublication,
-        })),
-      },
-      derniereVerification: latestVerification?.dateVerification ?? null,
-    };
-  }
-
-  private async writeVerificationEvent(
-    tx: Transaction,
-    payload: {
-      type: string;
-      actorId: string;
-      verificationId: string;
-      before?: Record<string, unknown>;
-      after?: Record<string, unknown>;
-      reason?: string;
-    },
-  ): Promise<void> {
-    const now = new Date();
-    await tx.evenementMetier.create({
-      data: {
-        typeEvenement: payload.type,
-        dateEvenement: now,
-        dateEnregistrement: now,
-        origine: 'API',
-        idActeur: payload.actorId,
-        idVerificationCible: payload.verificationId,
-        ...(payload.before ? { donneesAvant: payload.before as Prisma.InputJsonObject } : {}),
-        ...(payload.after ? { donneesApres: payload.after as Prisma.InputJsonObject } : {}),
-        ...(payload.reason ? { motif: payload.reason } : {}),
-        versionSchema: 1,
-      },
-    });
-  }
-
-  private async writeCaseClosureEvent(
-    tx: Transaction,
-    payload: {
-      actorId: string;
-      dossierId: string;
-      verificationId: string;
-      interventionId: string;
-      previousStatus: string;
-      dateCloture: Date;
-    },
-  ): Promise<void> {
-    const now = payload.dateCloture;
-    await tx.evenementMetier.create({
-      data: {
-        typeEvenement: 'DOSSIER_CLOTURE_VERIFIEE',
-        dateEvenement: now,
-        dateEnregistrement: now,
-        origine: 'API',
-        idActeur: payload.actorId,
-        idDossierCible: payload.dossierId,
-        donneesAvant: {
-          statutDossier: payload.previousStatus,
-          verificationId: payload.verificationId,
-          interventionId: payload.interventionId,
-        },
-        donneesApres: {
-          statutDossier: 'CLOTURE',
-          dateCloture: now.toISOString(),
-        },
-        versionSchema: 1,
-      },
-    });
-  }
-
-  private async serializableWrite<T>(
-    operation: (tx: Transaction) => Promise<T>,
-    conflictMessage: string,
-  ): Promise<T> {
-    try {
-      return await this.prisma.$transaction(operation, {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-      });
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ConflictException ||
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) throw error;
       if (isPrismaCode(error, 'P2002') || isPrismaCode(error, 'P2034')) {
-        throw new ConflictException(conflictMessage);
+        throw new ConflictException('Une vérification a été enregistrée simultanément.');
       }
       throw error;
     }

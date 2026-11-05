@@ -1,5 +1,18 @@
 import { api } from '../../lib/api';
 
+export interface WasteTypeOption {
+  idTypeDechet: string;
+  codeType: string;
+  libelle: string;
+}
+
+export interface CreateReportContentPayload {
+  idTypeDechet: string;
+  quantiteEstimee?: number;
+  volumeEstime?: number;
+  remarque?: string;
+}
+
 export interface ReportContent {
   idTypeDechet: string;
   quantiteEstimee: string | null;
@@ -20,7 +33,6 @@ export interface Report {
   dateConstat: string | null;
   dateSoumission: string | null;
   description: string | null;
-  idCommune: string | null;
   latitude: string | null;
   longitude: string | null;
   precisionLocalisation: string | null;
@@ -54,11 +66,16 @@ export interface SupplementList {
 
 export interface CreateReportPayload {
   description: string;
+  contenus: CreateReportContentPayload[];
   dateConstat?: string;
   latitude?: number;
   longitude?: number;
   precisionLocalisation?: number;
   descriptionLocalisation?: string;
+}
+
+export async function listAvailableWasteTypes(): Promise<WasteTypeOption[]> {
+  return api.request<WasteTypeOption[]>('/reports/waste-types');
 }
 
 export async function listMyReports(page = 1, pageSize = 20): Promise<ReportPage> {

@@ -41,6 +41,7 @@ export interface TeamIntervention {
   compteRendu: string | null;
   motifException: string | null;
   renseignePar: string;
+  verification: { dateVerification: string; resultatVerification: 'CONFORME' | 'A_REPRENDRE'; motif: string | null; etatVerification: 'VALIDEE' | 'REPRISE' } | null;
   affectation: {
     idAffectation: string;
     idEquipe: string;
@@ -54,7 +55,6 @@ export interface TeamIntervention {
       dossier: { referenceDossier: string; statutDossier: string };
       typeDechet: { codeType: string; libelle: string };
     };
-    verifications: Array<{ dateVerification: string; etatVerification: 'VALIDEE' | 'REPRISE' }>;
   };
 }
 

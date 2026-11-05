@@ -17,13 +17,4 @@ export class DecideVerificationDto {
   @MinLength(5)
   @MaxLength(2000)
   motif?: string;
-
-  @ApiPropertyOptional({
-    maxLength: 1000,
-    description: 'Référence de preuve ou pièce justificative déjà stockée. Ne pas transmettre un fichier brut ici.',
-  })
-  @IsOptional()
-  @IsString()
-  @MaxLength(1000)
-  referencePreuve?: string;
 }

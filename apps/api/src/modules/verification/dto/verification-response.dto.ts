@@ -10,7 +10,7 @@ export class VerificationPhotoDto {
   @ApiProperty({ format: 'date-time' })
   dateAjout!: Date;
 
-  @ApiProperty({ example: 'EN_ATTENTE' })
+  @ApiProperty({ example: 'PRIVEE' })
   etatPublication!: string;
 }
 
@@ -87,8 +87,6 @@ export class VerificationQueueItemDto {
   @ApiProperty({ type: VerificationInterventionDto })
   intervention!: VerificationInterventionDto;
 
-  @ApiProperty({ type: 'string', format: 'date-time', nullable: true })
-  derniereVerification!: Date | null;
 }
 
 export class VerificationQueueResponseDto {
@@ -113,6 +111,9 @@ export class VerificationDecisionResponseDto {
   idAffectation!: string;
 
   @ApiProperty({ format: 'uuid' })
+  idIntervention!: string;
+
+  @ApiProperty({ format: 'uuid' })
   idVerificateur!: string;
 
   @ApiProperty({ format: 'date-time' })
@@ -127,8 +128,6 @@ export class VerificationDecisionResponseDto {
   @ApiProperty({ type: 'string', nullable: true })
   motif!: string | null;
 
-  @ApiProperty({ type: 'string', nullable: true })
-  referencePreuve!: string | null;
 }
 
 export class VerificationDecisionResultDto {

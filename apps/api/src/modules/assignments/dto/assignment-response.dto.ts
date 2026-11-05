@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class AssignmentTeamResponseDto {
   @ApiProperty({ format: 'uuid' })
@@ -15,11 +15,11 @@ export class AssignmentCompetenceResponseDto {
   @ApiProperty({ format: 'uuid' })
   idCompetenceEquipe!: string;
 
-  @ApiProperty({ format: 'date-time' })
-  dateDebut!: Date;
+  @ApiProperty()
+  actif!: boolean;
 
-  @ApiProperty({ type: 'string', format: 'date-time', nullable: true })
-  dateFin!: Date | null;
+  @ApiProperty({ format: 'date-time' })
+  dateAttribution!: Date;
 }
 
 export class AssignmentContentTypeDto {
@@ -39,9 +39,15 @@ export class AssignmentCaseDto {
 
   @ApiProperty()
   statutDossier!: string;
+
+  @ApiProperty()
+  priorite!: string;
 }
 
 export class AssignmentContentDto {
+  @ApiProperty({ format: 'uuid' })
+  idContenuDossier!: string;
+
   @ApiProperty({ format: 'uuid' })
   idDossier!: string;
 
@@ -66,6 +72,9 @@ export class AssignmentResponseDto {
   idAffectation!: string;
 
   @ApiProperty({ format: 'uuid' })
+  idContenuDossier!: string;
+
+  @ApiProperty({ format: 'uuid' })
   idDossier!: string;
 
   @ApiProperty({ format: 'uuid' })
@@ -77,36 +86,6 @@ export class AssignmentResponseDto {
   @ApiProperty({ format: 'uuid' })
   idCompetenceEquipe!: string;
 
-  @ApiProperty({ format: 'date-time' })
-  dateHeureAffectation!: Date;
-
-  @ApiProperty({ format: 'uuid' })
-  idDecideur!: string;
-
-  @ApiProperty({ enum: ['ACTIVE', 'TERMINEE', 'ANNULEE'] })
-  etatAffectation!: string;
-
-  @ApiProperty({ type: 'string', nullable: true })
-  motif!: string | null;
-
-  @ApiProperty({ type: 'string', nullable: true })
-  observation!: string | null;
-
-  @ApiProperty({ type: 'string', format: 'date-time', nullable: true })
-  dateFinAffectation!: Date | null;
-
-  @ApiProperty({ enum: ['EN_ATTENTE', 'ACCEPTEE', 'REFUSEE'] })
-  decisionEquipe!: string;
-
-  @ApiProperty({ type: 'string', format: 'uuid', nullable: true })
-  reponduPar!: string | null;
-
-  @ApiProperty({ type: 'string', format: 'date-time', nullable: true })
-  dateReponseEquipe!: Date | null;
-
-  @ApiProperty({ type: 'string', nullable: true })
-  motifRefusEquipe!: string | null;
-
   @ApiProperty({ type: AssignmentTeamResponseDto })
   equipe!: AssignmentTeamResponseDto;
 
@@ -115,6 +94,47 @@ export class AssignmentResponseDto {
 
   @ApiProperty({ type: AssignmentContentDto })
   contenuDossier!: AssignmentContentDto;
+
+  @ApiProperty({ format: 'date-time' })
+  dateHeureAffectation!: Date;
+
+  @ApiProperty({ format: 'uuid' })
+  idDecideur!: string;
+
+  @ApiProperty()
+  etatAffectation!: string;
+
+  @ApiPropertyOptional({ type: 'string', nullable: true })
+  motif!: string | null;
+
+  @ApiPropertyOptional({ type: 'string', nullable: true })
+  observation!: string | null;
+
+  @ApiProperty({ type: 'string', format: 'date-time', nullable: true })
+  dateFinAffectation!: Date | null;
+
+  @ApiProperty()
+  decisionEquipe!: string;
+
+  @ApiProperty({ format: 'uuid', nullable: true })
+  reponduPar!: string | null;
+
+  @ApiProperty({ type: 'string', format: 'date-time', nullable: true })
+  dateReponseEquipe!: Date | null;
+
+  @ApiProperty({ type: 'string', nullable: true })
+  motifRefusEquipe!: string | null;
+}
+
+export class EligibleTeamResponseDto {
+  @ApiProperty({ format: 'uuid' })
+  idEquipe!: string;
+
+  @ApiProperty()
+  nomEquipe!: string;
+
+  @ApiProperty()
+  etatEquipe!: string;
 }
 
 export class AssignmentListResponseDto {
@@ -131,55 +151,52 @@ export class AssignmentListResponseDto {
   total!: number;
 }
 
-
-export class PendingAssignmentCaseResponseDto {
+export class PendingAssignmentContentDto {
   @ApiProperty({ format: 'uuid' })
-  idDossier!: string;
+  idContenuDossier!: string;
 
-  @ApiProperty()
-  referenceDossier!: string;
-
-  @ApiProperty()
-  statutDossier!: string;
-
-  @ApiProperty()
-  priorite!: string;
-}
-
-export class PendingAssignmentWasteTypeResponseDto {
-  @ApiProperty({ format: 'uuid' })
-  idTypeDechet!: string;
-
-  @ApiProperty()
-  codeType!: string;
-
-  @ApiProperty()
-  libelle!: string;
-}
-
-export class PendingAssignmentContentResponseDto {
   @ApiProperty({ format: 'uuid' })
   idDossier!: string;
 
   @ApiProperty({ format: 'uuid' })
   idTypeDechet!: string;
 
-  @ApiProperty({ enum: ['ACTIF'] })
+  @ApiProperty({ enum: ['ACTIF', 'RETIRE'] })
   etatContenuDossier!: string;
 
-  @ApiProperty({ enum: ['EN_ATTENTE'] })
+  @ApiProperty({ enum: ['EN_ATTENTE', 'EN_COURS', 'TERMINE'] })
   etatPriseEnCharge!: string;
 
-  @ApiProperty({ type: PendingAssignmentCaseResponseDto })
-  dossier!: PendingAssignmentCaseResponseDto;
+  @ApiProperty({
+    type: 'object',
+    properties: {
+      idDossier: { type: 'string', format: 'uuid' },
+      referenceDossier: { type: 'string' },
+      statutDossier: { type: 'string' },
+      priorite: { type: 'string' },
+    },
+  })
+  dossier!: {
+    idDossier: string;
+    referenceDossier: string;
+    statutDossier: string;
+    priorite: string;
+  };
 
-  @ApiProperty({ type: PendingAssignmentWasteTypeResponseDto })
-  typeDechet!: PendingAssignmentWasteTypeResponseDto;
+  @ApiProperty({
+    type: 'object',
+    properties: {
+      idTypeDechet: { type: 'string', format: 'uuid' },
+      codeType: { type: 'string' },
+      libelle: { type: 'string' },
+    },
+  })
+  typeDechet!: { idTypeDechet: string; codeType: string; libelle: string };
 }
 
 export class PendingAssignmentContentListResponseDto {
-  @ApiProperty({ type: [PendingAssignmentContentResponseDto] })
-  items!: PendingAssignmentContentResponseDto[];
+  @ApiProperty({ type: [PendingAssignmentContentDto] })
+  items!: PendingAssignmentContentDto[];
 
   @ApiProperty({ minimum: 1 })
   page!: number;
@@ -189,40 +206,4 @@ export class PendingAssignmentContentListResponseDto {
 
   @ApiProperty({ minimum: 0 })
   total!: number;
-}
-
-export class EligibleTeamAvailabilityResponseDto {
-  @ApiProperty()
-  etatDisponibilite!: string;
-
-  @ApiProperty({ format: 'date-time' })
-  valideJusqua!: Date;
-}
-
-export class EligibleTeamSkillResponseDto {
-  @ApiProperty({ format: 'uuid' })
-  idCompetenceEquipe!: string;
-
-  @ApiProperty({ format: 'date-time' })
-  dateDebut!: Date;
-
-  @ApiProperty({ type: 'string', format: 'date-time', nullable: true })
-  dateFin!: Date | null;
-}
-
-export class EligibleTeamResponseDto {
-  @ApiProperty({ format: 'uuid' })
-  idEquipe!: string;
-
-  @ApiProperty()
-  nomEquipe!: string;
-
-  @ApiProperty()
-  etatEquipe!: string;
-
-  @ApiProperty({ type: EligibleTeamSkillResponseDto })
-  competence!: EligibleTeamSkillResponseDto;
-
-  @ApiProperty({ type: EligibleTeamAvailabilityResponseDto, nullable: true })
-  disponibilite!: EligibleTeamAvailabilityResponseDto | null;
 }

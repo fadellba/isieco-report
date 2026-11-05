@@ -13,7 +13,19 @@ export class CaseWasteTypeResponseDto {
 
 export class CaseContentResponseDto {
   @ApiProperty({ format: 'uuid' })
+  idContenuDossier!: string;
+
+  @ApiProperty({ format: 'uuid' })
   idTypeDechet!: string;
+
+  @ApiProperty({ type: 'string', nullable: true })
+  quantiteEstimee!: string | null;
+
+  @ApiProperty({ type: 'string', nullable: true })
+  volumeEstime!: string | null;
+
+  @ApiProperty({ type: 'string', nullable: true })
+  remarque!: string | null;
 
   @ApiProperty({ enum: ['ACTIF', 'RETIRE'] })
   etatContenuDossier!: string;
@@ -25,7 +37,7 @@ export class CaseContentResponseDto {
   typeDechet!: CaseWasteTypeResponseDto;
 }
 
-export class CaseAttachmentReportDto {
+export class CaseSignalementResponseDto {
   @ApiProperty({ format: 'uuid' })
   idSignalement!: string;
 
@@ -37,63 +49,6 @@ export class CaseAttachmentReportDto {
 
   @ApiProperty()
   statutSignalement!: string;
-}
-
-export class CaseAttachmentResponseDto {
-  @ApiProperty({ format: 'uuid' })
-  idRattachement!: string;
-
-  @ApiProperty({ format: 'uuid' })
-  idDossier!: string;
-
-  @ApiProperty({ format: 'uuid' })
-  idSignalement!: string;
-
-  @ApiProperty({ format: 'date-time' })
-  dateDebutRattachement!: Date;
-
-  @ApiProperty({ type: 'string', format: 'date-time', nullable: true })
-  dateFinRattachement!: Date | null;
-
-  @ApiProperty()
-  typeRattachement!: string;
-
-  @ApiProperty({ type: 'string', nullable: true })
-  motif!: string | null;
-
-  @ApiProperty({ type: CaseAttachmentReportDto })
-  signalement!: CaseAttachmentReportDto;
-}
-
-export class CasePriorityHistoryResponseDto {
-  @ApiProperty()
-  priorite!: string;
-
-  @ApiProperty({ format: 'uuid' })
-  definiePar!: string;
-
-  @ApiProperty({ format: 'date-time' })
-  dateDefinition!: Date;
-
-  @ApiProperty()
-  justification!: string;
-}
-
-export class CaseLocationHistoryResponseDto {
-  @ApiProperty({ type: 'string', format: 'uuid', nullable: true })
-  idCommune!: string | null;
-
-  @ApiProperty({ type: 'string', nullable: true })
-  latitude!: string | null;
-
-  @ApiProperty({ type: 'string', nullable: true })
-  longitude!: string | null;
-
-  @ApiProperty({ format: 'date-time' })
-  dateModification!: Date;
-
-  @ApiProperty({ type: 'string', nullable: true })
-  motif!: string | null;
 }
 
 export class CaseResponseDto {
@@ -114,12 +69,6 @@ export class CaseResponseDto {
 
   @ApiProperty({ enum: ['BASSE', 'NORMALE', 'HAUTE', 'CRITIQUE'] })
   priorite!: string;
-
-  @ApiProperty({ format: 'date-time', nullable: true })
-  dateQualification!: Date | null;
-
-  @ApiProperty({ type: 'string', format: 'uuid', nullable: true })
-  idCommune!: string | null;
 
   @ApiProperty({ type: 'string', nullable: true })
   latitude!: string | null;
@@ -142,28 +91,8 @@ export class CaseResponseDto {
   @ApiProperty({ type: [CaseContentResponseDto] })
   contenus!: CaseContentResponseDto[];
 
-  @ApiProperty({ type: [CaseAttachmentResponseDto] })
-  rattachements!: CaseAttachmentResponseDto[];
-
-  @ApiProperty({ type: [CasePriorityHistoryResponseDto] })
-  historiquesPriorite!: CasePriorityHistoryResponseDto[];
-
-  @ApiProperty({ type: [CaseLocationHistoryResponseDto] })
-  historiquesLocalisation!: CaseLocationHistoryResponseDto[];
-}
-
-export class CaseListContentResponseDto {
-  @ApiProperty({ format: 'uuid' })
-  idTypeDechet!: string;
-
-  @ApiProperty({ enum: ['ACTIF', 'RETIRE'] })
-  etatContenuDossier!: string;
-
-  @ApiProperty({ enum: ['EN_ATTENTE', 'EN_COURS', 'TERMINE'] })
-  etatPriseEnCharge!: string;
-
-  @ApiProperty({ type: CaseWasteTypeResponseDto })
-  typeDechet!: CaseWasteTypeResponseDto;
+  @ApiProperty({ type: [CaseSignalementResponseDto] })
+  signalements!: CaseSignalementResponseDto[];
 }
 
 export class CaseListItemResponseDto {
@@ -185,14 +114,11 @@ export class CaseListItemResponseDto {
   @ApiProperty({ enum: ['BASSE', 'NORMALE', 'HAUTE', 'CRITIQUE'] })
   priorite!: string;
 
-  @ApiProperty({ type: 'string', format: 'uuid', nullable: true })
-  idCommune!: string | null;
-
-  @ApiProperty({ type: [CaseListContentResponseDto] })
-  contenus!: CaseListContentResponseDto[];
+  @ApiProperty({ type: [CaseContentResponseDto] })
+  contenus!: CaseContentResponseDto[];
 
   @ApiProperty({ minimum: 0 })
-  nombreRattachements!: number;
+  nombreSignalements!: number;
 }
 
 export class CaseListResponseDto {
