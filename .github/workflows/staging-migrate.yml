@@ -11,6 +11,14 @@ on:
           - NO
           - APPLY
         default: NO
+      confirm_backup_restore:
+        description: "Confirm that a full backup exists and its restoration was tested in an isolated database."
+        required: true
+        type: choice
+        options:
+          - NO
+          - YES
+        default: NO
 
 permissions:
   contents: read
@@ -22,7 +30,7 @@ concurrency:
 jobs:
   migrate:
     name: Apply versioned Prisma migrations to staging
-    if: github.ref == 'refs/heads/main' && inputs.apply_staging_migrations == 'APPLY'
+    if: github.ref == 'refs/heads/main' && inputs.apply_staging_migrations == 'APPLY' && inputs.confirm_backup_restore == 'YES'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: staging
