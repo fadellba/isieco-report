@@ -65,3 +65,48 @@ Le Security Advisor doit être relancé après l'application. Les tests d'API et
 
 La migration simplifiée supprime les anciennes tables et colonnes d'historique. Elle ne dispose pas d'un rollback permettant de restaurer les lignes supprimées. Avant de lancer le workflow manuel, créer une sauvegarde PostgreSQL complète hors du dépôt et vérifier sa restauration dans un environnement isolé. Le plan Supabase actuellement connecté est Free et aucune sauvegarde restaurable n'a été vérifiée pendant l'audit. Ne pas déduire qu'une sauvegarde automatique existe. Tant que cette précondition n'est pas prouvée et que le test CI de répétition sur les anciennes données synthétiques n'est pas vert, ne pas sélectionner APPLY.
 NaN
+
+## Export manuel et test de restauration sur l'offre Free
+
+Le projet connecté est sur l'offre Free. Supabase ne fournit pas de sauvegarde quotidienne gérée sur cette offre ; la documentation recommande les exports logiques via Supabase CLI et leur conservation hors site. Références officielles : [Database Backups](https://supabase.com/docs/guides/platform/backups) et [Backup and Restore using the CLI](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore).
+
+Installer Supabase CLI et Docker, puis copier la chaîne Session Pooler depuis le panneau Connect. Le mot de passe doit être percent-encoded dans l'URL. Saisir la chaîne dans une variable d'environnement et ne pas la committer :
+
+\`\`\`bash
+read -rsp "PostgreSQL connection string: " BACKUP_DB_URL
+echo
+umask 077
+BACKUP_DIR=".backups/isieco-$(date -u +%Y%m%dT%H%M%SZ)"
+mkdir -m 700 -p "$BACKUP_DIR"
+
+supabase db dump --db-url "$BACKUP_DB_URL" -f "$BACKUP_DIR/roles.sql" --role-only
+supabase db dump --db-url "$BACKUP_DB_URL" -f "$BACKUP_DIR/schema.sql"
+supabase db dump --db-url "$BACKUP_DB_URL" -f "$BACKUP_DIR/data.sql" --use-copy --data-only \\
+  -x "storage.buckets_vectors" -x "storage.vector_indexes"
+
+unset BACKUP_DB_URL
+(
+  cd "$BACKUP_DIR"
+  sha256sum roles.sql schema.sql data.sql > SHA256SUMS
+  sha256sum --check SHA256SUMS
+)
+\`\`\`
+
+Conserver le dossier hors du dépôt dans un espace chiffré à accès restreint. Le chemin .backups/ est ignoré par Git. Les exports logiques Supabase n'incluent pas les comptes Supabase Auth ni les objets binaires du Storage API. Ces éléments doivent être traités séparément si une restauration applicative intégrale est nécessaire.
+
+Tester la restauration dans un **nouveau projet Supabase isolé**, jamais sur le staging source. Configurer préalablement les extensions et paramètres nécessaires, puis restaurer les rôles, le schéma et les données avec la procédure officielle :
+
+\`\`\`bash
+psql \\
+  --single-transaction \\
+  --variable ON_ERROR_STOP=1 \\
+  --file "$BACKUP_DIR/roles.sql" \\
+  --file "$BACKUP_DIR/schema.sql" \\
+  --command 'SET session_replication_role = replica' \\
+  --file "$BACKUP_DIR/data.sql" \\
+  --dbname "$RESTORE_DB_URL"
+\`\`\`
+
+Un export n'est pas un backup validé tant que les checksums et une restauration complète du périmètre visé n'ont pas été vérifiés. Les clients Supabase Auth, les objets Storage et les réglages de projet ne sont pas rétablis par ces seuls dumps PostgreSQL.
+
+Le workflow staging demande deux confirmations : APPLY et YES pour attester qu'une sauvegarde a été restaurée dans un environnement isolé. Cette confirmation est une déclaration opérateur ; elle ne remplace pas l'inspection du backup, ses checksums ni le test de restauration.
