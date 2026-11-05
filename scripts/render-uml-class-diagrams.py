@@ -269,7 +269,7 @@ def main():
 
     if len(models) != 18:
         raise SystemExit(f"Expected 18 Prisma models, got {len(models)}")
-    print(f"Rendered {len(models)} classes, {len(relations)} associations, {len(generated)} PNG files:")
+    print(f"Rendered {len(models)} classes, {len(relations)} associations, {len(generated)} diagram files:")
     for name in generated:
         print(f" - docs/uml/{name}")
 
