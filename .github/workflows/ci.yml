@@ -136,6 +136,9 @@ jobs:
           DATABASE_URL: postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report?schema=public
           DIRECT_URL: postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report?schema=public
 
+      - name: Validate migration rehearsal script syntax
+        run: bash -n scripts/rehearse-simplified-domain-migration.sh
+
       - name: Rehearse the simplified migration against populated legacy data
         env:
           PGHOST: localhost
