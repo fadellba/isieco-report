@@ -18,14 +18,14 @@ Cette protection est nécessaire car les privilèges par défaut observés sur l
 
 ## Connexion GitHub Actions
 
-Le workflow `.github/workflows/staging-migrate.yml` applique uniquement les migrations déjà commitées. Il est manuel, limité à la branche `main`, protégé par deux choix explicites `APPLY` et `YES` (confirmation d'une sauvegarde restaurée) et utilise l'environnement GitHub `staging`.
+Le workflow `.github/workflows/staging-migrate.yml` applique uniquement les migrations déjà commitées. Il est manuel, limité à la branche `main`, protégé par deux choix explicites : `APPLY` et `YES` pour confirmer que les données du projet staging et son ancien schéma peuvent être supprimés ou transformés. Cette confirmation est limitée au staging et utilise l'environnement GitHub `staging`.
 
 1. Dans GitHub, ouvrir **Settings → Environments** et créer l'environnement `staging`.
 2. Ajouter dans **Environment secrets** le secret `STAGING_PRISMA_URL`.
 3. Dans Supabase Dashboard, ouvrir le projet `isieco-report-staging`, cliquer sur **Connect**, puis sélectionner **Session pooler**.
 4. Copier la chaîne PostgreSQL de session pooler (port **5432**, base `postgres`, utilisateur `postgres.mlhbdautaxufubaybzyt`) et ajouter `?sslmode=require` si ce paramètre n'est pas déjà présent.
 5. Enregistrer cette chaîne comme secret GitHub `STAGING_PRISMA_URL`. Ne jamais la placer dans le dépôt, un commentaire de PR, un fichier client ou une sortie de terminal.
-6. Dans **Actions → Staging Database Migrate → Run workflow**, choisir la branche `main`, `APPLY`, puis `YES` uniquement après avoir vérifié une restauration dans un environnement isolé.
+6. Dans **Actions → Staging Database Migrate → Run workflow**, choisir la branche `main`, `APPLY`, puis `YES` uniquement après avoir accepté explicitement la suppression/transformation des données existantes du projet `isieco-report-staging`.
 
 Le workflow vérifie le projet cible à partir du hostname, du port, du nom de base et de l'utilisateur avant de se connecter. Il refuse le pooler transactionnel (port 6543) et ne peut pas être utilisé depuis une branche de fonctionnalité.
 
@@ -63,7 +63,7 @@ Le Security Advisor doit être relancé après l'application. Les tests d'API et
 
 ## Précondition de sauvegarde pour la migration destructive
 
-La migration simplifiée supprime les anciennes tables et colonnes d'historique. Elle ne dispose pas d'un rollback permettant de restaurer les lignes supprimées. Avant de lancer le workflow manuel, créer une sauvegarde PostgreSQL complète hors du dépôt et vérifier sa restauration dans un environnement isolé. Le plan Supabase actuellement connecté est Free et aucune sauvegarde restaurable n'a été vérifiée pendant l'audit. Ne pas déduire qu'une sauvegarde automatique existe. Tant que cette précondition n'est pas prouvée et que le test CI de répétition sur les anciennes données synthétiques n'est pas vert, ne pas sélectionner APPLY.
+La migration simplifiée supprime les anciennes tables et colonnes d'historique. Elle ne dispose pas d'un rollback permettant de restaurer les lignes supprimées. Les données du staging ont été déclarées jetables : une sauvegarde restaurable n'est donc pas une précondition fonctionnelle pour ce projet. La migration reste destructive et la confirmation `YES` signifie que les données existantes du staging peuvent être perdues ou transformées. Une exportation hors site reste recommandée pour toute possibilité de retour arrière ; le test CI sur données synthétiques ne remplace pas une vraie sauvegarde.
 ## Export manuel et test de restauration sur l'offre Free
 
 Le projet connecté est sur l'offre Free. Supabase ne fournit pas de sauvegarde quotidienne gérée sur cette offre ; la documentation recommande les exports logiques via Supabase CLI et leur conservation hors site. Références officielles : [Database Backups](https://supabase.com/docs/guides/platform/backups) et [Backup and Restore using the CLI](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore).
@@ -134,4 +134,4 @@ TEST_DATABASE_URL="$RESTORE_DB_URL" pnpm db:test:invariants
 
 Le résultat attendu est **7 migrations terminées** : les six historiques et la migration de simplification. Le test d'invariants vérifie les 18 tables, RLS et plusieurs contraintes relationnelles dans une transaction annulée à la fin. Comparer et conserver les inventaires de lignes avant/après ; analyser séparément les transformations explicitement documentées (qualification la plus récente, rattachement actif, réponses, vérifications non appariées et événements de statut).
 
-Le workflow staging demande deux confirmations : APPLY et YES pour attester que la sauvegarde du schéma métier a été restaurée dans un environnement isolé et que le sort des identités Auth et objets Storage a été vérifié. Cette confirmation est une déclaration opérateur ; elle ne remplace pas l'inspection du backup, ses checksums ni le test de restauration.
+Le workflow staging demande deux confirmations : APPLY et YES pour attester que le schéma historique et les données du projet staging peuvent être supprimés ou transformés. La confirmation est limitée au projet `mlhbdautaxufubaybzyt`. Elle n'autorise aucune opération sur la production.
