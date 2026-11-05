@@ -33,7 +33,13 @@ export class QualificationQueueItemDto {
   @ApiProperty({ type: 'string', nullable: true })
   description!: string | null;
 
-  @ApiProperty({ type: 'object' })
+  @ApiProperty({
+    type: 'object',
+    properties: {
+      nom: { type: 'string' },
+      prenom: { type: 'string', nullable: true },
+    },
+  })
   utilisateur!: { nom: string; prenom: string | null };
 
   @ApiProperty({ type: [QualificationQueueContentDto] })
