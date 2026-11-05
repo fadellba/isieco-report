@@ -40,7 +40,7 @@ WHERE i."id_signalement" = s."id_signalement";
 
 -- 3. Fusionner QualificationSignalement dans ContenuSignalement.
 ALTER TABLE "contenu_signalement"
-  ADD COLUMN "id_contenu_signalement" UUID;
+  ADD COLUMN "id_contenu_signalement" UUID,
   ADD COLUMN "etat_qualification" TEXT NOT NULL DEFAULT 'EN_ATTENTE',
   ADD COLUMN "qualifie_par" UUID,
   ADD COLUMN "date_qualification" TIMESTAMP(3);
