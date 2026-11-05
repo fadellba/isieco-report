@@ -176,6 +176,67 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'Prisma migration history RLS was unexpectedly disabled.';
   END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public'
+      AND c.relkind IN ('r', 'p')
+      AND c.relname <> '_prisma_migrations'
+      AND NOT c.relrowsecurity
+  ) THEN
+    RAISE EXCEPTION 'RLS is not enabled on every business table.';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public'
+      AND c.relkind IN ('r', 'p')
+      AND (
+        has_table_privilege('anon', c.oid, 'SELECT')
+        OR has_table_privilege('anon', c.oid, 'INSERT')
+        OR has_table_privilege('anon', c.oid, 'UPDATE')
+        OR has_table_privilege('anon', c.oid, 'DELETE')
+        OR has_table_privilege('authenticated', c.oid, 'SELECT')
+        OR has_table_privilege('authenticated', c.oid, 'INSERT')
+        OR has_table_privilege('authenticated', c.oid, 'UPDATE')
+        OR has_table_privilege('authenticated', c.oid, 'DELETE')
+        OR has_table_privilege('service_role', c.oid, 'SELECT')
+        OR has_table_privilege('service_role', c.oid, 'INSERT')
+        OR has_table_privilege('service_role', c.oid, 'UPDATE')
+        OR has_table_privilege('service_role', c.oid, 'DELETE')
+      )
+  ) THEN
+    RAISE EXCEPTION 'A Supabase Data API role has direct table privileges in public.';
+  END IF;
+
+  SELECT count(*) INTO v_count FROM public.photo_signalement;
+  IF v_count <> 1 THEN
+    RAISE EXCEPTION 'Expected one preserved report photo, found %.', v_count;
+  END IF;
+
+  SELECT count(*) INTO v_count FROM public.photo_intervention;
+  IF v_count <> 1 THEN
+    RAISE EXCEPTION 'Expected one preserved intervention photo, found %.', v_count;
+  END IF;
+
+  SELECT count(*) INTO v_count FROM public.appartenance_equipe;
+  IF v_count <> 1 THEN
+    RAISE EXCEPTION 'Expected one preserved team membership, found %.', v_count;
+  END IF;
+
+  SELECT count(*) INTO v_count FROM public.affectation;
+  IF v_count <> 2 THEN
+    RAISE EXCEPTION 'Expected two preserved assignments, found %.', v_count;
+  END IF;
+
+  SELECT count(*) INTO v_count FROM public.intervention;
+  IF v_count <> 2 THEN
+    RAISE EXCEPTION 'Expected two preserved interventions, found %.', v_count;
+  END IF;
 END
 $assertions$;
 
