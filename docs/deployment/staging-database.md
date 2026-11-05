@@ -2,7 +2,7 @@
 
 ## Projet cible
 
-Le projet Supabase de staging est `isieco-report-staging` (`mlhbdautaxufubaybzyt`), région `eu-west-1`. Au contrôle du 5 novembre 2026, six migrations Prisma historiques étaient terminées. Le dataset observé était limité à 3 utilisateurs, 8 rôles, 1 signalement, 1 photo et 6 événements métier ; aucun dossier, équipe, affectation, intervention ou vérification. Ce jeu n'est pas représentatif des cas de migration complexes.
+Le projet Supabase de staging est `isieco-report-staging` (`mlhbdautaxufubaybzyt`), région `eu-west-1`. Au contrôle du 5 novembre 2026, six migrations Prisma historiques étaient terminées. Le dataset observé était limité à 3 profils métier, 8 rôles, 1 signalement, 1 photo et 6 événements métier ; aucun dossier, équipe, affectation, intervention ou vérification. Le contrôle des schémas gérés a également relevé 3 identités dans `auth.users`, 1 bucket et 1 objet dans `storage.objects`. Ce jeu n'est pas représentatif des cas de migration complexes.
 
 Le bucket privé `isieco-private-media` existe déjà, avec limite 10 MiB et types autorisés JPEG, PNG et WebP. Cette configuration Storage est distincte des migrations de la base métier.
 
@@ -94,7 +94,7 @@ unset BACKUP_DB_URL
 
 Conserver le dossier hors du dépôt dans un espace chiffré à accès restreint. Le chemin .backups/ est ignoré par Git. La commande Supabase CLI exclut les schémas gérés `auth`, `storage` et les schémas d'extensions. Les comptes Supabase Auth, les paramètres/policies personnalisés du Storage et les objets binaires ne sont donc pas restaurés par ces trois dumps. Ils doivent être traités séparément si une restauration applicative intégrale est nécessaire. Pour la répétition de la migration métier, le dump `public` contient en revanche les tables relationnelles historiques visées.
 
-Tester la restauration dans un **nouveau projet Supabase isolé**, jamais sur le staging source. Configurer préalablement les extensions nécessaires. Pour le cas courant sans Supabase Vault ni chiffrement de colonnes, restaurer les rôles, le schéma et les données avec la procédure officielle :
+Tester la restauration du schéma métier dans un **nouveau projet Supabase isolé**, jamais sur le staging source. Le test de migration PostgreSQL peut utiliser des identifiants synthétiques, car les utilisateurs Auth du projet source ne sont pas inclus dans le dump `public`. Configurer préalablement les extensions nécessaires. Pour le cas courant sans Supabase Vault ni chiffrement de colonnes, restaurer les rôles, le schéma et les données avec la procédure officielle :
 
 ```bash
 psql \
@@ -108,4 +108,4 @@ psql \
 
 Pour un projet utilisant Vault ou le chiffrement de colonnes, suivre la variante spécifique de la documentation Supabase qui ajoute `SET session_replication_role = replica` avant l'import des données ; ne pas l'appliquer par défaut. Un export n'est pas un backup validé tant que les checksums et une restauration complète du périmètre visé n'ont pas été vérifiés. Les comptes Supabase Auth, les policies/configurations Storage et les objets Storage ne sont pas rétablis par ces seuls dumps PostgreSQL.
 
-Le workflow staging demande deux confirmations : APPLY et YES pour attester qu'une sauvegarde a été restaurée dans un environnement isolé. Cette confirmation est une déclaration opérateur ; elle ne remplace pas l'inspection du backup, ses checksums ni le test de restauration.
+Le workflow staging demande deux confirmations : APPLY et YES pour attester que la sauvegarde du schéma métier a été restaurée dans un environnement isolé et que le sort des identités Auth et objets Storage a été vérifié. Cette confirmation est une déclaration opérateur ; elle ne remplace pas l'inspection du backup, ses checksums ni le test de restauration.
