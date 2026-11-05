@@ -3,9 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import { createClient, type User } from '@supabase/supabase-js';
 
 /**
- * Le serveur valide chaque access token auprès de Supabase Auth.
- * La clé utilisée ici est la clé publique du projet : aucune clé secrète Supabase
- * ne doit être installée dans l'API ou dans les clients.
+ * Le serveur valide chaque access token auprès de Supabase Auth avec la clé publique.
+ * Une éventuelle clé secrète reste réservée aux services serveur qui en ont besoin
+ * (par exemple Storage) et ne doit jamais être exposée aux clients.
  */
 @Injectable()
 export class SupabaseAuthService {
