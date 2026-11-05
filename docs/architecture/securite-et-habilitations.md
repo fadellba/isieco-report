@@ -2,42 +2,55 @@
 
 ## Identité
 
-Supabase Auth gère les identifiants, mots de passe, sessions et jetons. Les clients transmettent l'access token à l'API avec Authorization: Bearer. L'API vérifie le jeton, retrouve le profil métier et ses rôles côté serveur. La table Utilisateur est liée à l'identité externe par auth_user_id.
+Supabase Auth gère les identifiants, mots de passe, sessions et jetons. Les clients transmettent l'access token à l'API avec \`Authorization: Bearer\`. L'API vérifie le jeton, retrouve le profil métier \`Utilisateur\` via \`authUserId\`, puis résout les rôles côté serveur.
 
-Les secrets de session ne sont pas copiés dans PostgreSQL métier. La table SESSION historique est exclue.
+Les secrets d'authentification ne sont pas répliqués dans la base métier. La table \`auth.users\` reste sous la responsabilité de Supabase Auth.
 
-## Rôles de départ
+## Rôles fonctionnels
 
 | Code | Responsabilité |
 |---|---|
-| CITOYEN | Déposer ses signalements et suivre ceux auxquels il a accès. |
-| AGENT_QUALIFICATION | Analyser, demander un complément, accepter ou rejeter selon les règles. |
-| RESPONSABLE_TRAITEMENT | Piloter les dossiers, contenus et priorités selon délégation. |
-| RESPONSABLE_AFFECTATION | Affecter les catégories aux équipes compétentes. |
-| AGENT_TERRAIN | Consulter les missions et soumettre compte rendu et preuves. |
-| VERIFICATEUR_CLOTURE | Vérifier le résultat et autoriser clôture ou reprise. |
-| GESTIONNAIRE_REFERENTIEL | Administrer référentiels, équipes et compétences autorisés. |
-| ADMINISTRATEUR_COMPTES | Administrer les comptes et habilitations, sans privilège métier implicite. |
+| \`CITOYEN\` | Déposer ses signalements, consulter leur état, ajouter des photos et répondre aux compléments. |
+| \`AGENT_QUALIFICATION\` | Analyser les signalements, demander un complément, accepter ou rejeter. |
+| \`RESPONSABLE_TRAITEMENT\` | Constituer et piloter les dossiers, contenus, priorités et localisations. |
+| \`RESPONSABLE_AFFECTATION\` | Affecter des contenus de dossier aux équipes compétentes et réaffecter une mission éligible. |
+| \`AGENT_TERRAIN\` | Consulter les missions de ses équipes, soumettre comptes rendus et preuves. |
+| \`VERIFICATEUR_CLOTURE\` | Vérifier indépendamment les résultats et autoriser clôture ou reprise. |
+| \`GESTIONNAIRE_REFERENTIEL\` | Administrer les types de déchets, équipes, appartenances et compétences. |
+| \`ADMINISTRATEUR_COMPTES\` | Administrer les comptes et leurs attributions de rôles. |
 
 ## Règles impératives
 
-- L'inscription publique attribue seulement CITOYEN côté serveur.
+- L'inscription publique attribue uniquement le rôle \`CITOYEN\` côté serveur.
 - Aucun rôle ou permission transmis par le client n'est considéré comme fiable.
-- Le premier ADMINISTRATEUR_COMPTES est provisionné par une procédure contrôlée.
+- Le premier \`ADMINISTRATEUR_COMPTES\` est provisionné par une procédure contrôlée.
 - Les responsabilités qualification, affectation, intervention et vérification sont distinctes.
-- Chaque ressource (signalement, dossier, média, historique) fait l'objet d'un contrôle de propriété et de permission.
-- Les attributions et révocations de rôles sont exécutées dans une transaction sérialisable et journalisées dans `EvenementMetier` avec acteur, cible, date, motif et code du rôle.
-- L'attribution du même rôle actif est protégée par un index unique partiel PostgreSQL ; les conflits concurrents sont retournés comme `409 Conflict`.
-- La révocation du dernier compte `ADMINISTRATEUR_COMPTES` actif est interdite ; les opérations de rôle et leur événement d'audit sont atomiques.
-- Les décisions sensibles conservent acteur, date, motif et identifiant de corrélation lorsque disponible.
-- La consultation d'audit est elle-même limitée : un compte actif ne voit que les événements où il est acteur ou cible ; `ADMINISTRATEUR_COMPTES` ne voit que l'historique des attributions/révocations de rôles du compte demandé.
-- Aucune consultation globale du journal n'est accordée à `ADMINISTRATEUR_COMPTES` et aucun rôle `AUDITEUR` n'est créé sans décision d'architecture et validation fonctionnelle explicite.
+- L'accès à un signalement, dossier, contenu, affectation, intervention ou média est vérifié côté API selon la propriété, le rôle, l'appartenance et l'état métier.
+- Un agent ne peut consulter ou modifier que les opérations de ses équipes auxquelles il appartient activement.
+- L'auteur d'une intervention ne peut pas vérifier son propre compte rendu.
+- La révocation du dernier compte administrateur actif est interdite.
+- Les secrets de stockage et les chaînes PostgreSQL sont réservés à l'environnement API ; aucune clé privilégiée n'est embarquée dans Web ou Mobile.
 - Les erreurs ne divulguent pas SQL, stack traces, jetons ou secrets.
+
+## Traçabilité réellement portée par le modèle simplifié
+
+Le modèle cible ne contient plus de table générique \`EvenementMetier\`, de journal avant/après ni de module/endpoint Audit autonome. Il ne faut donc pas présenter le produit courant comme disposant d'un journal d'audit générique.
+
+Deux informations historiques métier restent structurées :
+
+- \`HistoriqueStatutSignalement\` conserve les transitions de statut d'un signalement, avec ancien/nouveau statut, date, acteur éventuel et motif.
+- \`UtilisateurRole\` conserve les périodes d'attribution d'un rôle via ses dates de début/fin, ainsi que l'attribution initiale et son motif lorsqu'ils sont fournis. La date de fin matérialise la fermeture de la période.
+
+Les deux mécanismes ont un périmètre précis. Ils ne constituent pas un journal complet de toutes les mutations, des accès, des tentatives refusées, des changements de priorité/localisation ou des opérations d'administration. Les champs retirés avec l'ancien audit générique ne sont pas reconstruits par la migration.
+
+Toute exigence réglementaire ou opérationnelle de journalisation exhaustive, d'immutabilité, de preuve de révocation, d'export ou de consultation globale doit faire l'objet d'une décision de conception et d'un modèle dédié avant d'être annoncée comme fonctionnalité.
 
 ## Médias et RLS
 
-Les médias sont stockés dans des buckets privés. Le backend contrôle taille, type, nom, droits et rétention, et peut délivrer des URL signées de courte durée. La clé service_role et les chaînes PostgreSQL ne sont jamais embarquées dans Web ou Mobile. RLS doit être activé et testé sur les accès directs aux APIs Supabase ; les contrôles NestJS restent indispensables.
+Les médias sont stockés dans un bucket Supabase privé. Le backend contrôle la taille, le type, le nom, l'accès et la rétention et délivre des URL signées de courte durée. Les chemins Storage ne sont jamais exposés au client.
+
+RLS est activé sur les tables métier ; les privilèges directs des rôles Data API \`anon\`, \`authenticated\` et \`service_role\` sont retirés pour le périmètre relationnel. L'accès métier passe par l'API NestJS. RLS et privilèges SQL doivent être recontrôlés après chaque migration sur l'environnement cible.
 
 ## Tests d'autorisation attendus
 
-Tester des cas positifs et négatifs, notamment compte suspendu, rôle absent ou expiré, ressource d'un autre utilisateur, délégation, transition non permise, opération idempotente et média privé.
+Tester les cas positifs et négatifs : compte suspendu, rôle absent ou expiré, signalement d'un autre utilisateur, appartenance d'équipe absente/terminée, auteur de l'intervention, tentative d'auto-vérification, état métier non éligible, opération idempotente, photo privée expirée ou purgée et concurrence de mutations.
