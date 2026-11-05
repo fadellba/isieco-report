@@ -18,14 +18,14 @@ Cette protection est nécessaire car les privilèges par défaut observés sur l
 
 ## Connexion GitHub Actions
 
-Le workflow `.github/workflows/staging-migrate.yml` applique uniquement les migrations déjà commitées. Il est manuel, limité à la branche `main`, protégé par un choix explicite `APPLY` et utilise l'environnement GitHub `staging`.
+Le workflow `.github/workflows/staging-migrate.yml` applique uniquement les migrations déjà commitées. Il est manuel, limité à la branche `main`, protégé par deux choix explicites `APPLY` et `YES` (confirmation d'une sauvegarde restaurée) et utilise l'environnement GitHub `staging`.
 
 1. Dans GitHub, ouvrir **Settings → Environments** et créer l'environnement `staging`.
 2. Ajouter dans **Environment secrets** le secret `STAGING_PRISMA_URL`.
 3. Dans Supabase Dashboard, ouvrir le projet `isieco-report-staging`, cliquer sur **Connect**, puis sélectionner **Session pooler**.
 4. Copier la chaîne PostgreSQL de session pooler (port **5432**, base `postgres`, utilisateur `postgres.mlhbdautaxufubaybzyt`) et ajouter `?sslmode=require` si ce paramètre n'est pas déjà présent.
 5. Enregistrer cette chaîne comme secret GitHub `STAGING_PRISMA_URL`. Ne jamais la placer dans le dépôt, un commentaire de PR, un fichier client ou une sortie de terminal.
-6. Dans **Actions → Staging Database Migrate → Run workflow**, choisir la branche `main`, puis `APPLY`.
+6. Dans **Actions → Staging Database Migrate → Run workflow**, choisir la branche `main`, `APPLY`, puis `YES` uniquement après avoir vérifié une restauration dans un environnement isolé.
 
 Le workflow vérifie le projet cible à partir du hostname, du port, du nom de base et de l'utilisateur avant de se connecter. Il refuse le pooler transactionnel (port 6543) et ne peut pas être utilisé depuis une branche de fonctionnalité.
 
