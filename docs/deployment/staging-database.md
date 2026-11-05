@@ -61,7 +61,7 @@ Le Security Advisor doit être relancé après l'application. Les tests d'API et
 - Le staging contrôlé le 5 novembre 2026 contient un petit jeu de données de test (3 profils, 8 rôles, 1 signalement, 1 photo et 6 événements métier). Ces données sont déclarées jetables ; la confirmation `YES` autorise explicitement leur perte ou transformation.
 
 
-## Précondition de sauvegarde pour la migration destructive
+## Sauvegarde facultative et retour arrière
 
 La migration simplifiée supprime les anciennes tables et colonnes d'historique. Elle ne dispose pas d'un rollback permettant de restaurer les lignes supprimées. Les données du staging ont été déclarées jetables : une sauvegarde restaurable n'est donc pas une précondition fonctionnelle pour ce projet. La migration reste destructive et la confirmation `YES` signifie que les données existantes du staging peuvent être perdues ou transformées. Une exportation hors site reste recommandée pour toute possibilité de retour arrière ; le test CI sur données synthétiques ne remplace pas une vraie sauvegarde.
 ## Export manuel et test de restauration sur l'offre Free
