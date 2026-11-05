@@ -17,5 +17,5 @@ export class UpdateWasteTypeDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsBoolean()
-  orientationSpecialisee?: boolean;
+  actif?: boolean;
 }

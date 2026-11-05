@@ -2,13 +2,9 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
 
 export class CreateAssignmentDto {
-  @ApiProperty({ format: 'uuid' })
+  @ApiProperty({ format: 'uuid', description: 'Contenu du dossier à affecter.' })
   @IsUUID()
-  idDossier!: string;
-
-  @ApiProperty({ format: 'uuid' })
-  @IsUUID()
-  idTypeDechet!: string;
+  idContenuDossier!: string;
 
   @ApiProperty({ format: 'uuid' })
   @IsUUID()

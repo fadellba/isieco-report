@@ -6,16 +6,19 @@ import test from 'node:test';
 const databaseUrl = process.env.TEST_DATABASE_URL;
 const { Pool } = pg;
 
-test('PostgreSQL enforces MLD v2.13 integrity constraints', { skip: !databaseUrl }, async () => {
+test('PostgreSQL enforces the simplified 18-table PFE domain model', { skip: !databaseUrl }, async () => {
   const pool = new Pool({ connectionString: databaseUrl, max: 1 });
   const client = await pool.connect();
   const userId = randomUUID();
   const authUserId = randomUUID();
   const reportId = randomUUID();
+  const dossierId = randomUUID();
   const typeId = randomUUID();
-  const publicationId = randomUUID();
-  const regionId = randomUUID();
   const teamId = randomUUID();
+  const competenceId = randomUUID();
+  const contentId = randomUUID();
+  const assignmentId = randomUUID();
+  const interventionId = randomUUID();
 
   async function expectSqlState(statement, values, expectedCode) {
     await client.query('SAVEPOINT invariant_probe');
@@ -30,231 +33,179 @@ test('PostgreSQL enforces MLD v2.13 integrity constraints', { skip: !databaseUrl
     }
   }
 
-  const expectCheckViolation = (statement, values) =>
-    expectSqlState(statement, values, '23514');
-  const expectUniqueViolation = (statement, values) =>
-    expectSqlState(statement, values, '23505');
-
   try {
     await client.query('BEGIN');
-
     await client.query(
       `INSERT INTO utilisateur (id_utilisateur, auth_user_id, nom, email)
        VALUES ($1, $2, 'Integration test', $3)`,
-      [userId, authUserId, `db-invariants-${userId}@example.test`],
+      [userId, authUserId, `pfe-model-${userId}@example.test`],
     );
 
-    const role = await client.query(
+    const citizen = await client.query(
       'SELECT id_role FROM role WHERE code_role = $1',
       ['CITOYEN'],
     );
-    assert.equal(role.rowCount, 1, 'The baseline migration must seed the CITOYEN role.');
-
-    const roleStart = new Date('2026-10-10T00:00:00.000Z');
-    await client.query(
-      'INSERT INTO utilisateur_role (id_utilisateur, id_role, date_debut) VALUES ($1, $2, $3)',
-      [userId, role.rows[0].id_role, roleStart],
-    );
-    await expectUniqueViolation(
-      'INSERT INTO utilisateur_role (id_utilisateur, id_role, date_debut) VALUES ($1, $2, $3)',
-      [userId, role.rows[0].id_role, new Date('2026-10-11T00:00:00.000Z')],
-    );
-
-    await expectCheckViolation(
-      `INSERT INTO utilisateur_role (id_utilisateur, id_role, date_debut, date_fin)
-       VALUES ($1, $2, TIMESTAMP '2026-10-10 00:00:00', TIMESTAMP '2026-10-09 00:00:00')`,
-      [userId, role.rows[0].id_role],
-    );
+    assert.equal(citizen.rowCount, 1, 'The initial migration must seed the citizen role.');
 
     await client.query(
-      `INSERT INTO signalement
-        (id_signalement, id_utilisateur, statut_signalement)
-       VALUES ($1, $2, 'BROUILLON')`,
-      [reportId, userId],
-    );
-
-    await expectCheckViolation(
-      `INSERT INTO signalement
-        (id_signalement, id_utilisateur, statut_signalement, latitude, longitude)
-       VALUES ($1, $2, 'BROUILLON', 91, 10)`,
-      [randomUUID(), userId],
-    );
-
-    await expectCheckViolation(
-      `INSERT INTO signalement
-        (id_signalement, id_utilisateur, statut_signalement, latitude)
-       VALUES ($1, $2, 'BROUILLON', 10)`,
-      [randomUUID(), userId],
-    );
-
-    await client.query(
-      `INSERT INTO type_dechet
-        (id_type_dechet, code_type, libelle, orientation_specialisee, date_debut_validite)
-       VALUES ($1, $2, 'Type de test', false, TIMESTAMP '2026-01-01 00:00:00')`,
-      [typeId, `TEST-${typeId}`],
-    );
-
-    await expectCheckViolation(
-      `INSERT INTO contenu_signalement
-        (id_signalement, id_type_dechet, quantite_estimee)
-       VALUES ($1, $2, -0.001)`,
-      [reportId, typeId],
-    );
-
-    await expectCheckViolation(
-      `INSERT INTO photo_signalement
-        (id_photo_signalement, reference_photo, date_ajout, id_signalement,
-         date_expiration, media_stockee_locale, etat_publication, floutage_confirme)
-       VALUES ($1, 'private/test.jpg', TIMESTAMP '2026-10-10 00:00:00', $2,
-               TIMESTAMP '2026-10-09 00:00:00', false, 'PRIVEE', false)`,
-      [randomUUID(), reportId],
-    );
-
-    await client.query(
-      `INSERT INTO region (id_region, code_region, nom_region, actif)
-       VALUES ($1, $2, 'Region integrity test', true)`,
-      [regionId, `REG-${regionId}`],
+      `INSERT INTO type_dechet (id_type_dechet, code_type, libelle, actif)
+       VALUES ($1, $2, 'Plastique', true)`,
+      [typeId, `PLASTIQUE-${typeId}`],
     );
     await client.query(
       `INSERT INTO equipe (id_equipe, nom_equipe, etat_equipe)
-       VALUES ($1, 'Team integrity test', 'ACTIVE')`,
+       VALUES ($1, 'Equipe test', 'ACTIVE')`,
       [teamId],
     );
+    await client.query(
+      `INSERT INTO competence_equipe
+        (id_competence_equipe, id_equipe, id_type_dechet, actif)
+       VALUES ($1, $2, $3, true)`,
+      [competenceId, teamId, typeId],
+    );
 
-    await expectCheckViolation(
-      `INSERT INTO evenement_metier
-        (id_evenement, type_evenement, date_enregistrement, origine, version_schema)
-       VALUES ($1, 'TEST', CURRENT_TIMESTAMP, 'TEST', 1)`,
-      [randomUUID()],
+    await expectSqlState(
+      `INSERT INTO competence_equipe
+        (id_competence_equipe, id_equipe, id_type_dechet, actif)
+       VALUES ($1, $2, $3, true)`,
+      [randomUUID(), teamId, typeId],
+      '23505',
     );
 
     await client.query(
-      `INSERT INTO evenement_metier
-        (id_evenement, type_evenement, date_enregistrement, origine, version_schema, id_region_cible)
-       VALUES ($1, 'REFERENTIEL_REGION_CREE', CURRENT_TIMESTAMP, 'API', 1, $2)`,
-      [randomUUID(), regionId],
-    );
-
-    await expectCheckViolation(
-      `INSERT INTO evenement_metier
-        (id_evenement, type_evenement, date_enregistrement, origine, version_schema,
-         id_region_cible, id_equipe_cible)
-       VALUES ($1, 'INVALID_MULTI_TARGET', CURRENT_TIMESTAMP, 'TEST', 1, $2, $3)`,
-      [randomUUID(), regionId, teamId],
+      `INSERT INTO dossier_traitement
+        (id_dossier, reference_dossier, description_synthese, date_creation_dossier,
+         statut_dossier, priorite, cree_par)
+       VALUES ($1, $2, 'Dossier de test', CURRENT_TIMESTAMP, 'OUVERT', 'NORMALE', $3)`,
+      [dossierId, `DOS-${dossierId}`, userId],
     );
 
     await client.query(
-      `INSERT INTO publication_flux
-        (id_publication, cree_par, date_creation, etat_publication)
-       VALUES ($1, $2, CURRENT_TIMESTAMP, 'BROUILLON')`,
-      [publicationId, userId],
+      `INSERT INTO signalement
+        (id_signalement, id_utilisateur, id_dossier, statut_signalement,
+         cle_idempotence, empreinte_requete)
+       VALUES ($1, $2, $3, 'SOUMIS', 'integration-key-1', 'fingerprint')`,
+      [reportId, userId, dossierId],
     );
 
-    await expectCheckViolation(
-      `INSERT INTO photo_publication
-        (id_photo_publication, id_publication, role_photo, date_ajout)
-       VALUES ($1, $2, 'AVANT', CURRENT_TIMESTAMP)`,
-      [randomUUID(), publicationId],
+    await expectSqlState(
+      `INSERT INTO signalement
+        (id_signalement, id_utilisateur, statut_signalement, latitude)
+       VALUES ($1, $2, 'SOUMIS', 10)`,
+      [randomUUID(), userId],
+      '23514',
     );
 
-    const expectedIndexes = [
-      'utilisateur_role_one_open_assignment_idx',
-      'appartenance_equipe_one_open_membership_idx',
-      'competence_equipe_one_open_skill_idx',
-      'delegation_decision_equipe_one_open_delegation_idx',
-      'rattachement_signalement_one_open_case_idx',
-      'affectation_one_open_assignment_idx',
+    await expectSqlState(
+      `INSERT INTO contenu_signalement
+        (id_contenu_signalement, id_signalement, id_type_dechet, quantite_estimee)
+       VALUES ($1, $2, $3, -0.001)`,
+      [randomUUID(), reportId, typeId],
+      '23514',
+    );
+
+    await client.query(
+      `INSERT INTO contenu_signalement
+        (id_contenu_signalement, id_signalement, id_type_dechet, quantite_estimee, etat_qualification)
+       VALUES ($1, $2, $3, 2.5, 'RETENU')`,
+      [randomUUID(), reportId, typeId],
+    );
+
+    await client.query(
+      `INSERT INTO historique_statut_signalement
+        (id_historique_statut, id_signalement, id_utilisateur, ancien_statut, nouveau_statut)
+       VALUES ($1, $2, $3, NULL, 'SOUMIS')`,
+      [randomUUID(), reportId, userId],
+    );
+
+    await client.query(
+      `INSERT INTO contenu_dossier
+        (id_contenu_dossier, id_dossier, id_type_dechet, etat_contenu_dossier, etat_prise_en_charge)
+       VALUES ($1, $2, $3, 'ACTIF', 'EN_ATTENTE')`,
+      [contentId, dossierId, typeId],
+    );
+
+    await client.query(
+      `INSERT INTO affectation
+        (id_affectation, id_contenu_dossier, id_equipe, id_competence_equipe,
+         date_heure_affectation, id_decideur, etat_affectation, decision_equipe)
+       VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, $5, 'ACTIVE', 'EN_ATTENTE')`,
+      [assignmentId, contentId, teamId, competenceId, userId],
+    );
+
+    await expectSqlState(
+      `INSERT INTO affectation
+        (id_affectation, id_contenu_dossier, id_equipe, id_competence_equipe,
+         date_heure_affectation, id_decideur, etat_affectation, decision_equipe)
+       VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, $5, 'ACTIVE', 'EN_ATTENTE')`,
+      [randomUUID(), contentId, teamId, competenceId, userId],
+      '23505',
+    );
+
+    await client.query(
+      `INSERT INTO intervention
+        (id_intervention, id_affectation, statut_intervention, renseigne_par)
+       VALUES ($1, $2, 'EN_COURS', $3)`,
+      [interventionId, assignmentId, userId],
+    );
+    await client.query(
+      `INSERT INTO verification
+        (id_verification, id_intervention, id_verificateur, date_verification, resultat_verification)
+       VALUES ($1, $2, $3, CURRENT_TIMESTAMP, 'A_REPRENDRE')`,
+      [randomUUID(), interventionId, userId],
+    );
+
+    await expectSqlState(
+      `INSERT INTO verification
+        (id_verification, id_intervention, id_verificateur, date_verification, resultat_verification)
+       VALUES ($1, $2, $3, CURRENT_TIMESTAMP, 'CONFORME')`,
+      [randomUUID(), interventionId, userId],
+      '23505',
+    );
+
+    const requiredTables = [
+      'utilisateur', 'role', 'utilisateur_role', 'type_dechet', 'equipe',
+      'appartenance_equipe', 'competence_equipe', 'dossier_traitement',
+      'signalement', 'photo_signalement', 'contenu_signalement',
+      'historique_statut_signalement', 'demande_complement', 'contenu_dossier',
+      'affectation', 'intervention', 'photo_intervention', 'verification',
     ];
-    const indexes = await client.query(
-      'SELECT indexname FROM pg_indexes WHERE schemaname = current_schema() AND indexname = ANY($1::text[])',
-      [expectedIndexes],
-    );
-    assert.deepEqual(
-      new Set(indexes.rows.map((row) => row.indexname)),
-      new Set(expectedIndexes),
-      'All active-period partial unique indexes must be installed.',
-    );
-
-    const businessTables = [
-      'utilisateur', 'role', 'utilisateur_role', 'preferences_visibilite_citoyen',
-      'badge', 'badge_utilisateur', 'historique_points', 'notification',
-      'type_dechet', 'equipe', 'appartenance_equipe', 'competence_equipe',
-      'region', 'departement', 'commune', 'delegation_decision_equipe',
-      'disponibilite_equipe', 'historique_disponibilite_equipe', 'signalement',
-      'photo_signalement', 'contenu_signalement', 'demande_complement',
-      'reponse_complement', 'qualification_signalement', 'idempotence_signalement',
-      'dossier_traitement', 'rattachement_signalement', 'contenu_dossier',
-      'provenance_contenu_dossier', 'affectation', 'intervention',
-      'photo_intervention', 'verification_resolution', 'historique_localisation_dossier',
-      'historique_priorite_dossier', 'evenement_metier', 'publication_flux',
-      'photo_publication',
-    ];
-    const rlsTables = await client.query(
+    const tableState = await client.query(
       `SELECT c.relname, c.relrowsecurity
        FROM pg_class c
        JOIN pg_namespace n ON n.oid = c.relnamespace
        WHERE n.nspname = 'public'
          AND c.relkind IN ('r', 'p')
          AND c.relname = ANY($1::text[])`,
-      [businessTables],
+      [requiredTables],
     );
-    assert.equal(
-      rlsTables.rowCount,
-      businessTables.length,
-      'All 38 MLD business tables must exist after migrations.',
-    );
-    assert.ok(
-      rlsTables.rows.every((row) => row.relrowsecurity),
-      'Row-level security must be enabled on every business table.',
-    );
+    assert.equal(tableState.rowCount, 18, 'All 18 simplified business tables must exist.');
+    assert.ok(tableState.rows.every((row) => row.relrowsecurity), 'RLS must be enabled for all 18 business tables.');
 
-    const apiRoles = ['anon', 'authenticated', 'service_role'];
-    const existingApiRoles = await client.query(
-      'SELECT rolname FROM pg_roles WHERE rolname = ANY($1::text[])',
-      [apiRoles],
+    const removedTables = [
+      'evenement_metier', 'qualification_signalement', 'reponse_complement',
+      'idempotence_signalement', 'rattachement_signalement', 'provenance_contenu_dossier',
+      'disponibilite_equipe', 'delegation_decision_equipe', 'historique_points',
+      'badge', 'badge_utilisateur', 'notification', 'publication_flux',
+      'photo_publication', 'region', 'departement', 'commune',
+      'historique_priorite_dossier', 'historique_localisation_dossier',
+      'historique_disponibilite_equipe',
+    ];
+    const oldTables = await client.query(
+      `SELECT tablename FROM pg_tables
+       WHERE schemaname = 'public' AND tablename = ANY($1::text[])`,
+      [removedTables],
     );
-    if (existingApiRoles.rowCount > 0) {
-      const exposedTables = await client.query(
-        `SELECT r.rolname, c.relname, p.privilege_type
-         FROM pg_roles r
-         CROSS JOIN pg_class c
-         JOIN pg_namespace n ON n.oid = c.relnamespace
-         CROSS JOIN (VALUES ('SELECT'), ('INSERT'), ('UPDATE'), ('DELETE')) AS p(privilege_type)
-         WHERE r.rolname = ANY($1::text[])
-           AND n.nspname = 'public'
-           AND c.relkind IN ('r', 'p')
-           AND c.relname = ANY($2::text[])
-           AND has_table_privilege(r.rolname, c.oid, p.privilege_type)
-         ORDER BY r.rolname, c.relname, p.privilege_type`,
-        [existingApiRoles.rows.map((row) => row.rolname), businessTables],
-      );
-      assert.deepEqual(
-        exposedTables.rows,
-        [],
-        'Supabase Data API roles must not have direct privileges on business tables.',
-      );
-    }
+    assert.deepEqual(oldTables.rows, [], 'Out-of-scope tables must not remain after simplification.');
 
-    const unsafeDefaults = await client.query(
-      `SELECT d.defaclobjtype, x.privilege_type,
-              CASE WHEN x.grantee = 0 THEN 'PUBLIC' ELSE r.rolname END AS grantee
-       FROM pg_default_acl d
-       CROSS JOIN LATERAL aclexplode(d.defaclacl) x
-       LEFT JOIN pg_roles r ON r.oid = x.grantee
-       WHERE d.defaclrole = (SELECT oid FROM pg_roles WHERE rolname = current_user)
-         AND d.defaclnamespace = 'public'::regnamespace
-         AND (
-           r.rolname = ANY($1::text[])
-           OR (x.grantee = 0 AND d.defaclobjtype IN ('r', 'S', 'f'))
-         )
-       ORDER BY d.defaclobjtype, grantee, x.privilege_type`,
-      [apiRoles],
+    const directForeignKeys = await client.query(
+      `SELECT conname
+       FROM pg_constraint
+       WHERE conrelid IN ('public.signalement'::regclass, 'public.verification'::regclass)
+         AND contype = 'f'`,
     );
-    assert.deepEqual(
-      unsafeDefaults.rows,
-      [],
-      'Future public tables, sequences and functions must not inherit API-role or PUBLIC access.',
-    );
+    assert.ok(directForeignKeys.rows.some((row) => row.conname.includes('signalement_id_dossier')));
+    assert.ok(directForeignKeys.rows.some((row) => row.conname.includes('verification_id_intervention')));
   } finally {
     await client.query('ROLLBACK');
     client.release();

@@ -42,6 +42,7 @@ interface Intervention {
   compteRendu: string | null;
   motifException: string | null;
   renseignePar: string;
+  verification: { dateVerification: string; resultatVerification: 'CONFORME' | 'A_REPRENDRE'; motif: string | null; etatVerification: 'VALIDEE' | 'REPRISE' } | null;
   affectation: {
     idAffectation: string;
     idEquipe: string;
@@ -55,7 +56,6 @@ interface Intervention {
       dossier: { referenceDossier: string; statutDossier: string };
       typeDechet: { codeType: string; libelle: string };
     };
-    verifications: Array<{ dateVerification: string; etatVerification: 'VALIDEE' | 'REPRISE' }>;
   };
 }
 
@@ -339,7 +339,7 @@ export function InterventionsPage() {
           <div className="divide-y divide-slate-100">
             {assignments.map((assignment) => {
               const latest = latestByAssignment.get(assignment.idAffectation);
-              const latestVerification = latest?.affectation.verifications[0] ?? null;
+              const latestVerification = latest?.verification ?? null;
               const isAuthor = latest?.renseignePar === profile?.utilisateurId;
               const canStart = assignment.decisionEquipe === 'ACCEPTEE' && (
                 !latest ||

@@ -15,12 +15,7 @@ import type { RejectReportDto } from './dto/reject-report.dto.js';
 import type { RequestSupplementDto } from './dto/request-supplement.dto.js';
 
 type Transaction = Prisma.TransactionClient;
-
 const DECISIONABLE_STATUSES: readonly ReportStatus[] = ['SOUMIS', 'COMPLEMENT_REPONDU'];
-
-function isPrismaCode(error: unknown, code: string): boolean {
-  return typeof error === 'object' && error !== null && 'code' in error && error.code === code;
-}
 
 @Injectable()
 export class QualificationService {
@@ -43,96 +38,70 @@ export class QualificationService {
   async listQueue(query: ListQualificationQueryDto) {
     const page = Math.max(1, query.page ?? 1);
     const pageSize = Math.min(100, Math.max(1, query.pageSize ?? 20));
-    const where = {
-      statutSignalement: { in: [...DECISIONABLE_STATUSES] },
-    };
-
-    const [total, items] = await this.prisma.$transaction([
+    const where = { statutSignalement: { in: [...DECISIONABLE_STATUSES] } };
+    const [total, rows] = await this.prisma.$transaction([
       this.prisma.signalement.count({ where }),
       this.prisma.signalement.findMany({
         where,
         orderBy: [{ dateSoumission: 'asc' }, { idSignalement: 'asc' }],
         skip: (page - 1) * pageSize,
         take: pageSize,
-        select: {
-          idSignalement: true,
-          statutSignalement: true,
-          dateConstat: true,
-          dateSoumission: true,
-          description: true,
-          idCommune: true,
-          latitude: true,
-          longitude: true,
-          descriptionLocalisation: true,
-          utilisateur: {
-            select: {
-              idUtilisateur: true,
-              nom: true,
-              prenom: true,
-            },
-          },
-          contenus: {
-            select: {
-              idTypeDechet: true,
-              quantiteEstimee: true,
-              volumeEstime: true,
-              remarque: true,
-              typeDechet: {
-                select: { codeType: true, libelle: true },
-              },
-            },
-          },
+        include: {
+          utilisateur: { select: { nom: true, prenom: true } },
+          contenus: { include: { typeDechet: { select: { codeType: true, libelle: true } } } },
           demandesComplement: {
             orderBy: { dateDemande: 'desc' },
             take: 1,
-            select: {
-              idDemande: true,
-              dateDemande: true,
-              etatDemande: true,
-            },
+            select: { etatDemande: true, motif: true, dateDemande: true, reponse: true, dateReponse: true },
           },
         },
       }),
     ]);
-
-    return { items, page, pageSize, total };
+    return {
+      items: rows.map((row) => ({
+        idSignalement: row.idSignalement,
+        statutSignalement: row.statutSignalement,
+        dateConstat: row.dateConstat,
+        dateSoumission: row.dateSoumission,
+        description: row.description,
+        localisation: row.localisation,
+        latitude: row.latitude?.toString() ?? null,
+        longitude: row.longitude?.toString() ?? null,
+        descriptionLocalisation: row.localisation,
+        utilisateur: row.utilisateur,
+        contenus: row.contenus.map((item) => ({
+          idTypeDechet: item.idTypeDechet,
+          quantiteEstimee: item.quantiteEstimee?.toString() ?? null,
+          volumeEstime: item.volumeEstime?.toString() ?? null,
+          remarque: item.remarque,
+          etatQualification: item.etatQualification,
+          typeDechet: item.typeDechet,
+        })),
+        demandesComplement: row.demandesComplement,
+      })),
+      page,
+      pageSize,
+      total,
+    };
   }
 
   async getQueueItem(idSignalement: string) {
-    const report = await this.prisma.signalement.findFirst({
+    const row = await this.prisma.signalement.findFirst({
       where: {
         idSignalement,
         statutSignalement: { in: [...DECISIONABLE_STATUSES] },
       },
-      select: {
-        idSignalement: true,
-        statutSignalement: true,
-        dateConstat: true,
-        dateSoumission: true,
-        description: true,
-        idCommune: true,
-        latitude: true,
-        longitude: true,
-        precisionLocalisation: true,
-        descriptionLocalisation: true,
-        utilisateur: {
-          select: { idUtilisateur: true, nom: true, prenom: true },
-        },
+      include: {
+        utilisateur: { select: { nom: true, prenom: true } },
         contenus: {
-          select: {
-            idTypeDechet: true,
-            quantiteEstimee: true,
-            volumeEstime: true,
-            remarque: true,
-            typeDechet: { select: { codeType: true, libelle: true } },
-          },
+          include: { typeDechet: { select: { codeType: true, libelle: true } } },
+          orderBy: { idTypeDechet: 'asc' },
         },
         photos: {
           select: {
             idPhotoSignalement: true,
             description: true,
             dateAjout: true,
-            etatPublication: true,
           },
           orderBy: { dateAjout: 'asc' },
         },
@@ -143,314 +112,292 @@ export class QualificationService {
             dateDemande: true,
             motif: true,
             etatDemande: true,
-            reponse: {
-              select: { idReponse: true, dateReponse: true, contenu: true },
-            },
+            reponse: true,
+            dateReponse: true,
           },
         },
       },
     });
-    if (!report) throw new NotFoundException('Signalement absent de la file de qualification.');
-    return report;
+    if (!row) throw new NotFoundException('Signalement absent de la file de qualification.');
+
+    return {
+      idSignalement: row.idSignalement,
+      statutSignalement: row.statutSignalement,
+      dateConstat: row.dateConstat,
+      dateSoumission: row.dateSoumission,
+      description: row.description,
+      latitude: row.latitude?.toString() ?? null,
+      longitude: row.longitude?.toString() ?? null,
+      precisionLocalisation: row.precisionLocalisation?.toString() ?? null,
+      descriptionLocalisation: row.localisation,
+      utilisateur: row.utilisateur,
+      contenus: row.contenus.map((item) => ({
+        idTypeDechet: item.idTypeDechet,
+        quantiteEstimee: item.quantiteEstimee?.toString() ?? null,
+        volumeEstime: item.volumeEstime?.toString() ?? null,
+        remarque: item.remarque,
+        etatQualification: item.etatQualification,
+        typeDechet: item.typeDechet,
+      })),
+      photos: row.photos.map((photo) => ({ ...photo, etatPublication: 'PRIVEE' })),
+      demandesComplement: row.demandesComplement.map((item) => ({
+        idDemande: item.idDemande,
+        dateDemande: item.dateDemande,
+        motif: item.motif,
+        etatDemande: item.etatDemande,
+        reponse: item.reponse && item.dateReponse
+          ? { dateReponse: item.dateReponse, contenu: item.reponse }
+          : null,
+      })),
+    };
   }
 
-  async createPhotoUrl(
-    idSignalement: string,
-    idPhotoSignalement: string,
-  ) {
-    const photo = await this.prisma.photoSignalement.findFirst({
+  async createPhotoUrl(idSignalement: string, idPhotoSignalement: string) {
+    const report = await this.prisma.signalement.findFirst({
       where: {
-        idPhotoSignalement,
         idSignalement,
-        signalement: {
-          statutSignalement: { in: [...DECISIONABLE_STATUSES] },
-        },
+        statutSignalement: { in: [...DECISIONABLE_STATUSES] },
+        photos: { some: { idPhotoSignalement } },
       },
       select: {
-        referencePhoto: true,
-        dateExpiration: true,
-        mediaPurgeAt: true,
+        photos: {
+          where: { idPhotoSignalement },
+          select: { referencePhoto: true, dateExpiration: true, mediaPurgeAt: true },
+        },
       },
     });
-
+    const photo = report?.photos[0];
     const now = new Date();
-    if (
-      !photo ||
-      photo.dateExpiration.getTime() <= now.getTime() ||
-      (photo.mediaPurgeAt !== null && photo.mediaPurgeAt.getTime() <= now.getTime())
-    ) {
+    if (!photo || photo.dateExpiration <= now || (photo.mediaPurgeAt && photo.mediaPurgeAt <= now)) {
       throw new NotFoundException('Photo absente de la file de qualification ou expirée.');
     }
-
     return this.storage.createSignedUrl(photo.referencePhoto);
   }
 
-  async requestSupplement(
-    idSignalement: string,
-    dto: RequestSupplementDto,
-    authUserId: string,
-  ) {
+  async requestSupplement(idSignalement: string, dto: RequestSupplementDto, authUserId: string) {
     const actorId = await this.actorId(authUserId);
     const motif = dto.motif.trim();
-    if (motif.length < 5 || motif.length > 2000) {
-      throw new BadRequestException('Le motif de complément doit contenir entre 5 et 2000 caractères.');
-    }
-
+    const now = new Date();
     try {
-      return await this.prisma.$transaction(
-        async (tx) => {
-          const report = await this.requireDecisionableReport(tx, idSignalement);
-          const openRequest = await tx.demandeComplement.findFirst({
-            where: { idSignalement, etatDemande: 'OUVERTE' },
-            select: { idDemande: true },
-          });
-          if (openRequest) {
-            throw new ConflictException('Une demande de complément est déjà ouverte pour ce signalement.');
-          }
+      return await this.prisma.$transaction(async (tx) => {
+        const report = await this.getDecisionableReport(tx, idSignalement);
+        const openRequest = await tx.demandeComplement.findFirst({
+          where: { idSignalement, etatDemande: 'OUVERTE' },
+          select: { idDemande: true },
+        });
+        if (openRequest) throw new ConflictException('Une demande de complément est déjà ouverte.');
 
-          const now = new Date();
-          const demande = await tx.demandeComplement.create({
-            data: {
-              idSignalement,
-              demandePar: actorId,
-              dateDemande: now,
-              motif,
-              etatDemande: 'OUVERTE',
-            },
-          });
-          const reportUpdate = await tx.signalement.updateMany({
-            where: {
-              idSignalement,
-              statutSignalement: report.statutSignalement,
-            },
-            data: { statutSignalement: 'EN_ATTENTE_COMPLEMENT' },
-          });
-          if (reportUpdate.count !== 1) {
-            throw new ConflictException('Le signalement a changé d’état simultanément.');
-          }
-          await this.writeEvent(tx, {
-            type: 'COMPLEMENT_DEMANDE',
-            actorId,
-            reportId: idSignalement,
-            before: { statutSignalement: report.statutSignalement },
-            after: {
-              statutSignalement: 'EN_ATTENTE_COMPLEMENT',
-              idDemande: demande.idDemande,
-              dateDemande: now.toISOString(),
-            },
-            reason: motif,
-          });
-          return demande;
-        },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-      );
+        const request = await tx.demandeComplement.create({
+          data: {
+            idSignalement,
+            demandePar: actorId,
+            dateDemande: now,
+            motif,
+            etatDemande: 'OUVERTE',
+          },
+        });
+        await tx.signalement.update({
+          where: { idSignalement },
+          data: {
+            statutSignalement: 'EN_ATTENTE_COMPLEMENT',
+            decisionPar: actorId,
+            dateDecision: now,
+            motifDecision: motif,
+          },
+        });
+        await this.writeStatus(tx, {
+          idSignalement,
+          actorId,
+          before: report.statutSignalement,
+          after: 'EN_ATTENTE_COMPLEMENT',
+          at: now,
+          motif,
+        });
+        return request;
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     } catch (error) {
-      this.handleTransactionError(error, 'Une demande de complément concurrente a été enregistrée.');
+      this.handleTransactionError(error, 'Le signalement ou la demande de complément a été modifié simultanément.');
     }
   }
 
-  async acceptReport(
-    idSignalement: string,
-    dto: AcceptReportDto,
-    authUserId: string,
-  ) {
+  async acceptReport(idSignalement: string, dto: AcceptReportDto, authUserId: string) {
     const actorId = await this.actorId(authUserId);
+    if (!dto.contenus.length) throw new BadRequestException('Au moins une catégorie doit être retenue.');
     const now = new Date();
-    if (!dto.contenus?.length || dto.contenus.length > 20) {
-      throw new BadRequestException('La qualification doit contenir entre 1 et 20 catégories.');
-    }
 
     try {
-      return await this.prisma.$transaction(
-        async (tx) => {
-          const report = await this.requireDecisionableReport(tx, idSignalement);
-          await this.assertNoOpenSupplement(tx, idSignalement);
+      await this.prisma.$transaction(async (tx) => {
+        const report = await this.getDecisionableReport(tx, idSignalement);
+        await this.ensureNoOpenSupplement(tx, idSignalement);
 
-          const wasteTypeIds = dto.contenus.map((item) => item.idTypeDechet);
-          if (new Set(wasteTypeIds).size !== wasteTypeIds.length) {
-            throw new BadRequestException('Chaque type de déchet ne peut apparaître qu’une fois.');
-          }
+        const typeIds = dto.contenus.map((item) => item.idTypeDechet);
+        const types = await tx.typeDechet.findMany({
+          where: { idTypeDechet: { in: typeIds }, actif: true },
+          select: { idTypeDechet: true },
+        });
+        if (types.length !== typeIds.length) {
+          throw new BadRequestException('Un ou plusieurs types de déchets sont inconnus ou inactifs.');
+        }
 
-          const activeWasteTypes = await tx.typeDechet.findMany({
+        const selected = new Set(typeIds);
+        const existingContents = await tx.contenuSignalement.findMany({
+          where: { idSignalement },
+          select: { idTypeDechet: true },
+        });
+
+        for (const item of dto.contenus) {
+          await tx.contenuSignalement.upsert({
             where: {
-              idTypeDechet: { in: wasteTypeIds },
-              dateDebutValidite: { lte: now },
-              OR: [{ dateFinValidite: null }, { dateFinValidite: { gte: now } }],
+              idSignalement_idTypeDechet: {
+                idSignalement,
+                idTypeDechet: item.idTypeDechet,
+              },
             },
-            select: { idTypeDechet: true },
-          });
-          if (activeWasteTypes.length !== wasteTypeIds.length) {
-            throw new BadRequestException('Un ou plusieurs types de déchets sont inconnus ou inactifs.');
-          }
-
-          await tx.qualificationSignalement.createMany({
-            data: dto.contenus.map((item) => ({
+            create: {
               idSignalement,
               idTypeDechet: item.idTypeDechet,
               quantiteEstimee: item.quantiteEstimee ?? null,
-              uniteQuantite: item.uniteQuantite?.trim() || null,
-              quantiteEstimeeLegacy: item.quantiteEstimeeLegacy ?? null,
               volumeEstime: item.volumeEstime ?? null,
               remarque: item.remarque?.trim() || null,
+              etatQualification: 'RETENU',
               qualifiePar: actorId,
               dateQualification: now,
+            },
+            update: {
+              quantiteEstimee: item.quantiteEstimee ?? null,
+              volumeEstime: item.volumeEstime ?? null,
+              remarque: item.remarque?.trim() || null,
               etatQualification: 'RETENU',
-              motifRetrait: null,
-            })),
+              qualifiePar: actorId,
+              dateQualification: now,
+            },
           });
+        }
 
-          const reportUpdate = await tx.signalement.updateMany({
-            where: {
-              idSignalement,
-              statutSignalement: report.statutSignalement,
-            },
-            data: {
-              statutSignalement: 'QUALIFIE',
-              decisionPar: actorId,
-              dateDecision: now,
-              motifDecision: null,
-            },
+        const excluded = existingContents
+          .filter((item) => !selected.has(item.idTypeDechet))
+          .map((item) => item.idTypeDechet);
+        if (excluded.length) {
+          await tx.contenuSignalement.updateMany({
+            where: { idSignalement, idTypeDechet: { in: excluded } },
+            data: { etatQualification: 'RETIRE', qualifiePar: actorId, dateQualification: now },
           });
-          if (reportUpdate.count !== 1) {
-            throw new ConflictException('Le signalement a changé d’état simultanément.');
-          }
+        }
 
-          await this.writeEvent(tx, {
-            type: 'SIGNALEMENT_QUALIFIE',
-            actorId,
-            reportId: idSignalement,
-            before: { statutSignalement: report.statutSignalement },
-            after: {
-              statutSignalement: 'QUALIFIE',
-              nombreCategoriesRetenues: dto.contenus.length,
-              dateDecision: now.toISOString(),
-            },
-          });
-
-          return tx.qualificationSignalement.findMany({
-            where: { idSignalement, qualifiePar: actorId, dateQualification: now },
-            orderBy: { idTypeDechet: 'asc' },
-            include: {
-              typeDechet: { select: { codeType: true, libelle: true } },
-            },
-          });
-        },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-      );
+        await tx.signalement.update({
+          where: { idSignalement },
+          data: {
+            statutSignalement: 'QUALIFIE',
+            decisionPar: actorId,
+            dateDecision: now,
+            motifDecision: null,
+          },
+        });
+        await this.writeStatus(tx, {
+          idSignalement,
+          actorId,
+          before: report.statutSignalement,
+          after: 'QUALIFIE',
+          at: now,
+          motif: null,
+        });
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     } catch (error) {
-      this.handleTransactionError(error, 'Le signalement a été qualifié simultanément.');
+      this.handleTransactionError(error, 'La décision de qualification est entrée en conflit avec une autre opération.');
     }
+
+    return this.getQueueItemAfterDecision(idSignalement);
   }
 
-  async rejectReport(
-    idSignalement: string,
-    dto: RejectReportDto,
-    authUserId: string,
-  ) {
+  async rejectReport(idSignalement: string, dto: RejectReportDto, authUserId: string) {
     const actorId = await this.actorId(authUserId);
     const motif = dto.motif.trim();
-    if (motif.length < 5 || motif.length > 2000) {
-      throw new BadRequestException('Le motif de rejet doit contenir entre 5 et 2000 caractères.');
-    }
+    const now = new Date();
 
     try {
-      return await this.prisma.$transaction(
-        async (tx) => {
-          const report = await this.requireDecisionableReport(tx, idSignalement);
-          await this.assertNoOpenSupplement(tx, idSignalement);
-          const now = new Date();
-          const reportUpdate = await tx.signalement.updateMany({
-            where: {
-              idSignalement,
-              statutSignalement: report.statutSignalement,
-            },
-            data: {
-              statutSignalement: 'REJETE',
-              decisionPar: actorId,
-              dateDecision: now,
-              motifDecision: motif,
-            },
-          });
-          if (reportUpdate.count !== 1) {
-            throw new ConflictException('Le signalement a changé d’état simultanément.');
-          }
-          await this.writeEvent(tx, {
-            type: 'SIGNALEMENT_REJETE',
-            actorId,
-            reportId: idSignalement,
-            before: { statutSignalement: report.statutSignalement },
-            after: {
-              statutSignalement: 'REJETE',
-              dateDecision: now.toISOString(),
-            },
-            reason: motif,
-          });
-          return { idSignalement, statutSignalement: 'REJETE', dateDecision: now, motifDecision: motif };
-        },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-      );
+      await this.prisma.$transaction(async (tx) => {
+        const report = await this.getDecisionableReport(tx, idSignalement);
+        await this.ensureNoOpenSupplement(tx, idSignalement);
+        await tx.signalement.update({
+          where: { idSignalement },
+          data: {
+            statutSignalement: 'REJETE',
+            decisionPar: actorId,
+            dateDecision: now,
+            motifDecision: motif,
+          },
+        });
+        await this.writeStatus(tx, {
+          idSignalement,
+          actorId,
+          before: report.statutSignalement,
+          after: 'REJETE',
+          at: now,
+          motif,
+        });
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     } catch (error) {
-      this.handleTransactionError(error, 'Le signalement a été rejeté ou modifié simultanément.');
+      this.handleTransactionError(error, 'La décision de rejet est entrée en conflit avec une autre opération.');
     }
+    return { idSignalement, statutSignalement: 'REJETE', motifDecision: motif };
   }
 
-  private async requireDecisionableReport(tx: Transaction, idSignalement: string) {
+  private async getDecisionableReport(tx: Transaction, idSignalement: string) {
     const report = await tx.signalement.findUnique({
       where: { idSignalement },
-      select: {
-        idSignalement: true,
-        statutSignalement: true,
-      },
+      select: { idSignalement: true, statutSignalement: true },
     });
     if (!report) throw new NotFoundException('Signalement introuvable.');
     if (!DECISIONABLE_STATUSES.includes(report.statutSignalement as ReportStatus)) {
-      throw new ConflictException('Le signalement n’est pas dans un état permettant cette décision.');
+      throw new ConflictException('Le signalement ne peut plus recevoir de décision de qualification.');
     }
     return report;
   }
 
-  private async assertNoOpenSupplement(tx: Transaction, idSignalement: string): Promise<void> {
-    const openRequest = await tx.demandeComplement.findFirst({
+  private async ensureNoOpenSupplement(tx: Transaction, idSignalement: string) {
+    const pending = await tx.demandeComplement.count({
       where: { idSignalement, etatDemande: 'OUVERTE' },
-      select: { idDemande: true },
     });
-    if (openRequest) {
-      throw new ConflictException('Une demande de complément doit être clôturée avant toute décision.');
+    if (pending > 0) {
+      throw new ConflictException('Une demande de complément doit être répondue avant toute décision.');
     }
   }
 
-  private async writeEvent(
+  private async writeStatus(
     tx: Transaction,
-    payload: {
-      type: string;
-      actorId: string;
-      reportId: string;
-      before?: Record<string, unknown>;
-      after?: Record<string, unknown>;
-      reason?: string;
-    },
-  ): Promise<void> {
-    const now = new Date();
-    await tx.evenementMetier.create({
+    input: { idSignalement: string; actorId: string; before: string; after: string; at: Date; motif: string | null },
+  ) {
+    await tx.historiqueStatutSignalement.create({
       data: {
-        typeEvenement: payload.type,
-        dateEvenement: now,
-        dateEnregistrement: now,
-        origine: 'API',
-        idActeur: payload.actorId,
-        idSignalementCible: payload.reportId,
-        ...(payload.before ? { donneesAvant: payload.before as Prisma.InputJsonObject } : {}),
-        ...(payload.after ? { donneesApres: payload.after as Prisma.InputJsonObject } : {}),
-        ...(payload.reason ? { motif: payload.reason } : {}),
-        versionSchema: 1,
+        idSignalement: input.idSignalement,
+        idUtilisateur: input.actorId,
+        ancienStatut: input.before,
+        nouveauStatut: input.after,
+        dateChangement: input.at,
+        motif: input.motif,
       },
     });
   }
 
+  private async getQueueItemAfterDecision(idSignalement: string) {
+    const item = await this.prisma.signalement.findUnique({
+      where: { idSignalement },
+      select: { idSignalement: true, statutSignalement: true, dateDecision: true },
+    });
+    return item;
+  }
+
   private handleTransactionError(error: unknown, conflictMessage: string): never {
+    if (error instanceof ConflictException || error instanceof NotFoundException || error instanceof BadRequestException) {
+      throw error;
+    }
     if (isPrismaCode(error, 'P2002') || isPrismaCode(error, 'P2034')) {
       throw new ConflictException(conflictMessage);
     }
     throw error;
   }
+}
+
+function isPrismaCode(error: unknown, code: string): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === code;
 }

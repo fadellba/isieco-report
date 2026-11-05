@@ -52,9 +52,6 @@ export class ReportResponseDto {
   @ApiProperty()
   description!: string | null;
 
-  @ApiProperty({ format: 'uuid', nullable: true })
-  idCommune!: string | null;
-
   @ApiProperty({ type: 'string', nullable: true, example: '-14.716700' })
   latitude!: string | null;
 

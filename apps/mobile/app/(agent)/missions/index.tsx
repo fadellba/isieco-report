@@ -281,7 +281,7 @@ export default function AgentMissionsScreen() {
                 <View className="mt-3 gap-4">
                   {assignments.map((assignment) => {
                     const latest = latestByAssignment.get(assignment.idAffectation);
-                    const verification = latest?.affectation.verifications[0];
+                    const verification = latest?.verification;
                     const selectedProof = latest ? proofs[latest.idIntervention] : undefined;
                     const canStart = assignment.decisionEquipe === 'ACCEPTEE' && (
                       !latest ||

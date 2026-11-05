@@ -63,8 +63,8 @@ export class ReportsController {
     required: true,
     description: 'Clé opaque de 8 à 128 caractères générée par le client et conservée en cas de retry.',
   })
-  @ApiCreatedResponse({ type: ReportResponseDto, description: 'Signalement créé, contenus liés et événement métier journalisé.' })
-  @ApiBadRequestResponse({ description: 'Données invalides, localisation incohérente ou référentiel inactif.' })
+  @ApiCreatedResponse({ type: ReportResponseDto, description: 'Signalement créé avec ses contenus et son historique initial de statut.' })
+  @ApiBadRequestResponse({ description: 'Données invalides, catégorie absente/inactive ou localisation incohérente.' })
   @ApiConflictResponse({ description: 'Clé idempotente réutilisée avec un autre contenu ou conflit concurrent.' })
   @ApiUnauthorizedResponse({ description: 'Jeton Supabase absent ou invalide.' })
   @ApiForbiddenResponse({ description: 'Un compte citoyen actif est requis.' })
@@ -74,6 +74,15 @@ export class ReportsController {
     @CurrentAuthUser() user: User,
   ) {
     return this.reports.createReport(dto, user.id, idempotencyKey ?? '');
+  }
+
+  @Get('waste-types')
+  @ApiOperation({ summary: 'Liste les types de déchets actifs accessibles au citoyen' })
+  @ApiOkResponse({ description: 'Identifiants et libellés des catégories utilisables dans un signalement.' })
+  @ApiUnauthorizedResponse({ description: 'Jeton Supabase absent ou invalide.' })
+  @ApiForbiddenResponse({ description: 'Un compte citoyen actif est requis.' })
+  listWasteTypes(@CurrentAuthUser() user: User) {
+    return this.reports.listActiveWasteTypes(user.id);
   }
 
   @Get()

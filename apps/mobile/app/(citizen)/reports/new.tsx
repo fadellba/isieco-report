@@ -1,11 +1,13 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useRouter } from 'expo-router';
 import { Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import {
   createReportIdempotencyKey,
+  listAvailableWasteTypes,
   submitReport,
   uploadReportPhoto,
   type CreateReportPayload,
+  type WasteTypeOption,
 } from '../../../src/features/reports/reports-api';
 import { localDateTimeToIso, parseOptionalCoordinate } from '../../../src/features/reports/report-format';
 import { captureMobilePhoto, pickMobilePhotos, requestCurrentForegroundCoordinates, type PreparedMobilePhoto } from '../../../src/features/media/mobile-media';
@@ -15,6 +17,9 @@ const inputClass = 'mt-1 rounded-xl border border-slate-300 bg-white px-4 py-3 t
 export default function NewCitizenReportScreen() {
   const router = useRouter();
   const [description, setDescription] = useState('');
+  const [wasteTypes, setWasteTypes] = useState<WasteTypeOption[]>([]);
+  const [selectedWasteTypeIds, setSelectedWasteTypeIds] = useState<string[]>([]);
+  const [loadingWasteTypes, setLoadingWasteTypes] = useState(true);
   const [dateConstat, setDateConstat] = useState('');
   const [locationDescription, setLocationDescription] = useState('');
   const [latitude, setLatitude] = useState('');
@@ -27,9 +32,24 @@ export default function NewCitizenReportScreen() {
   const [error, setError] = useState<string | null>(null);
   const idempotencyRef = useRef<{ fingerprint: string; key: string } | null>(null);
 
+  useEffect(() => {
+    let active = true;
+    listAvailableWasteTypes()
+      .then((items) => { if (active) setWasteTypes(items); })
+      .catch((reason: unknown) => {
+        if (active) setError(reason instanceof Error ? reason.message : 'Impossible de charger les catégories de déchets.');
+      })
+      .finally(() => { if (active) setLoadingWasteTypes(false); });
+    return () => { active = false; };
+  }, []);
+
   async function handleSubmit() {
     setError(null);
     const cleanDescription = description.trim();
+    if (selectedWasteTypeIds.length === 0) {
+      setError('Sélectionnez au moins une catégorie de déchets.');
+      return;
+    }
     if (cleanDescription.length < 10 || cleanDescription.length > 5000) {
       setError('La description doit contenir entre 10 et 5000 caractères.');
       return;
@@ -50,6 +70,7 @@ export default function NewCitizenReportScreen() {
       }
       const payload: CreateReportPayload = {
         description: cleanDescription,
+        contenus: selectedWasteTypeIds.map((idTypeDechet) => ({ idTypeDechet })),
         ...(dateConstat.trim() ? { dateConstat: localDateTimeToIso(dateConstat) } : {}),
         ...(locationDescription.trim() ? { descriptionLocalisation: locationDescription.trim() } : {}),
         ...(lat !== undefined && lon !== undefined
@@ -148,6 +169,32 @@ export default function NewCitizenReportScreen() {
           <TextInput value={description} onChangeText={setDescription} multiline maxLength={5000} textAlignVertical="top" placeholder="Décrivez le dépôt, le type de problème, les éléments visibles…" className={inputClass + ' mt-2 min-h-[150px]'} />
           <Text className="mt-1 text-right text-[10px] text-slate-400">{description.trim().length}/5000</Text>
         </View>
+        <View className="rounded-xl border border-eco-100 bg-white p-4">
+          <Text className="text-xs font-bold text-slate-700">Catégories de déchets observées *</Text>
+          <Text className="mt-1 text-xs leading-5 text-slate-500">Sélectionnez une ou plusieurs catégories. L’agent pourra ensuite confirmer ou ajuster la qualification.</Text>
+          {loadingWasteTypes ? <Text className="mt-3 text-xs text-slate-500">Chargement des catégories…</Text> : null}
+          {!loadingWasteTypes && wasteTypes.length === 0 ? <Text className="mt-3 text-xs text-amber-800">Aucune catégorie active n’est disponible. Le signalement ne peut pas être envoyé sans catégorie.</Text> : null}
+          <View className="mt-3 flex-row flex-wrap gap-2">
+            {wasteTypes.map((item) => {
+              const selected = selectedWasteTypeIds.includes(item.idTypeDechet);
+              return (
+                <TouchableOpacity
+                  key={item.idTypeDechet}
+                  onPress={() => setSelectedWasteTypeIds((current) =>
+                    selected
+                      ? current.filter((id) => id !== item.idTypeDechet)
+                      : [...current, item.idTypeDechet],
+                  )}
+                  className={selected ? 'rounded-full bg-eco-700 px-3 py-2' : 'rounded-full border border-slate-200 bg-white px-3 py-2'}
+                >
+                  <Text className={selected ? 'text-xs font-bold text-white' : 'text-xs font-semibold text-slate-700'}>{item.libelle}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <Text className="mt-2 text-[10px] text-slate-400">{selectedWasteTypeIds.length} catégorie(s) sélectionnée(s).</Text>
+        </View>
+
         <View>
           <Text className="text-xs font-bold text-slate-700">Date et heure du constat (facultatif)</Text>
           <TextInput value={dateConstat} onChangeText={setDateConstat} placeholder="2026-10-31T14:30" autoCapitalize="none" className={inputClass} />
@@ -210,7 +257,7 @@ export default function NewCitizenReportScreen() {
       </View>
 
       {error ? <Text className="mt-5 rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</Text> : null}
-      <TouchableOpacity onPress={() => void handleSubmit()} disabled={busy} className="mt-7 rounded-xl bg-eco-700 px-5 py-4 disabled:opacity-50">
+      <TouchableOpacity onPress={() => void handleSubmit()} disabled={busy || loadingWasteTypes || wasteTypes.length === 0 || selectedWasteTypeIds.length === 0} className="mt-7 rounded-xl bg-eco-700 px-5 py-4 disabled:opacity-50">
         <Text className="text-center font-bold text-white">{busy ? 'Envoi en cours…' : 'Envoyer le signalement'}</Text>
       </TouchableOpacity>
       <Link href="/(citizen)/reports" className="mt-6 text-center text-sm font-semibold text-eco-700">Annuler</Link>

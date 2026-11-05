@@ -22,11 +22,11 @@ export class AccountsService {
     }
 
     const metadata = authUser.user_metadata ?? {};
-    const nom = typeof metadata.nom === 'string' && metadata.nom.trim()
-      ? metadata.nom.trim()
-      : typeof metadata.full_name === 'string' && metadata.full_name.trim()
-        ? metadata.full_name.trim()
-        : email.split('@')[0] ?? 'Utilisateur';
+    const nom =
+      (typeof metadata.nom === 'string' && metadata.nom.trim()) ||
+      (typeof metadata.full_name === 'string' && metadata.full_name.trim()) ||
+      email.split('@')[0] ||
+      'Utilisateur';
     const prenom = typeof metadata.prenom === 'string' && metadata.prenom.trim()
       ? metadata.prenom.trim()
       : null;
@@ -37,7 +37,7 @@ export class AccountsService {
       create: {
         codeRole: 'CITOYEN',
         libelleRole: 'Citoyen',
-        description: 'Utilisateur citoyen pouvant déposer et suivre ses signalements.',
+        description: 'Dépose et suit ses signalements.',
       },
     });
 
@@ -67,8 +67,8 @@ export class AccountsService {
       where: { idUtilisateur: current.utilisateurId },
       data: {
         ...(dto.nom !== undefined ? { nom: dto.nom.trim() } : {}),
-        ...(dto.prenom !== undefined ? { prenom: dto.prenom.trim() || null } : {}),
-        ...(dto.telephone !== undefined ? { telephone: dto.telephone.trim() || null } : {}),
+        ...(dto.prenom !== undefined ? { prenom: dto.prenom?.trim() || null } : {}),
+        ...(dto.telephone !== undefined ? { telephone: dto.telephone?.trim() || null } : {}),
       },
     });
     return this.findProfile(authUser.id);
@@ -76,178 +76,200 @@ export class AccountsService {
 
   async listAccounts(page: number, pageSize: number) {
     const now = new Date();
+    const where = {};
     const [total, rows] = await this.prisma.$transaction([
-      this.prisma.utilisateur.count(),
+      this.prisma.utilisateur.count({ where }),
       this.prisma.utilisateur.findMany({
-        orderBy: { dateInscription: 'desc' },
+        where,
+        orderBy: [{ dateInscription: 'desc' }, { idUtilisateur: 'asc' }],
         skip: (page - 1) * pageSize,
         take: pageSize,
-        include: { roles: { where: activeRoleFilter(now), include: { role: true } } },
+        include: {
+          roles: {
+            where: activeRoleFilter(now),
+            include: { role: true },
+            orderBy: { dateDebut: 'asc' },
+          },
+        },
       }),
     ]);
-    return { items: rows.map((row) => this.toProfileResponse(row)), page, pageSize, total };
+
+    return {
+      items: rows.map((row) => this.toProfileResponse(row)),
+      page,
+      pageSize,
+      total,
+    };
   }
 
-  async assignRole(targetId: string, actorAuthUserId: string, dto: AssignRoleDto) {
-    const [target, actor, role] = await Promise.all([
-      this.prisma.utilisateur.findUnique({ where: { idUtilisateur: targetId } }),
-      this.prisma.utilisateur.findUnique({ where: { authUserId: actorAuthUserId } }),
-      this.prisma.role.findUnique({ where: { codeRole: dto.codeRole } }),
-    ]);
+  async assignRole(utilisateurId: string, actorAuthUserId: string, dto: AssignRoleDto) {
+    const actorId = await this.requireActiveAdministrator(actorAuthUserId);
+    const target = await this.prisma.utilisateur.findUnique({
+      where: { idUtilisateur: utilisateurId },
+      select: { idUtilisateur: true, etatCompte: true },
+    });
     if (!target) throw new NotFoundException('Compte cible introuvable.');
-    if (target.etatCompte !== 'ACTIF') throw new ForbiddenException('Le compte cible est inactif.');
-    if (!actor) throw new ForbiddenException('Compte administrateur métier introuvable.');
-    if (!role) throw new NotFoundException('Rôle introuvable. Vérifiez les migrations.');
-
-    const now = new Date();
-    const motif = dto.motif?.trim() || 'Attribution par un administrateur des comptes.';
-
-    try {
-      await this.prisma.$transaction(async (tx) => {
-        const existing = await tx.utilisateurRole.findFirst({
-          where: { idUtilisateur: targetId, idRole: role.idRole, ...activeRoleFilter(now) },
-        });
-        if (existing) {
-          throw new ConflictException('Ce rôle est déjà actif pour cet utilisateur.');
-        }
-
-        await tx.utilisateurRole.create({
-          data: {
-            utilisateur: { connect: { idUtilisateur: targetId } },
-            role: { connect: { idRole: role.idRole } },
-            attribuant: { connect: { idUtilisateur: actor.idUtilisateur } },
-            motif,
-          },
-        });
-
-        await tx.evenementMetier.create({
-          data: {
-            typeEvenement: 'ROLE_ATTRIBUE',
-            dateEvenement: now,
-            dateEnregistrement: now,
-            origine: 'API',
-            idActeur: actor.idUtilisateur,
-            idUtilisateurCible: targetId,
-            donneesApres: {
-              codeRole: dto.codeRole,
-              roleId: role.idRole,
-              dateDebut: now.toISOString(),
-            },
-            motif,
-            versionSchema: 1,
-          },
-        });
-      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
-    } catch (error) {
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'code' in error &&
-        (error.code === 'P2002' || error.code === 'P2034')
-      ) {
-        throw new ConflictException('Attribution concurrente du rôle. Actualisez le compte puis réessayez.');
-      }
-      throw error;
+    if (target.etatCompte !== 'ACTIF') {
+      throw new ConflictException('Un rôle ne peut être attribué qu’à un compte actif.');
     }
 
-    return this.findProfileById(targetId);
-  }
-
-  async revokeRole(targetId: string, actorAuthUserId: string, codeRole: FunctionalRole) {
-    const [target, actor, role] = await Promise.all([
-      this.prisma.utilisateur.findUnique({ where: { idUtilisateur: targetId } }),
-      this.prisma.utilisateur.findUnique({ where: { authUserId: actorAuthUserId } }),
-      this.prisma.role.findUnique({ where: { codeRole } }),
-    ]);
-    if (!target) throw new NotFoundException('Compte cible introuvable.');
-    if (!actor) throw new ForbiddenException('Compte administrateur métier introuvable.');
+    const role = await this.prisma.role.findUnique({ where: { codeRole: dto.codeRole } });
     if (!role) throw new NotFoundException('Rôle introuvable.');
 
     const now = new Date();
     try {
       await this.prisma.$transaction(async (tx) => {
-        const assignment = await tx.utilisateurRole.findFirst({
-          where: { idUtilisateur: targetId, idRole: role.idRole, ...activeRoleFilter(now) },
-        });
-        if (!assignment) throw new NotFoundException('Aucune attribution active trouvée.');
-
-        if (codeRole === 'ADMINISTRATEUR_COMPTES') {
-          const adminCount = await tx.utilisateurRole.count({
-            where: {
-              idRole: role.idRole,
-              ...activeRoleFilter(now),
-              utilisateur: { etatCompte: 'ACTIF' },
-            },
-          });
-          if (adminCount <= 1) throw new ConflictException('Le dernier administrateur ne peut pas être révoqué.');
-        }
-
-        const motif = 'Rôle révoqué par un administrateur des comptes.';
-        const result = await tx.utilisateurRole.updateMany({
+        const existing = await tx.utilisateurRole.findFirst({
           where: {
-            idUtilisateur: targetId,
+            idUtilisateur: utilisateurId,
             idRole: role.idRole,
-            dateDebut: assignment.dateDebut,
-            dateFin: assignment.dateFin,
+            ...activeRoleFilter(now),
           },
-          data: { dateFin: now, motif },
         });
-        if (result.count !== 1) throw new ConflictException('Attribution modifiée simultanément. Réessayez.');
+        if (existing) throw new ConflictException('Ce rôle est déjà actif pour ce compte.');
 
-        await tx.evenementMetier.create({
+        await tx.utilisateurRole.create({
           data: {
-            typeEvenement: 'ROLE_REVOQUE',
-            dateEvenement: now,
-            dateEnregistrement: now,
-            origine: 'API',
-            idActeur: actor.idUtilisateur,
-            idUtilisateurCible: targetId,
-            donneesAvant: {
-              codeRole,
-              roleId: role.idRole,
-              dateDebut: assignment.dateDebut.toISOString(),
-              dateFinPrevue: assignment.dateFin?.toISOString() ?? null,
-            },
-            donneesApres: {
-              dateFin: now.toISOString(),
-            },
-            motif,
-            versionSchema: 1,
+            idUtilisateur: utilisateurId,
+            idRole: role.idRole,
+            dateDebut: now,
+            attribuePar: actorId,
+            motif: dto.motif?.trim() || null,
           },
         });
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     } catch (error) {
-      if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2034') {
-        throw new ConflictException('Conflit de transaction. Réessayez.');
+      if (error instanceof ConflictException) throw error;
+      if (isPrismaCode(error, 'P2002') || isPrismaCode(error, 'P2034')) {
+        throw new ConflictException('Une attribution concurrente de ce rôle a été détectée.');
       }
       throw error;
     }
-    return this.findProfileById(targetId);
+
+    return this.findProfileById(utilisateurId);
+  }
+
+  async revokeRole(utilisateurId: string, actorAuthUserId: string, codeRole: FunctionalRole) {
+    const actorId = await this.requireActiveAdministrator(actorAuthUserId);
+    const target = await this.prisma.utilisateur.findUnique({
+      where: { idUtilisateur: utilisateurId },
+      select: { idUtilisateur: true, etatCompte: true },
+    });
+    if (!target) throw new NotFoundException('Compte cible introuvable.');
+
+    const role = await this.prisma.role.findUnique({ where: { codeRole } });
+    if (!role) throw new NotFoundException('Rôle introuvable.');
+
+    const now = new Date();
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        const active = await tx.utilisateurRole.findFirst({
+          where: {
+            idUtilisateur: utilisateurId,
+            idRole: role.idRole,
+            ...activeRoleFilter(now),
+          },
+        });
+        if (!active) throw new NotFoundException('Aucune attribution active de ce rôle.');
+
+        if (codeRole === 'ADMINISTRATEUR_COMPTES') {
+          const activeAdministrators = await tx.utilisateurRole.count({
+            where: {
+              role: { codeRole: 'ADMINISTRATEUR_COMPTES' },
+              utilisateur: { etatCompte: 'ACTIF' },
+              ...activeRoleFilter(now),
+            },
+          });
+          if (activeAdministrators <= 1) {
+            throw new ConflictException('La révocation du dernier administrateur des comptes est interdite.');
+          }
+        }
+
+        const result = await tx.utilisateurRole.updateMany({
+          where: {
+            idUtilisateur: utilisateurId,
+            idRole: role.idRole,
+            dateDebut: active.dateDebut,
+            dateFin: null,
+          },
+          data: { dateFin: now },
+        });
+        if (result.count !== 1) {
+          throw new ConflictException('L’attribution du rôle a été modifiée simultanément.');
+        }
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    } catch (error) {
+      if (error instanceof ConflictException || error instanceof NotFoundException) throw error;
+      if (isPrismaCode(error, 'P2034')) {
+        throw new ConflictException('Une modification concurrente des habilitations a été détectée.');
+      }
+      throw error;
+    }
+
+    return this.findProfileById(utilisateurId);
+  }
+
+  private async requireActiveAdministrator(authUserId: string): Promise<string> {
+    const actor = await this.prisma.utilisateur.findUnique({
+      where: { authUserId },
+      include: {
+        roles: {
+          where: {
+            ...activeRoleFilter(new Date()),
+            role: { codeRole: 'ADMINISTRATEUR_COMPTES' },
+          },
+          include: { role: true },
+        },
+      },
+    });
+    if (!actor || actor.etatCompte !== 'ACTIF' || actor.roles.length === 0) {
+      throw new ForbiddenException('Un administrateur des comptes actif est requis.');
+    }
+    return actor.idUtilisateur;
   }
 
   private async findProfile(authUserId: string) {
     const row = await this.prisma.utilisateur.findUnique({
       where: { authUserId },
-      include: { roles: { where: activeRoleFilter(new Date()), include: { role: true } } },
+      include: {
+        roles: {
+          where: activeRoleFilter(new Date()),
+          include: { role: true },
+          orderBy: { dateDebut: 'asc' },
+        },
+      },
     });
     if (!row) throw new NotFoundException('Profil métier introuvable.');
-    if (row.etatCompte !== 'ACTIF') throw new ForbiddenException('Compte désactivé.');
+    if (row.etatCompte !== 'ACTIF') {
+      throw new ForbiddenException('Ce compte est désactivé.');
+    }
     return this.toProfileResponse(row);
   }
 
   private async findProfileById(utilisateurId: string) {
     const row = await this.prisma.utilisateur.findUnique({
       where: { idUtilisateur: utilisateurId },
-      include: { roles: { where: activeRoleFilter(new Date()), include: { role: true } } },
+      include: {
+        roles: {
+          where: activeRoleFilter(new Date()),
+          include: { role: true },
+          orderBy: { dateDebut: 'asc' },
+        },
+      },
     });
     if (!row) throw new NotFoundException('Profil métier introuvable.');
     return this.toProfileResponse(row);
   }
 
   private toProfileResponse(row: {
-    idUtilisateur: string; authUserId: string; nom: string; prenom: string | null;
-    email: string; telephone: string | null; referenceAvatar: string | null;
-    dateInscription: Date; etatCompte: string;
+    idUtilisateur: string;
+    authUserId: string;
+    nom: string;
+    prenom: string | null;
+    email: string;
+    telephone: string | null;
+    dateInscription: Date;
+    etatCompte: string;
     roles: Array<{ role: { codeRole: string; libelleRole: string } }>;
   }) {
     return {
@@ -257,7 +279,7 @@ export class AccountsService {
       prenom: row.prenom,
       email: row.email,
       telephone: row.telephone,
-      referenceAvatar: row.referenceAvatar,
+      referenceAvatar: null,
       dateInscription: row.dateInscription,
       etatCompte: row.etatCompte,
       roles: row.roles.map(({ role }) => ({
@@ -266,4 +288,8 @@ export class AccountsService {
       })),
     };
   }
+}
+
+function isPrismaCode(error: unknown, code: string): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === code;
 }

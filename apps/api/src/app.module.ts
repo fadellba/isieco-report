@@ -12,7 +12,6 @@ import { AssignmentsModule } from './modules/assignments/assignments.module.js';
 import { InterventionsModule } from './modules/interventions/interventions.module.js';
 import { VerificationModule } from './modules/verification/verification.module.js';
 import { ReferentialsModule } from './modules/referentials/referentials.module.js';
-import { AuditModule } from './modules/audit/audit.module.js';
 
 @Module({
   imports: [
@@ -32,7 +31,6 @@ import { AuditModule } from './modules/audit/audit.module.js';
     InterventionsModule,
     VerificationModule,
     ReferentialsModule,
-    AuditModule,
   ],
 })
 export class AppModule {}

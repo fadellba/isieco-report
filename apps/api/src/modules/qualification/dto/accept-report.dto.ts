@@ -16,16 +16,11 @@ import {
 } from 'class-validator';
 
 export class QualifiedWasteContentDto {
-  @ApiProperty({ format: 'uuid', description: 'Identifiant du type de déchet retenu.' })
+  @ApiProperty({ format: 'uuid' })
   @IsUUID()
   idTypeDechet!: string;
 
-  @ApiPropertyOptional({
-    type: Number,
-    minimum: 0,
-    maximum: 999999999.999,
-    description: 'Quantité estimée.',
-  })
+  @ApiPropertyOptional({ type: Number, minimum: 0, maximum: 999999999.999 })
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 3 })
@@ -33,31 +28,7 @@ export class QualifiedWasteContentDto {
   @Max(999999999.999)
   quantiteEstimee?: number;
 
-  @ApiPropertyOptional({ maxLength: 40, description: 'Unité de la quantité estimée.' })
-  @IsOptional()
-  @IsString()
-  @MaxLength(40)
-  uniteQuantite?: string;
-
-  @ApiPropertyOptional({
-    type: Number,
-    minimum: 0,
-    maximum: 999999999.999,
-    description: 'Quantité estimée au format historique.',
-  })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber({ maxDecimalPlaces: 3 })
-  @Min(0)
-  @Max(999999999.999)
-  quantiteEstimeeLegacy?: number;
-
-  @ApiPropertyOptional({
-    type: Number,
-    minimum: 0,
-    maximum: 999999999.999,
-    description: 'Volume estimé.',
-  })
+  @ApiPropertyOptional({ type: Number, minimum: 0, maximum: 999999999.999 })
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 3 })
@@ -65,7 +36,7 @@ export class QualifiedWasteContentDto {
   @Max(999999999.999)
   volumeEstime?: number;
 
-  @ApiPropertyOptional({ maxLength: 1000, description: 'Remarque sur la qualification.' })
+  @ApiPropertyOptional({ maxLength: 1000 })
   @IsOptional()
   @IsString()
   @MaxLength(1000)
@@ -77,7 +48,6 @@ export class AcceptReportDto {
     type: () => [QualifiedWasteContentDto],
     minItems: 1,
     maxItems: 20,
-    description: 'Catégories de déchets retenues pour le signalement.',
   })
   @IsArray()
   @ArrayMinSize(1)

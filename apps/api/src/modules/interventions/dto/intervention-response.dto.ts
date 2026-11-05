@@ -36,17 +36,6 @@ export class InterventionAssignmentDto {
   @ApiProperty({ type: InterventionAssignmentContentDto })
   contenuDossier!: InterventionAssignmentContentDto;
 
-  @ApiProperty({
-    type: 'array',
-    items: {
-      type: 'object',
-      properties: {
-        dateVerification: { type: 'string', format: 'date-time' },
-        etatVerification: { type: 'string', enum: ['VALIDEE', 'REPRISE'] },
-      },
-    },
-  })
-  verifications!: Array<{ dateVerification: Date; etatVerification: string }>;
 }
 
 export class InterventionResponseDto {
@@ -79,6 +68,14 @@ export class InterventionResponseDto {
 
   @ApiProperty({ format: 'uuid' })
   renseignePar!: string;
+
+  @ApiProperty({ type: 'object', nullable: true, additionalProperties: true })
+  verification!: {
+    dateVerification: Date;
+    resultatVerification: string;
+    motif: string | null;
+    etatVerification: string;
+  } | null;
 
   @ApiProperty({ type: InterventionAssignmentDto })
   affectation!: InterventionAssignmentDto;

@@ -28,10 +28,8 @@ import { Roles } from '../../auth/roles.decorator.js';
 import { RolesGuard } from '../../auth/roles.guard.js';
 import { SupabaseAuthGuard } from '../../auth/supabase-auth.guard.js';
 import { CasesService } from './cases.service.js';
-import { AttachReportDto } from './dto/attach-report.dto.js';
 import { CaseListResponseDto, CaseResponseDto } from './dto/case-response.dto.js';
 import { CreateCaseFromReportDto } from './dto/create-case-from-report.dto.js';
-import { DetachReportDto } from './dto/detach-report.dto.js';
 import { ListCasesQueryDto } from './dto/list-cases-query.dto.js';
 import { UpdateCaseLocationDto } from './dto/update-case-location.dto.js';
 import { UpdateCasePriorityDto } from './dto/update-case-priority.dto.js';
@@ -74,7 +72,7 @@ export class CasesController {
   }
 
   @Get(':idDossier')
-  @ApiOperation({ summary: 'Consulte un dossier, ses contenus et ses rattachements' })
+  @ApiOperation({ summary: 'Consulte un dossier, ses contenus et ses signalements associés' })
   @ApiParam({ name: 'idDossier', format: 'uuid' })
   @ApiOkResponse({ type: CaseResponseDto })
   @ApiNotFoundResponse({ description: 'Dossier introuvable.' })
@@ -85,7 +83,7 @@ export class CasesController {
   @Post('from-reports/:idSignalement')
   @ApiOperation({
     summary: 'Crée un dossier à partir d’un signalement qualifié',
-    description: 'Crée le dossier, le rattachement initial, les contenus et leurs provenances dans une transaction sérialisable.',
+    description: 'Crée le dossier, les contenus retenus et le lien direct vers le signalement dans une transaction sérialisable.',
   })
   @ApiParam({ name: 'idSignalement', format: 'uuid' })
   @ApiCreatedResponse({ type: CaseResponseDto })
@@ -101,7 +99,7 @@ export class CasesController {
   }
 
   @Patch(':idDossier/priority')
-  @ApiOperation({ summary: 'Modifie la priorité avec justification et historisation' })
+  @ApiOperation({ summary: 'Modifie la priorité du dossier' })
   @ApiParam({ name: 'idDossier', format: 'uuid' })
   @ApiOkResponse({ type: CaseResponseDto })
   @ApiBadRequestResponse({ description: 'Priorité ou justification invalide.' })
@@ -116,10 +114,10 @@ export class CasesController {
   }
 
   @Patch(':idDossier/location')
-  @ApiOperation({ summary: 'Modifie la localisation avec justification et historisation' })
+  @ApiOperation({ summary: 'Modifie la localisation du dossier' })
   @ApiParam({ name: 'idDossier', format: 'uuid' })
   @ApiOkResponse({ type: CaseResponseDto })
-  @ApiBadRequestResponse({ description: 'Coordonnées ou commune invalides.' })
+  @ApiBadRequestResponse({ description: 'Coordonnées invalides.' })
   @ApiConflictResponse({ description: 'Dossier clôturé ou modification concurrente.' })
   @ApiNotFoundResponse({ description: 'Dossier introuvable.' })
   updateLocation(
@@ -141,14 +139,13 @@ export class CasesController {
   attachReport(
     @Param('idDossier', ParseUUIDPipe) idDossier: string,
     @Param('idSignalement', ParseUUIDPipe) idSignalement: string,
-    @Body() dto: AttachReportDto,
     @CurrentAuthUser() user: User,
   ) {
-    return this.cases.attachReport(idDossier, idSignalement, dto, user.id);
+    return this.cases.attachReport(idDossier, idSignalement, user.id);
   }
 
   @Post(':idDossier/reports/:idSignalement/detach')
-  @ApiOperation({ summary: 'Détache un signalement et ferme ses provenances actives' })
+  @ApiOperation({ summary: 'Retire le lien direct entre un signalement et un dossier' })
   @ApiParam({ name: 'idDossier', format: 'uuid' })
   @ApiParam({ name: 'idSignalement', format: 'uuid' })
   @ApiOkResponse({ type: CaseResponseDto })
@@ -158,9 +155,8 @@ export class CasesController {
   detachReport(
     @Param('idDossier', ParseUUIDPipe) idDossier: string,
     @Param('idSignalement', ParseUUIDPipe) idSignalement: string,
-    @Body() dto: DetachReportDto,
     @CurrentAuthUser() user: User,
   ) {
-    return this.cases.detachReport(idDossier, idSignalement, dto, user.id);
+    return this.cases.detachReport(idDossier, idSignalement, user.id);
   }
 }

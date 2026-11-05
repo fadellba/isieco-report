@@ -5,11 +5,10 @@ interface Team {
   idEquipe: string;
   nomEquipe: string;
   etatEquipe: string;
-  competence: { idCompetenceEquipe: string; dateDebut: string; dateFin: string | null };
-  disponibilite: { etatDisponibilite: string; valideJusqua: string } | null;
 }
 
 interface PendingContent {
+  idContenuDossier: string;
   idDossier: string;
   idTypeDechet: string;
   etatContenuDossier: string;
@@ -33,7 +32,7 @@ interface Assignment {
   dateReponseEquipe: string | null;
   motifRefusEquipe: string | null;
   equipe: { idEquipe: string; nomEquipe: string; etatEquipe: string };
-  competence: { idCompetenceEquipe: string; dateDebut: string; dateFin: string | null };
+  competence: { idCompetenceEquipe: string; actif: boolean; dateAttribution: string };
   contenuDossier: {
     idDossier: string;
     idTypeDechet: string;
@@ -95,7 +94,7 @@ export function AssignmentsPage() {
   const [notice, setNotice] = useState<string | null>(null);
 
   const selectedContent = useMemo(
-    () => pendingContents.find((item) => item.idDossier + '|' + item.idTypeDechet === selectedContentKey) ?? null,
+    () => pendingContents.find((item) => item.idContenuDossier === selectedContentKey) ?? null,
     [pendingContents, selectedContentKey],
   );
   const createTeams = selectedContent ? eligibleByType[selectedContent.idTypeDechet] ?? [] : [];
@@ -114,7 +113,7 @@ export function AssignmentsPage() {
       setResult(assignments);
       setPendingContents(contents.items);
       setSelectedContentKey((current) =>
-        current || (contents.items[0] ? contents.items[0].idDossier + '|' + contents.items[0].idTypeDechet : ''),
+        current || (contents.items[0] ? contents.items[0].idContenuDossier : ''),
       );
     } catch (reason) {
       setError(errorMessage(reason));
@@ -167,8 +166,7 @@ export function AssignmentsPage() {
         method: 'POST',
         headers: { 'Idempotency-Key': createKey },
         body: JSON.stringify({
-          idDossier: selectedContent.idDossier,
-          idTypeDechet: selectedContent.idTypeDechet,
+          idContenuDossier: selectedContent.idContenuDossier,
           idEquipe: selectedTeamId,
           ...(createReason.trim() ? { motif: createReason.trim() } : {}),
           ...(createObservation.trim() ? { observation: createObservation.trim() } : {}),
@@ -269,7 +267,7 @@ export function AssignmentsPage() {
             <select value={selectedContentKey} onChange={(event) => { setSelectedContentKey(event.target.value); setSelectedTeamId(''); }} disabled={!pendingContents.length} className={inputClass}>
               <option value="">Sélectionner un contenu</option>
               {pendingContents.map((item) => (
-                <option key={item.idDossier + item.idTypeDechet} value={item.idDossier + '|' + item.idTypeDechet}>
+                <option key={item.idContenuDossier} value={item.idContenuDossier}>
                   {item.dossier.referenceDossier} · {item.typeDechet.libelle} ({item.typeDechet.codeType})
                 </option>
               ))}
@@ -280,7 +278,7 @@ export function AssignmentsPage() {
               <option value="">Sélectionner une équipe</option>
               {createTeams.map((team) => (
                 <option key={team.idEquipe} value={team.idEquipe}>
-                  {team.nomEquipe} · {team.disponibilite && new Date(team.disponibilite.valideJusqua).getTime() < Date.now() ? 'Disponibilité expirée' : team.disponibilite?.etatDisponibilite ?? 'Disponibilité non renseignée'}
+                  {team.nomEquipe}
                 </option>
               ))}
             </select>
