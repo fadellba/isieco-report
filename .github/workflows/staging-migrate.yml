@@ -12,7 +12,7 @@ on:
           - APPLY
         default: NO
       confirm_backup_restore:
-        description: "Confirm that a full backup exists and its restoration was tested in an isolated database."
+        description: "Confirm the public database backup was restored in isolation and Auth identities / Storage objects are separately accounted for."
         required: true
         type: choice
         options:
