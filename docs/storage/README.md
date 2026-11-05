@@ -51,7 +51,7 @@ L'API téléverse l'objet avec `upsert: false`, puis crée la ligne photo. Si l'
 ## Consultation
 
 - Propriétaire d'un signalement : `GET /api/v1/reports/:id/photos/:photoId/url`.
-- Vérificateur de clôture : `GET /api/v1/verification/assignments/:idAffectation/photos/:idPhotoIntervention/url\), uniquement pour les photos de la dernière intervention soumise en attente de vérification. L'auto-vérification reste interdite.
+- Vérificateur de clôture : `GET /api/v1/verification/assignments/:idAffectation/photos/:idPhotoIntervention/url`, uniquement pour les photos de la dernière intervention soumise en attente de vérification. L'auto-vérification reste interdite.
 
 L'API contrôle la propriété ou le droit métier et la date d'expiration avant de signer le lien. Les URLs signées expirent après **60 secondes**. Elles sont des capacités temporaires : ne pas les stocker durablement, les journaliser ou les transmettre à des tiers.
 
