@@ -2,11 +2,44 @@
 set -Eeuo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-: "${LEGACY_DATABASE_URL:?LEGACY_DATABASE_URL must point to a disposable, empty PostgreSQL database}"
+: "${LEGACY_DATABASE_URL:?LEGACY_DATABASE_URL must point to a disposable, empty local PostgreSQL database}"
+: "${ALLOW_LEGACY_REHEARSAL:?Set ALLOW_LEGACY_REHEARSAL=YES to authorize the disposable migration rehearsal}"
+
+if [[ "$ALLOW_LEGACY_REHEARSAL" != "YES" ]]; then
+  echo "Refusing to run without ALLOW_LEGACY_REHEARSAL=YES." >&2
+  exit 1
+fi
+
+node --input-type=module <<'NODE'
+const target = new URL(process.env.LEGACY_DATABASE_URL);
+const host = target.hostname.replace(/^\\[|\\]$/g, "").toLowerCase();
+const database = decodeURIComponent(target.pathname.replace(/^\\/+/, "").split("/")[0]);
+
+if (!["postgres:", "postgresql:"].includes(target.protocol)) {
+  throw new Error("LEGACY_DATABASE_URL must be a PostgreSQL connection string.");
+}
+if (!["localhost", "127.0.0.1", "::1"].includes(host)) {
+  throw new Error("Refusing to run migration rehearsal against a non-local PostgreSQL host.");
+}
+if (!database.endsWith("_legacy_rehearsal")) {
+  throw new Error("The target database name must end with _legacy_rehearsal.");
+}
+NODE
 
 PSQL=(psql "$LEGACY_DATABASE_URL" --no-psqlrc --set ON_ERROR_STOP=1 --quiet)
+existing_relations="$("${PSQL[@]}" --tuples-only --no-align --command "
+  SELECT count(*)
+  FROM pg_class c
+  JOIN pg_namespace n ON n.oid = c.relnamespace
+  WHERE n.nspname = 'public'
+    AND c.relkind IN ('r', 'p', 'v', 'm', 'S', 'f');
+")"
+if [[ "$existing_relations" != "0" ]]; then
+  echo "Refusing to run: public schema is not empty ($existing_relations relations found)." >&2
+  exit 1
+fi
 
-echo "Preparing PostgreSQL roles and Prisma migration metadata for the legacy replay."
+echo "Preparing PostgreSQL roles and Prisma migration metadata for the local legacy replay."
 "${PSQL[@]}" <<'SQL'
 DO $roles$
 BEGIN
