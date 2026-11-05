@@ -57,34 +57,37 @@ Le Security Advisor doit être relancé après l'application. Les tests d'API et
 - Ne pas accorder de droits `anon` ou `authenticated` sur les tables métier pour contourner l'API NestJS.
 - Ne pas ajouter de policy RLS permissive « pour que le client fonctionne » ; les clients ne doivent pas lire ou écrire ces tables via PostgREST.
 - Ne pas activer les déploiements Vercel/Render de production dans le cadre de cette opération.
-- Les migrations Prisma sont additives et versionnées. Pour corriger un problème après déploiement, préparer une migration corrective ; ne pas supprimer ou modifier les migrations déjà appliquées.
-- Pour une base staging déjà utilisée, sauvegarder et vérifier les données avant toute migration. Le constat de base vierge date du 31 octobre 2026 et doit être confirmé au moment de l'exécution.
+- Les migrations Prisma sont versionnées et immuables après application. La migration simplifiée est destructive : elle supprime des tables et colonnes historiques et ne possède pas de rollback automatique. Pour corriger un problème après déploiement, préparer une migration corrective ; ne pas supprimer ou modifier les migrations déjà appliquées.
+- Le staging contrôlé le 5 novembre 2026 contient déjà des données (3 profils, 8 rôles, 1 signalement, 1 photo et 6 événements métier). Ne pas le traiter comme une base vierge ; sauvegarder et vérifier les données avant toute migration.
 
 
 ## Précondition de sauvegarde pour la migration destructive
 
 La migration simplifiée supprime les anciennes tables et colonnes d'historique. Elle ne dispose pas d'un rollback permettant de restaurer les lignes supprimées. Avant de lancer le workflow manuel, créer une sauvegarde PostgreSQL complète hors du dépôt et vérifier sa restauration dans un environnement isolé. Le plan Supabase actuellement connecté est Free et aucune sauvegarde restaurable n'a été vérifiée pendant l'audit. Ne pas déduire qu'une sauvegarde automatique existe. Tant que cette précondition n'est pas prouvée et que le test CI de répétition sur les anciennes données synthétiques n'est pas vert, ne pas sélectionner APPLY.
-NaN
-
 ## Export manuel et test de restauration sur l'offre Free
 
 Le projet connecté est sur l'offre Free. Supabase ne fournit pas de sauvegarde quotidienne gérée sur cette offre ; la documentation recommande les exports logiques via Supabase CLI et leur conservation hors site. Références officielles : [Database Backups](https://supabase.com/docs/guides/platform/backups) et [Backup and Restore using the CLI](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore).
 
-Installer Supabase CLI et Docker, puis copier la chaîne Session Pooler depuis le panneau Connect. Le mot de passe doit être percent-encoded dans l'URL. Saisir la chaîne dans une variable d'environnement et ne pas la committer :
+Installer Supabase CLI **v3** et Docker. Depuis un répertoire de travail temporaire (pas le dépôt applicatif), initialiser et lier explicitement le projet staging. La CLI v3 cible les bases distantes avec `--remote` ; ne pas dépendre de son ancien comportement par défaut :
 
 ```bash
-read -rsp "PostgreSQL connection string: " BACKUP_DB_URL
-echo
 umask 077
-BACKUP_DIR=".backups/isieco-$(date -u +%Y%m%dT%H%M%SZ)"
+BACKUP_DIR="$(pwd)/.backups/isieco-$(date -u +%Y%m%dT%H%M%SZ)"
 mkdir -m 700 -p "$BACKUP_DIR"
+BACKUP_WORKDIR="$(mktemp -d)"
+trap 'rm -rf "$BACKUP_WORKDIR"' EXIT
 
-supabase db dump --db-url "$BACKUP_DB_URL" -f "$BACKUP_DIR/roles.sql" --role-only
-supabase db dump --db-url "$BACKUP_DB_URL" -f "$BACKUP_DIR/schema.sql"
-supabase db dump --db-url "$BACKUP_DB_URL" -f "$BACKUP_DIR/data.sql" --use-copy --data-only \
-  -x "storage.buckets_vectors" -x "storage.vector_indexes"
+(
+  cd "$BACKUP_WORKDIR"
+  supabase init
+  supabase login
+  supabase link --project-ref mlhbdautaxufubaybzyt
 
-unset BACKUP_DB_URL
+  supabase db dump --remote -f "$BACKUP_DIR/roles.sql" --role-only
+  supabase db dump --remote -f "$BACKUP_DIR/schema.sql"
+  supabase db dump --remote -f "$BACKUP_DIR/data.sql" --use-copy --data-only \
+    -x "storage.buckets_vectors" -x "storage.vector_indexes"
+)
 (
   cd "$BACKUP_DIR"
   sha256sum roles.sql schema.sql data.sql > SHA256SUMS
@@ -94,7 +97,7 @@ unset BACKUP_DB_URL
 
 Conserver le dossier hors du dépôt dans un espace chiffré à accès restreint. Le chemin .backups/ est ignoré par Git. La commande Supabase CLI exclut les schémas gérés `auth`, `storage` et les schémas d'extensions. Les comptes Supabase Auth, les paramètres/policies personnalisés du Storage et les objets binaires ne sont donc pas restaurés par ces trois dumps. Ils doivent être traités séparément si une restauration applicative intégrale est nécessaire. Pour la répétition de la migration métier, le dump `public` contient en revanche les tables relationnelles historiques visées.
 
-Tester la restauration du schéma métier dans un **nouveau projet Supabase isolé**, jamais sur le staging source. Le test de migration PostgreSQL peut utiliser des identifiants synthétiques, car les utilisateurs Auth du projet source ne sont pas inclus dans le dump `public`. Configurer préalablement les extensions nécessaires. Pour le cas courant sans Supabase Vault ni chiffrement de colonnes, restaurer les rôles, le schéma et les données avec la procédure officielle :
+Tester la restauration du schéma métier dans une **base PostgreSQL isolée** (locale ou projet Supabase distinct), jamais sur le staging source. Le test de migration PostgreSQL peut utiliser des identifiants synthétiques, car les utilisateurs Auth du projet source ne sont pas inclus dans le dump `public`. Configurer préalablement les extensions nécessaires. Pour le cas courant sans Supabase Vault ni chiffrement de colonnes, restaurer les rôles, le schéma et les données avec la procédure officielle :
 
 ```bash
 psql \
