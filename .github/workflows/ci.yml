@@ -136,6 +136,24 @@ jobs:
           DATABASE_URL: postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report?schema=public
           DIRECT_URL: postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report?schema=public
 
+      - name: Rehearse the simplified migration against populated legacy data
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: isieco
+          PGPASSWORD: isieco_dev_password
+        run: |
+          dropdb --if-exists --force isieco_legacy_rehearsal
+          createdb isieco_legacy_rehearsal
+          LEGACY_DATABASE_URL="postgresql://isieco:isieco_dev_password@localhost:5432/isieco_legacy_rehearsal" \
+            bash scripts/rehearse-simplified-domain-migration.sh
+
+      - name: Validate UML class diagram generation
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes graphviz
+          python3 scripts/render-uml-class-diagrams.py
+
       - name: Verify migration history and generate additive SQL preview
         run: |
           pnpm exec prisma migrate status
