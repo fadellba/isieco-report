@@ -345,7 +345,7 @@ ALTER TABLE "demande_complement"
   FOREIGN KEY ("repondu_par") REFERENCES "utilisateur"("id_utilisateur")
   ON DELETE SET NULL ON UPDATE CASCADE;
 
-CREATE UNIQUE INDEX "competence_equipe_id_equipe_id_type_dechet_key"
+CREATE UNIQUE INDEX "competence_equipe_one_team_type_idx"
   ON "competence_equipe" ("id_equipe", "id_type_dechet");
 CREATE INDEX "contenu_signalement_report_qualification_idx"
   ON "contenu_signalement" ("id_signalement", "etat_qualification");
