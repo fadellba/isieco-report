@@ -180,19 +180,33 @@ ALTER TABLE "verification_resolution" RENAME TO "verification";
 
 -- 7. Migrer les changements de statut connus depuis le journal générique.
 INSERT INTO "historique_statut_signalement" (
-  "id_signalement", "id_utilisateur", "ancien_statut",
-  "nouveau_statut", "date_changement", "motif"
+  "id_historique_statut", "id_signalement", "id_utilisateur",
+  "ancien_statut", "nouveau_statut", "date_changement", "motif"
 )
 SELECT
+  gen_random_uuid(),
   e."id_signalement_cible",
   e."id_acteur",
-  e."donnees_avant" ->> 'statutSignalement',
-  COALESCE(e."donnees_apres" ->> 'statutSignalement', e."type_evenement"),
+  NULLIF(e."donnees_avant" ->> 'statutSignalement', ''),
+  COALESCE(
+    NULLIF(e."donnees_apres" ->> 'statutSignalement', ''),
+    CASE
+      WHEN e."type_evenement" = 'SIGNALEMENT_SOUMIS' THEN 'SOUMIS'
+      ELSE NULL
+    END
+  ),
   e."date_enregistrement",
   e."motif"
 FROM "evenement_metier" e
 WHERE e."id_signalement_cible" IS NOT NULL
-  AND e."type_evenement" ILIKE '%SIGNALEMENT%';
+  AND (
+    e."type_evenement" = 'SIGNALEMENT_SOUMIS'
+    OR (
+      NULLIF(e."donnees_apres" ->> 'statutSignalement', '') IS NOT NULL
+      AND NULLIF(e."donnees_avant" ->> 'statutSignalement', '')
+        IS DISTINCT FROM NULLIF(e."donnees_apres" ->> 'statutSignalement', '')
+    )
+  );
 
 -- 8. Transformer les périodes de validité en indicateurs simples.
 ALTER TABLE "type_dechet" ADD COLUMN "actif" BOOLEAN NOT NULL DEFAULT TRUE;
