@@ -201,6 +201,15 @@ def render_dot(dot_path: Path, png_path: Path):
         if png.read(8) != b"\x89PNG\r\n\x1a\n":
             raise SystemExit(f"Invalid PNG generated: {png_path}")
 
+def render_svg(dot_path: Path, svg_path: Path):
+    subprocess.run(
+        ["dot", "-Tsvg", str(dot_path), "-o", str(svg_path)],
+        check=True,
+    )
+    with svg_path.open("rb") as svg:
+        if b"<svg" not in svg.read(512):
+            raise SystemExit(f"Invalid SVG generated: {svg_path}")
+
 def main():
     models, domain_of, relations = parse_schema()
     OUT.mkdir(parents=True, exist_ok=True)
@@ -228,6 +237,11 @@ def main():
     overview_png = OUT / "diagramme-classes-systeme.png"
     render_dot(overview_path, overview_png)
     generated.append(overview_png.name)
+
+    # Keep the relational overview synchronized with the 18-class model too.
+    overview_svg = OUT / "modele-donnees.svg"
+    render_svg(overview_path, overview_svg)
+    generated.append(overview_svg.name)
 
     # Domain sheets: all private attributes plus the associations contained in
     # that domain. Cross-domain relations remain visible in the system overview.
