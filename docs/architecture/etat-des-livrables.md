@@ -1,6 +1,6 @@
 # État des livrables
 
-État de référence : **31 octobre 2026, après fusion de la PR #29 ; Phases 20 et 21 intégrées et CI du commit `7b02e5a` sur `main` verte**. « Intégré » signifie fusionné dans `main`. « Initialisé » signifie que la structure existe sans parcours métier complet. « En cours » désigne une évolution sur une branche non fusionnée. Un build vert ne vaut pas recette utilisateur.
+État de référence : **5 novembre 2026, après fusion de la PR #33 dans `main`. La CI #184 sur le commit `2db03a7b1443a35e96dd06daee032fa00ed73bcd` est verte.** « Intégré » signifie fusionné dans `main`. « Initialisé » signifie que la structure existe sans parcours métier complet. « En cours » désigne une évolution sur une branche non fusionnée. Un build vert ne vaut pas recette utilisateur.
 
 | Domaine | Livrable | État |
 |---|---|---|
@@ -33,20 +33,20 @@
 | Mobile | Parcours Agent terrain | Intégré (PR #24) : équipes propres au compte, affectations, réponses, démarrage, compte rendu, reprise et upload natif des preuves photo (PR #26). |
 | Mobile | Photos et géolocalisation natives | Intégrées (PR #26) : image picker, capture caméra, conversion JPEG, upload privé citoyen/agent, aperçu par URL signée et localisation au premier plan sur demande. CI complète verte. |
 | Packages | `shared` et `api-client` | Initialisés ; contrats et endpoints dédiés à compléter à mesure des besoins des clients. |
-| Base de données | MLD v2.13 | 38 modèles Prisma présents. |
-| Base de données | Migrations | Cinq migrations Prisma versionnées ; la CI applique l'historique sur PostgreSQL vierge et teste contraintes métier, activation RLS et absence d'accès Data API. Le projet staging reste vierge jusqu'à l'exécution du workflow manuel `Staging Database Migrate` avec `STAGING_PRISMA_URL`. |
-| UML/Merise | Modèles et cas d'utilisation | Sources et vues versionnées ; elles décrivent le périmètre cible et ne remplacent pas la recette des écrans. |
+| Base de données | MLD v2.13 | 18 modèles Prisma présents ; l'ancien schéma de 38 modèles est converti par la migration de simplification. |
+| Base de données | Migrations | Sept migrations Prisma versionnées, dont la dernière est destructive ; la CI #184 a validé la base vierge. La répétition de la migration depuis les six migrations historiques avec données synthétiques est en cours dans une branche de suivi. Le projet staging reste vierge jusqu'à l'exécution du workflow manuel `Staging Database Migrate` avec `STAGING_PRISMA_URL`. |
+| UML/Merise | Modèles et cas d'utilisation | Le diagramme de classes décrit désormais 18 modèles ; le workflow UML #3 a échoué car son générateur attendait encore 38 classes. Correctif du générateur et mise à jour des PNG/SVG en cours. |
 | Exploitation | Vercel, Render, Supabase distant | Architecture documentée ; configuration et déploiements de production non confirmés. |
 | Mobile | Recette native | À faire : tester permissions, galerie, caméra, conversion d'images et localisation sur appareils Android/iOS réels. |
 | Mobile | APK signé et GitHub Release | À faire ; aucun APK de release signé confirmé. |
 
 ## Prochain ordre de livraison recommandé
 
-1. Configurer l'environnement GitHub `staging` et le secret `STAGING_PRISMA_URL`, exécuter le workflow manuel de migration puis vérifier `_prisma_migrations`, RLS et les privilèges Data API. Configurer ensuite les secrets API, faire valider `MEDIA_RETENTION_DAYS`, tester l'upload privé et planifier `pnpm storage:purge`.
-2. Recetter sur appareils Android/iOS réels les permissions, la galerie, la caméra, l'upload privé, l'aperçu signé et la localisation ponctuelle.
-3. Préparer l'environnement de déploiement : renseigner les Deploy Hooks Vercel/Render et les URLs de smoke test, vérifier les domaines, variables d'environnement et migrations de production. N'activer `PRODUCTION_DEPLOY_ENABLED=true` qu'après validation de la sauvegarde, de la restauration et de la fenêtre de changement.
-4. Générer et signer l'APK Android, publier une GitHub Release et vérifier le lien de téléchargement.
-5. Exécuter la recette fonctionnelle de bout en bout, les tests de droits inter-comptes, la restauration et les smoke tests de production.
+1. Terminer et valider le test CI de répétition sur les anciennes migrations avec données synthétiques ; auditer les pertes de données et vérifier les mappings. Configurer ensuite les secrets API, faire valider `MEDIA_RETENTION_DAYS`, tester l'upload privé et planifier `pnpm storage:purge`.
+2. Obtenir une sauvegarde restaurable ou un clone isolé, comparer les volumes historiques puis faire appliquer la migration en staging après validation explicite.
+3. Recetter les parcours Web/Mobile et l'API sur staging, puis tester Android/iOS réels, RLS, uploads et droits inter-comptes. N'activer `PRODUCTION_DEPLOY_ENABLED=true` qu'après validation de la sauvegarde, de la restauration et de la fenêtre de changement.
+4. Préparer la production uniquement après preuve de sauvegarde/restauration et validation de staging ; conserver les Deploy Hooks désactivés jusque-là.
+5. Figer les livrables PFE : diagramme UML, modèle physique, dictionnaire de données et rapport de migration avec pertes/écarts.
 
 ## Règle de clôture d'un livrable
 
