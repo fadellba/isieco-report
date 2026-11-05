@@ -34,7 +34,7 @@ Le diagramme courant représente 18 modèles. Toute évolution de \`schema.prism
 
 ![Vue relationnelle du modèle](modele-donnees.svg)
 
-Cette vue historique sert de repère visuel, mais ne doit pas être utilisée comme inventaire du modèle courant si elle n'a pas été régénérée depuis le schéma simplifié. Les colonnes et clés de référence sont définies dans [schema.prisma](../../prisma/schema.prisma).
+Le SVG est maintenant régénéré depuis la vue d'ensemble Graphviz du schéma Prisma par `scripts/render-uml-class-diagrams.py`. Il expose les 18 classes courantes et leurs associations. Les colonnes et clés de référence sont définies dans [schema.prisma](../../prisma/schema.prisma).
 
 ## Référence
 
