@@ -64,3 +64,4 @@ Le Security Advisor doit être relancé après l'application. Les tests d'API et
 ## Précondition de sauvegarde pour la migration destructive
 
 La migration simplifiée supprime les anciennes tables et colonnes d'historique. Elle ne dispose pas d'un rollback permettant de restaurer les lignes supprimées. Avant de lancer le workflow manuel, créer une sauvegarde PostgreSQL complète hors du dépôt et vérifier sa restauration dans un environnement isolé. Le plan Supabase actuellement connecté est Free et aucune sauvegarde restaurable n'a été vérifiée pendant l'audit. Ne pas déduire qu'une sauvegarde automatique existe. Tant que cette précondition n'est pas prouvée et que le test CI de répétition sur les anciennes données synthétiques n'est pas vert, ne pas sélectionner APPLY.
+NaN
