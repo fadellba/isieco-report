@@ -56,7 +56,7 @@ export class AssignmentsController {
 
   @Get('eligible-teams/:idTypeDechet')
   @Roles('RESPONSABLE_AFFECTATION')
-  @ApiOperation({ summary: 'Liste les équipes actives compétentes et disponibles pour un type de déchet' })
+  @ApiOperation({ summary: 'Liste les équipes actives compétentes pour un type de déchet' })
   @ApiParam({ name: 'idTypeDechet', format: 'uuid' })
   @ApiOkResponse({ type: [EligibleTeamResponseDto] })
   @ApiForbiddenResponse({ description: 'Rôle RESPONSABLE_AFFECTATION requis.' })
@@ -99,7 +99,7 @@ export class AssignmentsController {
   @ApiHeader({ name: 'Idempotency-Key', required: true, description: 'Clé stable de 8 à 128 caractères pour rejouer sans doublon.' })
   @ApiCreatedResponse({ type: AssignmentResponseDto })
   @ApiBadRequestResponse({ description: 'Données invalides ou clé idempotente manquante.' })
-  @ApiConflictResponse({ description: 'Équipe non éligible, compétence absente, indisponibilité ou affectation déjà active.' })
+  @ApiConflictResponse({ description: 'Équipe non éligible, compétence absente ou affectation déjà active.' })
   @ApiNotFoundResponse({ description: 'Contenu, dossier ou équipe introuvable.' })
   @ApiForbiddenResponse({ description: 'Rôle RESPONSABLE_AFFECTATION requis.' })
   create(
