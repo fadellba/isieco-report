@@ -72,7 +72,7 @@ Le projet connecté est sur l'offre Free. Supabase ne fournit pas de sauvegarde 
 
 Installer Supabase CLI et Docker, puis copier la chaîne Session Pooler depuis le panneau Connect. Le mot de passe doit être percent-encoded dans l'URL. Saisir la chaîne dans une variable d'environnement et ne pas la committer :
 
-\`\`\`bash
+```bash
 read -rsp "PostgreSQL connection string: " BACKUP_DB_URL
 echo
 umask 077
@@ -90,13 +90,13 @@ unset BACKUP_DB_URL
   sha256sum roles.sql schema.sql data.sql > SHA256SUMS
   sha256sum --check SHA256SUMS
 )
-\`\`\`
+```
 
 Conserver le dossier hors du dépôt dans un espace chiffré à accès restreint. Le chemin .backups/ est ignoré par Git. Les exports logiques Supabase n'incluent pas les comptes Supabase Auth ni les objets binaires du Storage API. Ces éléments doivent être traités séparément si une restauration applicative intégrale est nécessaire.
 
 Tester la restauration dans un **nouveau projet Supabase isolé**, jamais sur le staging source. Configurer préalablement les extensions et paramètres nécessaires, puis restaurer les rôles, le schéma et les données avec la procédure officielle :
 
-\`\`\`bash
+```bash
 psql \\
   --single-transaction \\
   --variable ON_ERROR_STOP=1 \\
@@ -105,7 +105,7 @@ psql \\
   --command 'SET session_replication_role = replica' \\
   --file "$BACKUP_DIR/data.sql" \\
   --dbname "$RESTORE_DB_URL"
-\`\`\`
+```
 
 Un export n'est pas un backup validé tant que les checksums et une restauration complète du périmètre visé n'ont pas été vérifiés. Les clients Supabase Auth, les objets Storage et les réglages de projet ne sont pas rétablis par ces seuls dumps PostgreSQL.
 
