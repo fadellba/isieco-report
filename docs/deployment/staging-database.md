@@ -81,7 +81,7 @@ mkdir -m 700 -p "$BACKUP_DIR"
 
 supabase db dump --db-url "$BACKUP_DB_URL" -f "$BACKUP_DIR/roles.sql" --role-only
 supabase db dump --db-url "$BACKUP_DB_URL" -f "$BACKUP_DIR/schema.sql"
-supabase db dump --db-url "$BACKUP_DB_URL" -f "$BACKUP_DIR/data.sql" --use-copy --data-only \\
+supabase db dump --db-url "$BACKUP_DB_URL" -f "$BACKUP_DIR/data.sql" --use-copy --data-only \
   -x "storage.buckets_vectors" -x "storage.vector_indexes"
 
 unset BACKUP_DB_URL
@@ -92,21 +92,20 @@ unset BACKUP_DB_URL
 )
 ```
 
-Conserver le dossier hors du dépôt dans un espace chiffré à accès restreint. Le chemin .backups/ est ignoré par Git. Les exports logiques Supabase n'incluent pas les comptes Supabase Auth ni les objets binaires du Storage API. Ces éléments doivent être traités séparément si une restauration applicative intégrale est nécessaire.
+Conserver le dossier hors du dépôt dans un espace chiffré à accès restreint. Le chemin .backups/ est ignoré par Git. La commande Supabase CLI exclut les schémas gérés `auth`, `storage` et les schémas d'extensions. Les comptes Supabase Auth, les paramètres/policies personnalisés du Storage et les objets binaires ne sont donc pas restaurés par ces trois dumps. Ils doivent être traités séparément si une restauration applicative intégrale est nécessaire. Pour la répétition de la migration métier, le dump `public` contient en revanche les tables relationnelles historiques visées.
 
-Tester la restauration dans un **nouveau projet Supabase isolé**, jamais sur le staging source. Configurer préalablement les extensions et paramètres nécessaires, puis restaurer les rôles, le schéma et les données avec la procédure officielle :
+Tester la restauration dans un **nouveau projet Supabase isolé**, jamais sur le staging source. Configurer préalablement les extensions nécessaires. Pour le cas courant sans Supabase Vault ni chiffrement de colonnes, restaurer les rôles, le schéma et les données avec la procédure officielle :
 
 ```bash
-psql \\
-  --single-transaction \\
-  --variable ON_ERROR_STOP=1 \\
-  --file "$BACKUP_DIR/roles.sql" \\
-  --file "$BACKUP_DIR/schema.sql" \\
-  --command 'SET session_replication_role = replica' \\
-  --file "$BACKUP_DIR/data.sql" \\
+psql \
+  --single-transaction \
+  --variable ON_ERROR_STOP=1 \
+  --file "$BACKUP_DIR/roles.sql" \
+  --file "$BACKUP_DIR/schema.sql" \
+  --file "$BACKUP_DIR/data.sql" \
   --dbname "$RESTORE_DB_URL"
 ```
 
-Un export n'est pas un backup validé tant que les checksums et une restauration complète du périmètre visé n'ont pas été vérifiés. Les clients Supabase Auth, les objets Storage et les réglages de projet ne sont pas rétablis par ces seuls dumps PostgreSQL.
+Pour un projet utilisant Vault ou le chiffrement de colonnes, suivre la variante spécifique de la documentation Supabase qui ajoute `SET session_replication_role = replica` avant l'import des données ; ne pas l'appliquer par défaut. Un export n'est pas un backup validé tant que les checksums et une restauration complète du périmètre visé n'ont pas été vérifiés. Les comptes Supabase Auth, les policies/configurations Storage et les objets Storage ne sont pas rétablis par ces seuls dumps PostgreSQL.
 
 Le workflow staging demande deux confirmations : APPLY et YES pour attester qu'une sauvegarde a été restaurée dans un environnement isolé. Cette confirmation est une déclaration opérateur ; elle ne remplace pas l'inspection du backup, ses checksums ni le test de restauration.
