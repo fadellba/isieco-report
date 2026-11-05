@@ -373,9 +373,6 @@ $lockdown$;
 ALTER TABLE "utilisateur"
   DROP COLUMN IF EXISTS "reference_avatar";
 
-ALTER TABLE "signalement"
-  DROP COLUMN IF EXISTS "description_localisation";
-
 ALTER TABLE "dossier_traitement"
   DROP COLUMN IF EXISTS "date_qualification";
 
