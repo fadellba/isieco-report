@@ -20,7 +20,7 @@ Le bucket se provisionne via le Dashboard ou l'outil d'administration Storage. N
 
 ### État du projet staging vérifié le 5 novembre 2026
 
-Le projet Supabase `isieco-report-staging` contient le bucket `isieco-private-media` configuré comme privé, avec limite de 10 MiB et types JPEG/PNG/WebP. RLS est activé sur les tables Storage et aucune policy d'accès direct `anon`/`authenticated` n'a été observée au dernier contrôle. Le 5 novembre 2026, un objet était présent dans ce bucket ; prévoir sa préservation ou son remplacement de test lors d'une restauration isolée.
+Le projet Supabase `isieco-report-staging` contient le bucket `isieco-private-media` configuré comme privé, avec limite de 10 MiB et types JPEG/PNG/WebP. RLS est activé sur les tables Storage et aucune policy d'accès direct `anon`/`authenticated` n'a été observée au dernier contrôle. Les objets Storage de test sont également déclarés jetables pour cette opération.
 
 Cette vérification confirme les paramètres du bucket, pas le flux complet API → Storage. Le secret serveur, `MEDIA_RETENTION_DAYS`, la migration du schéma staging et le test d'upload API restent à configurer/exécuter.
 
