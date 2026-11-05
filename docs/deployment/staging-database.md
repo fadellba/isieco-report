@@ -2,17 +2,17 @@
 
 ## Projet cible
 
-Le projet Supabase de staging est `isieco-report-staging` (`mlhbdautaxufubaybzyt`), région `eu-west-1`. Le projet a été vérifié le 31 octobre 2026 : la base métier était vierge et aucune migration Prisma n'était enregistrée.
+Le projet Supabase de staging est `isieco-report-staging` (`mlhbdautaxufubaybzyt`), région `eu-west-1`. Au contrôle du 5 novembre 2026, six migrations Prisma historiques étaient terminées. Le dataset observé était limité à 3 utilisateurs, 8 rôles, 1 signalement, 1 photo et 6 événements métier ; aucun dossier, équipe, affectation, intervention ou vérification. Ce jeu n'est pas représentatif des cas de migration complexes.
 
 Le bucket privé `isieco-private-media` existe déjà, avec limite 10 MiB et types autorisés JPEG, PNG et WebP. Cette configuration Storage est distincte des migrations de la base métier.
 
 ## Pourquoi passer par Prisma Migrate
 
-La source de vérité du schéma métier est `prisma/schema.prisma` et les six migrations SQL versionnées dans `prisma/migrations/`. L'historique d'application est conservé dans `_prisma_migrations`.
+La source de vérité du schéma métier est `prisma/schema.prisma` et les migrations SQL versionnées dans `prisma/migrations/`. Les six premières migrations construisent l'ancien modèle de 38 tables ; la migration `20261105000000_simplified_domain_model` le transforme en 18 tables. L'historique d'application est conservé dans `_prisma_migrations`.
 
 Ne pas copier les fichiers SQL dans le Dashboard Supabase et ne pas appeler manuellement `apply_migration` pour ce schéma : cela ne mettrait pas à jour l'historique `_prisma_migrations` de Prisma et rendrait le déploiement suivant incohérent.
 
-La migration `20261031000000_supabase_business_data_api_lockdown` ajoute une protection importante pour Supabase : RLS sur les 38 tables métier, révocation des privilèges des rôles `anon`, `authenticated` et `service_role`, et suppression de leurs privilèges par défaut sur les futurs objets créés par le rôle de migration. La migration corrective `20261101000000_supabase_prisma_migration_history_lockdown` protège également `public._prisma_migrations`, que Prisma crée automatiquement avant d'appliquer les migrations versionnées : RLS y est activé et les privilèges des rôles Data API lui sont retirés. Les clients ISI-Eco ne consomment pas PostgreSQL directement ; ils passent par NestJS.
+La migration `20261031000000_supabase_business_data_api_lockdown` ajoute une protection importante pour Supabase : RLS sur les anciennes tables métier, puis sur les 18 tables du modèle simplifié, révocation des privilèges des rôles `anon`, `authenticated` et `service_role`, et suppression de leurs privilèges par défaut sur les futurs objets créés par le rôle de migration. La migration corrective `20261101000000_supabase_prisma_migration_history_lockdown` protège également `public._prisma_migrations`, que Prisma crée automatiquement avant d'appliquer les migrations versionnées : RLS y est activé et les privilèges des rôles Data API lui sont retirés. Les clients ISI-Eco ne consomment pas PostgreSQL directement ; ils passent par NestJS.
 
 Cette protection est nécessaire car les privilèges par défaut observés sur le projet staging accordaient encore des droits aux rôles Data API sur les tables futures. La configuration réelle du projet prime sur les valeurs par défaut supposées.
 
@@ -44,9 +44,9 @@ pnpm exec prisma migrate status
 
 Après réussite, vérifier dans Supabase :
 
-- les 38 tables métier attendues dans le schéma `public` ;
-- les six entrées de migration dans `_prisma_migrations` ;
-- RLS activé sur les 38 tables métier et sur `public._prisma_migrations` ;
+- les 18 tables métier attendues dans le schéma `public` ;
+- les sept entrées de migration dans `_prisma_migrations` ;
+- RLS activé sur les 18 tables métier et sur `public._prisma_migrations` ;
 - aucun privilège direct `SELECT/INSERT/UPDATE/DELETE` pour `anon`, `authenticated` et `service_role` sur les tables métier ou sur `public._prisma_migrations` ;
 - absence de privilèges par défaut accordés à ces rôles sur les futures tables, séquences et fonctions.
 
@@ -59,3 +59,8 @@ Le Security Advisor doit être relancé après l'application. Les tests d'API et
 - Ne pas activer les déploiements Vercel/Render de production dans le cadre de cette opération.
 - Les migrations Prisma sont additives et versionnées. Pour corriger un problème après déploiement, préparer une migration corrective ; ne pas supprimer ou modifier les migrations déjà appliquées.
 - Pour une base staging déjà utilisée, sauvegarder et vérifier les données avant toute migration. Le constat de base vierge date du 31 octobre 2026 et doit être confirmé au moment de l'exécution.
+
+
+## Précondition de sauvegarde pour la migration destructive
+
+La migration simplifiée supprime les anciennes tables et colonnes d'historique. Elle ne dispose pas d'un rollback permettant de restaurer les lignes supprimées. Avant de lancer le workflow manuel, créer une sauvegarde PostgreSQL complète hors du dépôt et vérifier sa restauration dans un environnement isolé. Le plan Supabase actuellement connecté est Free et aucune sauvegarde restaurable n'a été vérifiée pendant l'audit. Ne pas déduire qu'une sauvegarde automatique existe. Tant que cette précondition n'est pas prouvée et que le test CI de répétition sur les anciennes données synthétiques n'est pas vert, ne pas sélectionner APPLY.
