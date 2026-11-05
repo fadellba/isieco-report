@@ -82,7 +82,7 @@ INSERT INTO public.photo_signalement (
 ) VALUES (
   '00000000-0000-4000-8000-000000000061', 'storage/report-fixture.jpg', 'Photo fixture',
   '2026-11-01', '00000000-0000-4000-8000-000000000011',
-  '2027-11-01', NULL, FALSE, 'PRIVEE', NULL, FALSE, NULL, NULL, NULL, NULL
+  '2027-11-01', NULL, FALSE, 'EN_ATTENTE', NULL, FALSE, NULL, NULL, NULL, NULL
 );
 
 INSERT INTO public.contenu_signalement (
@@ -165,7 +165,7 @@ INSERT INTO public.photo_intervention (
   '00000000-0000-4000-8000-000000000111',
   '00000000-0000-4000-8000-000000000102',
   'storage/intervention-fixture.jpg', 'APRES', 'Photo intervention fixture',
-  '2026-11-05', '2027-11-05', NULL, FALSE, 'PRIVEE', NULL,
+  '2026-11-05', '2027-11-05', NULL, FALSE, 'EN_ATTENTE', NULL,
   FALSE, NULL, NULL, NULL, NULL
 );
 
