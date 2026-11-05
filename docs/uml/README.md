@@ -21,14 +21,14 @@ Source et explications : [contexte-systeme.md](contexte-systeme.md).
 
 [Ouvrir les classes, attributs, clés et associations](diagramme-classes.md).
 
-Les vues PNG par domaine sont générées depuis \`prisma/schema.prisma\` par \`scripts/render-uml-class-diagrams.py\` :
+Les vues PNG par domaine sont générées depuis `prisma/schema.prisma` par `scripts/render-uml-class-diagrams.py` :
 
 - [Identité et habilitations](diagramme-classes-identite-engagement.png)
 - [Référentiels et équipes](diagramme-classes-referentiels-equipes.png)
 - [Signalements et compléments](diagramme-classes-signalements-qualification.png)
 - [Dossiers et opérations](diagramme-classes-dossiers-operations.png)
 
-Le diagramme courant représente 18 modèles. Toute évolution de \`schema.prisma\` doit garder le script de génération, le diagramme Mermaid et ces vues synchronisés.
+Le diagramme courant représente 18 modèles. Toute évolution de `schema.prisma` doit garder le script de génération, le diagramme Mermaid et ces vues synchronisés.
 
 ## Vue relationnelle
 
