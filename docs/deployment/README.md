@@ -4,52 +4,53 @@
 
 ![Architecture de déploiement ISI-Eco Report](architecture-deploiement.svg)
 
-Voir [l'architecture de déploiement détaillée](architecture-deploiement.md) pour la description des flux, des plateformes et des limites.
+La plateforme cible utilise GitHub Actions pour l'intégration continue, Vercel pour le Web, Render pour l'API NestJS et Supabase pour PostgreSQL, Auth et Storage. La disponibilité réelle dépend du plan choisi et doit être vérifiée avant un usage opérationnel.
 
-## Cible MVP
-
-GitHub héberge le monorepo et les workflows. Vercel héberge le Web React/Vite, Render exécute l'API NestJS, Supabase fournit PostgreSQL, Auth et Storage. L'application Android Expo est compilée séparément ; l'APK signé sera publié dans une GitHub Release et lié depuis la page publique /telecharger.
+## Responsabilités des plateformes
 
 | Élément | Plateforme | Responsabilité |
 |---|---|---|
-| Source et collaboration | GitHub | Dépôt, branches, revues, issues, tags et Releases. |
-| Intégration continue | GitHub Actions | Dépendances, génération Prisma/OpenAPI, tests, typecheck et builds. |
-| Frontend Web | Vercel | Back-office et page /telecharger. Vérifier que l'usage est éligible au plan retenu. |
-| Backend | Render | Une instance de l'API NestJS modulaire. |
+| Source et collaboration | GitHub | Dépôt, branches, revues et Releases. |
+| Intégration continue | GitHub Actions | Dépendances, migrations PostgreSQL, Prisma, OpenAPI, tests et builds. |
+| Frontend Web | Vercel | Back-office React/Vite. |
+| Backend | Render | API NestJS modulaire. |
 | Base métier | Supabase PostgreSQL | Données relationnelles et transactions. |
 | Identité | Supabase Auth | Identifiants, sessions et JWT. |
 | Médias | Supabase Storage | Photos et preuves dans des buckets privés. |
-| Distribution Android | GitHub Releases | APK signé, versionné, avec somme SHA-256. |
+| Distribution Android | GitHub Releases | APK signé, versionné, avec SHA-256. |
 
-Les offres gratuites sont destinées au développement, aux tests et à la démonstration. Elles ne garantissent ni disponibilité permanente, ni support, ni coût nul en exploitation réelle. Render Free peut mettre en veille un service inactif ; Supabase Free a des quotas et conditions de pause ; Vercel Hobby est soumis à ses conditions d'utilisation personnelle/non commerciale. Vérifier les conditions avant mise en service publique.
+Les offres gratuites sont adaptées au développement et à la démonstration, pas à une garantie de disponibilité. Vérifier les quotas, conditions d'utilisation et limites de mise en veille avant une mise en service publique.
 
 ## Parcours d'une requête
 
-Le client crée une session Supabase Auth, transmet l'access token à l'API par HTTPS, puis NestJS vérifie le JWT et résout les rôles depuis la base métier. L'API applique les permissions, exécute la transaction PostgreSQL et utilise Storage pour les médias privés. Les clients ne reçoivent aucune clé privilégiée. Le disque local Render n'est jamais un stockage métier.
+Le client crée une session Supabase Auth et transmet le jeton d'accès à l'API par HTTPS. NestJS vérifie le JWT, résout le profil et les rôles, applique les règles métier, exécute les transactions PostgreSQL et utilise Storage pour les médias. Les clients ne détiennent aucune clé privilégiée. Le disque local Render n'est pas un stockage métier.
 
-## Chaîne de livraison cible
+## Chaîne de livraison
 
-1. Développement sur une branche.
-2. Pull request et CI réussie.
-3. Revue du code, des tests, du contrat OpenAPI et des migrations SQL.
-4. Fusion dans la branche de livraison.
-5. Déploiement du Web sur Vercel et de l'API sur Render.
-6. Application contrôlée des migrations sur Supabase après test et sauvegarde.
-7. Smoke tests de santé API, authentification, autorisations, signalement, affectation, intervention et média.
-8. Si le Mobile a changé : build Android, signature, calcul SHA-256, publication GitHub Release et mise à jour du lien /telecharger.
+1. Développement sur une branche et ouverture d'une pull request.
+2. CI complète sur le SHA proposé : migrations vierges, répétition historique avec fixtures, tests, OpenAPI, typecheck, builds et diagrammes UML.
+3. Revue du code, de la sécurité, des données transformées et de la documentation.
+4. Fusion dans `main`.
+5. Déploiement Web/API uniquement si l'opt-in de production et les Deploy Hooks sont explicitement configurés.
+6. Migration Supabase après backup/restauration vérifié, fenêtre de changement et approbation.
+7. Smoke tests de santé, authentification, autorisations, signalement, affectation, intervention et médias.
 
-## Base de données staging
+## Migration staging
 
-Le workflow manuel [Staging Database Migrate](../../.github/workflows/staging-migrate.yml) applique les migrations Prisma versionnées au projet Supabase staging. Il n'est déclenché ni par un push ni par une pull request : il exige la branche `main`, le choix explicite `APPLY` et le secret d'environnement `STAGING_PRISMA_URL`. La connexion doit utiliser Supavisor Session Pooler (port 5432), pas le pooler transactionnel. Lire [la procédure staging](staging-database.md) avant la première exécution.
+Le workflow manuel [Staging Database Migrate](../../.github/workflows/staging-migrate.yml) applique les migrations Prisma versionnées au projet Supabase staging. Il est limité à `main`, utilise l'environnement GitHub `staging` et exige deux choix explicites : `APPLY` et `YES` pour confirmer qu'une sauvegarde a été restaurée dans un environnement isolé. La connexion doit utiliser Supavisor Session Pooler (port 5432), pas le pooler transactionnel. Lire [la procédure staging](staging-database.md) avant toute exécution.
 
-La migration de sécurité active RLS sur les 38 tables métier et retire les privilèges des rôles `anon`, `authenticated` et `service_role`. Les clients restent confinés à l'API NestJS.
+La migration finale transforme l'ancien modèle de 38 tables métier en 18 tables. Elle supprime des historiques et des modules hors périmètre ; elle n'a pas de rollback récupérant les données supprimées. Le workflow staging ne doit pas être exécuté avant une répétition CI réussie et un backup restauré.
 
-## Docker et production
+Le staging observé contient encore six anciennes migrations et un dataset très réduit : 3 profils métier, 8 rôles, 1 signalement, 1 photo et 6 événements ; aucun dossier, équipe, affectation, intervention ou vérification. Les schémas gérés hébergent aussi 3 identités Auth, 1 bucket et 1 objet Storage. Cette base ne permet pas une recette représentative des relations complexes.
 
-Docker Compose sert à lancer PostgreSQL et les dépendances locales. Kubernetes n'est pas retenu pour le MVP.
+## Sauvegardes
 
-Avant un usage opérationnel, prévoir un plan d'hébergement adapté à la disponibilité attendue, sauvegardes indépendantes de la base et des médias, tests de restauration, supervision, gestion/rotation des secrets, domaine/TLS, politique de conservation et rollback des migrations.
+Le projet connecté utilise l'offre Supabase Free. Aucune sauvegarde quotidienne gérée n'est incluse dans cette offre ; une exportation logique manuelle avec Supabase CLI doit être conservée hors dépôt et restaurée dans un projet isolé. Les dumps PostgreSQL ne couvrent pas les comptes Auth ni les objets binaires Storage. Voir les instructions et les liens officiels dans [la procédure staging](staging-database.md).
+
+Avant un usage opérationnel, préparer des sauvegardes indépendantes de la base et des médias, tester leur restauration, superviser les services, gérer et renouveler les secrets, configurer domaine/TLS, rétention et procédure de retour arrière.
 
 ## État dans le dépôt
 
-Les workflows `web-deploy.yml` et `api-deploy.yml` sont intégrés dans `main` (Phase 20, PR #25). Ils se déclenchent sur un push vers `main` ou manuellement (sur `main` uniquement), puis exigent une exécution `CI` de type `push` réussie pour le SHA exact avant tout appel de Deploy Hook. Configurer les secrets GitHub `VERCEL_DEPLOY_HOOK_URL` et `RENDER_DEPLOY_HOOK_URL` pour activer les hooks ; le secret `PRODUCTION_DEPLOY_ENABLED` doit en plus valoir exactement `true` pour autoriser un appel en production. Ce verrou explicite reste désactivé par défaut. `WEB_SMOKE_URL` et `API_SMOKE_URL` sont facultatifs et doivent être des URL HTTPS de santé. Sur le commit de référence `6bfc822` (31 octobre 2026), les runs #41248396500 et #41248396526 ont attendu puis confirmé la CI verte (#41248396450), mais leurs journaux montrent que l'opt-in et les Deploy Hooks étaient vides : aucun appel Vercel/Render n'a été envoyé et les smoke tests ont été ignorés. Un statut GitHub Actions `success` signifie ici que le workflow de garde s'est terminé correctement, pas qu'un déploiement a eu lieu. Aucun déploiement de production ni APK de release signé n'est confirmé. Le SQL snapshot CI n'est pas l'équivalent d'une migration additive appliquée à PostgreSQL. La base Supabase staging reste indépendante de PostgreSQL CI et doit être initialisée explicitement avec le workflow manuel documenté dans [staging-database.md](staging-database.md).
+Les workflows `web-deploy.yml` et `api-deploy.yml` existent. Ils attendent la CI réussie sur le SHA exact et exigent `PRODUCTION_DEPLOY_ENABLED=true` ainsi que leurs Deploy Hooks respectifs. Ces garde-fous restent désactivés par défaut. Un workflow terminé avec succès alors que le déploiement est ignoré ne prouve pas une mise en production. Aucun déploiement de production ni smoke test post-déploiement n'est confirmé.
+
+La source de vérité du modèle physique est `prisma/schema.prisma`. La CI applique les migrations sur PostgreSQL vierge et rejoue l'ancien historique sur une autre base jetable avec des données synthétiques ; elle produit aussi les diagrammes depuis les 18 modèles Prisma.

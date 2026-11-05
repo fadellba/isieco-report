@@ -1,39 +1,39 @@
 # Modélisation Merise
 
-## Référence
+## Référence actuelle
 
-Le modèle de référence est le MLD v2.13. Le fichier [prisma/schema.prisma](../../prisma/schema.prisma) contient 38 modèles métier. `auth.users` est géré en dehors du schéma métier par Supabase Auth. La table SESSION historique est exclue car les sessions et jetons sont gérés par Supabase Auth.
+Le modèle métier simplifié de référence contient **18 modèles Prisma**, traduisant les classes du MCD du PFE. Le diagramme de classes et sa matrice de correspondance sont disponibles dans [les livrables UML](../uml/diagramme-classes.md).
 
-## Vue relationnelle synthétique des données
+La table `auth.users` reste administrée par Supabase Auth. Le champ `Utilisateur.authUserId` relie le compte métier à l'identité externe ; aucun mot de passe, session ou bearer token n'est répliqué.
 
-![Vue relationnelle synthétique des 38 modèles Prisma](../uml/modele-donnees.svg)
+## Modèle physique
 
-Cette vue donne une vision globale des modèles et de leurs regroupements. Elle ne constitue pas un diagramme de classes détaillé.
+Le schéma [`prisma/schema.prisma`](../../prisma/schema.prisma) décrit les 18 modèles métier. Les noms des tables physiques sont précisés par `@@map`, ceux des colonnes par `@map`.
 
-## Diagramme de classes UML
-
-Voir le [diagramme de classes UML détaillé](../uml/diagramme-classes.md), qui présente les attributs, clés et associations par domaine métier.
+Les six premières migrations versionnées construisent l'ancien modèle relationnel de 38 tables. La migration `20261105000000_simplified_domain_model` transforme ce schéma historique en modèle simplifié de 18 tables. Il s'agit d'une migration destructive et non d'une simple création de tables à partir de zéro.
 
 ## Documents
 
-- [Traduction du MLD v2.13 vers Prisma](implementation-mld-v2.13.md)
+- [Diagramme de classes et correspondance UML/Prisma/PostgreSQL](../uml/diagramme-classes.md)
+- [Traduction du modèle simplifié vers Prisma et PostgreSQL](implementation-modele-simplifie.md)
 - [Schéma Prisma](../../prisma/schema.prisma)
 - [Historique des migrations](../../prisma/migrations/)
+- [Notes de migration et limites de conservation](../architecture/modele-metier-simplifie.md)
 
-## Inventaire des 38 modèles
+## Principes relationnels
 
-Utilisateur, Role, UtilisateurRole, PreferencesVisibiliteCitoyen, Badge, BadgeUtilisateur, HistoriquePoints, Notification, TypeDechet, Equipe, AppartenanceEquipe, CompetenceEquipe, Region, Departement, Commune, DelegationDecisionEquipe, DisponibiliteEquipe, HistoriqueDisponibiliteEquipe, Signalement, PhotoSignalement, ContenuSignalement, DemandeComplement, ReponseComplement, QualificationSignalement, IdempotenceSignalement, DossierTraitement, RattachementSignalement, ContenuDossier, ProvenanceContenuDossier, Affectation, Intervention, PhotoIntervention, VerificationResolution, HistoriqueLocalisationDossier, HistoriquePrioriteDossier, EvenementMetier, PublicationFlux, PhotoPublication.
+Les associations plusieurs-à-plusieurs avec attributs métier sont représentées par des classes d'association explicites : `UtilisateurRole` et `AppartenanceEquipe`. `Affectation` porte une référence directe vers `ContenuDossier`, et `Verification` vers `Intervention`.
 
-## Modèle vs migrations
+Les invariants conditionnels complètent les clés étrangères : unicité d'une affectation active par contenu, unicité d'une vérification par intervention, cohérence des dates et protection des références historiques. Les règles non exprimables dans Prisma doivent être ajoutées dans une migration SQL et couvertes par des tests PostgreSQL.
 
-Le schéma Prisma décrit 38 modèles, mais l'historique de migrations versionnées est encore incomplet : les premières migrations portent sur comptes/rôles et les autres modèles métier. Un SQL snapshot CI généré depuis un schéma vide n'est pas une migration additive depuis la base existante.
+## Migration et validation
 
-Le dépôt configure deux bases PostgreSQL locales distinctes : la base applicative et la base shadow utilisée par Prisma Migrate. La commande `pnpm db:migration:preview` compare l'historique de migrations existant au schéma Prisma et produit un SQL additif ; elle ne repart pas d'un schéma vide et ne modifie pas la base applicative.
+La CI applique les migrations sur une base vierge, puis rejoue l'ancien historique sur une autre base jetable, injecte des données synthétiques couvrant les relations et transformations principales, applique la migration simplifiée et vérifie les invariants de conservation. Elle génère également les diagrammes UML à partir du schéma Prisma.
 
-Les migrations versionnées matérialisent les 38 modèles, puis ajoutent les contraintes SQL non représentables dans Prisma : périodes, dates de rétention, coordonnées, quantités, cibles exclusives d'événements/photos et unicités conditionnelles des relations courantes. La migration `20261030233000_geographic_audit_targets` ajoute les clés étrangères, index et cible exclusive des événements d'audit sur régions, départements et communes. La migration `20261031000000_supabase_business_data_api_lockdown` active RLS sur les 38 tables métier, révoque les privilèges directs des rôles Data API Supabase et supprime les privilèges par défaut pour les futurs objets `public` créés par le rôle de migration.
+Cette répétition synthétique ne constitue pas une validation sur la base distante. Le staging actuel conserve encore l'historique des six migrations anciennes et contient très peu de dossiers, affectations et interventions. Avant son évolution, une sauvegarde restaurable ou un environnement cloné et un contrôle métier sur des volumes représentatifs restent nécessaires.
 
-La CI applique les cinq migrations versionnées sur une base PostgreSQL vierge et exécute les tests d'intégrité négatifs, de RLS et de privilèges Data API sur PostgreSQL réel. La commande locale ciblée est `TEST_DATABASE_URL=postgresql://... pnpm db:test:invariants`. Les tests vérifient que les violations sont refusées par le moteur PostgreSQL, pas seulement par la validation cliente.
+La commande locale ciblée pour les invariants SQL du schéma courant reste :
 
-## Invariants à tester
+`TEST_DATABASE_URL="postgresql://isieco:isieco_dev_password@localhost:5432/isieco_report" pnpm db:test:invariants`
 
-Périodes de validité, unicités conditionnelles des affectations et rattachements actifs, cohérence des états et dates, cibles exclusives des événements, coordonnées, quantités, rétention des médias, idempotence et transitions métier. Leur présence dans la documentation ne signifie pas que ces contraintes sont déjà actives.
+Le scénario de conversion de l'ancien modèle est exécuté par le script `scripts/rehearse-simplified-domain-migration.sh` sur une base PostgreSQL vide et jetable.

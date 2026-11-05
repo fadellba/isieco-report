@@ -32,16 +32,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y graphviz
 
-      - name: Render overview and detailed domain PNGs
+      - name: Render the UML overview, domain PNGs and relational SVG
         run: python3 scripts/render-uml-class-diagrams.py
 
-      - name: Commit generated PNG files
+      - name: Commit generated UML diagrams
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/uml/diagramme-classes-*.png
+          git add docs/uml/diagramme-classes-*.png docs/uml/modele-donnees.svg
           if git diff --cached --quiet; then
-            echo "No PNG changes to commit."
+            echo "No generated diagram changes to commit."
           else
             git commit -m "docs(uml): publish class diagram PNGs"
             git push origin HEAD:main

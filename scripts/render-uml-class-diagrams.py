@@ -18,28 +18,20 @@ SCHEMA = ROOT / "prisma" / "schema.prisma"
 OUT = ROOT / "docs" / "uml"
 
 DOMAINS = [
-    ("Identité et engagement", "identite-engagement", [
-        "Utilisateur", "Role", "UtilisateurRole", "PreferencesVisibiliteCitoyen",
-        "Badge", "BadgeUtilisateur", "HistoriquePoints", "Notification",
+    ("Identité et habilitations", "identite-engagement", [
+        "Utilisateur", "Role", "UtilisateurRole",
     ], "#dbeafe"),
     ("Référentiels et équipes", "referentiels-equipes", [
         "TypeDechet", "Equipe", "AppartenanceEquipe", "CompetenceEquipe",
-        "Region", "Departement", "Commune", "DelegationDecisionEquipe",
-        "DisponibiliteEquipe", "HistoriqueDisponibiliteEquipe",
     ], "#dcfce7"),
-    ("Signalements et qualification", "signalements-qualification", [
-        "Signalement", "PhotoSignalement", "ContenuSignalement", "DemandeComplement",
-        "ReponseComplement", "QualificationSignalement", "IdempotenceSignalement",
+    ("Signalements et compléments", "signalements-qualification", [
+        "Signalement", "PhotoSignalement", "ContenuSignalement",
+        "HistoriqueStatutSignalement", "DemandeComplement",
     ], "#fef3c7"),
     ("Dossiers et opérations", "dossiers-operations", [
-        "DossierTraitement", "RattachementSignalement", "ContenuDossier",
-        "ProvenanceContenuDossier", "Affectation", "Intervention",
-        "PhotoIntervention", "VerificationResolution",
-        "HistoriqueLocalisationDossier", "HistoriquePrioriteDossier",
+        "DossierTraitement", "ContenuDossier", "Affectation", "Intervention",
+        "PhotoIntervention", "Verification",
     ], "#f3e8ff"),
-    ("Traçabilité et diffusion", "tracabilite-diffusion", [
-        "EvenementMetier", "PublicationFlux", "PhotoPublication",
-    ], "#ffe4e6"),
 ]
 COLORS = {name: (slug, color) for name, slug, _, color in DOMAINS}
 SCALAR_TYPES = {
@@ -209,12 +201,21 @@ def render_dot(dot_path: Path, png_path: Path):
         if png.read(8) != b"\x89PNG\r\n\x1a\n":
             raise SystemExit(f"Invalid PNG generated: {png_path}")
 
+def render_svg(dot_path: Path, svg_path: Path):
+    subprocess.run(
+        ["dot", "-Tsvg", str(dot_path), "-o", str(svg_path)],
+        check=True,
+    )
+    with svg_path.open("rb") as svg:
+        if b"<svg" not in svg.read(512):
+            raise SystemExit(f"Invalid SVG generated: {svg_path}")
+
 def main():
     models, domain_of, relations = parse_schema()
     OUT.mkdir(parents=True, exist_ok=True)
     generated = []
 
-    # System overview: all 38 classes and all declared associations. Attribute
+    # System overview: all 18 classes and all declared associations. Attribute
     # details are deliberately moved to the domain sheets to keep this overview
     # readable at normal zoom.
     overview = [
@@ -236,6 +237,11 @@ def main():
     overview_png = OUT / "diagramme-classes-systeme.png"
     render_dot(overview_path, overview_png)
     generated.append(overview_png.name)
+
+    # Keep the relational overview synchronized with the 18-class model too.
+    overview_svg = OUT / "modele-donnees.svg"
+    render_svg(overview_path, overview_svg)
+    generated.append(overview_svg.name)
 
     # Domain sheets: all private attributes plus the associations contained in
     # that domain. Cross-domain relations remain visible in the system overview.
@@ -261,9 +267,9 @@ def main():
         render_dot(dot_path, png_path)
         generated.append(png_path.name)
 
-    if len(models) != 38:
-        raise SystemExit(f"Expected 38 Prisma models, got {len(models)}")
-    print(f"Rendered {len(models)} classes, {len(relations)} associations, {len(generated)} PNG files:")
+    if len(models) != 18:
+        raise SystemExit(f"Expected 18 Prisma models, got {len(models)}")
+    print(f"Rendered {len(models)} classes, {len(relations)} associations, {len(generated)} diagram files:")
     for name in generated:
         print(f" - docs/uml/{name}")
 

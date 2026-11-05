@@ -2,7 +2,7 @@
 
 ## Source de vérité
 
-Le document OpenAPI 3 est généré depuis les contrôleurs NestJS, DTO et décorateurs Swagger. Maintenir les annotations près du code ; ne pas créer une seconde description manuelle des mêmes contrats.
+Le contrat OpenAPI est généré depuis les contrôleurs NestJS, DTO et décorateurs Swagger. Les routes ci-dessous sont un index de navigation ; les annotations de code et le JSON généré restent la référence contractuelle.
 
 Lorsque l'API tourne en local :
 
@@ -11,95 +11,161 @@ Lorsque l'API tourne en local :
 - Préfixe : `http://localhost:3000/api/v1`
 - Génération : `pnpm api:openapi` (écrit `docs/api/openapi.json`).
 
-Swagger est une interface développeur. Il ne doit exposer aucun secret, chemin privé de stockage ou donnée personnelle réelle.
+Ne jamais publier de secret, chemin privé Storage, jeton ou donnée réelle dans Swagger ou les exemples.
 
-## Parcours métier présents
+## Authentification et habilitations
 
-Les routes métier sont groupées par comptes, référentiels, signalements, qualification, dossiers, affectations, interventions et vérification. Chaque contrôleur documente ses habilitations et DTO.
+Supabase Auth gère les identités et les sessions. Les routes protégées reçoivent `Authorization: Bearer <access-token>`. NestJS valide le jeton, résout le compte métier et applique les rôles et règles métier. Le client ne transmet jamais un rôle faisant autorité.
 
-### Qualification et constitution des dossiers (Phase 13)
+| Rôle | Responsabilité principale |
+|---|---|
+| `CITOYEN` | Créer et consulter ses signalements, photos et demandes de complément. |
+| `AGENT_QUALIFICATION` | Qualifier les signalements, demander un complément ou décider. |
+| `RESPONSABLE_TRAITEMENT` | Constituer et piloter les dossiers de traitement. |
+| `GESTIONNAIRE_REFERENTIEL` | Gérer les types de déchets, les équipes, les appartenances et les compétences. |
+| `RESPONSABLE_AFFECTATION` | Affecter les contenus de dossier aux équipes et réaffecter une mission éligible. |
+| `AGENT_TERRAIN` | Consulter ses équipes, répondre aux affectations et réaliser les interventions. |
+| `VERIFICATEUR_CLOTURE` | Vérifier indépendamment les comptes rendus et demander une reprise ou valider. |
+| `ADMINISTRATEUR_COMPTES` | Administrer les comptes et leurs attributions de rôles. |
 
-| Méthode | Route | Autorisation | Description |
-|---|---|---|---|
-| GET | `/cases/qualified-reports` | `RESPONSABLE_TRAITEMENT` | Liste paginée des signalements au statut `QUALIFIE` sans rattachement actif, avec catégories retenues et informations de propriétaire nécessaires à la constitution d'un dossier. |
-| GET | `/qualification/:idSignalement/photos/:idPhotoSignalement/url` | `AGENT_QUALIFICATION` | URL signée temporaire pour une photo appartenant au signalement demandé, encore dans la file de décision et non expirée/purgée. Le lien expire après 60 secondes. |
+Le rôle est requis en plus des contrôles contextuels : propriété du signalement, appartenance active à une équipe, auteur de l'intervention, état courant et séparation des tâches. Une garde de route ne remplace pas la validation métier dans le service.
 
-Ces routes complètent les parcours Qualification et Cases. Elles n'accordent aucun accès direct aux chemins Storage : l'API vérifie l'état métier et l'association photo/signalement avant de signer l'URL.
+## Inventaire des routes implémentées
 
-### Affectations (Phase 15)
+Les routes utilisent le préfixe commun `/api/v1`. Les paramètres UUID doivent être valides. Les détails des DTO, contraintes de pagination, codes de réponse et erreurs sont générés par Swagger.
 
-| Méthode | Route | Autorisation | Description |
-|---|---|---|---|
-| GET | `/assignments/pending-contents` | `RESPONSABLE_AFFECTATION` | Contenus actifs, en attente, dans des dossiers non clôturés et sans affectation active. Pagination `page` / `pageSize`. |
-| GET | `/assignments/eligible-teams/:idTypeDechet` | `RESPONSABLE_AFFECTATION` | Équipes actives ayant une compétence courante valide pour le type demandé, hors indisponibilité courante explicite. |
-| GET | `/assignments` | `RESPONSABLE_AFFECTATION` | Historique paginé et filtrable des affectations. |
-| POST | `/assignments` | `RESPONSABLE_AFFECTATION` | Crée une affectation avec `Idempotency-Key`. Le service revalide le contenu, le dossier, l'équipe, la compétence, la disponibilité et l'unicité dans une transaction sérialisable. |
-| POST | `/assignments/:idAffectation/reassign` | `RESPONSABLE_AFFECTATION` | Réaffecte une affectation en attente ou refusée avec motif et clé idempotente. Une intervention déjà commencée bloque cette opération. |
-| GET | `/assignments/team/:idEquipe` | `AGENT_TERRAIN` + appartenance active | Consulte les affectations actives de sa propre équipe. |
-| POST | `/assignments/:idAffectation/response` | `AGENT_TERRAIN` + appartenance active | Accepte ou refuse une affectation ; le refus est motivé. |
+### Comptes — `accounts`
 
-Les endpoints de découverte sont informatifs. Ils n'accordent pas d'accès aux endpoints Cases ou Referentials et ne remplacent jamais la validation transactionnelle lors d'une mutation.
+| Méthode | Route | Accès |
+|---|---|---|
+| GET | `/accounts/me` | Compte authentifié ; crée ou récupère le profil métier. |
+| PATCH | `/accounts/me` | Compte authentifié ; modifie son profil. |
+| GET | `/accounts` | `ADMINISTRATEUR_COMPTES` ; liste paginée. |
+| POST | `/accounts/:utilisateurId/roles` | `ADMINISTRATEUR_COMPTES` ; attribue un rôle. |
+| DELETE | `/accounts/:utilisateurId/roles/:codeRole` | `ADMINISTRATEUR_COMPTES` ; révoque un rôle. |
 
-### Opérations terrain (Phase 16)
+### Référentiels — `referentials`
 
-| Méthode | Route | Autorisation | Description |
-|---|---|---|---|
-| GET | `/interventions/my-teams` | `AGENT_TERRAIN` + compte métier actif | Liste les équipes actives auxquelles appartient le compte connecté, avec l'appartenance courante. Aucune équipe n'est fournie par le client pour déterminer ce périmètre. |
-| GET | `/interventions/team/:idEquipe` | `AGENT_TERRAIN` + appartenance active | Consulte les interventions des affectations actives de cette équipe ; les métadonnées de la dernière vérification indiquent si une reprise a été demandée. |
-| POST | `/interventions/assignments/:idAffectation/start` | `AGENT_TERRAIN` + appartenance active | Démarre une intervention après acceptation de l'affectation et validation des états métier. Une reprise exige une décision de vérification `REPRISE`. |
-| POST | `/interventions/:idIntervention/photos` | Auteur de l'intervention + `AGENT_TERRAIN` + appartenance active | Upload multipart `file`, `contextePhoto` obligatoire et description facultative. JPEG/PNG/WebP, 10 MiB maximum. |
-| POST | `/interventions/:idIntervention/submit` | Auteur de l'intervention + `AGENT_TERRAIN` + appartenance active | Soumet un compte rendu (20 caractères minimum). Les résultats `PARTIELLE` et `IMPOSSIBLE` exigent un motif d'exception. |
+| Méthode | Route | Accès |
+|---|---|---|
+| GET | `/referentials/waste-types` | `GESTIONNAIRE_REFERENTIEL` ; option `includeInactive`. |
+| POST | `/referentials/waste-types` | `GESTIONNAIRE_REFERENTIEL` ; crée un type de déchet. |
+| PATCH | `/referentials/waste-types/:id` | `GESTIONNAIRE_REFERENTIEL` ; modifie les champs et l'état actif. |
+| GET | `/referentials/teams` | `GESTIONNAIRE_REFERENTIEL` ; équipes, membres et compétences. |
+| POST | `/referentials/teams` | `GESTIONNAIRE_REFERENTIEL` ; crée une équipe. |
+| PATCH | `/referentials/teams/:teamId` | `GESTIONNAIRE_REFERENTIEL` ; modifie une équipe. |
+| POST | `/referentials/teams/:teamId/memberships` | `GESTIONNAIRE_REFERENTIEL` ; ajoute un membre. |
+| POST | `/referentials/teams/:teamId/memberships/close` | `GESTIONNAIRE_REFERENTIEL` ; termine une appartenance. |
+| POST | `/referentials/teams/:teamId/skills` | `GESTIONNAIRE_REFERENTIEL` ; ajoute une compétence. |
+| POST | `/referentials/teams/:teamId/skills/close` | `GESTIONNAIRE_REFERENTIEL` ; désactive une compétence. |
 
-Le listing `my-teams` ne retourne que les équipes correspondant à une appartenance dont la période est courante et dont l'équipe est active. La liste de missions et les mutations conservent leurs propres contrôles d'appartenance, d'auteur et d'état métier côté API.
+Le modèle simplifié ne comporte plus de référentiels région/département/commune, de délégation ni de périodes d'indisponibilité d'équipe. La documentation et les clients ne doivent pas supposer ces endpoints.
 
-### Audit (Phase 11)
+### Signalements citoyens — `reports`
 
-| Méthode | Route | Autorisation | Description |
-|---|---|---|---|
-| GET | `/audit/me` | Compte métier actif connecté | Historique paginé dont le compte est acteur ou cible, avec filtres de date et de type. |
-| GET | `/audit/accounts/:idUtilisateur/roles` | `ADMINISTRATEUR_COMPTES` | Historique des seules attributions et révocations de rôles du compte visé. |
+| Méthode | Route | Accès |
+|---|---|---|
+| POST | `/reports` | `CITOYEN` ; dépôt idempotent avec l'en-tête `Idempotency-Key`. |
+| GET | `/reports/waste-types` | `CITOYEN` ; types de déchets actifs pour la déclaration. |
+| GET | `/reports` | `CITOYEN` ; liste paginée appartenant au compte connecté. |
+| GET | `/reports/:id` | `CITOYEN` propriétaire ; détail du signalement. |
+| POST | `/reports/:id/photos` | `CITOYEN` propriétaire ; upload de photo privée. |
+| GET | `/reports/:id/photos/:photoId/url` | `CITOYEN` propriétaire ; URL signée temporaire. |
+| GET | `/reports/:id/supplements` | `CITOYEN` propriétaire ; demandes de complément. |
+| POST | `/reports/:id/supplements/:demandeId/responses` | `CITOYEN` propriétaire ; réponse unique à une demande ouverte. |
 
-Les réponses exposent les métadonnées d'événement et sa cible, jamais `donneesAvant`, `donneesApres`, les motifs libres ou les informations de destinataire externe. Il n'existe pas de consultation globale du journal : aucun rôle d'auditeur global n'est défini dans le modèle d'habilitations.
+Le dépôt valide les catégories et la cohérence de localisation côté API. Une même clé idempotente et un même corps retournent le dépôt initial ; la réutilisation avec un corps différent est un conflit.
 
-### Médias privés (Phase 10)
+### Qualification — `qualification`
 
-| Méthode | Route | Autorisation | Description |
-|---|---|---|---|
-| POST | `/reports/:id/photos` | `CITOYEN` + propriétaire | Upload multipart `file`, description facultative. |
-| GET | `/reports/:id/photos/:photoId/url` | `CITOYEN` + propriétaire | URL signée 60 secondes. |
-| POST | `/interventions/:idIntervention/photos` | `AGENT_TERRAIN` + auteur de l'intervention + appartenance active | Upload multipart `file`, `contextePhoto` requis, description facultative ; avant soumission du compte rendu. |
-| GET | `/verification/assignments/:idAffectation/photos/:idPhotoIntervention/url` | `VERIFICATEUR_CLOTURE` | URL signée de la photo de la dernière soumission en attente ; auto-vérification interdite. |
+| Méthode | Route | Accès |
+|---|---|---|
+| GET | `/qualification/queue` | `AGENT_QUALIFICATION` ; file paginée. |
+| GET | `/qualification/:idSignalement` | `AGENT_QUALIFICATION` ; détail d'un signalement dans la file. |
+| GET | `/qualification/:idSignalement/photos/:idPhotoSignalement/url` | `AGENT_QUALIFICATION` ; URL signée d'une photo éligible. |
+| POST | `/qualification/:idSignalement/supplements` | `AGENT_QUALIFICATION` ; demande un complément au citoyen. |
+| POST | `/qualification/:idSignalement/accept` | `AGENT_QUALIFICATION` ; accepte et enregistre les catégories retenues. |
+| POST | `/qualification/:idSignalement/reject` | `AGENT_QUALIFICATION` ; rejette avec motif obligatoire. |
 
-Les fichiers acceptés sont JPEG, PNG et WebP, avec vérification de la signature binaire et limite de 10 MiB par fichier. Les chemins Storage ne sont jamais renvoyés aux clients. La consultation passe par un contrôle de droit métier côté API puis une URL de courte durée. La configuration de bucket, du secret serveur et de la conservation est décrite dans [Stockage privé des médias](../storage/README.md).
+### Dossiers — `cases`
+
+Toutes les routes ci-dessous exigent `RESPONSABLE_TRAITEMENT`.
+
+| Méthode | Route | Fonction |
+|---|---|---|
+| GET | `/cases/qualified-reports` | Liste les signalements qualifiés sans dossier. |
+| GET | `/cases` | Liste paginée des dossiers, avec filtre de statut. |
+| GET | `/cases/:idDossier` | Détail du dossier, de ses contenus et signalements. |
+| GET | `/cases/:idDossier/history` | Historique des transitions de statut des signalements liés au dossier. |
+| POST | `/cases/from-reports/:idSignalement` | Crée un dossier et le relie directement au signalement qualifié. |
+| PATCH | `/cases/:idDossier/priority` | Modifie la priorité d'un dossier non clôturé. |
+| PATCH | `/cases/:idDossier/location` | Modifie sa localisation. |
+| POST | `/cases/:idDossier/reports/:idSignalement/attach` | Lie un signalement qualifié à un dossier existant. |
+| POST | `/cases/:idDossier/reports/:idSignalement/detach` | Supprime ce lien direct. |
+
+L'association courante est matérialisée par `signalement.id_dossier`. Aucun motif de rattachement/détachement n'est persisté par le modèle simplifié.
+
+### Affectations — `assignments`
+
+| Méthode | Route | Accès |
+|---|---|---|
+| GET | `/assignments/pending-contents` | `RESPONSABLE_AFFECTATION` ; contenus disponibles. |
+| GET | `/assignments/eligible-teams/:idTypeDechet` | `RESPONSABLE_AFFECTATION` ; équipes actives compétentes. |
+| GET | `/assignments` | `RESPONSABLE_AFFECTATION` ; historique paginé. |
+| POST | `/assignments` | `RESPONSABLE_AFFECTATION` ; nouvelle affectation idempotente. |
+| GET | `/assignments/team/:idEquipe` | `AGENT_TERRAIN` membre actif de l'équipe ; ses affectations. |
+| POST | `/assignments/:idAffectation/response` | `AGENT_TERRAIN` membre actif de l'équipe ; accepte ou refuse. |
+| POST | `/assignments/:idAffectation/reassign` | `RESPONSABLE_AFFECTATION` ; réaffectation d'une mission éligible. |
+
+La création référence directement un `ContenuDossier`, une équipe et une `CompetenceEquipe`. Le service revalide les états et l'éligibilité dans une transaction ; le header `Idempotency-Key` est requis pour créer ou réaffecter.
+
+### Interventions — `interventions`
+
+Toutes les routes exigent `AGENT_TERRAIN` ; l'appartenance active, l'auteur et l'état de la mission sont revalidés côté service.
+
+| Méthode | Route | Fonction |
+|---|---|---|
+| GET | `/interventions/my-teams` | Liste les équipes actives du compte. |
+| GET | `/interventions/team/:idEquipe` | Consulte les interventions de son équipe. |
+| POST | `/interventions/assignments/:idAffectation/start` | Démarre une intervention sur une affectation acceptée. |
+| POST | `/interventions/:idIntervention/photos` | Ajoute une preuve photo avant soumission. |
+| POST | `/interventions/:idIntervention/submit` | Soumet le compte rendu et le résultat terrain. |
+
+Un résultat partiel ou impossible exige un motif d'exception. Seul l'agent ayant démarré l'intervention peut soumettre le compte rendu et joindre les preuves.
+
+### Vérification — `verification`
+
+Toutes les routes exigent `VERIFICATEUR_CLOTURE`. L'auto-vérification est interdite.
+
+| Méthode | Route | Fonction |
+|---|---|---|
+| GET | `/verification/pending` | Liste paginée des interventions en attente. |
+| GET | `/verification/assignments/:idAffectation` | Consulte le dernier compte rendu soumis. |
+| GET | `/verification/assignments/:idAffectation/photos/:idPhotoIntervention/url` | Crée une URL signée pour une preuve de l'intervention soumise. |
+| POST | `/verification/assignments/:idAffectation/decision` | Valide ou demande une reprise motivée. |
+
+Une décision conforme clôt l'affectation et termine le contenu ; le dossier n'est clôturé que lorsque tous ses contenus actifs sont terminés.
+
+## Stockage de médias
+
+Les uploads utilisent le stockage privé via le backend. Les formats acceptés sont JPEG, PNG et WebP ; la taille est limitée à 10 MiB. Les chemins Storage ne sont jamais retournés au client. L'API vérifie la propriété et le contexte métier avant de créer une URL signée de courte durée.
+
+Le schéma simplifié ne contient plus de champs de publication/approbation publique des photos. Les références de stockage, dates d'expiration et métadonnées de purge sont conservées pour la rétention.
 
 ## Checklist de documentation d'un endpoint
 
-Chaque endpoint doit documenter :
-1. Son objectif métier via `@ApiOperation`.
-2. Son groupe via `@ApiTags`.
-3. Les paramètres de chemin et de requête, avec leurs contraintes.
-4. Le DTO de requête et les contraintes de champ.
-5. Le schéma et le code de succès.
-6. Les erreurs pertinentes (`400`, `401`, `403`, `404`, `409`, `422`, `429`, `500` selon le cas).
-7. L'authentification Bearer via `@ApiBearerAuth` si nécessaire.
-8. Les rôles métier requis et le comportement d'autorisation.
+Chaque endpoint doit documenter dans le code :
+1. Son objectif via `@ApiOperation` et son groupe via `@ApiTags`.
+2. Les paramètres de chemin et de requête ainsi que leurs contraintes.
+3. Le DTO de requête et la validation effective.
+4. Le schéma et le code de succès.
+5. Les erreurs pertinentes et les habilitations.
+6. Le comportement des contrôles métier contextuels.
 
-Les champs DTO doivent associer les décorateurs Swagger et class-validator afin que le contrat généré reflète la validation réelle.
+## Versionnement et erreurs
 
-## Authentification et autorisation
-
-Supabase Auth gère l'identité et les sessions. Les requêtes protégées transmettent le jeton d'accès dans `Authorization: Bearer <access-token>`. L'API valide le jeton et résout les rôles métier dans la base applicative.
-
-L'API est la frontière d'autorisation. Masquer un bouton côté client ne constitue pas un contrôle d'accès. Ne jamais faire confiance à un rôle ou une permission transmis par les métadonnées du client.
-
-## Versionnement et compatibilité
-
-Toutes les routes métier sont préfixées par `/api/v1`. N'ajouter une version que pour une frontière de compatibilité délibérée. Préférer les changements additifs et conserver la sémantique des réponses existantes.
-
-## Erreurs
-
-Les erreurs doivent utiliser des codes HTTP stables et des messages sûrs. Ne jamais retourner de stack trace, SQL, contenu de jeton, secret fournisseur ou détail interne. Toute évolution du format d'erreur doit être documentée depuis le comportement réellement implémenté.
+Toutes les routes métier sont préfixées par `/api/v1`. Préférer les changements additifs et conserver la sémantique des réponses existantes. Les erreurs doivent utiliser des codes HTTP stables et des messages sûrs ; ne jamais retourner de stack trace, SQL, jeton ou secret fournisseur.
 
 ## Workflow de changement
 
-Mettre à jour décorateurs, DTO, tests et documentation dans la même PR que le comportement. La CI génère OpenAPI et valide le JSON produit.
+Mettre à jour contrôleur, DTO, service, tests et annotations OpenAPI dans la même PR. La CI génère OpenAPI et valide le JSON produit. Ce fichier doit rester un index des routes réellement implémentées et ne doit pas réintroduire des endpoints supprimés du modèle.

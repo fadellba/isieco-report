@@ -1,31 +1,13 @@
-# Diagramme de classes UML — ISI-Eco Report
+# Diagramme de classes UML simplifié — ISI-Eco Report
 
-Ce livrable est généré à partir du schéma `prisma/schema.prisma` de la branche `main`. Il décrit les **38 classes métier**, les attributs scalaires, les clés et les associations définies par Prisma.
+## Source et périmètre
 
-Les diagrammes sont séparés en cinq domaines métier pour rester lisibles. Les propriétés de navigation Prisma sont représentées par les associations plutôt que répétées comme attributs.
+Ce diagramme décrit le modèle métier simplifié livré dans `prisma/schema.prisma`. Il contient **18 classes persistées**. Les propriétés scalaires, clés et associations correspondent au schéma Prisma ; les champs techniques d'intégration restent identifiés dans la section dédiée.
 
-## Vue d’ensemble en PNG
+Le nom conceptuel **Dossier** est traduit dans le code par `DossierTraitement`, et dans PostgreSQL par `dossier_traitement`, pour préserver le nom physique historique.
 
-![Diagramme de classes du système ISI-Eco Report](diagramme-classes-systeme.png)
+## Classes, attributs et associations
 
-Cette vue présente les 38 classes et les associations entre domaines. Les attributs sont détaillés dans les cinq planches PNG suivantes.
-
-
-## Conventions de lecture
-
-- Tous les attributs sont représentés privés (`-`) par convention d'encapsulation. Prisma ne spécifie pas la visibilité UML des propriétés ; elle ne doit donc pas être interprétée comme une information extraite du schéma.
-- Aucun attribut `protected` n'est introduit, car le modèle ne définit pas de hiérarchie d'héritage. Les contrats publics sont portés par les opérations applicatives, pas par l'exposition directe des champs de persistance.
-
-
-- `PK` : propriété composant la clé primaire, y compris une clé composite.
-- `FK` : propriété utilisée comme clé étrangère dans une relation Prisma.
-- `UQ` : propriété couverte par une contrainte d'unicité déclarée dans Prisma.
-- `?` après un attribut : valeur nullable.
-- Les associations affichent les multiplicités déduites des relations singulières ou en collection déclarées dans Prisma.
-- `auth.users` et les sessions ne sont pas des classes métier de ce modèle : l'identité et les sessions sont gérées par Supabase Auth.
-
-## Identité et engagement
-\n![Diagramme de classes — Identité et engagement](diagramme-classes-identite-engagement.png)\n
 ```mermaid
 classDiagram
   class Utilisateur {
@@ -33,7 +15,6 @@ classDiagram
     -UUID authUserId UQ
     -String nom
     -String prenom?
-    -String referenceAvatar?
     -String email UQ
     -String telephone?
     -DateTime dateInscription
@@ -53,73 +34,12 @@ classDiagram
     -UUID attribuePar? FK
     -String motif?
   }
-  class PreferencesVisibiliteCitoyen {
-    -UUID idUtilisateur PK FK
-    -Boolean afficherAvatar
-    -Boolean afficherNomPublic
-    -String nomPublic?
-    -Boolean afficherPoints
-    -Boolean afficherRang
-    -Boolean afficherBadges
-    -Boolean participerClassement
-  }
-  class Badge {
-    -UUID idBadge PK
-    -String codeBadge UQ
-    -String libelle
-    -String description?
-    -Boolean actif
-  }
-  class BadgeUtilisateur {
-    -UUID idUtilisateur PK FK
-    -UUID idBadge PK FK
-    -DateTime dateAttribution PK
-    -UUID attribuePar? FK
-    -String motif?
-  }
-  class HistoriquePoints {
-    -UUID idPoint PK
-    -UUID idUtilisateur FK
-    -UUID idSignalement? FK
-    -Int points
-    -DateTime dateAttribution
-    -String motif
-    -String typeMouvement
-    -UUID idPointOrigine? FK
-  }
-  class Notification {
-    -UUID idNotification PK
-    -UUID idUtilisateur FK
-    -String titre
-    -String message
-    -Boolean lu
-    -DateTime dateCreation
-    -String lienCible?
-  }
-  Utilisateur "1" -- "*" UtilisateurRole : roles
-  Utilisateur "1" -- "*" UtilisateurRole : rolesAttribues
-  Utilisateur "1" -- "*" HistoriquePoints : mouvementsPoints
-  Utilisateur "1" -- "*" Notification : notifications
-  Utilisateur "0..1" -- "0..1" PreferencesVisibiliteCitoyen : preferencesVisibilite
-  Utilisateur "1" -- "*" BadgeUtilisateur : badgesAttribues
-  Utilisateur "1" -- "*" BadgeUtilisateur : badgesRecus
-  Role "1" -- "*" UtilisateurRole : utilisateurs
-  HistoriquePoints "1" -- "*" HistoriquePoints : compensations
-  Badge "1" -- "*" BadgeUtilisateur : utilisateurs
-```
-
-## Référentiels et équipes
-\n![Diagramme de classes — Référentiels et équipes](diagramme-classes-referentiels-equipes.png)\n
-```mermaid
-classDiagram
   class TypeDechet {
     -UUID idTypeDechet PK
     -String codeType UQ
     -String libelle
     -String description?
-    -Boolean orientationSpecialisee
-    -DateTime dateDebutValidite
-    -DateTime dateFinValidite?
+    -Boolean actif
   }
   class Equipe {
     -UUID idEquipe PK
@@ -135,91 +55,30 @@ classDiagram
     -String fonction
   }
   class CompetenceEquipe {
-    -UUID idCompetenceEquipe PK UQ
-    -UUID idEquipe FK UQ
-    -UUID idTypeDechet FK UQ
-    -DateTime dateDebut UQ
-    -DateTime dateFin?
-    -String commentaire?
-    -UUID valideePar? FK
-  }
-  class Region {
-    -UUID idRegion PK
-    -String codeRegion? UQ
-    -String nomRegion UQ
-    -Boolean actif
-  }
-  class Departement {
-    -UUID idDepartement PK UQ
-    -UUID idRegion FK UQ
-    -String codeDepartement? UQ
-    -String nomDepartement UQ
-    -Boolean actif
-  }
-  class Commune {
-    -UUID idCommune PK UQ
-    -UUID idDepartement FK UQ
-    -String codeCommune? UQ
-    -String nomCommune UQ
-    -Boolean actif
-  }
-  class DelegationDecisionEquipe {
-    -UUID idDelegation PK
-    -UUID idEquipe FK UQ
-    -UUID idUtilisateurDelegue FK UQ
-    -DateTime dateDebutAppartenance
-    -String typeDecision UQ
-    -UUID deleguePar FK
-    -DateTime dateDebut UQ
-    -DateTime dateFin?
-    -String motif?
-  }
-  class DisponibiliteEquipe {
-    -UUID idEquipe PK FK
-    -String etatDisponibilite
-    -UUID miseAJourPar FK
-    -DateTime dateMiseAJour
-    -DateTime valideJusqua
-    -String commentaire?
-  }
-  class HistoriqueDisponibiliteEquipe {
-    -UUID idHistorique PK
+    -UUID idCompetenceEquipe PK
     -UUID idEquipe FK
-    -String etatDisponibilite
-    -UUID miseAJourPar FK
-    -DateTime dateMiseAJour
-    -DateTime valideJusqua
+    -UUID idTypeDechet FK
+    -Boolean actif
+    -DateTime dateAttribution
     -String commentaire?
   }
-  TypeDechet "1" -- "*" CompetenceEquipe : competences
-  Equipe "1" -- "*" AppartenanceEquipe : appartenances
-  Equipe "1" -- "*" CompetenceEquipe : competences
-  Equipe "1" -- "*" DelegationDecisionEquipe : delegations
-  Equipe "0..1" -- "0..1" DisponibiliteEquipe : disponibilite
-  Equipe "1" -- "*" HistoriqueDisponibiliteEquipe : historiqueDisponibilite
-  Region "1" -- "*" Departement : departements
-  Departement "1" -- "*" Commune : communes
-```
-
-## Signalements et qualification
-\n![Diagramme de classes — Signalements et qualification](diagramme-classes-signalements-qualification.png)\n
-```mermaid
-classDiagram
   class Signalement {
     -UUID idSignalement PK
     -UUID idUtilisateur FK
+    -UUID idDossier? FK
     -DateTime dateConstat?
     -DateTime dateSoumission?
     -String description?
-    -UUID idCommune? FK
     -Decimal latitude?
     -Decimal longitude?
     -Decimal precisionLocalisation?
-    -String descriptionLocalisation?
+    -String localisation?
     -String statutSignalement
     -UUID decisionPar? FK
     -DateTime dateDecision?
     -String motifDecision?
+    -String cleIdempotence?
+    -String empreinteRequete?
   }
   class PhotoSignalement {
     -UUID idPhotoSignalement PK
@@ -229,21 +88,26 @@ classDiagram
     -UUID idSignalement FK
     -DateTime dateExpiration
     -DateTime mediaPurgeAt?
-    -Boolean mediaStockeeLocale
-    -String etatPublication
-    -String referencePhotoPublique?
-    -Boolean floutageConfirme
-    -UUID varianteSoumisePar? FK
-    -DateTime dateSoumissionVariante?
-    -UUID approuvePar? FK
-    -DateTime dateApprobation?
   }
   class ContenuSignalement {
-    -UUID idSignalement PK FK
-    -UUID idTypeDechet PK FK
+    -UUID idContenuSignalement PK
+    -UUID idSignalement FK
+    -UUID idTypeDechet FK
     -Decimal quantiteEstimee?
     -Decimal volumeEstime?
     -String remarque?
+    -String etatQualification
+    -UUID qualifiePar? FK
+    -DateTime dateQualification?
+  }
+  class HistoriqueStatutSignalement {
+    -UUID idHistoriqueStatut PK
+    -UUID idSignalement FK
+    -UUID idUtilisateur? FK
+    -String ancienStatut?
+    -String nouveauStatut
+    -DateTime dateChangement
+    -String motif?
   }
   class DemandeComplement {
     -UUID idDemande PK
@@ -252,47 +116,10 @@ classDiagram
     -DateTime dateDemande
     -String motif
     -String etatDemande
+    -String reponse?
+    -UUID reponduPar? FK
+    -DateTime dateReponse?
   }
-  class ReponseComplement {
-    -UUID idReponse PK
-    -UUID idDemande FK UQ
-    -UUID reponduPar FK
-    -DateTime dateReponse
-    -String contenu
-  }
-  class QualificationSignalement {
-    -UUID idQualification PK UQ
-    -UUID idSignalement FK UQ
-    -UUID idTypeDechet FK UQ
-    -Decimal quantiteEstimee?
-    -String uniteQuantite?
-    -Decimal quantiteEstimeeLegacy?
-    -Decimal volumeEstime?
-    -String remarque?
-    -UUID qualifiePar FK
-    -DateTime dateQualification
-    -String etatQualification
-    -String motifRetrait?
-  }
-  class IdempotenceSignalement {
-    -UUID idUtilisateur PK FK
-    -String cleIdempotence PK
-    -String empreinteRequete
-    -UUID idSignalement FK UQ
-    -DateTime dateCreation
-  }
-  Signalement "1" -- "*" PhotoSignalement : photos
-  Signalement "1" -- "*" ContenuSignalement : contenus
-  Signalement "1" -- "*" DemandeComplement : demandesComplement
-  Signalement "1" -- "*" QualificationSignalement : qualifications
-  Signalement "0..1" -- "0..1" IdempotenceSignalement : idempotence
-  DemandeComplement "0..1" -- "0..1" ReponseComplement : reponse
-```
-
-## Dossiers et opérations
-\n![Diagramme de classes — Dossiers et opérations](diagramme-classes-dossiers-operations.png)\n
-```mermaid
-classDiagram
   class DossierTraitement {
     -UUID idDossier PK
     -String referenceDossier UQ
@@ -300,8 +127,6 @@ classDiagram
     -DateTime dateCreationDossier
     -String statutDossier
     -String priorite
-    -DateTime dateQualification?
-    -UUID idCommune? FK
     -Decimal latitude?
     -Decimal longitude?
     -Decimal precisionLocalisation?
@@ -309,52 +134,20 @@ classDiagram
     -DateTime dateCloture?
     -UUID creePar FK
   }
-  class RattachementSignalement {
-    -UUID idRattachement PK
-    -UUID idSignalement FK
-    -UUID idDossier FK
-    -DateTime dateDebutRattachement
-    -DateTime dateFinRattachement?
-    -String typeRattachement
-    -String motif?
-    -UUID idActeur FK
-  }
   class ContenuDossier {
-    -UUID idDossier PK FK
-    -UUID idTypeDechet PK FK
+    -UUID idContenuDossier PK
+    -UUID idDossier FK
+    -UUID idTypeDechet FK
     -Decimal quantiteEstimee?
     -String uniteQuantite?
-    -Decimal quantiteEstimeeLegacy?
     -Decimal volumeEstime?
-    -String niveauRisqueQualifie?
     -String remarque?
-    -UUID qualifiePar? FK
-    -DateTime dateQualification?
     -String etatContenuDossier
     -String etatPriseEnCharge
-    -DateTime dateAttenteEquipe?
-    -String motifAttenteEquipe?
-    -DateTime dateRetrait?
-    -UUID retirePar? FK
-    -String motifRetrait?
-    -String origineAjout
-    -String motifAjout?
-  }
-  class ProvenanceContenuDossier {
-    -UUID idDossier PK FK
-    -UUID idTypeDechet PK FK
-    -UUID idQualification PK FK
-    -DateTime dateDebut PK
-    -UUID idSignalement FK
-    -UUID idRattachement FK
-    -UUID ajoutePar FK
-    -DateTime dateFin?
-    -String motif?
   }
   class Affectation {
     -UUID idAffectation PK
-    -UUID idDossier FK
-    -UUID idTypeDechet FK
+    -UUID idContenuDossier FK
     -UUID idEquipe FK
     -UUID idCompetenceEquipe FK
     -DateTime dateHeureAffectation
@@ -390,177 +183,95 @@ classDiagram
     -DateTime dateAjout
     -DateTime dateExpiration
     -DateTime mediaPurgeAt?
-    -Boolean mediaStockeeLocale
-    -String etatPublication
-    -String referencePhotoPublique?
-    -Boolean floutageConfirme
-    -UUID varianteSoumisePar? FK
-    -DateTime dateSoumissionVariante?
-    -UUID approuvePar? FK
-    -DateTime dateApprobation?
   }
-  class VerificationResolution {
+  class Verification {
     -UUID idVerification PK
-    -UUID idAffectation FK
+    -UUID idIntervention? FK UQ
     -UUID idVerificateur FK
     -DateTime dateVerification
     -String resultatVerification
-    -String etatVerification
-    -String motif?
-    -String referencePreuve?
-  }
-  class HistoriqueLocalisationDossier {
-    -UUID idHistorique PK
-    -UUID idDossier FK
-    -UUID idCommune? FK
-    -Decimal latitude?
-    -Decimal longitude?
-    -Decimal precisionLocalisation?
-    -String descriptionLocalisation?
-    -UUID modifiePar FK
-    -DateTime dateModification
     -String motif?
   }
-  class HistoriquePrioriteDossier {
-    -UUID idHistorique PK
-    -UUID idDossier FK
-    -String priorite
-    -UUID definiePar FK
-    -DateTime dateDefinition
-    -String justification
-  }
-  DossierTraitement "1" -- "*" RattachementSignalement : rattachements
+
+  Utilisateur "1" -- "*" UtilisateurRole : habilitations
+  Role "1" -- "*" UtilisateurRole : attribution
+  Utilisateur "0..*" -- "0..1" UtilisateurRole : attribuant
+  Utilisateur "1" -- "*" AppartenanceEquipe : appartenances
+  Equipe "1" -- "*" AppartenanceEquipe : membres
+  Equipe "1" -- "*" CompetenceEquipe : compétences
+  TypeDechet "1" -- "*" CompetenceEquipe : domaine
+  Utilisateur "1" -- "*" Signalement : auteur
+  Utilisateur "0..*" -- "0..1" Signalement : décideur
+  DossierTraitement "0..1" -- "*" Signalement : dossier courant
+  Signalement "1" -- "*" PhotoSignalement : photos
+  Signalement "1" -- "*" ContenuSignalement : catégories déclarées
+  TypeDechet "1" -- "*" ContenuSignalement : catégorie
+  Utilisateur "0..*" -- "0..1" ContenuSignalement : qualificateur
+  Signalement "1" -- "*" HistoriqueStatutSignalement : transitions
+  Utilisateur "0..1" -- "*" HistoriqueStatutSignalement : acteur
+  Signalement "1" -- "*" DemandeComplement : demandes
+  Utilisateur "1" -- "*" DemandeComplement : demandeur
+  Utilisateur "0..*" -- "0..1" DemandeComplement : répondant
   DossierTraitement "1" -- "*" ContenuDossier : contenus
-  DossierTraitement "1" -- "*" HistoriqueLocalisationDossier : historiquesLocalisation
-  DossierTraitement "1" -- "*" HistoriquePrioriteDossier : historiquesPriorite
-  RattachementSignalement "1" -- "*" ProvenanceContenuDossier : provenances
+  TypeDechet "1" -- "*" ContenuDossier : catégorie
+  Utilisateur "1" -- "*" DossierTraitement : créateur
   ContenuDossier "1" -- "*" Affectation : affectations
-  ContenuDossier "1" -- "*" ProvenanceContenuDossier : provenances
+  Equipe "1" -- "*" Affectation : équipe
+  CompetenceEquipe "1" -- "*" Affectation : compétence
+  Utilisateur "1" -- "*" Affectation : décideur
+  Utilisateur "0..*" -- "0..1" Affectation : répondant
   Affectation "1" -- "*" Intervention : interventions
-  Affectation "1" -- "*" VerificationResolution : verifications
+  Utilisateur "1" -- "*" Intervention : agent
   Intervention "1" -- "*" PhotoIntervention : photos
+  Intervention "0..1" -- "0..1" Verification : contrôle
+  Utilisateur "1" -- "*" Verification : vérificateur
 ```
 
-## Traçabilité et diffusion
-\n![Diagramme de classes — Traçabilité et diffusion](diagramme-classes-tracabilite-diffusion.png)\n
-```mermaid
-classDiagram
-  class EvenementMetier {
-    -UUID idEvenement PK
-    -String typeEvenement
-    -DateTime dateEvenement?
-    -DateTime dateEnregistrement
-    -String origine
-    -UUID idActeur? FK
-    -UUID idSignalementCible? FK
-    -UUID idDossierCible? FK
-    -UUID idRattachementCible? FK
-    -UUID idAffectationCible? FK
-    -UUID idInterventionCible? FK
-    -UUID idVerificationCible? FK
-    -UUID idUtilisateurCible? FK
-    -UUID idEquipeCible? FK
-    -UUID idTypeDechetCible? FK
-    -UUID idCompetenceEquipeCible? FK
-    -UUID idDossierContenuCible? FK
-    -UUID idTypeDechetContenuCible? FK
-    -UUID idEvenementCorrige? FK
-    -Json donneesAvant?
-    -Json donneesApres?
-    -String destinataireExterne?
-    -String motif?
-    -UUID correlationId?
-    -String referenceOperationUnique? UQ
-    -Int versionSchema
-  }
-  class PublicationFlux {
-    -UUID idPublication PK
-    -UUID idSignalement? FK
-    -UUID idDossier? FK
-    -UUID creePar FK
-    -DateTime dateCreation
-    -String etatPublication
-    -UUID approuvePar? FK
-    -DateTime dateApprobation?
-    -DateTime datePublication?
-    -String motifDecision?
-  }
-  class PhotoPublication {
-    -UUID idPhotoPublication PK
-    -UUID idPublication FK UQ
-    -UUID idPhotoSignalement? FK UQ
-    -UUID idPhotoIntervention? FK UQ
-    -String rolePhoto
-    -DateTime dateAjout
-  }
-  EvenementMetier "1" -- "*" EvenementMetier : corrections
-  PublicationFlux "1" -- "*" PhotoPublication : photos
-```
+## Correspondance conceptuel, Prisma et PostgreSQL
 
-## Associations inter-domaines
+| Classe conceptuelle | Modèle Prisma | Table PostgreSQL |
+|---|---|---|
+| Utilisateur | `Utilisateur` | `utilisateur` |
+| Role | `Role` | `role` |
+| UtilisateurRole | `UtilisateurRole` | `utilisateur_role` |
+| TypeDechet | `TypeDechet` | `type_dechet` |
+| Equipe | `Equipe` | `equipe` |
+| AppartenanceEquipe | `AppartenanceEquipe` | `appartenance_equipe` |
+| CompetenceEquipe | `CompetenceEquipe` | `competence_equipe` |
+| Signalement | `Signalement` | `signalement` |
+| PhotoSignalement | `PhotoSignalement` | `photo_signalement` |
+| ContenuSignalement | `ContenuSignalement` | `contenu_signalement` |
+| HistoriqueStatutSignalement | `HistoriqueStatutSignalement` | `historique_statut_signalement` |
+| DemandeComplement | `DemandeComplement` | `demande_complement` |
+| Dossier | `DossierTraitement` | `dossier_traitement` |
+| ContenuDossier | `ContenuDossier` | `contenu_dossier` |
+| Affectation | `Affectation` | `affectation` |
+| Intervention | `Intervention` | `intervention` |
+| PhotoIntervention | `PhotoIntervention` | `photo_intervention` |
+| Verification | `Verification` | `verification` |
 
-Les associations entre classes de domaines différents sont listées ici. Les classes correspondantes apparaissent dans les diagrammes de leurs domaines respectifs.
+## Écarts et champs techniques assumés
 
-| Domaine source | Classe et propriété | Domaine cible | Classe cible |
-|---|---|---|---|
-| Identité et engagement | `Utilisateur.appartenances` | Référentiels et équipes | `AppartenanceEquipe` |
-| Identité et engagement | `Utilisateur.competencesValidees` | Référentiels et équipes | `CompetenceEquipe` |
-| Identité et engagement | `Utilisateur.signalements` | Signalements et qualification | `Signalement` |
-| Identité et engagement | `Utilisateur.signalementsDecides` | Signalements et qualification | `Signalement` |
-| Identité et engagement | `Utilisateur.photosSignalementSoumises` | Signalements et qualification | `PhotoSignalement` |
-| Identité et engagement | `Utilisateur.photosSignalementApprouvees` | Signalements et qualification | `PhotoSignalement` |
-| Identité et engagement | `Utilisateur.dossiersCrees` | Dossiers et opérations | `DossierTraitement` |
-| Identité et engagement | `Utilisateur.rattachementsActes` | Dossiers et opérations | `RattachementSignalement` |
-| Identité et engagement | `Utilisateur.contenusQualifies` | Dossiers et opérations | `ContenuDossier` |
-| Identité et engagement | `Utilisateur.contenusRetires` | Dossiers et opérations | `ContenuDossier` |
-| Identité et engagement | `Utilisateur.affectationsDecidees` | Dossiers et opérations | `Affectation` |
-| Identité et engagement | `Utilisateur.affectationsRepondues` | Dossiers et opérations | `Affectation` |
-| Identité et engagement | `Utilisateur.interventionsRenseignees` | Dossiers et opérations | `Intervention` |
-| Identité et engagement | `Utilisateur.verificationsEffectuees` | Dossiers et opérations | `VerificationResolution` |
-| Identité et engagement | `Utilisateur.evenementsAgis` | Traçabilité et diffusion | `EvenementMetier` |
-| Identité et engagement | `Utilisateur.evenementsUtilisateurCible` | Traçabilité et diffusion | `EvenementMetier` |
-| Identité et engagement | `Utilisateur.demandesComplement` | Signalements et qualification | `DemandeComplement` |
-| Identité et engagement | `Utilisateur.reponsesComplement` | Signalements et qualification | `ReponseComplement` |
-| Identité et engagement | `Utilisateur.qualifications` | Signalements et qualification | `QualificationSignalement` |
-| Identité et engagement | `Utilisateur.provenancesAjoutees` | Dossiers et opérations | `ProvenanceContenuDossier` |
-| Identité et engagement | `Utilisateur.idempotences` | Signalements et qualification | `IdempotenceSignalement` |
-| Identité et engagement | `Utilisateur.delegationsRecues` | Référentiels et équipes | `DelegationDecisionEquipe` |
-| Identité et engagement | `Utilisateur.delegationsPar` | Référentiels et équipes | `DelegationDecisionEquipe` |
-| Identité et engagement | `Utilisateur.disponibilitesModifiees` | Référentiels et équipes | `DisponibiliteEquipe` |
-| Identité et engagement | `Utilisateur.historiquesDisponibilite` | Référentiels et équipes | `HistoriqueDisponibiliteEquipe` |
-| Identité et engagement | `Utilisateur.historiquesLocalisation` | Dossiers et opérations | `HistoriqueLocalisationDossier` |
-| Identité et engagement | `Utilisateur.historiquesPriorite` | Dossiers et opérations | `HistoriquePrioriteDossier` |
-| Identité et engagement | `Utilisateur.publicationsCreees` | Traçabilité et diffusion | `PublicationFlux` |
-| Identité et engagement | `Utilisateur.publicationsApprouvees` | Traçabilité et diffusion | `PublicationFlux` |
-| Identité et engagement | `Utilisateur.photosInterventionSoumises` | Dossiers et opérations | `PhotoIntervention` |
-| Identité et engagement | `Utilisateur.photosInterventionApprouvees` | Dossiers et opérations | `PhotoIntervention` |
-| Référentiels et équipes | `TypeDechet.contenusSignalement` | Signalements et qualification | `ContenuSignalement` |
-| Référentiels et équipes | `TypeDechet.contenusDossier` | Dossiers et opérations | `ContenuDossier` |
-| Référentiels et équipes | `TypeDechet.qualifications` | Signalements et qualification | `QualificationSignalement` |
-| Référentiels et équipes | `TypeDechet.evenementsCible` | Traçabilité et diffusion | `EvenementMetier` |
-| Référentiels et équipes | `Equipe.affectations` | Dossiers et opérations | `Affectation` |
-| Référentiels et équipes | `Equipe.evenementsCible` | Traçabilité et diffusion | `EvenementMetier` |
-| Référentiels et équipes | `CompetenceEquipe.affectations` | Dossiers et opérations | `Affectation` |
-| Référentiels et équipes | `CompetenceEquipe.evenementsCible` | Traçabilité et diffusion | `EvenementMetier` |
-| Référentiels et équipes | `Commune.signalements` | Signalements et qualification | `Signalement` |
-| Signalements et qualification | `Signalement.rattachements` | Dossiers et opérations | `RattachementSignalement` |
-| Signalements et qualification | `Signalement.provenances` | Dossiers et opérations | `ProvenanceContenuDossier` |
-| Signalements et qualification | `Signalement.evenementsCible` | Traçabilité et diffusion | `EvenementMetier` |
-| Signalements et qualification | `Signalement.mouvementsPoints` | Identité et engagement | `HistoriquePoints` |
-| Signalements et qualification | `Signalement.publications` | Traçabilité et diffusion | `PublicationFlux` |
-| Signalements et qualification | `PhotoSignalement.publications` | Traçabilité et diffusion | `PhotoPublication` |
-| Référentiels et équipes | `Commune.dossiers` | Dossiers et opérations | `DossierTraitement` |
-| Dossiers et opérations | `DossierTraitement.evenementsCible` | Traçabilité et diffusion | `EvenementMetier` |
-| Dossiers et opérations | `DossierTraitement.publications` | Traçabilité et diffusion | `PublicationFlux` |
-| Dossiers et opérations | `RattachementSignalement.evenementsCible` | Traçabilité et diffusion | `EvenementMetier` |
-| Dossiers et opérations | `ContenuDossier.evenementsCible` | Traçabilité et diffusion | `EvenementMetier` |
-| Dossiers et opérations | `Affectation.evenementsCible` | Traçabilité et diffusion | `EvenementMetier` |
-| Dossiers et opérations | `Intervention.evenementsCible` | Traçabilité et diffusion | `EvenementMetier` |
-| Dossiers et opérations | `PhotoIntervention.publications` | Traçabilité et diffusion | `PhotoPublication` |
-| Dossiers et opérations | `VerificationResolution.evenementsCible` | Traçabilité et diffusion | `EvenementMetier` |
-| Signalements et qualification | `QualificationSignalement.provenances` | Dossiers et opérations | `ProvenanceContenuDossier` |
-| Référentiels et équipes | `Commune.historiquesLocalisation` | Dossiers et opérations | `HistoriqueLocalisationDossier` |
+- `authUserId` relie le profil métier à Supabase Auth. Les mots de passe et sessions restent hors du modèle métier.
+- `cleIdempotence` et `empreinteRequete` assurent l'idempotence des dépôts ; ils sont stockés sur `Signalement`.
+- `dateExpiration` et `mediaPurgeAt` servent à la rétention et à la purge des médias.
+- Les photos utilisent actuellement `referencePhoto`, qui désigne la référence de stockage privée. Le modèle ne sépare pas encore le chemin, le nom de fichier et le type MIME en trois attributs distincts.
+- `UtilisateurRole` et `AppartenanceEquipe` gardent des clés primaires composites temporelles. Cela conserve l'historique des périodes de rôle et d'appartenance.
+- `Verification.idIntervention` est nullable pour les anciennes vérifications qui ne peuvent pas être rattachées sans ambiguïté à une intervention. La clé est unique lorsqu'elle est renseignée.
+- `localisation` de `Signalement` est mappée sur la colonne SQL historique `description_localisation`. Le modèle Dossier conserve son propre champ `descriptionLocalisation`.
 
-## Source de vérité et limites
+Ces écarts doivent être explicitement acceptés dans la spécification PFE ou corrigés dans un changement de modèle distinct. Le nombre de classes égal à 18 ne suffit pas à démontrer une conformité attribut par attribut.
 
-Le schéma Prisma reste la source de vérité pour les attributs, types, clés et relations déclarées. Ce diagramme ne représente pas les méthodes des services applicatifs : les opérations métier sont spécifiées dans les cas d'utilisation. Les contraintes SQL complémentaires, les règles conditionnelles, les cardinalités métier et les transitions d'état doivent être documentées et testées séparément.
+## Migration et limites de conservation
+
+La migration `20261105000000_simplified_domain_model` transforme l'ancien schéma de 38 modèles vers les 18 tables cibles. Elle conserve les données courantes utiles au nouveau périmètre mais ne conserve pas tous les historiques de l'ancien système :
+
+- le rattachement actif d'un signalement est copié dans `signalement.id_dossier`; les rattachements terminés sont supprimés ;
+- la dernière qualification par couple signalement/catégorie est fusionnée dans `contenu_signalement`; les versions antérieures et certains attributs de qualification ne sont pas repris ;
+- les réponses sont fusionnées dans `demande_complement` ;
+- les vérifications sont appariées chronologiquement aux interventions d'une même affectation ; celles qui ne trouvent pas d'intervention restent sans lien ;
+- seuls les événements présentant un changement de statut exploitable sont copiés dans `historique_statut_signalement` ;
+- les périodes de validité des types et compétences sont réduites à un booléen `actif` et une date d'attribution pour la compétence ;
+- les fonctions retirées du modèle, leurs historiques et leurs colonnes sont supprimés.
+
+La migration doit être répétée sur une copie réaliste de la base avant tout déploiement persistant. Le scénario CI synthétique couvre les chemins de transformation, mais ne remplace pas une sauvegarde restaurable ni l'analyse des volumes réels.

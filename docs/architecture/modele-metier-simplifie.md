@@ -1,39 +1,47 @@
-# Simplification réelle du modèle métier
+# Simplification du modèle métier
 
 ## Cible
 
-Le modèle conceptuel simplifié du PFE devient le modèle métier de référence. Le schéma Prisma expose désormais 18 modèles : Utilisateur, Role, UtilisateurRole, Signalement, PhotoSignalement, ContenuSignalement, HistoriqueStatutSignalement, DemandeComplement, DossierTraitement, TypeDechet, ContenuDossier, Equipe, CompetenceEquipe, AppartenanceEquipe, Affectation, Intervention, PhotoIntervention et Verification.
+Le modèle conceptuel simplifié du PFE devient la référence métier de l'application. Le schéma Prisma comporte 18 modèles : `Utilisateur`, `Role`, `UtilisateurRole`, `Signalement`, `PhotoSignalement`, `ContenuSignalement`, `HistoriqueStatutSignalement`, `DemandeComplement`, `DossierTraitement` (classe conceptuelle `Dossier`), `TypeDechet`, `ContenuDossier`, `CompetenceEquipe`, `Equipe`, `AppartenanceEquipe`, `Affectation`, `Intervention`, `PhotoIntervention` et `Verification`.
+
+La [matrice UML/Prisma/PostgreSQL](../uml/diagramme-classes.md) détaille les attributs, clés, relations et écarts techniques.
 
 ## Règles de réduction
 
-- Le lien Signalement–Dossier est direct via `signalement.id_dossier`. Un signalement appartient à zéro ou un dossier.
-- Les données de qualification sont intégrées à ContenuSignalement. L'état de qualification et l'agent/date sont conservés avec le contenu déclaré.
-- La réponse est stockée directement dans DemandeComplement, avec le répondant et la date.
-- Le statut d'un signalement est historisé dans HistoriqueStatutSignalement.
-- Une affectation référence un ContenuDossier et une compétence d'équipe.
-- Une vérification référence une intervention. Chaque intervention ne reçoit au plus qu'une vérification.
-- Les types de déchets et compétences utilisent un indicateur actif simple.
-- Les fonctions géographiques hiérarchiques, délégations, disponibilités détaillées, provenance des contenus, audit générique, notifications, badges, points et publications sortent du périmètre simplifié.
+- Le lien Signalement-Dossier est direct via `signalement.id_dossier`. Un signalement appartient à zéro ou un dossier.
+- Les qualifications courantes sont intégrées à `ContenuSignalement`.
+- La réponse est stockée directement dans `DemandeComplement`, avec le répondant et la date.
+- Les changements de statut sont stockés dans `HistoriqueStatutSignalement`.
+- Une affectation référence un `ContenuDossier`, une équipe et une compétence d'équipe.
+- Une vérification référence une intervention. La relation est unique ; elle reste nullable pour les anciennes vérifications sans correspondance.
+- Les types de déchets et les compétences d'équipe utilisent un indicateur actif.
+- Les hiérarchies géographiques, délégations, disponibilités détaillées, provenances, audit générique, notifications, gamification et publications sortent du périmètre simplifié.
 
-## Données techniques conservées
+## Champs techniques conservés
 
-Les clés d'idempotence sont conservées dans Signalement. Les dates d'expiration et de purge sont conservées dans les deux tables de photos. Ces colonnes sont nécessaires au fonctionnement, mais n'ajoutent pas de classes métier au MCD.
+`Utilisateur.authUserId` référence Supabase Auth. Les clés d'idempotence restent dans `Signalement`. Les dates d'expiration et de purge restent dans les deux entités photo. Ces propriétés soutiennent les besoins techniques et ne constituent pas des classes métier supplémentaires.
 
-## Impacts fonctionnels
+Les photos utilisent une référence de stockage privée `referencePhoto`, et non trois champs séparés chemin/nom/MIME. Les classes d'association `UtilisateurRole` et `AppartenanceEquipe` préservent leurs clés composites temporelles. Ces différences doivent être assumées ou alignées dans une évolution ultérieure du modèle.
 
-- Le rattachement et le détachement d'un signalement deviennent une mise à jour de sa clé étrangère. L'historique de rattachement et de provenance n'est plus fourni.
-- La qualification ne gère plus de journal séparé des révisions de catégorie : le contenu courant porte le résultat.
-- Une demande de complément contient au plus une réponse.
-- L'administration des équipes garde les membres et compétences, mais abandonne disponibilité datée et délégation.
-- L'activité transversale n'est plus un module autonome. L'historique conservé dans le parcours est celui des statuts de signalement.
-- Les notifications, points, badges, publications et flux citoyens sont retirés de l'application.
+## Transformations et pertes d'historique
 
-## Migration
+| Source ancienne | Transformation | Limite de conservation |
+|---|---|---|
+| `rattachement_signalement` | Le rattachement actif devient `signalement.id_dossier` | Les anciens rattachements terminés sont supprimés. |
+| `idempotence_signalement` | Clé et empreinte déplacées dans `signalement` | Les dates de création de l'entrée d'idempotence ne sont pas conservées. |
+| `qualification_signalement` | Dernière qualification par signalement/type fusionnée dans `contenu_signalement` | Les versions précédentes et les champs non représentés sont perdus. |
+| `reponse_complement` | Réponse, répondant et date copiés dans `demande_complement` | Le modèle cible ne permet qu'une réponse. |
+| `contenu_dossier` | Ajout d'un identifiant UUID propre | Des colonnes de workflow historiques sont supprimées. |
+| `verification_resolution` | Chaque vérification est associée par rang chronologique à une intervention de la même affectation | Une vérification sans intervention correspondante garde `id_intervention = NULL`. |
+| `evenement_metier` | Seules les transitions de statut détectables sont copiées | Les événements génériques non liés à un changement de statut sont supprimés. |
+| Validité TypeDechet/CompetenceEquipe | Conversion en booléen `actif` | Les dates de fin/début sont perdues ; `dateAttribution` conserve le début de compétence. |
 
-La migration `20261105000000_simplified_domain_model` transforme le schéma existant sans modifier les anciennes migrations. Elle récupère le rattachement actuellement actif, déplace l'idempotence vers Signalement, fusionne les données de qualification et les réponses, puis relie les vérifications aux interventions lorsque la correspondance historique existe. Les anciennes données d'événements non liées au statut de signalement, les historiques géographiques/de priorité et les modules secondaires sont supprimés conformément à la réduction de périmètre.
+Les hiérarchies Région/Département/Commune, historiques de localisation/priorité, provenance, disponibilité et délégation, notifications, points, badges et publications sont supprimés par choix de périmètre. Les colonnes de publication/approbation des photos sont également supprimées ; les références de stockage et dates d'expiration/purge sont conservées.
 
-Les vérifications historiques sans intervention correspondante gardent leur ligne avec `id_intervention = NULL`. Elles sont consultables comme données historiques, mais ne constituent pas une vérification active du nouveau workflow.
+## Validation
 
-## Limites de validation
+La CI teste les migrations sur une base PostgreSQL vierge et, séparément, rejoue les six migrations historiques sur une base jetable avec un jeu de données synthétiques. Le scénario vérifie le rattachement actif, l'idempotence, la dernière qualification, la réponse, les contenus/affectations, le mapping des vérifications, la conversion des indicateurs actifs et le filtrage des événements de statut.
 
-La migration doit être validée sur une copie de base contenant des données réelles avant staging. Les déploiements de production doivent attendre la validation du mapping des vérifications historiques, du volume de rattachements et du plan de sauvegarde/restauration.
+Cette répétition couvre les chemins de transformation connus, mais pas les distributions de données d'une base réelle. Le staging Supabase observé conserve encore les six migrations historiques et ne possède aucune affectation, intervention ou vérification ; il n'est donc pas représentatif pour la recette métier.
+
+**Aucune migration distante ne doit être appliquée avant d'avoir vérifié une sauvegarde restaurable ou préparé un clone isolé, puis comparé les volumes réels avant/après.** La CI verte n'est pas une preuve de sauvegarde ni de restauration.

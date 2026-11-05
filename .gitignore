@@ -33,3 +33,6 @@ prisma/migration-preview.sql
 *.log
 .DS_Store
 Thumbs.db
+
+# Local database backups contain sensitive data and must never be committed.
+.backups/
