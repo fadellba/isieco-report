@@ -112,4 +112,26 @@ psql \
 
 La commande `SET session_replication_role = replica` désactive les triggers pendant l'import ; elle fait partie de la procédure Supabase et doit être utilisée uniquement sur la base isolée de restauration. Pour un projet utilisant le chiffrement de colonnes, suivre en plus la variante officielle qui transfère la clé racine de chiffrement. Un export n'est pas un backup validé tant que les checksums et une restauration complète du périmètre visé n'ont pas été vérifiés. Les comptes Supabase Auth, les paramètres/policies Storage et les objets Storage ne sont pas rétablis par ces seuls dumps PostgreSQL.
 
+Après restauration, vérifier que les **six migrations historiques** sont présentes et terminées dans `public._prisma_migrations`. Si l'historique manque ou diffère, arrêter ici : ne pas lancer `migrate deploy` sur un schéma déjà créé sans avoir réconcilié l'historique.
+
+```sql
+SELECT migration_name, finished_at, rolled_back_at
+FROM public._prisma_migrations
+ORDER BY migration_name;
+```
+
+Depuis une révision du dépôt contenant `20261105000000_simplified_domain_model`, appliquer la migration uniquement à cette copie isolée :
+
+```bash
+export DATABASE_URL="$RESTORE_DB_URL"
+export DIRECT_URL="$RESTORE_DB_URL"
+pnpm install --frozen-lockfile
+pnpm db:generate
+pnpm db:deploy
+pnpm exec prisma migrate status
+TEST_DATABASE_URL="$RESTORE_DB_URL" pnpm db:test:invariants
+```
+
+Le résultat attendu est **7 migrations terminées** : les six historiques et la migration de simplification. Le test d'invariants vérifie les 18 tables, RLS et plusieurs contraintes relationnelles dans une transaction annulée à la fin. Comparer et conserver les inventaires de lignes avant/après ; analyser séparément les transformations explicitement documentées (qualification la plus récente, rattachement actif, réponses, vérifications non appariées et événements de statut).
+
 Le workflow staging demande deux confirmations : APPLY et YES pour attester que la sauvegarde du schéma métier a été restaurée dans un environnement isolé et que le sort des identités Auth et objets Storage a été vérifié. Cette confirmation est une déclaration opérateur ; elle ne remplace pas l'inspection du backup, ses checksums ni le test de restauration.
