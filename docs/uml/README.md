@@ -1,6 +1,6 @@
 # Livrables UML
 
-Les diagrammes sont intégrés dans la documentation sous forme de graphiques Mermaid ou SVG, avec leurs sources textuelles versionnées.
+Les sources textuelles, diagrammes et conventions UML sont versionnés dans ce dossier.
 
 ## Diagramme de contexte
 
@@ -12,33 +12,30 @@ Source et explications : [contexte-systeme.md](contexte-systeme.md).
 
 ![Diagramme UML détaillé des cas d’utilisation](cas-utilisation.svg)
 
-- [Présentation du diagramme et conventions UML](cas-utilisation.md)
-- [Description détaillée des cas d’utilisation par acteur](cas-utilisation-par-acteur.md)
+- [Présentation et conventions](cas-utilisation.md)
+- [Description détaillée par acteur](cas-utilisation-par-acteur.md)
 
-Le diagramme représente les huit rôles métier et explicite les relations `<<include>>` et `<<extend>>`. Les fiches décrivent les préconditions, objectifs, résultats et règles propres à chaque acteur.
+## Diagramme de classes
 
-## Diagramme de classes UML
+![Diagramme de classes simplifié du système ISI-Eco Report](diagramme-classes-systeme.png)
 
-![Diagramme de classes du système ISI-Eco Report](diagramme-classes-systeme.png)
+[Ouvrir les classes, attributs, clés et associations](diagramme-classes.md).
 
-[Ouvrir les sources Mermaid, les attributs et les conventions](diagramme-classes.md).
+Les vues PNG par domaine sont générées depuis \`prisma/schema.prisma\` par \`scripts/render-uml-class-diagrams.py\` :
 
-Les vues PNG détaillées par domaine sont également publiées :
-
-- [Identité et engagement](diagramme-classes-identite-engagement.png)
+- [Identité et habilitations](diagramme-classes-identite-engagement.png)
 - [Référentiels et équipes](diagramme-classes-referentiels-equipes.png)
-- [Signalements et qualification](diagramme-classes-signalements-qualification.png)
+- [Signalements et compléments](diagramme-classes-signalements-qualification.png)
 - [Dossiers et opérations](diagramme-classes-dossiers-operations.png)
-- [Traçabilité et diffusion](diagramme-classes-tracabilite-diffusion.png)
 
-Cette source Mermaid contient les 38 classes métier, leurs attributs, les marqueurs PK/FK/UQ et les associations du schéma Prisma. Cinq vues par domaine métier sont proposées, suivies de l'inventaire des associations inter-domaines.
+Le diagramme courant représente 18 modèles. Toute évolution de \`schema.prisma\` doit garder le script de génération, le diagramme Mermaid et ces vues synchronisés.
 
-## Vue relationnelle synthétique du modèle de données
+## Vue relationnelle
 
-![Vue relationnelle synthétique des 38 modèles Prisma](modele-donnees.svg)
+![Vue relationnelle du modèle](modele-donnees.svg)
 
-Cette vue SVG sert d'index visuel du MLD. Elle ne remplace pas le diagramme de classes détaillé. Les colonnes, clés et contraintes sont définies dans [schema.prisma](../../prisma/schema.prisma) et le [MLD v2.13](../merise/README.md).
+Cette vue historique sert de repère visuel, mais ne doit pas être utilisée comme inventaire du modèle courant si elle n'a pas été régénérée depuis le schéma simplifié. Les colonnes et clés de référence sont définies dans [schema.prisma](../../prisma/schema.prisma).
 
 ## Référence
 
-Le modèle métier actuel est défini par les 38 modèles Prisma. Les spécifications UML décrivent la conception cible et ne valent pas preuve d’implémentation de tous les parcours.
+La source de vérité physique est le schéma Prisma courant. La correspondance conceptuelle, les champs techniques et les limites de migration sont explicités dans [le diagramme de classes](diagramme-classes.md) et [la documentation Merise](../merise/README.md).
