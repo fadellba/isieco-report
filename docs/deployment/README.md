@@ -30,14 +30,14 @@ Le client crée une session Supabase Auth et transmet le jeton d'accès à l'API
 1. Développement sur une branche et ouverture d'une pull request.
 2. CI complète sur le SHA proposé : migrations vierges, répétition historique avec fixtures, tests, OpenAPI, typecheck, builds et diagrammes UML.
 3. Revue du code, de la sécurité, des données transformées et de la documentation.
-4. Fusion dans \`main\`.
+4. Fusion dans `main`.
 5. Déploiement Web/API uniquement si l'opt-in de production et les Deploy Hooks sont explicitement configurés.
 6. Migration Supabase après backup/restauration vérifié, fenêtre de changement et approbation.
 7. Smoke tests de santé, authentification, autorisations, signalement, affectation, intervention et médias.
 
 ## Migration staging
 
-Le workflow manuel [Staging Database Migrate](../../.github/workflows/staging-migrate.yml) applique les migrations Prisma versionnées au projet Supabase staging. Il est limité à \`main\`, utilise l'environnement GitHub \`staging\` et exige deux choix explicites : \`APPLY\` et \`YES\` pour confirmer qu'une sauvegarde a été restaurée dans un environnement isolé. La connexion doit utiliser Supavisor Session Pooler (port 5432), pas le pooler transactionnel. Lire [la procédure staging](staging-database.md) avant toute exécution.
+Le workflow manuel [Staging Database Migrate](../../.github/workflows/staging-migrate.yml) applique les migrations Prisma versionnées au projet Supabase staging. Il est limité à `main`, utilise l'environnement GitHub `staging` et exige deux choix explicites : `APPLY` et `YES` pour confirmer qu'une sauvegarde a été restaurée dans un environnement isolé. La connexion doit utiliser Supavisor Session Pooler (port 5432), pas le pooler transactionnel. Lire [la procédure staging](staging-database.md) avant toute exécution.
 
 La migration finale transforme l'ancien modèle de 38 tables métier en 18 tables. Elle supprime des historiques et des modules hors périmètre ; elle n'a pas de rollback récupérant les données supprimées. Le workflow staging ne doit pas être exécuté avant une répétition CI réussie et un backup restauré.
 
@@ -51,6 +51,6 @@ Avant un usage opérationnel, préparer des sauvegardes indépendantes de la bas
 
 ## État dans le dépôt
 
-Les workflows \`web-deploy.yml\` et \`api-deploy.yml\` existent. Ils attendent la CI réussie sur le SHA exact et exigent \`PRODUCTION_DEPLOY_ENABLED=true\` ainsi que leurs Deploy Hooks respectifs. Ces garde-fous restent désactivés par défaut. Un workflow terminé avec succès alors que le déploiement est ignoré ne prouve pas une mise en production. Aucun déploiement de production ni smoke test post-déploiement n'est confirmé.
+Les workflows `web-deploy.yml` et `api-deploy.yml` existent. Ils attendent la CI réussie sur le SHA exact et exigent `PRODUCTION_DEPLOY_ENABLED=true` ainsi que leurs Deploy Hooks respectifs. Ces garde-fous restent désactivés par défaut. Un workflow terminé avec succès alors que le déploiement est ignoré ne prouve pas une mise en production. Aucun déploiement de production ni smoke test post-déploiement n'est confirmé.
 
-La source de vérité du modèle physique est \`prisma/schema.prisma\`. La CI applique les migrations sur PostgreSQL vierge et rejoue l'ancien historique sur une autre base jetable avec des données synthétiques ; elle produit aussi les diagrammes depuis les 18 modèles Prisma.
+La source de vérité du modèle physique est `prisma/schema.prisma`. La CI applique les migrations sur PostgreSQL vierge et rejoue l'ancien historique sur une autre base jetable avec des données synthétiques ; elle produit aussi les diagrammes depuis les 18 modèles Prisma.
