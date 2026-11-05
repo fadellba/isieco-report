@@ -41,7 +41,7 @@ Le workflow manuel [Staging Database Migrate](../../.github/workflows/staging-mi
 
 La migration finale transforme l'ancien modèle de 38 tables métier en 18 tables. Elle supprime des historiques et des modules hors périmètre ; elle n'a pas de rollback récupérant les données supprimées. Le workflow staging ne doit pas être exécuté avant une répétition CI réussie et un backup restauré.
 
-Le staging observé contient encore six anciennes migrations et un dataset très réduit : 3 utilisateurs, 8 rôles, 1 signalement, 1 photo et 6 événements ; aucun dossier, équipe, affectation, intervention ou vérification. Cette base ne permet pas une recette représentative des relations complexes.
+Le staging observé contient encore six anciennes migrations et un dataset très réduit : 3 profils métier, 8 rôles, 1 signalement, 1 photo et 6 événements ; aucun dossier, équipe, affectation, intervention ou vérification. Les schémas gérés hébergent aussi 3 identités Auth, 1 bucket et 1 objet Storage. Cette base ne permet pas une recette représentative des relations complexes.
 
 ## Sauvegardes
 
