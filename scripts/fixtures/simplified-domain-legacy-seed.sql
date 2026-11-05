@@ -140,7 +140,7 @@ INSERT INTO public.contenu_dossier (
 ), (
   '00000000-0000-4000-8000-000000000021',
   '00000000-0000-4000-8000-000000000031',
-  2.000, 'KG', NULL, 1.000, 'Ancien contenu de dossier',
+  2.000, 'KG', NULL, 1.000, 'FAIBLE', 'Ancien contenu de dossier',
   '00000000-0000-4000-8000-000000000002', '2026-10-02',
   'QUALIFIE', 'NON_AFFECTE', NULL, NULL, NULL, NULL, NULL,
   'MANUEL', 'Contenu associé à une affectation terminée'
