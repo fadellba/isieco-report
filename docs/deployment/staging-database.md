@@ -2,7 +2,7 @@
 
 ## Projet cible
 
-Le projet Supabase de staging est `isieco-report-staging` (`mlhbdautaxufubaybzyt`), région `eu-west-1`. Au contrôle du 5 novembre 2026, six migrations Prisma historiques étaient terminées. Le dataset observé était limité à 3 profils métier, 8 rôles, 1 signalement, 1 photo et 6 événements métier ; aucun dossier, équipe, affectation, intervention ou vérification. Le contrôle des schémas gérés a également relevé 3 identités dans `auth.users`, 1 bucket et 1 objet dans `storage.objects`. Ce jeu n'est pas représentatif des cas de migration complexes.
+Le projet Supabase de staging est `isieco-report-staging` (`mlhbdautaxufubaybzyt`), région `eu-west-1`. Au contrôle du 5 novembre 2026, six migrations Prisma historiques étaient terminées et le schéma correspondait encore au modèle historique. Le jeu de données présent est un jeu de test déclaré jetable ; son contenu n'entre pas dans les critères de validation de la migration.
 
 Le bucket privé `isieco-private-media` existe déjà, avec limite 10 MiB et types autorisés JPEG, PNG et WebP. Cette configuration Storage est distincte des migrations de la base métier.
 
@@ -58,7 +58,7 @@ Le Security Advisor doit être relancé après l'application. Les tests d'API et
 - Ne pas ajouter de policy RLS permissive « pour que le client fonctionne » ; les clients ne doivent pas lire ou écrire ces tables via PostgREST.
 - Ne pas activer les déploiements Vercel/Render de production dans le cadre de cette opération.
 - Les migrations Prisma sont versionnées et immuables après application. La migration simplifiée est destructive : elle supprime des tables et colonnes historiques et ne possède pas de rollback automatique. Pour corriger un problème après déploiement, préparer une migration corrective ; ne pas supprimer ou modifier les migrations déjà appliquées.
-- Le staging contrôlé le 5 novembre 2026 contient un petit jeu de données de test (3 profils, 8 rôles, 1 signalement, 1 photo et 6 événements métier). Ces données sont déclarées jetables ; la confirmation `YES` autorise explicitement leur perte ou transformation.
+- Le staging contient un jeu de données de test déclaré jetable ; la confirmation `YES` autorise explicitement sa perte ou sa transformation.
 
 
 ## Sauvegarde facultative et retour arrière
