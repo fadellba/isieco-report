@@ -145,6 +145,7 @@ jobs:
           PGPORT: 5432
           PGUSER: isieco
           PGPASSWORD: isieco_dev_password
+          ALLOW_LEGACY_REHEARSAL: YES
         run: |
           dropdb --if-exists --force isieco_legacy_rehearsal
           createdb isieco_legacy_rehearsal
