@@ -87,10 +87,12 @@ test('creates an assignment using the direct dossier content identifier and team
         calls.created = data;
         return { idAffectation: assignmentId };
       },
+      findUniqueOrThrow: async () => row,
     },
     contenuDossier: {
       findUnique: async () => ({
         idContenuDossier: contentId,
+        idTypeDechet: typeId,
         etatContenuDossier: 'ACTIF',
         etatPriseEnCharge: 'EN_ATTENTE',
         dossier: { statutDossier: 'OUVERT' },
@@ -114,7 +116,7 @@ test('creates an assignment using the direct dossier content identifier and team
   assert.equal(calls.created.idContenuDossier, contentId);
   assert.equal(calls.created.idCompetenceEquipe, skillId);
   assert.equal(result.idAffectation, assignmentId);
-  assert.equal(result.idDossier, undefined);
+  assert.equal(result.idDossier, dossierId);
   assert.equal(calls.isolation, 'Serializable');
 });
 
