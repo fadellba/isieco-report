@@ -66,13 +66,21 @@ INSERT INTO public.signalement (
   id_signalement, id_utilisateur, date_constat, date_soumission, description,
   id_commune, latitude, longitude, precision_localisation, description_localisation,
   statut_signalement, decision_par, date_decision, motif_decision
-) VALUES (
-  '00000000-0000-4000-8000-000000000011',
-  '00000000-0000-4000-8000-000000000001',
-  '2026-10-31', '2026-11-01', 'Signalement synthétique de migration',
-  NULL, 14.716700, -17.467700, 10, 'A proximité de la zone test',
-  'EN_COURS', '00000000-0000-4000-8000-000000000002', '2026-11-05', 'Pris en charge'
-);
+) VALUES
+  (
+    '00000000-0000-4000-8000-000000000011',
+    '00000000-0000-4000-8000-000000000001',
+    '2026-10-31', '2026-11-01', 'Signalement synthétique de migration',
+    NULL, 14.716700, -17.467700, 10, 'A proximité de la zone test',
+    'EN_COURS', '00000000-0000-4000-8000-000000000002', '2026-11-05', 'Pris en charge'
+  ),
+  (
+    '00000000-0000-4000-8000-000000000012',
+    '00000000-0000-4000-8000-000000000001',
+    '2026-11-02', '2026-11-03', 'Signalement sans contenu déclaré préalable',
+    NULL, NULL, NULL, NULL, NULL,
+    'SOUMIS', NULL, NULL, NULL
+  );
 
 INSERT INTO public.photo_signalement (
   id_photo_signalement, reference_photo, description, date_ajout, id_signalement,
@@ -99,7 +107,8 @@ INSERT INTO public.qualification_signalement (
   qualifie_par, date_qualification, etat_qualification, motif_retrait
 ) VALUES
   ('00000000-0000-4000-8000-000000000071', '00000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-000000000031', 5.000, 'KG', NULL, 2.000, 'Ancienne qualification', '00000000-0000-4000-8000-000000000002', '2026-11-02', 'A_CONFIRMER', NULL),
-  ('00000000-0000-4000-8000-000000000072', '00000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-000000000031', 12.500, 'KG', NULL, 4.200, 'Qualification la plus recente', '00000000-0000-4000-8000-000000000002', '2026-11-04', 'CONFIRME', NULL);
+  ('00000000-0000-4000-8000-000000000072', '00000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-000000000031', 12.500, 'KG', NULL, 4.200, 'Qualification la plus recente', '00000000-0000-4000-8000-000000000002', '2026-11-04', 'CONFIRME', NULL),
+  ('00000000-0000-4000-8000-000000000073', '00000000-0000-4000-8000-000000000012', '00000000-0000-4000-8000-000000000031', 1.250, 'KG', NULL, 0.500, 'Qualification sans contenu initial', '00000000-0000-4000-8000-000000000002', '2026-11-03', 'CONFIRME', NULL);
 
 INSERT INTO public.rattachement_signalement (
   id_rattachement, id_signalement, id_dossier, date_debut_rattachement,
@@ -128,6 +137,13 @@ INSERT INTO public.contenu_dossier (
   '00000000-0000-4000-8000-000000000002', '2026-11-04',
   'QUALIFIE', 'NON_AFFECTE', NULL, NULL, NULL, NULL, NULL,
   'SIGNALEMENT', 'Import fixture'
+), (
+  '00000000-0000-4000-8000-000000000021',
+  '00000000-0000-4000-8000-000000000031',
+  2.000, 'KG', NULL, 1.000, 'Ancien contenu de dossier',
+  '00000000-0000-4000-8000-000000000002', '2026-10-02',
+  'QUALIFIE', 'NON_AFFECTE', NULL, NULL, NULL, NULL, NULL,
+  'MANUEL', 'Contenu associé à une affectation terminée'
 );
 
 INSERT INTO public.affectation (
@@ -174,7 +190,8 @@ INSERT INTO public.verification_resolution (
   resultat_verification, etat_verification, motif, reference_preuve
 ) VALUES
   ('00000000-0000-4000-8000-000000000121', '00000000-0000-4000-8000-000000000091', '00000000-0000-4000-8000-000000000003', '2026-11-03', 'A_REPRENDRE', 'TERMINEE', 'Verification ancienne', 'proof-old'),
-  ('00000000-0000-4000-8000-000000000122', '00000000-0000-4000-8000-000000000091', '00000000-0000-4000-8000-000000000003', '2026-11-05 10:00', 'CONFORME', 'TERMINEE', 'Verification la plus recente', 'proof-current');
+  ('00000000-0000-4000-8000-000000000122', '00000000-0000-4000-8000-000000000091', '00000000-0000-4000-8000-000000000003', '2026-11-05 10:00', 'CONFORME', 'TERMINEE', 'Verification la plus recente', 'proof-current'),
+  ('00000000-0000-4000-8000-000000000123', '00000000-0000-4000-8000-000000000092', '00000000-0000-4000-8000-000000000003', '2026-10-06', 'CONFORME', 'TERMINEE', 'Verification sans intervention correspondante', 'proof-orphan');
 
 INSERT INTO public.demande_complement (
   id_demande, id_signalement, demande_par, date_demande, motif, etat_demande
