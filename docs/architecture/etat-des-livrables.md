@@ -20,11 +20,11 @@
 | Sauvegarde | Aucune restauration complète d'une sauvegarde PostgreSQL et Storage n'est prouvée. Une sauvegarde non restaurée ne constitue pas un plan de reprise validé. |
 | Production | Les workflows Render/Vercel existent mais le drapeau de déploiement production reste désactivé. Aucun déploiement production ni smoke test production n'est confirmé. |
 | Mobile natif | La recette sur appareils Android/iOS réels, l'APK signé et la GitHub Release restent à produire. Notifications, mode hors connexion et affichage des preuves d'intervention après upload restent hors périmètre livré. |
-| Branche de durcissement | La branche `codex/phase1-5-hardening` regroupe les corrections métier, le verrouillage du quota photo, l'audit des référentiels/médias et une migration additive d'extension du contrôle `entity_type`. La migration doit être appliquée au staging avant le déploiement de cette branche. |
+| Branche de durcissement | La branche `codex/phase1-5-hardening` regroupe les corrections métier, le verrouillage du quota photo, l'audit des référentiels/médias, le `search_path` du trigger, 15 index FK et un alignement des quatre dérives de noms Prisma/PostgreSQL (suppression d'un index unique redondant, trois renommages). Ces migrations doivent être appliquées au staging avant le déploiement de cette branche. |
 
 ## Séquence de clôture
 
-1. CI complète réussie sur la branche de durcissement : run #42303745540, incluant tests, typecheck, OpenAPI et builds.
+1. La CI complète a réussi sur les commits précédents de la branche (runs #42303745540 et #42304670622). Le dernier alignement de noms de schéma doit encore passer sa propre CI et confirmer un diff Prisma vide.
 2. Faire relire puis fusionner la PR de durcissement.
 3. Avant le déploiement staging de cette nouvelle migration, vérifier la nature des données présentes et satisfaire explicitement la confirmation de données jetables demandée par le workflow manuel. La migration ajoutée étend seulement les valeurs autorisées du journal d'audit, mais le workflow de migration exige une confirmation générale sur les données staging.
 4. Vérifier les variables runtime Storage sans exposer les secrets, faire valider `MEDIA_RETENTION_DAYS`, fusionner puis observer le workflow de purge staging quotidien, et tester upload, URL signée, expiration et purge avec données synthétiques.
