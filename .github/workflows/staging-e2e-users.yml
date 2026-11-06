@@ -70,5 +70,8 @@ jobs:
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Validate seed script syntax
+        run: node --check apps/api/scripts/seed-staging-e2e-users.mjs
+
       - name: Provision and verify eight isolated test users
         run: pnpm --filter @isieco/api seed:staging:e2e-users
