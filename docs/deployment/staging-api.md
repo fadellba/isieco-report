@@ -14,13 +14,15 @@ La production est exclue de ce workflow. Il ne lit ni n'utilise `PRODUCTION_DEPL
 
 Dans **Settings → Environments → staging → Environment secrets**, conserver `STAGING_PRISMA_URL` et ajouter `STAGING_RENDER_DEPLOY_HOOK_URL`.
 
+Dans **Settings → Environments → staging → Environment variables**, définir `STAGING_API_DEPLOY_ENABLED=true` uniquement après avoir ajouté et vérifié le secret du Deploy Hook. Tant que cette variable vaut autre chose que `true` ou n'existe pas, un push sur `main` ne déclenche pas de déploiement automatique. Le lancement manuel avec le choix explicite `DEPLOY` reste disponible.
+
 Créer ce dernier depuis **Render → isieco-api-staging → Settings → Deploy Hook**. Le conserver uniquement comme secret GitHub. Le workflow valide l'hôte et le service ID du hook avant toute requête et ne l'affiche jamais.
 
 Le workflow valide également que `STAGING_PRISMA_URL` vise le pooler Session du projet Supabase staging (port 5432, utilisateur du projet, base `postgres`, TLS). Il exécute ensuite `prisma migrate status` en lecture seule. Si les migrations ne sont pas à jour, le déploiement applicatif est bloqué ; appliquer d'abord les migrations approuvées via le workflow staging dédié.
 
 ## Déroulement
 
-`.github/workflows/api-staging-deploy.yml` est déclenché par un push sur `main` qui touche le code API, les packages partagés, Prisma ou les fichiers de dépendances. Il peut aussi être lancé manuellement depuis `main`, en choisissant explicitement `DEPLOY`.
+`.github/workflows/api-staging-deploy.yml` surveille les pushs sur `main` qui touchent le code API, les packages partagés, Prisma ou les fichiers de dépendances. Le job de déploiement automatique reste désactivé tant que `STAGING_API_DEPLOY_ENABLED` n'est pas défini à `true`. Il peut aussi être lancé manuellement depuis `main`, en choisissant explicitement `DEPLOY`.
 
 Il attend la CI réussie sur le SHA exact, vérifie l'état des migrations staging, demande à Render de déployer ce SHA précis, puis interroge `GET /api/v1/health/ready`.
 
