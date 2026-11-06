@@ -187,3 +187,37 @@ jobs:
           done
           echo "Staging did not report the expected commit and a healthy database within the bounded wait."
           exit 1
+
+      - name: Run public API smoke checks
+        env:
+          API_BASE_URL: https://isieco-api-staging.onrender.com
+        run: |
+          set -euo pipefail
+
+          health_file="$(mktemp)"
+          docs_file="$(mktemp)"
+          trap 'rm -f "$health_file" "$docs_file"' EXIT
+
+          health_status="$(curl --silent --show-error --location --max-time 15 \
+            --output "$health_file" --write-out '%{http_code}' "$API_BASE_URL/api/v1/health")"
+          if [ "$health_status" != "200" ]; then
+            echo "Liveness smoke check failed with HTTP $health_status."
+            exit 1
+          fi
+          node --input-type=module - "$health_file" <<'NODE'
+          import { readFileSync } from 'node:fs';
+          const body = JSON.parse(readFileSync(process.argv[2], 'utf8'));
+          if (body.status !== 'ok' || body.service !== 'isieco-api') {
+            throw new Error('Unexpected API liveness response.');
+          }
+          console.log('Liveness endpoint returned the expected service response.');
+          NODE
+
+          docs_status="$(curl --silent --show-error --location --max-time 15 \
+            --output "$docs_file" --write-out '%{http_code}' "$API_BASE_URL/docs")"
+          if [ "$docs_status" != "200" ] || ! grep -qi 'swagger-ui' "$docs_file"; then
+            echo "OpenAPI documentation smoke check failed with HTTP $docs_status."
+            exit 1
+          fi
+          echo "Swagger documentation endpoint is responding."
+
