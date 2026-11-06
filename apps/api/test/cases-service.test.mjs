@@ -47,9 +47,14 @@ const dossier = {
 };
 
 test('creates a dossier and stores the direct Signalement.idDossier association', async () => {
-  const calls = { create: null, reportUpdate: null, isolation: null, audit: 0 };
+  const calls = { create: null, reportUpdate: null, isolation: null, audit: 0, reportHistoryAssociation: null };
   const tx = {
-    $executeRaw: async () => { calls.audit += 1; return 1; },
+    $executeRaw: async (strings) => {
+      calls.audit += 1;
+      const sql = strings.join('?');
+      if (sql.includes('source_event_id')) calls.reportHistoryAssociation = sql;
+      return 1;
+    },
     signalement: {
       findUnique: async () => report,
       updateMany: async (args) => { calls.reportUpdate = args; return { count: 1 }; },
@@ -80,7 +85,9 @@ test('creates a dossier and stores the direct Signalement.idDossier association'
   assert.equal(calls.reportUpdate.data.idDossier, dossierId);
   assert.equal(calls.isolation, 'Serializable');
   assert.equal(result.idDossier, dossierId);
-  assert.equal(calls.audit, 2);
+  assert.equal(calls.audit, 3);
+  assert.match(calls.reportHistoryAssociation, /ON CONFLICT/);
+  assert.match(calls.reportHistoryAssociation, /source_event_id/);
 });
 
 test('refuses to create a dossier from a report that is not qualified', async () => {
