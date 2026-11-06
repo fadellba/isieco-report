@@ -122,3 +122,34 @@ test('only TERMINEE field results can be validated as conforming', async () => {
     ConflictException,
   );
 });
+
+
+test('excludes interventions authored by the current verifier from the pending queue', async () => {
+  const where = [];
+  const prisma = {
+    utilisateur: { findUnique: async () => ({ idUtilisateur: verifierId, etatCompte: 'ACTIF' }) },
+    intervention: {
+      count: async (args) => { where.push(args.where); return 0; },
+      findMany: async (args) => { where.push(args.where); return []; },
+    },
+    $transaction: async (operations) => Promise.all(operations),
+  };
+  const service = new VerificationService(prisma, {});
+  const result = await service.listPending({ page: 1, pageSize: 20 }, authId);
+
+  assert.equal(result.total, 0);
+  assert.equal(where.length, 2);
+  assert.equal(where.every((filter) => filter.renseignePar.not === verifierId), true);
+});
+
+test('hides a self-authored intervention from direct pending lookup', async () => {
+  let capturedWhere;
+  const prisma = {
+    utilisateur: { findUnique: async () => ({ idUtilisateur: verifierId, etatCompte: 'ACTIF' }) },
+    intervention: { findFirst: async (args) => { capturedWhere = args.where; return null; } },
+  };
+  const service = new VerificationService(prisma, {});
+
+  await assert.rejects(service.getPending(assignmentId, authId), ConflictException);
+  assert.equal(capturedWhere.renseignePar.not, verifierId);
+});

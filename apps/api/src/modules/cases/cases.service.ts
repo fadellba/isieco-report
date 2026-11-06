@@ -10,6 +10,7 @@ import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { associateReportEventsWithCase, recordBusinessEvent } from '../../infrastructure/audit/business-audit.js';
 import type { CreateCaseFromReportDto } from './dto/create-case-from-report.dto.js';
+import type { CaseReportLinkDto } from './dto/case-report-link.dto.js';
 import type { ListCasesQueryDto } from './dto/list-cases-query.dto.js';
 import type { UpdateCaseLocationDto } from './dto/update-case-location.dto.js';
 import type { UpdateCasePriorityDto } from './dto/update-case-priority.dto.js';
@@ -331,60 +332,62 @@ export class CasesService {
     return this.getCase(idDossier);
   }
 
-  async attachReport(idDossier: string, idSignalement: string, authUserId: string) {
+  private async lockOpenCase(tx: Transaction, idDossier: string): Promise<void> {
+    const rows = await tx.$queryRawUnsafe<Array<{ statutDossier: string }>>(
+      'SELECT statut_dossier AS "statutDossier" FROM public.dossier_traitement WHERE id_dossier = $1::uuid FOR UPDATE',
+      idDossier,
+    );
+    const dossier = rows[0];
+    if (!dossier) throw new NotFoundException('Dossier introuvable.');
+    if (dossier.statutDossier === 'CLOTURE') {
+      throw new ConflictException('Un dossier clôturé ne peut plus être modifié.');
+    }
+  }
+
+  async attachReport(idDossier: string, idSignalement: string, dto: CaseReportLinkDto, authUserId: string) {
     const actorId = await this.actorId(authUserId);
+    const motif = dto.motif.trim();
+    if (motif.length < 5) throw new BadRequestException('Le motif de rattachement doit contenir au moins 5 caractères.');
+
     try {
       return await this.prisma.$transaction(async (tx) => {
-        const dossier = await tx.dossierTraitement.findUnique({
-          where: { idDossier },
-          select: { statutDossier: true },
-        });
-        if (!dossier) throw new NotFoundException('Dossier introuvable.');
-        if (dossier.statutDossier === 'CLOTURE') throw new ConflictException('Un dossier clôturé ne peut plus recevoir de signalement.');
-
+        await this.lockOpenCase(tx, idDossier);
         const report = await this.loadQualifiedReport(tx, idSignalement);
         if (report.idDossier) throw new ConflictException('Ce signalement appartient déjà à un dossier.');
 
-        await tx.signalement.update({ where: { idSignalement }, data: { idDossier } });
-        for (const item of report.contenus.filter((content) => content.etatQualification === 'RETENU')) {
+        const retained = report.contenus.filter((item) => item.etatQualification === 'RETENU');
+        for (const item of retained) {
           const existing = await tx.contenuDossier.findUnique({
             where: { idDossier_idTypeDechet: { idDossier, idTypeDechet: item.idTypeDechet } },
+            select: { idContenuDossier: true },
           });
-          if (!existing) {
-            await tx.contenuDossier.create({
-              data: {
-                idDossier,
-                idTypeDechet: item.idTypeDechet,
-                quantiteEstimee: item.quantiteEstimee,
-                volumeEstime: item.volumeEstime,
-                remarque: item.remarque,
-                etatContenuDossier: 'ACTIF',
-                etatPriseEnCharge: 'EN_ATTENTE',
-              },
-            });
-            continue;
+          if (existing) {
+            throw new ConflictException(
+              'Le dossier contient déjà cette catégorie. Les quantités de catégories identiques ne sont pas agrégées.',
+            );
           }
+        }
 
-          const quantity = existing.quantiteEstimee === null
-            ? item.quantiteEstimee
-            : item.quantiteEstimee === null
-              ? existing.quantiteEstimee
-              : existing.quantiteEstimee.add(item.quantiteEstimee);
-          const volume = existing.volumeEstime === null
-            ? item.volumeEstime
-            : item.volumeEstime === null
-              ? existing.volumeEstime
-              : existing.volumeEstime.add(item.volumeEstime);
-          const remarks = [existing.remarque, item.remarque].filter((value): value is string => Boolean(value?.trim()));
-          await tx.contenuDossier.update({
-            where: { idContenuDossier: existing.idContenuDossier },
+        const linked = await tx.signalement.updateMany({
+          where: { idSignalement, idDossier: null, statutSignalement: 'QUALIFIE' },
+          data: { idDossier },
+        });
+        if (linked.count !== 1) throw new ConflictException('Le signalement a été rattaché par une opération concurrente.');
+
+        for (const item of retained) {
+          await tx.contenuDossier.create({
             data: {
-              quantiteEstimee: quantity,
-              volumeEstime: volume,
-              remarque: remarks.length ? remarks.join('\n') : null,
+              idDossier,
+              idTypeDechet: item.idTypeDechet,
+              quantiteEstimee: item.quantiteEstimee,
+              volumeEstime: item.volumeEstime,
+              remarque: item.remarque,
+              etatContenuDossier: 'ACTIF',
+              etatPriseEnCharge: 'EN_ATTENTE',
             },
           });
         }
+
         await associateReportEventsWithCase(tx, idSignalement, idDossier);
         await recordBusinessEvent(tx, {
           actorId,
@@ -392,19 +395,28 @@ export class CasesService {
           entityType: 'SIGNALEMENT',
           entityId: idSignalement,
           dossierId: idDossier,
+          reason: motif,
         });
         return tx.dossierTraitement.findUniqueOrThrow({ where: { idDossier }, select: caseDetailSelect });
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof ConflictException || error instanceof BadRequestException) throw error;
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ConflictException ||
+        error instanceof BadRequestException
+      ) throw error;
       this.handleWriteConflict(error, 'Le signalement a été rattaché simultanément.');
     }
   }
 
-  async detachReport(idDossier: string, idSignalement: string, authUserId: string) {
+  async detachReport(idDossier: string, idSignalement: string, dto: CaseReportLinkDto, authUserId: string) {
     const actorId = await this.actorId(authUserId);
+    const motif = dto.motif.trim();
+    if (motif.length < 5) throw new BadRequestException('Le motif de détachement doit contenir au moins 5 caractères.');
+
     try {
       return await this.prisma.$transaction(async (tx) => {
+        await this.lockOpenCase(tx, idDossier);
         const report = await tx.signalement.findFirst({
           where: { idSignalement, idDossier },
           include: { contenus: { where: { etatQualification: 'RETENU' } } },
@@ -417,7 +429,6 @@ export class CasesService {
             select: { idContenuDossier: true },
           });
           if (!dossierContent) continue;
-
           const activeAssignments = await tx.affectation.count({
             where: { idContenuDossier: dossierContent.idContenuDossier, dateFinAffectation: null },
           });
@@ -432,7 +443,12 @@ export class CasesService {
           }
         }
 
-        await tx.signalement.update({ where: { idSignalement }, data: { idDossier: null } });
+        const detached = await tx.signalement.updateMany({
+          where: { idSignalement, idDossier },
+          data: { idDossier: null },
+        });
+        if (detached.count !== 1) throw new ConflictException('Le rattachement a été modifié simultanément.');
+
         for (const item of report.contenus) {
           const otherReports = await tx.signalement.findMany({
             where: {
@@ -470,11 +486,16 @@ export class CasesService {
           entityType: 'SIGNALEMENT',
           entityId: idSignalement,
           dossierId: idDossier,
+          reason: motif,
         });
         return tx.dossierTraitement.findUniqueOrThrow({ where: { idDossier }, select: caseDetailSelect });
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof ConflictException || error instanceof BadRequestException) throw error;
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ConflictException ||
+        error instanceof BadRequestException
+      ) throw error;
       this.handleWriteConflict(error, 'Le rattachement a été modifié simultanément.');
     }
   }

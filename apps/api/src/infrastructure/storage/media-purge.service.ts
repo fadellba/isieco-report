@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
 import { SupabaseStorageService } from './supabase-storage.service.js';
+import { recordBusinessEvent } from '../audit/business-audit.js';
 
 type PurgeCounts = {
   scannedSignalement: number;
@@ -32,13 +33,13 @@ export class MediaPurgeService {
         where: { dateExpiration: { lte: now }, mediaPurgeAt: null },
         orderBy: [{ dateExpiration: 'asc' }, { idPhotoSignalement: 'asc' }],
         take: safeBatchSize,
-        select: { idPhotoSignalement: true, referencePhoto: true },
+        select: { idPhotoSignalement: true, idSignalement: true, referencePhoto: true },
       }),
       this.prisma.photoIntervention.findMany({
         where: { dateExpiration: { lte: now }, mediaPurgeAt: null },
         orderBy: [{ dateExpiration: 'asc' }, { idPhotoIntervention: 'asc' }],
         take: safeBatchSize,
-        select: { idPhotoIntervention: true, referencePhoto: true },
+        select: { idPhotoIntervention: true, idIntervention: true, referencePhoto: true },
       }),
     ]);
 
@@ -54,13 +55,25 @@ export class MediaPurgeService {
     for (const photo of reportPhotos) {
       try {
         await this.storage.remove(photo.referencePhoto);
-        const result = await this.prisma.photoSignalement.updateMany({
-          where: {
-            idPhotoSignalement: photo.idPhotoSignalement,
-            dateExpiration: { lte: now },
-            mediaPurgeAt: null,
-          },
-          data: { mediaPurgeAt: new Date() },
+        const result = await this.prisma.$transaction(async (tx) => {
+          const updated = await tx.photoSignalement.updateMany({
+            where: {
+              idPhotoSignalement: photo.idPhotoSignalement,
+              dateExpiration: { lte: now },
+              mediaPurgeAt: null,
+            },
+            data: { mediaPurgeAt: new Date() },
+          });
+          if (updated.count === 1) {
+            await recordBusinessEvent(tx, {
+              actorId: null,
+              actionCode: 'PHOTO_SIGNALEMENT_PURGEE',
+              entityType: 'SIGNALEMENT',
+              entityId: photo.idSignalement,
+              metadata: { result: 'PURGED' },
+            });
+          }
+          return updated;
         });
         if (result.count === 1) counts.purgedSignalement += 1;
         else counts.skipped += 1;
@@ -72,13 +85,25 @@ export class MediaPurgeService {
     for (const photo of interventionPhotos) {
       try {
         await this.storage.remove(photo.referencePhoto);
-        const result = await this.prisma.photoIntervention.updateMany({
-          where: {
-            idPhotoIntervention: photo.idPhotoIntervention,
-            dateExpiration: { lte: now },
-            mediaPurgeAt: null,
-          },
-          data: { mediaPurgeAt: new Date() },
+        const result = await this.prisma.$transaction(async (tx) => {
+          const updated = await tx.photoIntervention.updateMany({
+            where: {
+              idPhotoIntervention: photo.idPhotoIntervention,
+              dateExpiration: { lte: now },
+              mediaPurgeAt: null,
+            },
+            data: { mediaPurgeAt: new Date() },
+          });
+          if (updated.count === 1) {
+            await recordBusinessEvent(tx, {
+              actorId: null,
+              actionCode: 'PHOTO_INTERVENTION_PURGEE',
+              entityType: 'INTERVENTION',
+              entityId: photo.idIntervention,
+              metadata: { result: 'PURGED' },
+            });
+          }
+          return updated;
         });
         if (result.count === 1) counts.purgedIntervention += 1;
         else counts.skipped += 1;

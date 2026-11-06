@@ -55,11 +55,11 @@ La PR #26 a intégré :
 - sélection de photos depuis la galerie et capture caméra pour les signalements citoyens et les interventions Agent terrain ;
 - conversion en JPEG, limitation du bord long à 1600 px et envoi multipart vers les endpoints API privés déjà existants ;
 - aperçu des photos du signalement avec URL signée de courte durée, obtenue uniquement à la demande ;
-- limite de trois photos par signalement dans l'interface citoyenne ;
+- limite de trois photos par signalement dans l'interface citoyenne, appliquée aussi côté API sous verrou SQL du signalement pour résister aux dépôts concurrents ;
 - localisation ponctuelle au premier plan, uniquement après action explicite, avec précision estimée ; la saisie manuelle reste disponible ;
 - plugins Expo et permissions Android/iOS limités aux usages nécessaires.
 
-L'API reste l'autorité : elle vérifie le propriétaire du signalement ou l'auteur de l'intervention, les appartenances, les états métier, le type réel de l'image et la taille maximale de 10 MiB. Aucun chemin Storage ni clé privilégiée n'est exposé au Mobile. Les permissions peuvent être refusées sans bloquer le dépôt manuel d'un signalement. La CI complète de la PR #26 est verte ; la recette sur appareils réels reste à effectuer.
+L'API reste l'autorité : elle vérifie le propriétaire du signalement ou l'auteur de l'intervention, les appartenances, les états métier, le type réel de l'image et la taille maximale de 10 MiB. Les ajouts de preuves sont auditables, sans conserver de chemin Storage dans l'événement. Aucun chemin Storage ni clé privilégiée n'est exposé au Mobile. Les permissions peuvent être refusées sans bloquer le dépôt manuel d'un signalement. La CI complète de la PR #26 est verte ; la recette sur appareils réels reste à effectuer.
 
 ## Limites restantes
 

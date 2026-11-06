@@ -1,40 +1,40 @@
 # État des livrables
 
-État de référence : **6 novembre 2026**. La simplification du modèle est dans `main` via la PR #33. La PR #34 apporte les tests de répétition de migration et les corrections de génération UML. La migration distante staging est appliquée et vérifiée par le run GitHub Actions [#42136250612](https://github.com/fadellba/isieco-report/actions/runs/42136250612).
+État de référence : **6 novembre 2026**. Le commit de référence sur `main` pendant la vérification est `f14b89e6132fe2921e60449de8740d8f53c9ec50`. La simplification du modèle est intégrée (PR #33) et la PR #34 apporte la répétition de migration et la génération UML.
 
 | Domaine | État vérifié |
 |---|---|
-| Architecture | Monorepo pnpm, API NestJS, Web React et Mobile Expo. |
-| Modèle métier | 18 modèles Prisma : identité/rôles, référentiels/équipes, signalements, dossiers, affectations, interventions et vérifications. |
-| Migration | Sept migrations versionnées. La dernière transforme l'ancien schéma de 38 tables en 18 tables et supprime volontairement des historiques/modules hors périmètre. |
-| CI de base | CI #184 sur main réussie : migrations à blanc, OpenAPI, TypeScript, tests et builds Web/API/Mobile. |
-| Répétition historique | La PR #34 ajoute le replay des six anciennes migrations sur une base PostgreSQL jetable, des fixtures synthétiques, l'application de la migration simplifiée et des assertions de conservation. La validation couvre aussi l'insertion d'un contenu absent et une vérification ancienne non appariable. |
-| UML/Merise | Le générateur cible 18 classes, 32 associations et six artefacts graphiques : vue d'ensemble, quatre vues de domaine et SVG relationnel. Les sources Mermaid et matrices de correspondance ont été mises à jour. |
-| API | Les modules Accounts, Reports, Qualification, Cases, Assignments, Interventions et Verification ont été adaptés au modèle simplifié. OpenAPI, tests et compilation passent dans la CI de suivi. |
-| Web/Mobile | Les clients Web et Mobile ont été adaptés au schéma simplifié. Les builds passent ; la recette utilisateur et les tests sur appareils Android/iOS réels restent à faire. |
-| Médias | Upload privé, liens signés et commande de purge présents. Configuration des secrets serveur, politique de rétention, Cron de purge et recette Storage staging encore requis. |
-| API staging Render | Le service `isieco-api-staging` existe dans le workspace Falcon, région Frankfurt, branché sur `main`. L'auto-déploiement est désactivé ; le dernier déploiement réussi date du 1er novembre 2026 sur un commit antérieur à la simplification du schéma. Les variables runtime ne sont pas lisibles par le connecteur et restent à vérifier dans le Dashboard Render. Aucun déploiement n'a été déclenché pendant l'audit. |
-| Staging Supabase | Run #42136250612 réussi le 6 novembre 2026. Sept migrations Prisma terminées ; 18 tables métier présentes dans `public`, plus `_prisma_migrations`. `prisma migrate status` confirme que le schéma est à jour. |
-| Sauvegarde | Aucune restauration complète n'a été vérifiée. Les données et médias staging étant déclarés jetables, une sauvegarde restaurable n'était pas un prérequis à la migration. Un export hors site reste recommandé avant d'utiliser ce staging avec des données utiles. |
-| Workflow staging | `staging-migrate.yml` reste manuel et limité à `main`. Le run #42136250612 a validé `APPLY` et la confirmation de données jetables, puis appliqué les sept migrations sur le seul projet staging. |
-| Sécurité staging | RLS est activé sur les 18 tables métier et `_prisma_migrations`. Aucun privilège de table direct n'est accordé à `anon`, `authenticated` ou `service_role` et aucune policy RLS n'est définie : c'est le verrouillage attendu puisque les clients passent par NestJS. Le Security Advisor signale la protection des mots de passe compromis désactivée (WARN) et 15 clés étrangères sans index dédié (INFO). L'organisation Supabase est en offre Free ; la documentation Supabase réserve la protection contre les mots de passe compromis aux offres Pro et supérieures. Cette alerte ne peut donc pas être levée sans changement de plan. Les 15 index FK restent à évaluer selon les requêtes et la charge réelle. |
-| Production | Les workflows Vercel/Render existent, mais les appels de déploiement de production sont désactivés. Aucun déploiement ni smoke test production n'est confirmé. |
-| PFE | Diagramme UML, matrice conceptuel/Prisma/PostgreSQL, documentation de migration et pertes d'historique sont synchronisés dans la branche de suivi. Figer le dossier après validation staging. |
-| Mobile natif | Permissions, caméra, galerie, upload, localisation et parcours métier à recetter sur appareils réels. APK Android signé et GitHub Release à produire. |
+| Architecture | Monorepo pnpm : API NestJS, Web React/Vite, Mobile Expo/React Native et packages partagés. |
+| Modèle métier | 18 modèles Prisma dans `public`. Le journal d'audit est un schéma PostgreSQL distinct `audit`, hors du modèle métier Prisma. |
+| Migrations | Huit migrations Prisma sont présentes sur `main` au commit de référence. La branche PR #44 ajoute trois migrations (extension du ledger, 15 index FK, alignement des objets PostgreSQL) ; elles ont été appliquées et répétées dans la CI sur base vierge et fixture historique. Elles ne sont pas encore appliquées au staging partagé. |
+| CI | Le run main [#42268959982](https://github.com/fadellba/isieco-report/actions/runs/42268959982) a réussi sur le commit de référence. La CI complète de PR #44 a réussi sur le commit final `21b376a8a782c88b0d46b286b917d2bd659cd02f` au run [#42305048319](https://github.com/fadellba/isieco-report/actions/runs/42305048319) : migration vierge + rehearsal historique, UML, génération Prisma, typecheck, tests, OpenAPI et builds Web/API/Mobile. L'artefact `prisma-additive-migration-preview` ne contient aucun SQL résiduel (`-- This is an empty migration.`). |
+| Répétition historique | La CI rejoue les migrations historiques sur une base PostgreSQL jetable, les fixtures synthétiques, la simplification et les assertions de conservation documentées. |
+| UML/Merise | Générateur pour 18 classes, 32 associations et artefacts graphiques ; sources Mermaid et matrices de correspondance versionnées. |
+| API / Web / Mobile | Compilation, tests et builds intégrés à la CI. La compilation ne remplace pas la recette utilisateur ni les tests physiques Android/iOS. |
+| API staging Render | Le workflow [#42279020301](https://github.com/fadellba/isieco-report/actions/runs/42279020301) a déployé le commit de référence sur `isieco-api-staging`. La révision exacte, la readiness DB, liveness, Swagger, la matrice des huit rôles et le parcours citoyen → vérification ont tous réussi. |
+| Supabase staging | Au moment du run #42279020301, `prisma migrate status` a confirmé l'absence de migration en attente sur le commit de référence. Le schéma public contenait les 18 tables métier et la table Prisma de suivi. |
+| Storage staging | Le bucket privé `isieco-private-media` a été vérifié le 5 novembre (10 MiB, JPEG/PNG/WebP). Le workflow staging ne prouve pas encore l'upload, la lecture signée, l'expiration ou la purge depuis l'API. |
+| Secrets et rétention | Les valeurs des secrets runtime ne sont pas lisibles par le connecteur. `SUPABASE_SECRET_KEY`, `MEDIA_RETENTION_DAYS` et la politique métier de conservation restent à contrôler dans l'environnement ; aucune durée ne doit être inventée. |
+| Purge média | Le workflow `.github/workflows/staging-media-purge.yml` de la branche de durcissement planifie une exécution quotidienne à 02:15 UTC sur staging et propose un déclenchement manuel `RUN`. Il utilise les secrets existants de l'environnement GitHub `staging`, valide l'URL DB et le bucket cible, et traite au plus 100 médias de chaque type. Il ne devient actif qu'après fusion dans `main` ; une exécution réelle devra encore être vérifiée. |
+| Sécurité/performance staging | Les 20 tables observées (18 tables métier, `_prisma_migrations`, audit) ont RLS activé. La requête de privilèges ne retourne aucun droit table pour `anon`, `authenticated`, `service_role` ou `PUBLIC`. L'advisor signale 20 tables RLS sans policy (cohérent avec ce modèle fermé par grants), la protection contre les mots de passe compromis désactivée, et 15 FK sans index. La branche ajoute les 15 index manquants au schéma Prisma et à une migration additive ; l'advisor devra être relancé après application staging. Les 8 index « inutilisés » du staging ne sont pas supprimés sans mesures sur une charge représentative. La migration d'audit fixe également le `search_path` de sa fonction trigger. |
+| Sauvegarde | Aucune restauration complète d'une sauvegarde PostgreSQL et Storage n'est prouvée. Une sauvegarde non restaurée ne constitue pas un plan de reprise validé. |
+| Production | Les workflows Render/Vercel existent mais le drapeau de déploiement production reste désactivé. Aucun déploiement production ni smoke test production n'est confirmé. |
+| Mobile natif | La recette sur appareils Android/iOS réels, l'APK signé et la GitHub Release restent à produire. Notifications, mode hors connexion et affichage des preuves d'intervention après upload restent hors périmètre livré. |
+| Branche de durcissement | La branche `codex/phase1-5-hardening` regroupe les corrections métier, le verrouillage du quota photo, l'audit des référentiels/médias, le `search_path` du trigger, 15 index FK et un alignement des quatre dérives de noms Prisma/PostgreSQL (suppression d'un index unique redondant, trois renommages). Ces migrations doivent être appliquées au staging avant le déploiement de cette branche. |
 
-## Ordre restant
+## Séquence de clôture
 
-1. Configurer et vérifier les variables runtime de l'API staging (`DATABASE_URL`, `DIRECT_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SECRET_KEY` et `SUPABASE_STORAGE_BUCKET`) sans exposer les secrets aux clients.
-2. Faire valider une durée de conservation métier, puis définir `MEDIA_RETENTION_DAYS` ; ne pas inventer cette valeur.
-3. Activer la protection Supabase Auth contre les mots de passe compromis et documenter le contrôle.
-4. Planifier `pnpm storage:purge` dans l'environnement d'hébergement, puis tester upload, URL signée, expiration et purge avec des données synthétiques.
-5. Recetter les parcours API/Web/Mobile et les droits inter-comptes, puis tester les fonctions caméra, galerie et localisation sur appareils Android/iOS réels.
-6. Corriger les index FK après examen des requêtes et mesures de charge ; les avertissements d'index inutilisés sur ce staging peu sollicité ne justifient pas leur suppression immédiate.
-7. N'envisager la production qu'après validation des tests, des secrets, de la rétention, de la purge, des Deploy Hooks et des smoke tests. Figer ensuite les livrables PFE et préparer l'APK signé.
+1. CI complète réussie sur le commit final de la branche : run #42305048319. Le diff Prisma est vide après les migrations d'index FK et d'alignement des noms PostgreSQL.
+2. Faire relire puis fusionner la PR de durcissement.
+3. Avant le déploiement staging de cette nouvelle migration, vérifier la nature des données présentes et satisfaire explicitement la confirmation de données jetables demandée par le workflow manuel. La migration ajoutée étend seulement les valeurs autorisées du journal d'audit, mais le workflow de migration exige une confirmation générale sur les données staging.
+4. Vérifier les variables runtime Storage sans exposer les secrets, faire valider `MEDIA_RETENTION_DAYS`, fusionner puis observer le workflow de purge staging quotidien, et tester upload, URL signée, expiration et purge avec données synthétiques.
+5. Tester Web/Mobile et les droits inter-comptes sur appareils réels Android/iOS ; produire et vérifier l'APK signé.
+6. Effectuer une sauvegarde réelle et une restauration complète, incluant séparément les objets Storage.
+7. N'activer la production qu'après validation formelle de la restauration, des secrets, de la rétention, de la purge, des tests, des Deploy Hooks et des smoke tests.
 
 ## Conditions de clôture
 
 - Une migration sur base vierge ne prouve pas la préservation des données historiques.
 - Le scénario CI synthétique ne remplace pas une sauvegarde réelle restaurée.
-- La présence d'un workflow de déploiement ne prouve pas une mise en production.
+- Un workflow de déploiement vert peut signifier que le déploiement a été volontairement ignoré.
 - La compilation ne remplace pas la recette utilisateur ni les tests d'autorisation.

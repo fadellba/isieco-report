@@ -169,3 +169,50 @@ test('returns the dossier audit timeline by its historical dossier id', async ()
   assert.match(calls.sql, /WHERE dossier_id = \?::uuid/);
   assert.deepEqual(calls.values, [dossierId]);
 });
+
+
+test('rejects attaching a report when the dossier already contains one of its categories', async () => {
+  const calls = { linked: 0, created: 0 };
+  const tx = {
+    $queryRawUnsafe: async () => [{ statutDossier: 'OUVERT' }],
+    signalement: {
+      findUnique: async () => report,
+      updateMany: async () => { calls.linked += 1; return { count: 1 }; },
+    },
+    contenuDossier: {
+      findUnique: async () => ({ idContenuDossier: '77777777-7777-4777-8777-777777777777' }),
+      create: async () => { calls.created += 1; },
+    },
+  };
+  const prisma = {
+    utilisateur: { findUnique: async () => ({ idUtilisateur: actorId, etatCompte: 'ACTIF' }) },
+    $transaction: async (operation) => operation(tx),
+  };
+  const service = new CasesService(prisma);
+
+  await assert.rejects(
+    service.attachReport(dossierId, reportId, { motif: 'Signalement complémentaire validé' }, authId),
+    ConflictException,
+  );
+  assert.equal(calls.linked, 0);
+  assert.equal(calls.created, 0);
+});
+
+test('refuses to detach a report once the dossier is closed', async () => {
+  let reportRead = false;
+  const tx = {
+    $queryRawUnsafe: async () => [{ statutDossier: 'CLOTURE' }],
+    signalement: { findFirst: async () => { reportRead = true; return report; } },
+  };
+  const prisma = {
+    utilisateur: { findUnique: async () => ({ idUtilisateur: actorId, etatCompte: 'ACTIF' }) },
+    $transaction: async (operation) => operation(tx),
+  };
+  const service = new CasesService(prisma);
+
+  await assert.rejects(
+    service.detachReport(dossierId, reportId, { motif: 'Correction du rattachement' }, authId),
+    ConflictException,
+  );
+  assert.equal(reportRead, false);
+});
