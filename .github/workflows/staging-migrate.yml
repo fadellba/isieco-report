@@ -28,6 +28,20 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  dispatch-diagnostics:
+    name: Diagnose staging dispatch inputs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show non-secret dispatch selections
+        env:
+          APPLY_SELECTION: ${{ github.event.inputs.apply_staging_migrations }}
+          DISPOSABLE_SELECTION: ${{ github.event.inputs.confirm_staging_data_disposable }}
+          REF_NAME: ${{ github.ref }}
+        run: |
+          echo "Branch: $REF_NAME"
+          echo "apply_staging_migrations: '${APPLY_SELECTION:-<empty>}'"
+          echo "confirm_staging_data_disposable: '${DISPOSABLE_SELECTION:-<empty>}'"
+
   migrate:
     name: Apply versioned Prisma migrations to staging
     if: github.ref == 'refs/heads/main' && inputs.apply_staging_migrations == 'APPLY' && inputs.confirm_staging_data_disposable == 'YES'
