@@ -8,6 +8,7 @@ import {
 import { randomUUID } from 'node:crypto';
 import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../database/prisma.service.js';
+import { recordBusinessEvent } from '../../infrastructure/audit/business-audit.js';
 import { SupabaseStorageService } from '../../infrastructure/storage/supabase-storage.service.js';
 import { validateImageFile } from '../../infrastructure/storage/media-file.js';
 import type { SubmitInterventionDto } from './dto/submit-intervention.dto.js';
@@ -164,6 +165,7 @@ export class InterventionsService {
           contenuDossier: {
             select: {
               idContenuDossier: true,
+              idDossier: true,
               etatContenuDossier: true,
               etatPriseEnCharge: true,
               dossier: { select: { statutDossier: true } },
@@ -221,6 +223,14 @@ export class InterventionsService {
         },
         select: { idIntervention: true },
       });
+      await recordBusinessEvent(tx, {
+        actorId,
+        actionCode: 'INTERVENTION_DEMARREE',
+        entityType: 'INTERVENTION',
+        entityId: created.idIntervention,
+        dossierId: assignment.contenuDossier.idDossier,
+        metadata: { assignmentId: idAffectation },
+      });
       const row = await tx.intervention.findUniqueOrThrow({
         where: { idIntervention: created.idIntervention },
         select: interventionDetailSelect,
@@ -257,6 +267,7 @@ export class InterventionsService {
               decisionEquipe: true,
               contenuDossier: {
                 select: {
+                  idDossier: true,
                   etatContenuDossier: true,
                   etatPriseEnCharge: true,
                   dossier: { select: { statutDossier: true } },
@@ -298,6 +309,14 @@ export class InterventionsService {
         },
       });
       if (updated.count !== 1) throw new ConflictException('Le compte rendu a été soumis simultanément.');
+      await recordBusinessEvent(tx, {
+        actorId,
+        actionCode: 'INTERVENTION_SOUMISE',
+        entityType: 'INTERVENTION',
+        entityId: idIntervention,
+        dossierId: current.affectation.contenuDossier.idDossier,
+        metadata: { result },
+      });
       const row = await tx.intervention.findUniqueOrThrow({
         where: { idIntervention },
         select: interventionDetailSelect,
