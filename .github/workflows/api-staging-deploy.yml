@@ -31,7 +31,7 @@ concurrency:
 jobs:
   deploy:
     name: Deploy and verify API staging
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event.inputs.deploy_staging == 'DEPLOY')
+    if: github.ref == 'refs/heads/main' && ((github.event_name == 'push' && vars.STAGING_API_DEPLOY_ENABLED == 'true') || (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_staging == 'DEPLOY'))
     runs-on: ubuntu-latest
     environment: staging
     timeout-minutes: 30
