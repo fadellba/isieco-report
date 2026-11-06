@@ -17,10 +17,72 @@ function actorPrisma() {
 }
 
 test('requestSupplement changes the report state and creates the inline request in one transaction', async () => {
+  const calls = { created: null, reportUpdate: null, history: null, isolation: null, audit: 0 };
+import assert from 'node:assert/strict';
+import { ConflictException } from '@nestjs/common';
+import test from 'node:test';
+import { QualificationService } from '../dist/modules/qualification/qualification.service.js';
+
+const authId = '11111111-1111-4111-8111-111111111111';
+const actorId = '22222222-2222-4222-8222-222222222222';
+const reportId = '33333333-3333-4333-8333-333333333333';
+const typeId = '44444444-4444-4444-8444-444444444444';
+
+function actorPrisma() {
+  return {
+    utilisateur: {
+      findUnique: async () => ({ idUtilisateur: actorId, etatCompte: 'ACTIF' }),
+    },
+  };
+}
+
+test('requestSupplement changes the report state and creates the inline request in one transaction', async () => {
+  const calls = { created: null, reportUpdate: null, history: null, isolation: null };
+import assert from 'node:assert/strict';
+import { ConflictException } from '@nestjs/common';
+import test from 'node:test';
+import { QualificationService } from '../dist/modules/qualification/qualification.service.js';
+
+const authId = '11111111-1111-4111-8111-111111111111';
+const actorId = '22222222-2222-4222-8222-222222222222';
+const reportId = '33333333-3333-4333-8333-333333333333';
+const typeId = '44444444-4444-4444-8444-444444444444';
+
+function actorPrisma() {
+  return {
+    utilisateur: {
+      findUnique: async () => ({ idUtilisateur: actorId, etatCompte: 'ACTIF' }),
+    },
+  };
+}
+
+test('requestSupplement changes the report state and creates the inline request in one transaction', async () => {
+  const calls = { created: null, reportUpdate: null, history: null, isolation: null };
+import assert from 'node:assert/strict';
+import { ConflictException } from '@nestjs/common';
+import test from 'node:test';
+import { QualificationService } from '../dist/modules/qualification/qualification.service.js';
+
+const authId = '11111111-1111-4111-8111-111111111111';
+const actorId = '22222222-2222-4222-8222-222222222222';
+const reportId = '33333333-3333-4333-8333-333333333333';
+const typeId = '44444444-4444-4444-8444-444444444444';
+
+function actorPrisma() {
+  return {
+    utilisateur: {
+      findUnique: async () => ({ idUtilisateur: actorId, etatCompte: 'ACTIF' }),
+    },
+  };
+}
+
+test('requestSupplement changes the report state and creates the inline request in one transaction', async () => {
   const calls = { created: null, reportUpdate: null, history: null, isolation: null };
   const tx = {
     signalement: {
-      findUnique: async () => ({ idSignalement: reportId, statutSignalement: 'SOUMIS' }),
+      findUnique: async () => ({ idSignalement: reportId, statutSignalement: 'SOUMIS' }),    $executeRaw: async () => { calls.audit = (calls.audit ?? 0) + 1; return 1; },
+    $executeRaw: async () => { calls.audit = (calls.audit ?? 0) + 1; return 1; },
+
       update: async ({ data }) => { calls.reportUpdate = data; return data; },
     },
     demandeComplement: {
@@ -45,10 +107,11 @@ test('requestSupplement changes the report state and creates the inline request 
   assert.equal(calls.history.nouveauStatut, 'EN_ATTENTE_COMPLEMENT');
   assert.equal(calls.isolation, 'Serializable');
   assert.equal(result.etatDemande, 'OUVERTE');
+  assert.equal(calls.audit, 1);
 });
 
 test('acceptReport stores qualification fields directly on ContenuSignalement', async () => {
-  const calls = { upserts: [], status: null, reportUpdate: null };
+  const calls = { upserts: [], status: null, reportUpdate: null, audit: 0 };
   const tx = {
     signalement: {
       findUnique: async () => ({ idSignalement: reportId, statutSignalement: 'SOUMIS' }),
@@ -86,6 +149,7 @@ test('acceptReport stores qualification fields directly on ContenuSignalement', 
   assert.equal(calls.reportUpdate.statutSignalement, 'QUALIFIE');
   assert.equal(calls.status.nouveauStatut, 'QUALIFIE');
   assert.equal(result.statutSignalement, 'QUALIFIE');
+  assert.equal(calls.audit, 1);
 });
 
 test('rejectReport refuses to decide while an inline supplement request remains open', async () => {
