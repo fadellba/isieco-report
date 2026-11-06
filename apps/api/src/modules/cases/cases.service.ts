@@ -269,7 +269,6 @@ export class CasesService {
       FROM audit.evenement_metier
       WHERE dossier_id = ${idDossier}::uuid
       ORDER BY occurred_at DESC, id DESC
-      LIMIT 500
     `;
   }
 
