@@ -95,8 +95,8 @@ test('submits the intervention report and records a business audit event', async
   const membership = { findFirst: async () => ({ idEquipe: teamId }) };
   const tx = {
     intervention: {
-      findUnique: async () => currentIntervention(),    $executeRaw: async () => { calls.audit += 1; return 1; },
-
+      findUnique: async () => currentIntervention(),
+    $executeRaw: async () => { calls.audit += 1; return 1; },
       updateMany: async (args) => { calls.update = args; return { count: 1 }; },
       findUniqueOrThrow: async () => responseRow(),
     },
