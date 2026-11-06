@@ -9,7 +9,8 @@ Conserver le secret existant `STAGING_PRISMA_URL` et configurer les trois secret
 | Secret | Contenu |
 |---|---|
 | `STAGING_SUPABASE_SECRET_KEY` | Clé Supabase secrète `sb_secret_...` ou ancienne clé JWT `service_role` du projet staging. Jamais une clé publishable/anon. |
-| `STAGING_E2E_PASSWORD_SEED` | Secret aléatoire d'au moins 32 octets, utilisé pour dériver un mot de passe distinct par rôle. |\n| `STAGING_SUPABASE_CA_CERT` | Contenu PEM complet du certificat CA PostgreSQL téléchargé depuis **Supabase Dashboard → Database → Settings → SSL Configuration** pour le projet staging. |
+| `STAGING_E2E_PASSWORD_SEED` | Secret aléatoire d'au moins 32 octets, utilisé pour dériver un mot de passe distinct par rôle. |
+| `STAGING_SUPABASE_CA_CERT` | Contenu PEM complet du certificat CA PostgreSQL téléchargé depuis **Supabase Dashboard → Database → Settings → SSL Configuration** pour le projet staging. |
 
 Ne pas placer ces valeurs dans le dépôt, dans un fichier `.env` commité ou dans un client Web/Mobile. L'URL Supabase est volontairement fixée au projet staging dans le workflow et revalidée par le script. La connexion PostgreSQL est également vérifiée : projet attendu, Session Pooler, port 5432 et TLS avec validation stricte du certificat CA (`rejectUnauthorized: true`). Le script retire les paramètres SSL de l'URL avant de passer explicitement le CA au pilote `pg`, afin que l'URL ne remplace pas sa configuration TLS.
 
