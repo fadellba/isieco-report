@@ -380,7 +380,7 @@ export class CasesService {
             data: {
               quantiteEstimee: quantity,
               volumeEstime: volume,
-              remarque: remarks.length ? remarks.join('\\n') : null,
+              remarque: remarks.length ? remarks.join('\n') : null,
             },
           });
         }
@@ -457,7 +457,7 @@ export class CasesService {
             data: {
               quantiteEstimee: quantityValues.length ? quantityValues.reduce((sum, value) => sum.add(value), new Prisma.Decimal(0)) : null,
               volumeEstime: volumeValues.length ? volumeValues.reduce((sum, value) => sum.add(value), new Prisma.Decimal(0)) : null,
-              remarque: remaining.map((value) => value.remarque).filter((value): value is string => Boolean(value?.trim())).join('\\n') || null,
+              remarque: remaining.map((value) => value.remarque).filter((value): value is string => Boolean(value?.trim())).join('\n') || null,
             },
           });
         }
