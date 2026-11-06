@@ -242,15 +242,16 @@ test('business audit ledger is private and append-only', { skip: !databaseUrl },
 
 
     const sourceReportEventId = randomUUID();
+    const sourceLegacyHistoryId = randomUUID();
     const sourceReportId = randomUUID();
     const firstDossierId = randomUUID();
     const secondDossierId = randomUUID();
 
     await client.query(
       `INSERT INTO audit.evenement_metier
-        (id, action_code, entity_type, entity_id, metadata)
-       VALUES ($1, 'SIGNALEMENT_QUALIFIE', 'SIGNALEMENT', $2, '{"nextStatus":"QUALIFIE"}'::jsonb)`,
-      [sourceReportEventId, sourceReportId],
+        (id, action_code, entity_type, entity_id, source_event_id, metadata)
+       VALUES ($1, 'STATUT_SIGNALEMENT_TRANSITION', 'SIGNALEMENT', $2, $3, '{"nextStatus":"QUALIFIE"}'::jsonb)`,
+      [sourceReportEventId, sourceReportId, sourceLegacyHistoryId],
     );
 
     const associateReportEvents = `
@@ -265,7 +266,6 @@ test('business audit ledger is private and append-only', { skip: !databaseUrl },
       WHERE source.entity_type = 'SIGNALEMENT'
         AND source.entity_id = $1
         AND source.dossier_id IS NULL
-        AND source.source_event_id IS NULL
       ON CONFLICT (source_event_id, dossier_id)
         WHERE source_event_id IS NOT NULL
       DO NOTHING
@@ -288,6 +288,7 @@ test('business audit ledger is private and append-only', { skip: !databaseUrl },
       [firstDossierId, secondDossierId].sort(),
     );
     assert.ok(copiedEvents.rows.every((row) => row.metadata.nextStatus === 'QUALIFIE'));
+    assert.ok(copiedEvents.rows.every((row) => row.source_event_id === sourceReportEventId));
 
     await client.query(
       `INSERT INTO audit.evenement_metier (id, action_code, entity_type, entity_id, metadata)
