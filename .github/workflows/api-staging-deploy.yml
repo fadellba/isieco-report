@@ -1,0 +1,189 @@
+name: API Staging Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/api/**"
+      - "packages/**"
+      - "prisma/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".nvmrc"
+  workflow_dispatch:
+    inputs:
+      deploy_staging:
+        description: "Select DEPLOY to deploy the current main commit to staging."
+        required: true
+        type: choice
+        options: [NO, DEPLOY]
+        default: NO
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: api-staging-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy and verify API staging
+    if: github.ref == 'refs/heads/main' && ((github.event_name == 'push' && vars.STAGING_API_DEPLOY_ENABLED == 'true') || (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_staging == 'DEPLOY'))
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 30
+    steps:
+      - name: Wait for successful CI on this exact commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_API_URL: ${{ github.api_url }}
+          GH_REPOSITORY: ${{ github.repository }}
+          TARGET_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 40); do
+            response="$(curl --fail --silent --show-error \
+              --header "Authorization: Bearer $GH_TOKEN" \
+              --header "Accept: application/vnd.github+json" \
+              "$GH_API_URL/repos/$GH_REPOSITORY/actions/workflows/ci.yml/runs?branch=main&per_page=30")"
+
+            run="$(jq -c --arg sha "$TARGET_SHA" \
+              '[.workflow_runs[] | select(.head_sha == $sha and .event == "push" and .name == "CI")] | sort_by(.created_at) | reverse | .[0] // empty' \
+              <<< "$response")"
+
+            if [ -n "$run" ]; then
+              status="$(jq -r '.status' <<< "$run")"
+              conclusion="$(jq -r '.conclusion // empty' <<< "$run")"
+              run_id="$(jq -r '.id' <<< "$run")"
+              echo "CI run $run_id for $TARGET_SHA: $status"
+
+              if [ "$status" = "completed" ]; then
+                if [ "$conclusion" = "success" ]; then
+                  echo "Successful CI confirmed for the exact staging commit."
+                  exit 0
+                fi
+                echo "CI did not succeed; staging deployment is blocked."
+                exit 1
+              fi
+            else
+              echo "Waiting for CI run on $TARGET_SHA (attempt $attempt/40)."
+            fi
+            sleep 15
+          done
+          echo "No successful CI run found for the exact commit within the bounded wait."
+          exit 1
+
+      - name: Validate staging-only deployment configuration
+        env:
+          DIRECT_URL: ${{ secrets.STAGING_PRISMA_URL }}
+          DEPLOY_HOOK_URL: ${{ secrets.STAGING_RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${DIRECT_URL:-}" ]; then
+            echo "The staging environment secret STAGING_PRISMA_URL is required."
+            exit 1
+          fi
+          if [ -z "${DEPLOY_HOOK_URL:-}" ]; then
+            echo "The staging environment secret STAGING_RENDER_DEPLOY_HOOK_URL is required."
+            exit 1
+          fi
+
+          node --input-type=module <<'NODE'
+          const db = new URL(process.env.DIRECT_URL);
+          const expectedProjectRef = 'mlhbdautaxufubaybzyt';
+          if (!['postgres:', 'postgresql:'].includes(db.protocol)
+            || !db.hostname.endsWith('.pooler.supabase.com')
+            || db.port !== '5432'
+            || decodeURIComponent(db.username) !== `postgres.${expectedProjectRef}`
+            || db.pathname !== '/postgres'
+            || !['require', 'verify-ca', 'verify-full'].includes(db.searchParams.get('sslmode'))
+            || !db.password) {
+            throw new Error('STAGING_PRISMA_URL does not match the approved Supabase staging target.');
+          }
+
+          const hook = new URL(process.env.DEPLOY_HOOK_URL);
+          const expectedPath = '/deploy/srv-dbj97gh42hec73cc2olg';
+          if (hook.protocol !== 'https:' || hook.hostname !== 'api.render.com'
+            || hook.pathname !== expectedPath || !hook.searchParams.has('key')) {
+            throw new Error('STAGING_RENDER_DEPLOY_HOOK_URL does not target the approved Render staging service.');
+          }
+          console.log('Staging database and Render deploy-hook targets validated; secret values were not printed.');
+          NODE
+
+      - name: Checkout source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7.1.0
+        with:
+          node-version-file: .nvmrc
+          check-latest: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6.1.0
+        with:
+          version: 12.16.1
+          run_install: false
+
+      - name: Verify staging schema is already up to date
+        env:
+          DIRECT_URL: ${{ secrets.STAGING_PRISMA_URL }}
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          pnpm db:generate
+          pnpm exec prisma migrate status
+
+      - name: Trigger Render staging deployment for this exact commit
+        env:
+          DEPLOY_HOOK_URL: ${{ secrets.STAGING_RENDER_DEPLOY_HOOK_URL }}
+          TARGET_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          response_file="$(mktemp)"
+          trap 'rm -f "$response_file"' EXIT
+          deploy_url="$(DEPLOY_HOOK_URL="$DEPLOY_HOOK_URL" TARGET_SHA="$TARGET_SHA" node --input-type=module -e '
+            const url = new URL(process.env.DEPLOY_HOOK_URL);
+            url.searchParams.set("ref", process.env.TARGET_SHA);
+            process.stdout.write(url.toString());
+          ')"
+          http_status="$(curl --silent --show-error --output "$response_file" \
+            --write-out '%{http_code}' --request POST "$deploy_url")"
+          case "$http_status" in
+            200) echo "Render accepted the staging deployment request." ;;
+            202) echo "Render queued the staging deployment behind an existing deploy." ;;
+            *) echo "Render deploy hook failed with HTTP $http_status."; exit 1 ;;
+          esac
+
+      - name: Wait for the exact revision and database readiness
+        env:
+          READY_URL: https://isieco-api-staging.onrender.com/api/v1/health/ready
+          TARGET_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          body_file="$(mktemp)"
+          trap 'rm -f "$body_file"' EXIT
+          for attempt in $(seq 1 50); do
+            http_status="$(curl --silent --show-error --location --max-time 15 \
+              --output "$body_file" --write-out '%{http_code}' "$READY_URL" || true)"
+            revision="$(jq -r '.revision // "unknown"' "$body_file" 2>/dev/null || echo unknown)"
+            database="$(jq -r '.checks.database // "unknown"' "$body_file" 2>/dev/null || echo unknown)"
+
+            if [ "$http_status" = "200" ] \
+              && jq -e --arg sha "$TARGET_SHA" \
+                '.status == "ok" and .checks.database == "ok" and .revision == $sha' \
+                "$body_file" >/dev/null 2>&1; then
+              echo "Staging is ready on the exact commit $TARGET_SHA; database check passed."
+              exit 0
+            fi
+
+            echo "Waiting for staging commit/readiness (attempt $attempt/50; HTTP ${http_status:-000}; revision $revision; database $database)."
+            sleep 12
+          done
+          echo "Staging did not report the expected commit and a healthy database within the bounded wait."
+          exit 1

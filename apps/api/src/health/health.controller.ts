@@ -16,12 +16,18 @@ export class HealthController {
 
   @Get('ready')
   @ApiOperation({ summary: 'Vérifie que l’API peut traiter des requêtes' })
-  @ApiOkResponse({ description: 'La base de données est joignable.' })
+  @ApiOkResponse({ description: 'La base de données est joignable et la révision déployée est publiée.' })
   @ApiServiceUnavailableResponse({ description: 'La base de données est indisponible.' })
   async readiness() {
     try {
       await this.prisma.$queryRawUnsafe('SELECT 1');
-      return { status: 'ok', service: 'isieco-api', checks: { database: 'ok' }, timestamp: new Date().toISOString() };
+      return {
+        status: 'ok',
+        service: 'isieco-api',
+        checks: { database: 'ok' },
+        revision: process.env.RENDER_GIT_COMMIT ?? null,
+        timestamp: new Date().toISOString(),
+      };
     } catch {
       throw new ServiceUnavailableException({
         status: 'error',
