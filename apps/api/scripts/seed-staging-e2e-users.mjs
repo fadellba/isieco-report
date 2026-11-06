@@ -197,12 +197,12 @@ async function main() {
       provisioned.push({ account, authUserId: user.id });
     }
 
-    const db = await pool.connect();
+    const profileDb = await pool.connect();
     try {
-      await db.query('BEGIN');
+      await profileDb.query('BEGIN');
 
       for (const { account, authUserId } of provisioned) {
-        const conflictingProfile = await db.query(
+        const conflictingProfile = await profileDb.query(
           `SELECT auth_user_id
              FROM public.utilisateur
             WHERE lower(email) = lower($1)
@@ -215,7 +215,7 @@ async function main() {
           throw new Error(`Profile email collision detected for ${account.email}; no profile data was changed.`);
         }
 
-        const profileResult = await db.query(
+        const profileResult = await profileDb.query(
           `INSERT INTO public.utilisateur (auth_user_id, nom, prenom, email, etat_compte)
            VALUES ($1::uuid, $2, 'Staging', $3, 'ACTIF')
            ON CONFLICT (auth_user_id)
@@ -232,14 +232,14 @@ async function main() {
           throw new Error(`Could not create or resolve the business profile for ${account.email}.`);
         }
 
-        const roleIdResult = await db.query(
+        const roleIdResult = await profileDb.query(
           'SELECT id_role FROM public.role WHERE code_role = $1',
           [account.role],
         );
         const roleId = roleIdResult.rows[0]?.id_role;
         if (!roleId) throw new Error(`Role disappeared during seed: ${account.role}`);
 
-        await db.query(
+        await profileDb.query(
           `UPDATE public.utilisateur_role
               SET date_fin = CURRENT_TIMESTAMP
             WHERE id_utilisateur = $1::uuid
@@ -248,7 +248,7 @@ async function main() {
           [userProfileId, roleId],
         );
 
-        await db.query(
+        await profileDb.query(
           `INSERT INTO public.utilisateur_role (id_utilisateur, id_role, motif)
            SELECT $1::uuid, $2::uuid, 'Compte E2E staging provisionné par CI'
            WHERE NOT EXISTS (
@@ -262,7 +262,7 @@ async function main() {
         );
       }
 
-      const verification = await db.query(
+      const verification = await profileDb.query(
         `SELECT u.email, r.code_role, COUNT(*) OVER (PARTITION BY u.id_utilisateur) AS active_role_count
            FROM public.utilisateur u
            JOIN public.utilisateur_role ur
@@ -286,17 +286,17 @@ async function main() {
         }
       }
 
-      await db.query('COMMIT');
+      await profileDb.query('COMMIT');
       console.log(`Provisioned and verified ${accounts.length} isolated staging E2E Auth users and profiles.`);
       for (const account of accounts) {
         console.log(`- ${account.role}: ${account.email}`);
       }
       console.log('Passwords were not printed. They are derived per role from STAGING_E2E_PASSWORD_SEED.');
     } catch (error) {
-      await db.query('ROLLBACK');
+      await profileDb.query('ROLLBACK');
       throw error;
     } finally {
-      db.release();
+      profileDb.release();
     }
   } finally {
     await pool.end();
