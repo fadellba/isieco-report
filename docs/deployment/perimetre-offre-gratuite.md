@@ -32,14 +32,16 @@ Sources officielles consultées le 6 novembre 2026 :
 
 La validation de Storage ne requiert pas Supabase Pro. Le bucket staging est privé, plafonné à 10 MiB et limité à JPEG/PNG/WebP. Le contrôle SQL/Storage du 6 novembre confirme qu'une ligne photo possède son objet ; aucun objet manquant, orphelin ou expiré n'a été observé.
 
-Restent à exécuter après validation de la politique métier de conservation :
+La politique métier de conservation est maintenant validée à **365 jours à compter du dépôt de chaque photo** (décision du 6 novembre 2026). `MEDIA_RETENTION_DAYS=365` a été ajoutée au service API Render de staging ; le redéploiement correspondant doit être confirmé sain avant la recette.
 
-1. définir `MEDIA_RETENTION_DAYS` avec une durée approuvée par le responsable métier ;
+Restent à exécuter dans le périmètre gratuit :
+
+1. vérifier que le service staging a bien redémarré avec `MEDIA_RETENTION_DAYS=365` ;
 2. utiliser uniquement des comptes et médias synthétiques ;
 3. tester upload citoyen et preuve d'intervention, contrôle d'accès et URL signée de 60 secondes ;
-4. vérifier l'expiration, la purge ciblée, les compteurs, la reprise après échec et l'audit.
+4. vérifier l'expiration, la purge ciblée sur les seuls objets de test, les compteurs, la reprise après échec et l'audit.
 
-La décision sur la durée de conservation est un prérequis métier, pas un coût d'abonnement. Ne pas fixer une valeur arbitraire pour débloquer le test.
+La durée est appliquée aux nouveaux dépôts. Le changement de variable ne recalcule pas les `dateExpiration` déjà enregistrées. Cette validation ne nécessite pas de changement d'offre Supabase.
 
 ### Application mobile — issue #53
 

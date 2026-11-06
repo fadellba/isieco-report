@@ -24,7 +24,7 @@ Le bucket `isieco-private-media` du projet `isieco-report-staging` a été contr
 
 Un contrôle en lecture seule du 6 novembre a croisé les métadonnées métier et les objets Storage : 1 ligne `photo_signalement`, 1 objet correspondant présent, 0 objet manquant, 0 objet orphelin, 0 ligne `photo_intervention` et 0 média expiré. Ce contrôle de cohérence ne remplace pas un test d'upload ou de restauration.
 
-Le test d'upload, la lecture par URL signée, l'expiration et la purge réelle avec objets synthétiques restent à exécuter. La durée métier de rétention et `MEDIA_RETENTION_DAYS` ne sont pas confirmés. Ces opérations utilisent les fonctions déjà disponibles sur l'offre gratuite ; elles ne nécessitent pas une montée en offre payante. Le workflow quotidien de purge staging est programmé à 02:15 UTC ; son premier run planifié reste à observer.
+La politique de conservation a été validée le **6 novembre 2026 à 365 jours à compter du dépôt de chaque photo**. La variable `MEDIA_RETENTION_DAYS=365` a été ajoutée à l'API Render `isieco-api-staging` ; le déploiement déclenché pour la prendre en compte doit être vérifié avant les tests d'upload. Cette politique et les tests Storage utilisent les fonctions déjà disponibles sur l'offre gratuite ; aucune montée en offre payante n'est nécessaire. Le workflow quotidien de purge staging est programmé à 02:15 UTC ; son premier run planifié reste à observer.
 
 ## Configuration API
 
@@ -35,7 +35,7 @@ Variables côté serveur uniquement :
 - `SUPABASE_STORAGE_BUCKET` : `isieco-private-media` par défaut.
 - `MEDIA_RETENTION_DAYS` : durée de conservation décidée par le responsable du service, entier entre 1 et 3650.
 
-`MEDIA_RETENTION_DAYS` doit rester non configuré tant que la politique métier de conservation n'a pas été validée. Dans ce cas, l'API refuse l'upload plutôt que d'inventer une durée. La clé `SUPABASE_SECRET_KEY` ne doit apparaître dans aucune variable `VITE_*` ou `EXPO_PUBLIC_*`, aucun bundle client, aucun log ou artefact CI.
+Pour le staging, la politique approuvée est `MEDIA_RETENTION_DAYS=365` : les nouveaux médias expirent 365 jours après leur dépôt. La variable est configurée uniquement sur le service API staging. Ne pas la reporter en production sans validation et approbation propres à cet environnement. Si elle est absente ou invalide dans un environnement, l'API refuse l'upload plutôt que d'inventer une durée. La clé `SUPABASE_SECRET_KEY` ne doit apparaître dans aucune variable `VITE_*` ou `EXPO_PUBLIC_*`, aucun bundle client, aucun log ou artefact CI.
 
 L'authentification des utilisateurs continue d'utiliser `SUPABASE_ANON_KEY`. Le secret Storage est indépendant et n'est chargé que par `SupabaseStorageService` dans l'API.
 
@@ -61,7 +61,7 @@ Les photos d'intervention restent invisibles dans la file de vérification aprè
 
 ## Conservation et purge
 
-La colonne `dateExpiration` est déterminée au dépôt depuis `MEDIA_RETENTION_DAYS`. La colonne `mediaPurgeAt` suit la suppression effective de l'objet.
+La colonne `dateExpiration` est déterminée au dépôt depuis `MEDIA_RETENTION_DAYS`. En staging, la durée validée est de 365 jours à compter de l'upload (365 × 24 heures). Une modification ultérieure de la variable ne recalcule pas les dates d'expiration déjà inscrites ; elle ne s'applique qu'aux nouveaux dépôts. La colonne `mediaPurgeAt` suit la suppression effective de l'objet.
 
 Le service `MediaPurgeService` et la commande `pnpm storage:purge` exécutent une purge bornée : 100 photos de signalement et 100 photos d'intervention au maximum par exécution. Pour chaque objet, l'API supprime le fichier du bucket privé, puis renseigne `mediaPurgeAt`. Les lignes photo sont conservées pour préserver les références historiques.
 
@@ -77,7 +77,7 @@ Chaque exécution traite au plus 100 photos de signalement et 100 photos d'inter
 
 - Confirmer que le bucket est privé et que l'API utilise le bon projet Supabase.
 - Contrôler que le secret est absent des variables client et des logs.
-- Valider la durée de rétention avant de renseigner `MEDIA_RETENTION_DAYS`.
+- Vérifier que `MEDIA_RETENTION_DAYS=365` est configurée sur staging et que le déploiement API correspondant est sain ; toute configuration production nécessite une décision distincte.
 - Tester l'upload, le lien signé, l'expiration et les contrôles de propriété depuis l'API.
 - Tester une purge réussie, un échec Storage, la reprise et les compteurs.
 - Vérifier séparément la sauvegarde/restauration des objets Storage ; les dumps PostgreSQL ne contiennent pas les fichiers binaires.
