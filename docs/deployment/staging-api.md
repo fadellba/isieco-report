@@ -24,7 +24,7 @@ Le workflow valide également que `STAGING_PRISMA_URL` vise le pooler Session du
 
 `.github/workflows/api-staging-deploy.yml` surveille les pushs sur `main` qui touchent le code API, les packages partagés, Prisma ou les fichiers de dépendances. Le job de déploiement automatique reste désactivé tant que `STAGING_API_DEPLOY_ENABLED` n'est pas défini à `true`. Il peut aussi être lancé manuellement depuis `main`, en choisissant explicitement `DEPLOY`.
 
-Il attend la CI réussie sur le SHA exact, vérifie l'état des migrations staging, demande à Render de déployer ce SHA précis, puis interroge `GET /api/v1/health/ready`.
+Il attend la CI réussie sur le SHA exact, vérifie l'état des migrations staging, demande à Render de déployer ce SHA précis, puis interroge `GET /api/v1/health/ready`. Il exécute ensuite des smoke tests sur le endpoint de liveness et l'interface Swagger.
 
 La readiness doit renvoyer HTTP 200, `checks.database = ok` et `revision = GITHUB_SHA`. La révision provient de la variable système Render `RENDER_GIT_COMMIT`. Cela évite de considérer l'ancienne instance comme validée lorsque le nouveau déploiement est encore en cours.
 
@@ -33,4 +33,4 @@ La readiness doit renvoyer HTTP 200, `checks.database = ok` et `revision = GITHU
 - Liveness : `GET /api/v1/health`
 - Readiness DB + révision : `GET /api/v1/health/ready`
 
-Un déploiement Render accepté ou mis en file d'attente n'est pas une preuve de réussite. La preuve est la réponse readiness sur le commit attendu et l'état DB OK. Le test de readiness ne remplace pas le parcours métier E2E ni les tests d'autorisation.
+Un déploiement Render accepté ou mis en file d'attente n'est pas une preuve de réussite. La preuve est la réponse readiness sur le commit attendu et l'état DB OK. Les smoke tests confirment seulement que l'API répond et que sa documentation est servie. Ils ne remplacent pas le parcours métier E2E ni les tests d'autorisation ; ces deux validations restent obligatoires avant de déclarer P0.1 terminé.
