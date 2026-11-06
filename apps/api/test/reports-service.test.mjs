@@ -80,9 +80,9 @@ test('creates a signalement, qualification content and initial status history at
   const calls = { report: null, contents: null, status: null, isolation: null, audit: 0 };
   const prisma = basePrisma();
   const tx = {
+    $executeRaw: async () => { calls.audit += 1; return 1; },
     signalement: {
       create: async ({ data }) => {
-    $executeRaw: async () => { calls.audit += 1; return 1; },
         calls.report = data;
         return { idSignalement: reportId };
       },
@@ -145,9 +145,9 @@ test('replays an existing idempotent request without creating a second signaleme
 test('answers an open supplement in the same transaction as the report status change', async () => {
   const calls = { demandUpdate: null, reportUpdate: null, status: null, audit: 0 };
   const tx = {
+    $executeRaw: async () => { calls.audit += 1; return 1; },
     demandeComplement: {
       findFirst: async () => ({ idDemande: demandId, etatDemande: 'OUVERTE', reponse: null }),
-    $executeRaw: async () => { calls.audit += 1; return 1; },
       update: async ({ data }) => { calls.demandUpdate = data; return data; },
     },
     signalement: {
