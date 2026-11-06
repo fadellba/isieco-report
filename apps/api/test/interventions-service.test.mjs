@@ -90,10 +90,11 @@ test('only the intervention author may submit the field report', async () => {
   );
 });
 
-test('submits the intervention report without a generic audit event', async () => {
-  const calls = { update: null, isolation: null };
+test('submits the intervention report and records a business audit event', async () => {
+  const calls = { update: null, isolation: null, audit: 0 };
   const membership = { findFirst: async () => ({ idEquipe: teamId }) };
   const tx = {
+    $executeRaw: async () => { calls.audit += 1; return 1; },
     intervention: {
       findUnique: async () => currentIntervention(),
       updateMany: async (args) => { calls.update = args; return { count: 1 }; },
@@ -117,6 +118,7 @@ test('submits the intervention report without a generic audit event', async () =
   assert.equal(calls.update.data.resultatIntervention, 'TERMINEE');
   assert.equal(calls.isolation, 'Serializable');
   assert.equal(result.idIntervention, interventionId);
+  assert.equal(calls.audit, 1);
 });
 
 test('requires an explicit Verification A_REPRENDRE before starting a new intervention', async () => {

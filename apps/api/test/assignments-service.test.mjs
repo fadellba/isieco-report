@@ -77,9 +77,10 @@ test('eligible teams are selected by active competence without availability depe
 });
 
 test('creates an assignment using the direct dossier content identifier and team skill', async () => {
-  const calls = { created: null, isolation: null };
+  const calls = { created: null, isolation: null, audit: 0 };
   const row = assignmentRow();
   const tx = {
+    $executeRaw: async () => { calls.audit += 1; return 1; },
     affectation: {
       findUnique: async ({ where }) => where.referenceOperationUnique ? null : row,
       findFirst: async () => null,
@@ -118,6 +119,7 @@ test('creates an assignment using the direct dossier content identifier and team
   assert.equal(result.idAffectation, assignmentId);
   assert.equal(result.idDossier, dossierId);
   assert.equal(calls.isolation, 'Serializable');
+  assert.equal(calls.audit, 1);
 });
 
 test('refuses to create an assignment when the team has no active competence', async () => {

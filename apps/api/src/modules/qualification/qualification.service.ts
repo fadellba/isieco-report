@@ -8,6 +8,7 @@ import {
 import { Prisma } from '../../generated/prisma/client.js';
 import type { ReportStatus } from '@isieco/shared';
 import { PrismaService } from '../../database/prisma.service.js';
+import { recordBusinessEvent } from '../../infrastructure/audit/business-audit.js';
 import { SupabaseStorageService } from '../../infrastructure/storage/supabase-storage.service.js';
 import type { AcceptReportDto } from './dto/accept-report.dto.js';
 import type { ListQualificationQueryDto } from './dto/list-qualification-query.dto.js';
@@ -213,6 +214,13 @@ export class QualificationService {
           at: now,
           motif,
         });
+        await recordBusinessEvent(tx, {
+          actorId,
+          actionCode: 'DEMANDE_COMPLEMENT_CREEE',
+          entityType: 'SIGNALEMENT',
+          entityId: idSignalement,
+          metadata: { previousStatus: report.statutSignalement, nextStatus: 'EN_ATTENTE_COMPLEMENT' },
+        });
         return request;
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     } catch (error) {
@@ -301,6 +309,13 @@ export class QualificationService {
           at: now,
           motif: null,
         });
+        await recordBusinessEvent(tx, {
+          actorId,
+          actionCode: 'SIGNALEMENT_QUALIFIE',
+          entityType: 'SIGNALEMENT',
+          entityId: idSignalement,
+          metadata: { previousStatus: report.statutSignalement, nextStatus: 'QUALIFIE' },
+        });
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     } catch (error) {
       this.handleTransactionError(error, 'La décision de qualification est entrée en conflit avec une autre opération.');
@@ -334,6 +349,13 @@ export class QualificationService {
           after: 'REJETE',
           at: now,
           motif,
+        });
+        await recordBusinessEvent(tx, {
+          actorId,
+          actionCode: 'SIGNALEMENT_REJETE',
+          entityType: 'SIGNALEMENT',
+          entityId: idSignalement,
+          metadata: { previousStatus: report.statutSignalement, nextStatus: 'REJETE' },
         });
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     } catch (error) {

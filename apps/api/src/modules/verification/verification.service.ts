@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../database/prisma.service.js';
+import { recordBusinessEvent } from '../../infrastructure/audit/business-audit.js';
 import { SupabaseStorageService } from '../../infrastructure/storage/supabase-storage.service.js';
 import type { DecideVerificationDto } from './dto/decide-verification.dto.js';
 import type { ListVerificationsQueryDto } from './dto/list-verifications-query.dto.js';
@@ -268,6 +269,14 @@ export class VerificationService {
             motif,
           },
         });
+        await recordBusinessEvent(tx, {
+          actorId,
+          actionCode: result === 'CONFORME' ? 'VERIFICATION_CONFORME' : 'VERIFICATION_REPRISE',
+          entityType: 'VERIFICATION',
+          entityId: verification.idVerification,
+          dossierId: intervention.affectation.contenuDossier.idDossier,
+          metadata: { result, interventionId: intervention.idIntervention },
+        });
 
         let dossierCloture = false;
         if (result === 'CONFORME') {
@@ -313,6 +322,16 @@ export class VerificationService {
               data: { statutDossier: 'CLOTURE', dateCloture: now },
             });
             dossierCloture = closed.count === 1;
+            if (dossierCloture) {
+              await recordBusinessEvent(tx, {
+                actorId,
+                actionCode: 'DOSSIER_CLOTURE',
+                entityType: 'DOSSIER',
+                entityId: intervention.affectation.contenuDossier.idDossier,
+                dossierId: intervention.affectation.contenuDossier.idDossier,
+                metadata: { result: 'CONFORME' },
+              });
+            }
           }
         }
 

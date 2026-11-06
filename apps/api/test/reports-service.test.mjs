@@ -77,9 +77,10 @@ test('rejects a report without at least one declared waste category', async () =
 });
 
 test('creates a signalement, qualification content and initial status history atomically', async () => {
-  const calls = { report: null, contents: null, status: null, isolation: null };
+  const calls = { report: null, contents: null, status: null, isolation: null, audit: 0 };
   const prisma = basePrisma();
   const tx = {
+    $executeRaw: async () => { calls.audit += 1; return 1; },
     signalement: {
       create: async ({ data }) => {
         calls.report = data;
@@ -116,6 +117,7 @@ test('creates a signalement, qualification content and initial status history at
   assert.equal(calls.status.nouveauStatut, 'SOUMIS');
   assert.equal(calls.isolation, 'Serializable');
   assert.equal(result.idSignalement, reportId);
+  assert.equal(calls.audit, 1);
 });
 
 test('replays an existing idempotent request without creating a second signalement', async () => {
@@ -141,8 +143,9 @@ test('replays an existing idempotent request without creating a second signaleme
 });
 
 test('answers an open supplement in the same transaction as the report status change', async () => {
-  const calls = { demandUpdate: null, reportUpdate: null, status: null };
+  const calls = { demandUpdate: null, reportUpdate: null, status: null, audit: 0 };
   const tx = {
+    $executeRaw: async () => { calls.audit += 1; return 1; },
     demandeComplement: {
       findFirst: async () => ({ idDemande: demandId, etatDemande: 'OUVERTE', reponse: null }),
       update: async ({ data }) => { calls.demandUpdate = data; return data; },
@@ -165,6 +168,7 @@ test('answers an open supplement in the same transaction as the report status ch
   assert.equal(calls.reportUpdate.statutSignalement, 'COMPLEMENT_REPONDU');
   assert.equal(calls.status.nouveauStatut, 'COMPLEMENT_REPONDU');
   assert.equal(result.idDemande, demandId);
+  assert.equal(calls.audit, 1);
 });
 
 test('does not reveal a report owned by another citizen', async () => {

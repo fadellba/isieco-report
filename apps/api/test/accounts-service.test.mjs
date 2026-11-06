@@ -92,7 +92,9 @@ test('assignRole writes only the role history row in a serializable transaction'
   const citizenRole = { idRole: roleId, codeRole: 'AGENT_TERRAIN', libelleRole: 'Agent terrain' };
   let created;
   let isolation;
+  const calls = { audit: 0 };
   const tx = {
+    $executeRaw: async () => { calls.audit += 1; return 1; },
     utilisateurRole: {
       findFirst: async () => null,
       create: async ({ data }) => { created = data; return data; },
@@ -124,4 +126,5 @@ test('assignRole writes only the role history row in a serializable transaction'
   assert.equal(created.idRole, roleId);
   assert.equal(created.attribuePar, adminId);
   assert.equal(isolation, 'Serializable');
+  assert.equal(calls.audit, 1);
 });

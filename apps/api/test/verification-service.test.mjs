@@ -35,8 +35,9 @@ function submittedIntervention(overrides = {}) {
 }
 
 test('creates Verification against the exact Intervention and closes completed work', async () => {
-  const calls = { verification: null, assignment: null, content: null, dossier: null };
+  const calls = { verification: null, assignment: null, content: null, dossier: null, audit: 0 };
   const tx = {
+    $executeRaw: async () => { calls.audit += 1; return 1; },
     intervention: { findFirst: async () => submittedIntervention() },
     verification: {
       create: async ({ data }) => {
@@ -72,6 +73,7 @@ test('creates Verification against the exact Intervention and closes completed w
   assert.equal(calls.dossier.data.statutDossier, 'CLOTURE');
   assert.equal(result.verification.etatVerification, 'VALIDEE');
   assert.equal(result.dossierCloture, true);
+  assert.equal(calls.audit, 2);
 });
 
 test('does not allow an intervention author to verify their own work', async () => {

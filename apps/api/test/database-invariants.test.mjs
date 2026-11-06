@@ -212,3 +212,115 @@ test('PostgreSQL enforces the simplified 18-table PFE domain model', { skip: !da
     await pool.end();
   }
 });
+
+test('business audit ledger is private and append-only', { skip: !databaseUrl }, async () => {
+  const pool = new Pool({ connectionString: databaseUrl, max: 1 });
+  const client = await pool.connect();
+  const eventId = randomUUID();
+  const entityId = randomUUID();
+
+  try {
+    await client.query('BEGIN');
+    const table = await client.query(
+      `SELECT relrowsecurity
+       FROM pg_class
+       WHERE oid = 'audit.evenement_metier'::regclass`,
+    );
+    assert.equal(table.rows[0]?.relrowsecurity, true, 'RLS must be enabled on the audit ledger.');
+
+    const access = await client.query(
+      `SELECT
+         has_schema_privilege('anon', 'audit', 'USAGE') AS anon_usage,
+         has_schema_privilege('authenticated', 'audit', 'USAGE') AS authenticated_usage,
+         has_schema_privilege('service_role', 'audit', 'USAGE') AS service_usage`,
+    );
+    assert.deepEqual(access.rows[0], {
+      anon_usage: false,
+      authenticated_usage: false,
+      service_usage: false,
+    });
+
+
+    const sourceReportEventId = randomUUID();
+    const sourceReportId = randomUUID();
+    const firstDossierId = randomUUID();
+    const secondDossierId = randomUUID();
+
+    await client.query(
+      `INSERT INTO audit.evenement_metier
+        (id, action_code, entity_type, entity_id, metadata)
+       VALUES ($1, 'SIGNALEMENT_QUALIFIE', 'SIGNALEMENT', $2, '{"nextStatus":"QUALIFIE"}'::jsonb)`,
+      [sourceReportEventId, sourceReportId],
+    );
+
+    const associateReportEvents = `
+      INSERT INTO audit.evenement_metier (
+        occurred_at, actor_id, action_code, entity_type, entity_id,
+        dossier_id, reason, correlation_id, source_event_id, metadata
+      )
+      SELECT
+        source.occurred_at, source.actor_id, source.action_code, source.entity_type,
+        source.entity_id, $2, source.reason, source.correlation_id, source.id, source.metadata
+      FROM audit.evenement_metier AS source
+      WHERE source.entity_type = 'SIGNALEMENT'
+        AND source.entity_id = $1
+        AND source.dossier_id IS NULL
+        AND source.source_event_id IS NULL
+      ON CONFLICT (source_event_id, dossier_id)
+        WHERE source_event_id IS NOT NULL
+      DO NOTHING
+    `;
+
+    await client.query(associateReportEvents, [sourceReportId, firstDossierId]);
+    await client.query(associateReportEvents, [sourceReportId, firstDossierId]);
+    await client.query(associateReportEvents, [sourceReportId, secondDossierId]);
+
+    const copiedEvents = await client.query(
+      `SELECT dossier_id, source_event_id, metadata
+       FROM audit.evenement_metier
+       WHERE source_event_id = $1
+       ORDER BY dossier_id`,
+      [sourceReportEventId],
+    );
+    assert.equal(copiedEvents.rowCount, 2, 'The same report event is copied once per dossier.');
+    assert.deepEqual(
+      copiedEvents.rows.map((row) => row.dossier_id).sort(),
+      [firstDossierId, secondDossierId].sort(),
+    );
+    assert.ok(copiedEvents.rows.every((row) => row.metadata.nextStatus === 'QUALIFIE'));
+
+    await client.query(
+      `INSERT INTO audit.evenement_metier (id, action_code, entity_type, entity_id, metadata)
+       VALUES ($1, 'TEST_AUDIT_EVENT', 'DOSSIER', $2, '{"priority":"NORMALE"}'::jsonb)`,
+      [eventId, entityId],
+    );
+
+    await client.query('SAVEPOINT audit_update_probe');
+    await assert.rejects(
+      client.query('UPDATE audit.evenement_metier SET action_code = $1 WHERE id = $2', ['TAMPERED', eventId]),
+      (error) => error?.code === '55000',
+    );
+    await client.query('ROLLBACK TO SAVEPOINT audit_update_probe');
+    await client.query('RELEASE SAVEPOINT audit_update_probe');
+
+    await client.query('SAVEPOINT audit_delete_probe');
+    await assert.rejects(
+      client.query('DELETE FROM audit.evenement_metier WHERE id = $1', [eventId]),
+      (error) => error?.code === '55000',
+    );
+    await client.query('ROLLBACK TO SAVEPOINT audit_delete_probe');
+    await client.query('RELEASE SAVEPOINT audit_delete_probe');
+
+    await client.query('SAVEPOINT audit_truncate_probe');
+    await assert.rejects(
+      client.query('TRUNCATE audit.evenement_metier'),
+      (error) => error?.code === '55000',
+    );
+    await client.query('ROLLBACK TO SAVEPOINT audit_truncate_probe');
+    await client.query('RELEASE SAVEPOINT audit_truncate_probe');
+  } finally {
+    await client.query('ROLLBACK');
+    client.release();
+    await pool.end();
+  }
+});

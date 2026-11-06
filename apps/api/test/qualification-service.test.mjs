@@ -17,8 +17,9 @@ function actorPrisma() {
 }
 
 test('requestSupplement changes the report state and creates the inline request in one transaction', async () => {
-  const calls = { created: null, reportUpdate: null, history: null, isolation: null };
+  const calls = { created: null, reportUpdate: null, history: null, isolation: null, audit: 0 };
   const tx = {
+    $executeRaw: async () => { calls.audit += 1; return 1; },
     signalement: {
       findUnique: async () => ({ idSignalement: reportId, statutSignalement: 'SOUMIS' }),
       update: async ({ data }) => { calls.reportUpdate = data; return data; },
@@ -45,11 +46,13 @@ test('requestSupplement changes the report state and creates the inline request 
   assert.equal(calls.history.nouveauStatut, 'EN_ATTENTE_COMPLEMENT');
   assert.equal(calls.isolation, 'Serializable');
   assert.equal(result.etatDemande, 'OUVERTE');
+  assert.equal(calls.audit, 1);
 });
 
 test('acceptReport stores qualification fields directly on ContenuSignalement', async () => {
-  const calls = { upserts: [], status: null, reportUpdate: null };
+  const calls = { upserts: [], status: null, reportUpdate: null, audit: 0 };
   const tx = {
+    $executeRaw: async () => { calls.audit += 1; return 1; },
     signalement: {
       findUnique: async () => ({ idSignalement: reportId, statutSignalement: 'SOUMIS' }),
       update: async ({ data }) => { calls.reportUpdate = data; return data; },
@@ -86,6 +89,7 @@ test('acceptReport stores qualification fields directly on ContenuSignalement', 
   assert.equal(calls.reportUpdate.statutSignalement, 'QUALIFIE');
   assert.equal(calls.status.nouveauStatut, 'QUALIFIE');
   assert.equal(result.statutSignalement, 'QUALIFIE');
+  assert.equal(calls.audit, 1);
 });
 
 test('rejectReport refuses to decide while an inline supplement request remains open', async () => {

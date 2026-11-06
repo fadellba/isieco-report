@@ -47,8 +47,14 @@ const dossier = {
 };
 
 test('creates a dossier and stores the direct Signalement.idDossier association', async () => {
-  const calls = { create: null, reportUpdate: null, isolation: null };
+  const calls = { create: null, reportUpdate: null, isolation: null, audit: 0, reportHistoryAssociation: null };
   const tx = {
+    $executeRaw: async (strings) => {
+      calls.audit += 1;
+      const sql = strings.join('?');
+      if (sql.includes('source_event_id')) calls.reportHistoryAssociation = sql;
+      return 1;
+    },
     signalement: {
       findUnique: async () => report,
       updateMany: async (args) => { calls.reportUpdate = args; return { count: 1 }; },
@@ -79,6 +85,9 @@ test('creates a dossier and stores the direct Signalement.idDossier association'
   assert.equal(calls.reportUpdate.data.idDossier, dossierId);
   assert.equal(calls.isolation, 'Serializable');
   assert.equal(result.idDossier, dossierId);
+  assert.equal(calls.audit, 3);
+  assert.match(calls.reportHistoryAssociation, /ON CONFLICT/);
+  assert.match(calls.reportHistoryAssociation, /source_event_id/);
 });
 
 test('refuses to create a dossier from a report that is not qualified', async () => {
@@ -126,4 +135,37 @@ test('qualified report queue only includes reports without a dossier', async () 
 
   assert.equal(where.idDossier, null);
   assert.equal(where.statutSignalement, 'QUALIFIE');
+});
+
+
+test('returns the dossier audit timeline by its historical dossier id', async () => {
+  const events = [{
+    id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    occurredAt: new Date('2026-11-06T12:00:00.000Z'),
+    actorId,
+    actionCode: 'SIGNALEMENT_DETACHE',
+    entityType: 'SIGNALEMENT',
+    entityId: reportId,
+    dossierId,
+    reason: null,
+    metadata: {},
+  }];
+  const calls = { sql: '', values: [] };
+  const prisma = {
+    dossierTraitement: {
+      findUnique: async () => ({ idDossier: dossierId }),
+    },
+    $queryRaw: async (strings, ...values) => {
+      calls.sql = strings.join('?');
+      calls.values = values;
+      return events;
+    },
+  };
+  const service = new CasesService(prisma);
+
+  const result = await service.getCaseHistory(dossierId);
+
+  assert.deepEqual(result, events);
+  assert.match(calls.sql, /WHERE dossier_id = \?::uuid/);
+  assert.deepEqual(calls.values, [dossierId]);
 });

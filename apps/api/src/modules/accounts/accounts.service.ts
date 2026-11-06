@@ -3,6 +3,7 @@ import type { User } from '@supabase/supabase-js';
 import type { FunctionalRole } from '@isieco/shared';
 import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../database/prisma.service.js';
+import { recordBusinessEvent } from '../../infrastructure/audit/business-audit.js';
 import type { AssignRoleDto } from './dto/assign-role.dto.js';
 import type { UpdateMyProfileDto } from './dto/update-my-profile.dto.js';
 
@@ -137,6 +138,13 @@ export class AccountsService {
             motif: dto.motif?.trim() || null,
           },
         });
+        await recordBusinessEvent(tx, {
+          actorId,
+          actionCode: 'ROLE_ATTRIBUE',
+          entityType: 'UTILISATEUR',
+          entityId: utilisateurId,
+          metadata: { result: dto.codeRole },
+        });
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     } catch (error) {
       if (error instanceof ConflictException) throw error;
@@ -197,6 +205,13 @@ export class AccountsService {
         if (result.count !== 1) {
           throw new ConflictException('L’attribution du rôle a été modifiée simultanément.');
         }
+        await recordBusinessEvent(tx, {
+          actorId,
+          actionCode: 'ROLE_REVOQUE',
+          entityType: 'UTILISATEUR',
+          entityId: utilisateurId,
+          metadata: { result: codeRole },
+        });
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     } catch (error) {
       if (error instanceof ConflictException || error instanceof NotFoundException) throw error;
