@@ -261,6 +261,14 @@ test('business audit ledger is private and append-only', { skip: !databaseUrl },
     );
     await client.query('ROLLBACK TO SAVEPOINT audit_delete_probe');
     await client.query('RELEASE SAVEPOINT audit_delete_probe');
+
+    await client.query('SAVEPOINT audit_truncate_probe');
+    await assert.rejects(
+      client.query('TRUNCATE audit.evenement_metier'),
+      (error) => error?.code === '55000',
+    );
+    await client.query('ROLLBACK TO SAVEPOINT audit_truncate_probe');
+    await client.query('RELEASE SAVEPOINT audit_truncate_probe');
   } finally {
     await client.query('ROLLBACK');
     client.release();
