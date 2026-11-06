@@ -95,3 +95,48 @@ export async function recordBusinessEvent(
     )
   `;
 }
+
+
+/**
+ * Copies pre-dossier report events into the dossier timeline without changing
+ * their original immutable rows. A source event can be copied only once per dossier.
+ */
+export async function associateReportEventsWithCase(
+  tx: Prisma.TransactionClient,
+  reportId: string,
+  dossierId: string,
+): Promise<void> {
+  await tx.$executeRaw`
+    INSERT INTO audit.evenement_metier (
+      occurred_at,
+      actor_id,
+      action_code,
+      entity_type,
+      entity_id,
+      dossier_id,
+      reason,
+      correlation_id,
+      source_event_id,
+      metadata
+    )
+    SELECT
+      source.occurred_at,
+      source.actor_id,
+      source.action_code,
+      source.entity_type,
+      source.entity_id,
+      ${dossierId}::uuid,
+      source.reason,
+      source.correlation_id,
+      source.id,
+      source.metadata
+    FROM audit.evenement_metier AS source
+    WHERE source.entity_type = 'SIGNALEMENT'
+      AND source.entity_id = ${reportId}::uuid
+      AND source.dossier_id IS NULL
+      AND source.source_event_id IS NULL
+    ON CONFLICT (source_event_id, dossier_id)
+      WHERE source_event_id IS NOT NULL
+    DO NOTHING
+  `;
+}
