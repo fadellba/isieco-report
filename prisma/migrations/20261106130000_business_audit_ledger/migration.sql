@@ -63,6 +63,8 @@ CREATE TRIGGER evenement_metier_no_truncate
   BEFORE TRUNCATE ON audit.evenement_metier
   FOR EACH STATEMENT EXECUTE FUNCTION audit.reject_event_mutation();
 
+REVOKE ALL PRIVILEGES ON FUNCTION audit.reject_event_mutation() FROM PUBLIC;
+
 -- Backfill status history that is still associated with a dossier.
 -- dossier_id is copied onto each event so later detachment cannot erase its timeline.
 INSERT INTO audit.evenement_metier (
@@ -75,7 +77,7 @@ SELECT
   'SIGNALEMENT',
   h.id_signalement,
   s.id_dossier,
-  h.motif,
+  NULL,
   jsonb_strip_nulls(jsonb_build_object(
     'previousStatus', h.ancien_statut,
     'nextStatus', h.nouveau_statut
