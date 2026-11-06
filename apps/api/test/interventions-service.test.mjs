@@ -72,6 +72,7 @@ function responseRow() {
 
 test('only the intervention author may submit the field report', async () => {
   const tx = {
+    $executeRaw: async () => { calls.audit += 1; return 1; },
     intervention: {
       findUnique: async () => currentIntervention({ renseignePar: otherUserId }),
       updateMany: async () => { throw new Error('must not submit'); },
@@ -96,7 +97,6 @@ test('submits the intervention report and records a business audit event', async
   const tx = {
     intervention: {
       findUnique: async () => currentIntervention(),
-    $executeRaw: async () => { calls.audit += 1; return 1; },
       updateMany: async (args) => { calls.update = args; return { count: 1 }; },
       findUniqueOrThrow: async () => responseRow(),
     },
