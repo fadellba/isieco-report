@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../database/prisma.service.js';
-import { recordBusinessEvent } from '../../infrastructure/audit/business-audit.js';
+import { associateReportEventsWithCase, recordBusinessEvent } from '../../infrastructure/audit/business-audit.js';
 import type { CreateCaseFromReportDto } from './dto/create-case-from-report.dto.js';
 import type { ListCasesQueryDto } from './dto/list-cases-query.dto.js';
 import type { UpdateCaseLocationDto } from './dto/update-case-location.dto.js';
@@ -125,6 +125,7 @@ export class CasesService {
           dossierId: dossier.idDossier,
           metadata: { priority: dto.priorite ?? 'NORMALE', reportId: idSignalement },
         });
+        await associateReportEventsWithCase(tx, idSignalement, dossier.idDossier);
         await recordBusinessEvent(tx, {
           actorId,
           actionCode: 'SIGNALEMENT_RATTACHE',
@@ -384,6 +385,7 @@ export class CasesService {
             },
           });
         }
+        await associateReportEventsWithCase(tx, idSignalement, idDossier);
         await recordBusinessEvent(tx, {
           actorId,
           actionCode: 'SIGNALEMENT_RATTACHE',
