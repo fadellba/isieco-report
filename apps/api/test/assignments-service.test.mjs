@@ -80,9 +80,9 @@ test('creates an assignment using the direct dossier content identifier and team
   const calls = { created: null, isolation: null, audit: 0 };
   const row = assignmentRow();
   const tx = {
+    $executeRaw: async () => { calls.audit += 1; return 1; },
     affectation: {
       findUnique: async ({ where }) => where.referenceOperationUnique ? null : row,
-    $executeRaw: async () => { calls.audit += 1; return 1; },
       findFirst: async () => null,
       create: async ({ data }) => {
         calls.created = data;
