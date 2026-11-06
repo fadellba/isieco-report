@@ -20,9 +20,11 @@ Le bucket se provisionne via le Dashboard ou l'outil d'administration Storage. N
 
 ### État du staging au 6 novembre 2026
 
-Le bucket `isieco-private-media` du projet `isieco-report-staging` a été contrôlé le 5 novembre : privé, limite de 10 MiB et types JPEG/PNG/WebP. Le workflow [Staging Forward Migrate and Deploy #42308007540](https://github.com/fadellba/isieco-report/actions/runs/42308007540) a terminé avec succès sur le commit `29ce3f46634d80e33860ccda4abf21cf194f36a0`. Il a appliqué les trois migrations additives, vérifié l'historique Prisma, déployé la révision exacte sur Render, validé la readiness DB, liveness et Swagger, puis exécuté la matrice des huit rôles et le parcours citoyen → vérification → clôture.
+Le bucket `isieco-private-media` du projet `isieco-report-staging` a été contrôlé le 6 novembre : privé (`public=false`), limite de 10 MiB et types JPEG/PNG/WebP. Le workflow [Staging Forward Migrate and Deploy #42308007540](https://github.com/fadellba/isieco-report/actions/runs/42308007540) a terminé avec succès sur le commit applicatif `29ce3f46634d80e33860ccda4abf21cf194f36a0`. Il a appliqué les trois migrations additives, vérifié l'historique Prisma, déployé la révision exacte sur Render, validé la readiness DB, liveness et Swagger, puis exécuté la matrice des huit rôles et le parcours citoyen → vérification → clôture.
 
-Ce run ne teste pas le flux complet API → Storage. Le test d'upload, la lecture par URL signée, l'expiration et la purge réelle avec objets synthétiques restent à exécuter. La durée métier de rétention et `MEDIA_RETENTION_DAYS` ne sont pas confirmés. Le workflow quotidien de purge staging est fusionné et programmé à 02:15 UTC ; son premier run réel reste à observer.
+Un contrôle en lecture seule du 6 novembre a croisé les métadonnées métier et les objets Storage : 1 ligne `photo_signalement`, 1 objet correspondant présent, 0 objet manquant, 0 objet orphelin, 0 ligne `photo_intervention` et 0 média expiré. Ce contrôle de cohérence ne remplace pas un test d'upload ou de restauration.
+
+Le test d'upload, la lecture par URL signée, l'expiration et la purge réelle avec objets synthétiques restent à exécuter. La durée métier de rétention et `MEDIA_RETENTION_DAYS` ne sont pas confirmés. Ces opérations utilisent les fonctions déjà disponibles sur l'offre gratuite ; elles ne nécessitent pas une montée en offre payante. Le workflow quotidien de purge staging est programmé à 02:15 UTC ; son premier run planifié reste à observer.
 
 ## Configuration API
 
@@ -79,3 +81,10 @@ Chaque exécution traite au plus 100 photos de signalement et 100 photos d'inter
 - Tester l'upload, le lien signé, l'expiration et les contrôles de propriété depuis l'API.
 - Tester une purge réussie, un échec Storage, la reprise et les compteurs.
 - Vérifier séparément la sauvegarde/restauration des objets Storage ; les dumps PostgreSQL ne contiennent pas les fichiers binaires.
+
+
+## Sauvegarde des objets et offre gratuite
+
+Les tests Storage et l'export des objets ne requièrent pas Supabase Pro. En revanche, un dump PostgreSQL ne contient pas les binaires du bucket. Sur l'offre Free, conserver séparément les objets privés avec Supabase CLI (`supabase storage ls` pour inventorier, `supabase storage cp` pour copier/télécharger) ou avec un client S3 compatible explicitement configuré. Voir la [documentation officielle de téléchargement des objets](https://supabase.com/docs/guides/storage/management/download-objects) et le [périmètre gratuit](../deployment/perimetre-offre-gratuite.md).
+
+L'export doit être exécuté avec un accès d'administration conservé hors du dépôt. Préserver les chemins, les checksums et une table de correspondance avec les lignes `photo_signalement` / `photo_intervention`. Restaurer les fichiers séparément du dump SQL et vérifier qu'ils sont toujours dans un bucket privé. Ne jamais rendre le bucket public pour faciliter une sauvegarde et ne jamais modifier directement les tables internes `storage.objects` pour copier les objets.
