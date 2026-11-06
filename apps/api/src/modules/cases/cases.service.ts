@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../database/prisma.service.js';
+import { recordBusinessEvent } from '../../infrastructure/audit/business-audit.js';
 import type { CreateCaseFromReportDto } from './dto/create-case-from-report.dto.js';
 import type { ListCasesQueryDto } from './dto/list-cases-query.dto.js';
 import type { UpdateCaseLocationDto } from './dto/update-case-location.dto.js';
@@ -65,14 +66,13 @@ export class CasesService {
     return actor.idUtilisateur;
   }
 
+
   async createFromReport(idSignalement: string, dto: CreateCaseFromReportDto, authUserId: string) {
     const actorId = await this.actorId(authUserId);
     try {
       return await this.prisma.$transaction(async (tx) => {
         const report = await this.loadQualifiedReport(tx, idSignalement);
-        if (report.idDossier) {
-          throw new ConflictException('Ce signalement appartient déjà à un dossier.');
-        }
+        if (report.idDossier) throw new ConflictException('Ce signalement appartient déjà à un dossier.');
 
         const now = new Date();
         const summary = dto.descriptionSynthese?.trim() ||
@@ -117,6 +117,23 @@ export class CasesService {
         if (linked.count !== 1) {
           throw new ConflictException('Le signalement a été associé à un dossier par une opération concurrente.');
         }
+
+        await recordBusinessEvent(tx, {
+          actorId,
+          actionCode: 'DOSSIER_CREE',
+          entityType: 'DOSSIER',
+          entityId: dossier.idDossier,
+          dossierId: dossier.idDossier,
+          metadata: { priority: dto.priorite ?? 'NORMALE', reportId: idSignalement },
+        });
+        await recordBusinessEvent(tx, {
+          actorId,
+          actionCode: 'SIGNALEMENT_RATTACHE',
+          entityType: 'SIGNALEMENT',
+          entityId: idSignalement,
+          dossierId: dossier.idDossier,
+        });
+
         return tx.dossierTraitement.findUniqueOrThrow({
           where: { idDossier: dossier.idDossier },
           select: caseDetailSelect,
@@ -223,61 +240,104 @@ export class CasesService {
     return dossier;
   }
 
+
   async getCaseHistory(idDossier: string) {
     const dossier = await this.prisma.dossierTraitement.findUnique({
       where: { idDossier },
-      select: { signalements: { select: { idSignalement: true } } },
+      select: { idDossier: true },
     });
     if (!dossier) throw new NotFoundException('Dossier introuvable.');
-    const ids = dossier.signalements.map((item) => item.idSignalement);
-    if (!ids.length) return [];
-    return this.prisma.historiqueStatutSignalement.findMany({
-      where: { idSignalement: { in: ids } },
-      orderBy: [{ dateChangement: 'desc' }, { idHistoriqueStatut: 'desc' }],
-    });
+    return this.prisma.$queryRaw<Array<{
+      id: string;
+      occurredAt: Date;
+      actorId: string | null;
+      actionCode: string;
+      entityType: string;
+      entityId: string;
+      dossierId: string | null;
+      reason: string | null;
+      metadata: Record<string, unknown>;
+    }>>`
+      SELECT
+        id,
+        occurred_at AS "occurredAt",
+        actor_id AS "actorId",
+        action_code AS "actionCode",
+        entity_type AS "entityType",
+        entity_id AS "entityId",
+        dossier_id AS "dossierId",
+        reason,
+        metadata
+      FROM audit.evenement_metier
+      WHERE dossier_id = ${idDossier}::uuid
+      ORDER BY occurred_at DESC, id DESC
+      LIMIT 500
+    `;
   }
 
-  async updatePriority(idDossier: string, dto: UpdateCasePriorityDto, _authUserId: string) {
-    await this.actorId(_authUserId);
-    const updated = await this.prisma.dossierTraitement.updateMany({
-      where: { idDossier, statutDossier: { not: 'CLOTURE' } },
-      data: { priorite: dto.priorite },
+
+  async updatePriority(idDossier: string, dto: UpdateCasePriorityDto, authUserId: string) {
+    const actorId = await this.actorId(authUserId);
+    await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.dossierTraitement.updateMany({
+        where: { idDossier, statutDossier: { not: 'CLOTURE' } },
+        data: { priorite: dto.priorite },
+      });
+      if (updated.count !== 1) {
+        const exists = await tx.dossierTraitement.findUnique({ where: { idDossier }, select: { idDossier: true } });
+        if (!exists) throw new NotFoundException('Dossier introuvable.');
+        throw new ConflictException('La priorité d’un dossier clôturé ne peut pas être modifiée.');
+      }
+      await recordBusinessEvent(tx, {
+        actorId,
+        actionCode: 'DOSSIER_PRIORITE_MODIFIEE',
+        entityType: 'DOSSIER',
+        entityId: idDossier,
+        dossierId: idDossier,
+        metadata: { priority: dto.priorite },
+      });
     });
-    if (updated.count !== 1) {
-      const exists = await this.prisma.dossierTraitement.findUnique({ where: { idDossier }, select: { idDossier: true } });
-      if (!exists) throw new NotFoundException('Dossier introuvable.');
-      throw new ConflictException('La priorité d’un dossier clôturé ne peut pas être modifiée.');
-    }
     return this.getCase(idDossier);
   }
 
+
   async updateLocation(idDossier: string, dto: UpdateCaseLocationDto, authUserId: string) {
-    await this.actorId(authUserId);
+    const actorId = await this.actorId(authUserId);
     if ((dto.latitude === null) !== (dto.longitude === null)) {
       throw new BadRequestException('La latitude et la longitude doivent être fournies ensemble.');
     }
     if (dto.precisionLocalisation != null && dto.latitude == null) {
       throw new BadRequestException('La précision exige des coordonnées.');
     }
-    const updated = await this.prisma.dossierTraitement.updateMany({
-      where: { idDossier, statutDossier: { not: 'CLOTURE' } },
-      data: {
-        ...(dto.latitude !== undefined ? { latitude: dto.latitude } : {}),
-        ...(dto.longitude !== undefined ? { longitude: dto.longitude } : {}),
-        ...(dto.precisionLocalisation !== undefined ? { precisionLocalisation: dto.precisionLocalisation } : {}),
-        ...(dto.descriptionLocalisation !== undefined ? { descriptionLocalisation: dto.descriptionLocalisation?.trim() || null } : {}),
-      },
+    await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.dossierTraitement.updateMany({
+        where: { idDossier, statutDossier: { not: 'CLOTURE' } },
+        data: {
+          ...(dto.latitude !== undefined ? { latitude: dto.latitude } : {}),
+          ...(dto.longitude !== undefined ? { longitude: dto.longitude } : {}),
+          ...(dto.precisionLocalisation !== undefined ? { precisionLocalisation: dto.precisionLocalisation } : {}),
+          ...(dto.descriptionLocalisation !== undefined ? { descriptionLocalisation: dto.descriptionLocalisation?.trim() || null } : {}),
+        },
+      });
+      if (updated.count !== 1) {
+        const exists = await tx.dossierTraitement.findUnique({ where: { idDossier }, select: { idDossier: true } });
+        if (!exists) throw new NotFoundException('Dossier introuvable.');
+        throw new ConflictException('La localisation d’un dossier clôturé ne peut pas être modifiée.');
+      }
+      await recordBusinessEvent(tx, {
+        actorId,
+        actionCode: 'DOSSIER_LOCALISATION_MODIFIEE',
+        entityType: 'DOSSIER',
+        entityId: idDossier,
+        dossierId: idDossier,
+      });
     });
-    if (updated.count !== 1) {
-      const exists = await this.prisma.dossierTraitement.findUnique({ where: { idDossier }, select: { idDossier: true } });
-      if (!exists) throw new NotFoundException('Dossier introuvable.');
-      throw new ConflictException('La localisation d’un dossier clôturé ne peut pas être modifiée.');
-    }
     return this.getCase(idDossier);
   }
 
+
   async attachReport(idDossier: string, idSignalement: string, authUserId: string) {
-    await this.actorId(authUserId);
+    const actorId = await this.actorId(authUserId);
     try {
       return await this.prisma.$transaction(async (tx) => {
         const dossier = await tx.dossierTraitement.findUnique({
@@ -290,10 +350,7 @@ export class CasesService {
         const report = await this.loadQualifiedReport(tx, idSignalement);
         if (report.idDossier) throw new ConflictException('Ce signalement appartient déjà à un dossier.');
 
-        await tx.signalement.update({
-          where: { idSignalement },
-          data: { idDossier },
-        });
+        await tx.signalement.update({ where: { idSignalement }, data: { idDossier } });
         for (const item of report.contenus.filter((content) => content.etatQualification === 'RETENU')) {
           const existing = await tx.contenuDossier.findUnique({
             where: { idDossier_idTypeDechet: { idDossier, idTypeDechet: item.idTypeDechet } },
@@ -329,10 +386,17 @@ export class CasesService {
             data: {
               quantiteEstimee: quantity,
               volumeEstime: volume,
-              remarque: remarks.length ? remarks.join('\n') : null,
+              remarque: remarks.length ? remarks.join('\\n') : null,
             },
           });
         }
+        await recordBusinessEvent(tx, {
+          actorId,
+          actionCode: 'SIGNALEMENT_RATTACHE',
+          entityType: 'SIGNALEMENT',
+          entityId: idSignalement,
+          dossierId: idDossier,
+        });
         return tx.dossierTraitement.findUniqueOrThrow({ where: { idDossier }, select: caseDetailSelect });
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     } catch (error) {
@@ -341,8 +405,9 @@ export class CasesService {
     }
   }
 
+
   async detachReport(idDossier: string, idSignalement: string, authUserId: string) {
-    await this.actorId(authUserId);
+    const actorId = await this.actorId(authUserId);
     try {
       return await this.prisma.$transaction(async (tx) => {
         const report = await tx.signalement.findFirst({
@@ -359,10 +424,7 @@ export class CasesService {
           if (!dossierContent) continue;
 
           const activeAssignments = await tx.affectation.count({
-            where: {
-              idContenuDossier: dossierContent.idContenuDossier,
-              dateFinAffectation: null,
-            },
+            where: { idContenuDossier: dossierContent.idContenuDossier, dateFinAffectation: null },
           });
           if (activeAssignments > 0) {
             throw new ConflictException('Ce contenu possède une affectation active et ne peut pas être retiré.');
@@ -375,11 +437,7 @@ export class CasesService {
           }
         }
 
-        await tx.signalement.update({
-          where: { idSignalement },
-          data: { idDossier: null },
-        });
-
+        await tx.signalement.update({ where: { idSignalement }, data: { idDossier: null } });
         for (const item of report.contenus) {
           const otherReports = await tx.signalement.findMany({
             where: {
@@ -406,10 +464,18 @@ export class CasesService {
             data: {
               quantiteEstimee: quantityValues.length ? quantityValues.reduce((sum, value) => sum.add(value), new Prisma.Decimal(0)) : null,
               volumeEstime: volumeValues.length ? volumeValues.reduce((sum, value) => sum.add(value), new Prisma.Decimal(0)) : null,
-              remarque: remaining.map((value) => value.remarque).filter((value): value is string => Boolean(value?.trim())).join('\n') || null,
+              remarque: remaining.map((value) => value.remarque).filter((value): value is string => Boolean(value?.trim())).join('\\n') || null,
             },
           });
         }
+
+        await recordBusinessEvent(tx, {
+          actorId,
+          actionCode: 'SIGNALEMENT_DETACHE',
+          entityType: 'SIGNALEMENT',
+          entityId: idSignalement,
+          dossierId: idDossier,
+        });
         return tx.dossierTraitement.findUniqueOrThrow({ where: { idDossier }, select: caseDetailSelect });
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     } catch (error) {
