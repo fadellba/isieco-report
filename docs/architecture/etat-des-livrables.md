@@ -1,6 +1,6 @@
 # État des livrables
 
-État de référence : **5 novembre 2026**. La simplification du modèle est dans main via la PR #33. La CI #184 du commit 2db03a7b1443a35e96dd06daee032fa00ed73bcd est verte sur base vierge. La PR #34 apporte les tests de répétition de migration, les corrections de génération UML et les verrous de sauvegarde staging.
+État de référence : **6 novembre 2026**. La simplification du modèle est dans `main` via la PR #33. La PR #34 apporte les tests de répétition de migration et les corrections de génération UML. La migration distante staging est appliquée et vérifiée par le run GitHub Actions [#42136250612](https://github.com/fadellba/isieco-report/actions/runs/42136250612).
 
 | Domaine | État vérifié |
 |---|---|
@@ -13,21 +13,24 @@
 | API | Les modules Accounts, Reports, Qualification, Cases, Assignments, Interventions et Verification ont été adaptés au modèle simplifié. OpenAPI, tests et compilation passent dans la CI de suivi. |
 | Web/Mobile | Les clients Web et Mobile ont été adaptés au schéma simplifié. Les builds passent ; la recette utilisateur et les tests sur appareils Android/iOS réels restent à faire. |
 | Médias | Upload privé, liens signés et commande de purge présents. Configuration des secrets serveur, politique de rétention, Cron de purge et recette Storage staging encore requis. |
-| Staging Supabase | Projet isieco-report-staging, six anciennes migrations enregistrées. Données publiques observées : 3 profils métier, 8 rôles, 1 signalement, 1 photo et 6 événements ; aucun dossier, équipe, affectation, intervention ou vérification. Les schémas gérés contiennent aussi 3 identités Auth, 1 bucket et 1 objet Storage. Dataset non représentatif des migrations métier complexes. |
-| Sauvegarde | Offre Supabase Free : aucune sauvegarde quotidienne gérée. Le dump logique CLI du schéma public doit être exporté, conservé hors dépôt et restauré dans un projet isolé. Auth (3 identités) et Storage (1 objet) sont exclus du dump et exigent une stratégie séparée. Aucune restauration complète n'a été vérifiée. |
-| Workflow staging | staging-migrate.yml reste manuel, limité à main, et exige deux confirmations : APPLY et YES pour attester qu'une sauvegarde a été restaurée. Ce verrou ne remplace pas la preuve opérateur. |
+| API staging Render | Le service `isieco-api-staging` existe dans le workspace Falcon, région Frankfurt, branché sur `main`. L'auto-déploiement est désactivé ; le dernier déploiement réussi date du 1er novembre 2026 sur un commit antérieur à la simplification du schéma. Les variables runtime ne sont pas lisibles par le connecteur et restent à vérifier dans le Dashboard Render. Aucun déploiement n'a été déclenché pendant l'audit. |
+| Staging Supabase | Run #42136250612 réussi le 6 novembre 2026. Sept migrations Prisma terminées ; 18 tables métier présentes dans `public`, plus `_prisma_migrations`. `prisma migrate status` confirme que le schéma est à jour. |
+| Sauvegarde | Aucune restauration complète n'a été vérifiée. Les données et médias staging étant déclarés jetables, une sauvegarde restaurable n'était pas un prérequis à la migration. Un export hors site reste recommandé avant d'utiliser ce staging avec des données utiles. |
+| Workflow staging | `staging-migrate.yml` reste manuel et limité à `main`. Le run #42136250612 a validé `APPLY` et la confirmation de données jetables, puis appliqué les sept migrations sur le seul projet staging. |
+| Sécurité staging | RLS est activé sur les 18 tables métier et `_prisma_migrations`. Aucun privilège de table direct n'est accordé à `anon`, `authenticated` ou `service_role` et aucune policy RLS n'est définie : c'est le verrouillage attendu puisque les clients passent par NestJS. Le Security Advisor signale la protection des mots de passe compromis désactivée (WARN) et 15 clés étrangères sans index dédié (INFO). L'organisation Supabase est en offre Free ; la documentation Supabase réserve la protection contre les mots de passe compromis aux offres Pro et supérieures. Cette alerte ne peut donc pas être levée sans changement de plan. Les 15 index FK restent à évaluer selon les requêtes et la charge réelle. |
 | Production | Les workflows Vercel/Render existent, mais les appels de déploiement de production sont désactivés. Aucun déploiement ni smoke test production n'est confirmé. |
 | PFE | Diagramme UML, matrice conceptuel/Prisma/PostgreSQL, documentation de migration et pertes d'historique sont synchronisés dans la branche de suivi. Figer le dossier après validation staging. |
 | Mobile natif | Permissions, caméra, galerie, upload, localisation et parcours métier à recetter sur appareils réels. APK Android signé et GitHub Release à produire. |
 
 ## Ordre restant
 
-1. Exporter le schéma métier public, conserver les checksums hors du dépôt et vérifier sa restauration dans un projet isolé. Préserver séparément les identités Supabase Auth et l'objet Storage existant ; le dump PostgreSQL ne les contient pas.
-2. Comparer les volumes réels et les cas historiques sur une restauration isolée, puis valider explicitement les données supprimées et les vérifications non appariées.
-3. Après validation de la PR #34 et du backup, configurer le secret GitHub STAGING_PRISMA_URL et exécuter manuellement le workflow staging. Vérifier les 18 tables, sept migrations, RLS, privilèges, volumes et relations.
-4. Recetter les parcours API/Web/Mobile, les droits inter-comptes, Storage, puis Android/iOS réels.
-5. N'envisager la production qu'après restauration éprouvée, fenêtre de changement, variables/Deploy Hooks et smoke tests.
-6. Figer les livrables du PFE et préparer l'APK signé.
+1. Configurer et vérifier les variables runtime de l'API staging (`DATABASE_URL`, `DIRECT_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SECRET_KEY` et `SUPABASE_STORAGE_BUCKET`) sans exposer les secrets aux clients.
+2. Faire valider une durée de conservation métier, puis définir `MEDIA_RETENTION_DAYS` ; ne pas inventer cette valeur.
+3. Activer la protection Supabase Auth contre les mots de passe compromis et documenter le contrôle.
+4. Planifier `pnpm storage:purge` dans l'environnement d'hébergement, puis tester upload, URL signée, expiration et purge avec des données synthétiques.
+5. Recetter les parcours API/Web/Mobile et les droits inter-comptes, puis tester les fonctions caméra, galerie et localisation sur appareils Android/iOS réels.
+6. Corriger les index FK après examen des requêtes et mesures de charge ; les avertissements d'index inutilisés sur ce staging peu sollicité ne justifient pas leur suppression immédiate.
+7. N'envisager la production qu'après validation des tests, des secrets, de la rétention, de la purge, des Deploy Hooks et des smoke tests. Figer ensuite les livrables PFE et préparer l'APK signé.
 
 ## Conditions de clôture
 

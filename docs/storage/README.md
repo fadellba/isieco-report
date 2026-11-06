@@ -18,11 +18,11 @@ Dans le projet Supabase de l'environnement :
 
 Le bucket se provisionne via le Dashboard ou l'outil d'administration Storage. Ne pas créer ni modifier directement les tables internes du schéma `storage` par une migration SQL du projet applicatif.
 
-### État du projet staging vérifié le 5 novembre 2026
+### État du staging au 6 novembre 2026
 
-Le projet Supabase `isieco-report-staging` contient le bucket `isieco-private-media` configuré comme privé, avec limite de 10 MiB et types JPEG/PNG/WebP. RLS est activé sur les tables Storage et aucune policy d'accès direct `anon`/`authenticated` n'a été observée au dernier contrôle. Les objets Storage de test sont également déclarés jetables pour cette opération.
+Le bucket `isieco-private-media` du projet `isieco-report-staging` avait été vérifié le 5 novembre : privé, limite de 10 MiB et types JPEG/PNG/WebP. La migration du schéma métier a été appliquée le 6 novembre via le run [#42136250612](https://github.com/fadellba/isieco-report/actions/runs/42136250612) ; sept migrations Prisma sont terminées et les 18 tables métier sont présentes.
 
-Cette vérification confirme les paramètres du bucket, pas le flux complet API → Storage. Le secret serveur, `MEDIA_RETENTION_DAYS`, la migration du schéma staging et le test d'upload API restent à configurer/exécuter.
+Le contrôle de base ne valide pas le flux complet API → Storage. Les variables runtime du secret serveur, `MEDIA_RETENTION_DAYS`, la planification de purge et le test d'upload API restent à configurer/exécuter. Les objets Storage de test restent jetables.
 
 ## Configuration API
 
