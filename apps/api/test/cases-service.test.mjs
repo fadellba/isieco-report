@@ -50,8 +50,8 @@ test('creates a dossier and stores the direct Signalement.idDossier association'
   const calls = { create: null, reportUpdate: null, isolation: null, audit: 0 };
   const tx = {
     signalement: {
-      findUnique: async () => report,    $executeRaw: async () => { calls.audit += 1; return 1; },
-
+      findUnique: async () => report,
+    $executeRaw: async () => { calls.audit += 1; return 1; },
       updateMany: async (args) => { calls.reportUpdate = args; return { count: 1 }; },
     },
     dossierTraitement: {
