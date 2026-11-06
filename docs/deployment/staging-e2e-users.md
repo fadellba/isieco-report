@@ -4,13 +4,14 @@ Le workflow [Staging E2E Test Users](../../.github/workflows/staging-e2e-users.y
 
 ## Préparer l'environnement GitHub `staging`
 
-Conserver le secret existant `STAGING_PRISMA_URL` et configurer les trois secrets suivants dans **Settings → Environments → staging** :
+Conserver le secret existant `STAGING_PRISMA_URL` et configurer les quatre secrets suivants dans **Settings → Environments → staging** :
 
 | Secret | Contenu |
 |---|---|
 | `STAGING_SUPABASE_SECRET_KEY` | Clé Supabase secrète `sb_secret_...` ou ancienne clé JWT `service_role` du projet staging. Jamais une clé publishable/anon. |
 | `STAGING_E2E_PASSWORD_SEED` | Secret aléatoire d'au moins 32 octets, utilisé pour dériver un mot de passe distinct par rôle. |
 | `STAGING_SUPABASE_CA_CERT` | Contenu PEM complet du certificat CA PostgreSQL téléchargé depuis **Supabase Dashboard → Database → Settings → SSL Configuration** pour le projet staging. |
+| `STAGING_SUPABASE_ANON_KEY` | Clé publique Supabase `sb_publishable_...` ou ancienne clé JWT `anon` du projet staging. Jamais une clé `sb_secret_...` ou `service_role`. Utilisée uniquement pour connecter les comptes de test. |
 
 Ne pas placer ces valeurs dans le dépôt, dans un fichier `.env` commité ou dans un client Web/Mobile. L'URL Supabase est volontairement fixée au projet staging dans le workflow et revalidée par le script. La connexion PostgreSQL est également vérifiée : projet attendu, Session Pooler, port 5432 et TLS avec validation stricte du certificat CA (`rejectUnauthorized: true`). Le script retire les paramètres SSL de l'URL avant de passer explicitement le CA au pilote `pg`, afin que l'URL ne remplace pas sa configuration TLS.
 
@@ -39,6 +40,19 @@ Les adresses utilisent le domaine réservé `.test` et ne correspondent pas à d
 | `e2e.administrateur-comptes@staging.isieco.test` | `ADMINISTRATEUR_COMPTES` |
 
 Chaque mot de passe est dérivé dans le job par HMAC-SHA256 à partir du secret `STAGING_E2E_PASSWORD_SEED` et du code rôle. Le mot de passe ne s'affiche jamais dans les logs. Un futur runner E2E peut recalculer le mot de passe du rôle à partir du même secret sans le stocker dans le dépôt.
+
+## Exécuter le parcours métier et la matrice d'accès
+
+Après le provisioning des huit comptes, configurer aussi `STAGING_SUPABASE_ANON_KEY` dans l'environnement GitHub `staging` avec la clé publique/publishable du même projet Supabase. Le runner refuse une clé secrète ou `service_role`.
+
+1. Ouvrir **GitHub → Actions → API Staging Deploy**.
+2. Lancer depuis `main` avec `deploy_staging = DEPLOY`.
+3. Le workflow attend la CI du commit exact, vérifie la cible PostgreSQL staging, déploie ce commit sur le service Render staging, attend sa readiness et vérifie liveness/Swagger.
+4. Le workflow exécute ensuite `apps/api/scripts/run-staging-api-e2e.mjs`.
+
+La matrice teste les huit identités contre une route de lecture réservée à chacun des huit rôles : 64 combinaisons (200 pour le rôle attendu, 403 pour les sept autres), ainsi qu'un appel sans jeton par route (401). Le parcours métier crée un signalement citoyen, le qualifie, crée un dossier, affecte une équipe, démarre et soumet une intervention, puis valide la conformité et vérifie la clôture ainsi que le journal d'audit.
+
+Le runner ajoute l'agent terrain à une équipe staging compétente via l'API des référentiels si nécessaire. Il ne supprime aucune donnée : chaque exécution réussie laisse un dossier E2E clôturé et ses événements d'audit en staging. Les données sont identifiées comme fixtures E2E. Ce parcours n'appelle aucun déploiement de production.
 
 ## Sécurité et idempotence
 
