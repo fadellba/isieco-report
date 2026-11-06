@@ -44,7 +44,7 @@ jobs:
 
   migrate:
     name: Apply versioned Prisma migrations to staging
-    if: github.ref == 'refs/heads/main' && github.event.inputs.apply_staging_migrations == 'APPLY' && github.event.inputs.confirm_staging_data_disposable == 'YES'
+    if: github.ref == 'refs/heads/main' && github.event.inputs.apply_staging_migrations == 'APPLY' && contains(fromJSON('["YES", "yes", "true", "TRUE"]'), github.event.inputs.confirm_staging_data_disposable)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: staging
