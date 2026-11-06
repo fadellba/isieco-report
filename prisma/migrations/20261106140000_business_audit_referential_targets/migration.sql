@@ -18,3 +18,6 @@ ALTER TABLE audit.evenement_metier
       'COMPETENCE'
     )
   );
+
+-- Pin the trigger function's name resolution to trusted system objects.
+ALTER FUNCTION audit.reject_event_mutation() SET search_path = pg_catalog;
