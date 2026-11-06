@@ -54,3 +54,7 @@ Avant un usage opérationnel, préparer des sauvegardes indépendantes de la bas
 Les workflows `web-deploy.yml` et `api-deploy.yml` existent. Ils attendent la CI réussie sur le SHA exact et exigent `PRODUCTION_DEPLOY_ENABLED=true` ainsi que leurs Deploy Hooks respectifs. Ces garde-fous restent désactivés par défaut. Un workflow terminé avec succès alors que le déploiement est ignoré ne prouve pas une mise en production. Aucun déploiement de production ni smoke test post-déploiement n'est confirmé.
 
 La source de vérité du modèle physique est `prisma/schema.prisma`. La CI applique les migrations sur PostgreSQL vierge et rejoue l'ancien historique sur une autre base jetable avec des données synthétiques ; elle produit aussi les diagrammes depuis les 18 modèles Prisma.
+
+## Comptes E2E staging
+
+Le workflow manuel [Staging E2E Test Users](../../.github/workflows/staging-e2e-users.yml) crée huit comptes Auth isolés, chacun associé à un seul rôle métier actif. Voir [la procédure de provisioning](staging-e2e-users.md) pour les secrets requis, les identifiants de test et les garde-fous staging.
