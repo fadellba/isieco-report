@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../database/prisma.service.js';
+import { recordBusinessEvent } from '../../infrastructure/audit/business-audit.js';
 import type { CreateAssignmentDto } from './dto/create-assignment.dto.js';
 import type { ListAssignmentsQueryDto } from './dto/list-assignments-query.dto.js';
 import type { ReassignAssignmentDto } from './dto/reassign-assignment.dto.js';
@@ -240,6 +241,14 @@ export class AssignmentsService {
         where: { idAffectation: created.idAffectation },
         select: assignmentDetailSelect,
       });
+      await recordBusinessEvent(tx, {
+        actorId,
+        actionCode: 'AFFECTATION_CREEE',
+        entityType: 'AFFECTATION',
+        entityId: created.idAffectation,
+        dossierId: row.contenuDossier.idDossier,
+        metadata: { teamId: dto.idEquipe },
+      });
       return this.shapeAssignment(row);
     }, 'Une affectation concurrente existe déjà pour cette catégorie ou l’opération a été modifiée.');
   }
@@ -263,6 +272,7 @@ export class AssignmentsService {
           observation: true,
           contenuDossier: {
             select: {
+              idDossier: true,
               etatContenuDossier: true,
               etatPriseEnCharge: true,
               dossier: { select: { statutDossier: true } },
@@ -293,6 +303,15 @@ export class AssignmentsService {
         },
       });
       if (updated.count !== 1) throw new ConflictException('L’affectation a reçu une réponse simultanée.');
+
+      await recordBusinessEvent(tx, {
+        actorId,
+        actionCode: accepted ? 'AFFECTATION_ACCEPTEE' : 'AFFECTATION_REFUSEE',
+        entityType: 'AFFECTATION',
+        entityId: idAffectation,
+        dossierId: current.contenuDossier.idDossier,
+        metadata: { decision: dto.decisionEquipe },
+      });
 
       if (accepted) {
         const contentUpdate = await tx.contenuDossier.updateMany({
@@ -401,6 +420,14 @@ export class AssignmentsService {
       const row = await tx.affectation.findUniqueOrThrow({
         where: { idAffectation: created.idAffectation },
         select: assignmentDetailSelect,
+      });
+      await recordBusinessEvent(tx, {
+        actorId,
+        actionCode: 'AFFECTATION_REAFFECTEE',
+        entityType: 'AFFECTATION',
+        entityId: created.idAffectation,
+        dossierId: current.contenuDossier.idDossier,
+        metadata: { assignmentId: idAffectation, teamId: dto.idEquipe },
       });
       return this.shapeAssignment(row);
     }, 'La réaffectation a rencontré un conflit concurrent ou une affectation active existe déjà.');
