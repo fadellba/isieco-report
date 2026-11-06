@@ -66,7 +66,6 @@ export class CasesService {
     return actor.idUtilisateur;
   }
 
-
   async createFromReport(idSignalement: string, dto: CreateCaseFromReportDto, authUserId: string) {
     const actorId = await this.actorId(authUserId);
     try {
@@ -240,7 +239,6 @@ export class CasesService {
     return dossier;
   }
 
-
   async getCaseHistory(idDossier: string) {
     const dossier = await this.prisma.dossierTraitement.findUnique({
       where: { idDossier },
@@ -275,7 +273,6 @@ export class CasesService {
     `;
   }
 
-
   async updatePriority(idDossier: string, dto: UpdateCasePriorityDto, authUserId: string) {
     const actorId = await this.actorId(authUserId);
     await this.prisma.$transaction(async (tx) => {
@@ -299,7 +296,6 @@ export class CasesService {
     });
     return this.getCase(idDossier);
   }
-
 
   async updateLocation(idDossier: string, dto: UpdateCaseLocationDto, authUserId: string) {
     const actorId = await this.actorId(authUserId);
@@ -334,7 +330,6 @@ export class CasesService {
     });
     return this.getCase(idDossier);
   }
-
 
   async attachReport(idDossier: string, idSignalement: string, authUserId: string) {
     const actorId = await this.actorId(authUserId);
@@ -404,7 +399,6 @@ export class CasesService {
       this.handleWriteConflict(error, 'Le signalement a été rattaché simultanément.');
     }
   }
-
 
   async detachReport(idDossier: string, idSignalement: string, authUserId: string) {
     const actorId = await this.actorId(authUserId);
