@@ -337,8 +337,9 @@ export class CasesService {
       'SELECT statut_dossier AS "statutDossier" FROM public.dossier_traitement WHERE id_dossier = $1::uuid FOR UPDATE',
       idDossier,
     );
-    if (!rows.length) throw new NotFoundException('Dossier introuvable.');
-    if (rows[0].statutDossier === 'CLOTURE') {
+    const dossier = rows[0];
+    if (!dossier) throw new NotFoundException('Dossier introuvable.');
+    if (dossier.statutDossier === 'CLOTURE') {
       throw new ConflictException('Un dossier clôturé ne peut plus être modifié.');
     }
   }
