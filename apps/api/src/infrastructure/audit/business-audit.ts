@@ -41,8 +41,6 @@ export interface BusinessAuditEvent {
   entityType: BusinessAuditEntity;
   entityId: string;
   dossierId?: string | null;
-  reason?: string | null;
-  correlationId?: string | null;
   metadata?: BusinessAuditMetadata;
 }
 
@@ -85,7 +83,7 @@ export async function recordBusinessEvent(
   await tx.$executeRaw`
     INSERT INTO audit.evenement_metier (
       actor_id, action_code, entity_type, entity_id, dossier_id,
-      reason, correlation_id, metadata
+      metadata
     )
     VALUES (
       ${event.actorId}::uuid,
@@ -93,8 +91,6 @@ export async function recordBusinessEvent(
       ${event.entityType},
       ${event.entityId}::uuid,
       ${event.dossierId ?? null}::uuid,
-      ${event.reason ?? null},
-      ${event.correlationId ?? null},
       ${JSON.stringify(metadata)}::jsonb
     )
   `;
