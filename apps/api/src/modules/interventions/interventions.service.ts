@@ -387,7 +387,7 @@ export class InterventionsService {
 
     const now = new Date();
     const photoId = randomUUID();
-    const storagePath = \`interventions/\${idIntervention}/\${photoId}.\${file.extension}\`;
+    const storagePath = 'interventions/' + idIntervention + '/' + photoId + '.' + file.extension;
     const dateExpiration = this.storage.getExpirationDate(now);
     await this.storage.upload(storagePath, file);
 

@@ -340,7 +340,7 @@ export class ReportsService {
     if (!report) throw new NotFoundException('Signalement introuvable.');
 
     const now = new Date();
-    const referencePhoto = \`reports/\${idSignalement}/\${randomUUID()}.\${file.extension}\`;
+    const referencePhoto = 'reports/' + idSignalement + '/' + randomUUID() + '.' + file.extension;
     await this.storage.upload(referencePhoto, file);
     try {
       const photo = await this.prisma.$transaction(async (tx) => {
