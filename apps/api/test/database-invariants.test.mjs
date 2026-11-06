@@ -212,3 +212,58 @@ test('PostgreSQL enforces the simplified 18-table PFE domain model', { skip: !da
     await pool.end();
   }
 });
+
+test('business audit ledger is private and append-only', { skip: !databaseUrl }, async () => {
+  const pool = new Pool({ connectionString: databaseUrl, max: 1 });
+  const client = await pool.connect();
+  const eventId = randomUUID();
+  const entityId = randomUUID();
+
+  try {
+    await client.query('BEGIN');
+    const table = await client.query(
+      `SELECT relrowsecurity
+       FROM pg_class
+       WHERE oid = 'audit.evenement_metier'::regclass`,
+    );
+    assert.equal(table.rows[0]?.relrowsecurity, true, 'RLS must be enabled on the audit ledger.');
+
+    const access = await client.query(
+      `SELECT
+         has_schema_privilege('anon', 'audit', 'USAGE') AS anon_usage,
+         has_schema_privilege('authenticated', 'audit', 'USAGE') AS authenticated_usage,
+         has_schema_privilege('service_role', 'audit', 'USAGE') AS service_usage`,
+    );
+    assert.deepEqual(access.rows[0], {
+      anon_usage: false,
+      authenticated_usage: false,
+      service_usage: false,
+    });
+
+    await client.query(
+      `INSERT INTO audit.evenement_metier (id, action_code, entity_type, entity_id, metadata)
+       VALUES ($1, 'TEST_AUDIT_EVENT', 'DOSSIER', $2, '{"priority":"NORMALE"}'::jsonb)`,
+      [eventId, entityId],
+    );
+
+    await client.query('SAVEPOINT audit_update_probe');
+    await assert.rejects(
+      client.query('UPDATE audit.evenement_metier SET action_code = $1 WHERE id = $2', ['TAMPERED', eventId]),
+      (error) => error?.code === '55000',
+    );
+    await client.query('ROLLBACK TO SAVEPOINT audit_update_probe');
+    await client.query('RELEASE SAVEPOINT audit_update_probe');
+
+    await client.query('SAVEPOINT audit_delete_probe');
+    await assert.rejects(
+      client.query('DELETE FROM audit.evenement_metier WHERE id = $1', [eventId]),
+      (error) => error?.code === '55000',
+    );
+    await client.query('ROLLBACK TO SAVEPOINT audit_delete_probe');
+    await client.query('RELEASE SAVEPOINT audit_delete_probe');
+  } finally {
+    await client.query('ROLLBACK');
+    client.release();
+    await pool.end();
+  }
+});
