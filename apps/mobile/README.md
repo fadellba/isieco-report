@@ -59,7 +59,13 @@ La PR #26 a intégré :
 - localisation ponctuelle au premier plan, uniquement après action explicite, avec précision estimée ; la saisie manuelle reste disponible ;
 - plugins Expo et permissions Android/iOS limités aux usages nécessaires.
 
-L'API reste l'autorité : elle vérifie le propriétaire du signalement ou l'auteur de l'intervention, les appartenances, les états métier, le type réel de l'image et la taille maximale de 10 MiB. Les ajouts de preuves sont auditables, sans conserver de chemin Storage dans l'événement. Aucun chemin Storage ni clé privilégiée n'est exposé au Mobile. Les permissions peuvent être refusées sans bloquer le dépôt manuel d'un signalement. La CI complète de la PR #26 est verte ; la recette sur appareils réels reste à effectuer.
+L'API reste l'autorité : elle vérifie le propriétaire du signalement ou l'auteur de l'intervention, les appartenances, les états métier, le type réel de l'image et la taille maximale de 10 MiB. Les ajouts de preuves sont auditables, sans conserver de chemin Storage dans l'événement. Aucun chemin Storage ni clé privilégiée n'est exposé au Mobile. Les permissions peuvent être refusées sans bloquer le dépôt manuel d'un signalement. La CI complète est verte, et le staging vérifie désormais le parcours API complet jusqu'à la clôture. La recette native sur appareils réels reste à effectuer.
+
+## Build et distribution native
+
+`eas.json` contient les profils `preview-apk` et `production-apk` (Android, format APK). La CI GitHub vérifie actuellement le typecheck, les tests et l'export JavaScript/bundles Android (`expo export --platform android`) ; cet export n'est **pas** un APK Android signé. Aucun build EAS, APK signé, SHA-256 de release ou GitHub Release n'a été vérifié au 6 novembre 2026.
+
+Avant de distribuer une build de test, vérifier l'identifiant du projet Expo, les identifiants de signature Android et le secret `EXPO_TOKEN` dans l'environnement de build, puis lancer le profil `preview-apk`. Installer le binaire obtenu sur un Android physique et exécuter la recette. Le profil `production-apk` ne doit pas être utilisé avant les portes de sécurité, la recette mobile et la restauration du plan de reprise.
 
 ## Limites restantes
 

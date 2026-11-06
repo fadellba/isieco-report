@@ -20,9 +20,9 @@ Le bucket se provisionne via le Dashboard ou l'outil d'administration Storage. N
 
 ### État du staging au 6 novembre 2026
 
-Le bucket `isieco-private-media` du projet `isieco-report-staging` a été vérifié le 5 novembre : privé, limite de 10 MiB et types JPEG/PNG/WebP. Le workflow [API Staging Deploy #42279020301](https://github.com/fadellba/isieco-report/actions/runs/42279020301) a confirmé, sur le commit `f14b89e6132fe2921e60449de8740d8f53c9ec50`, que le schéma Prisma était à jour, que l'API était prête sur cette révision et que les smoke tests publics ainsi que le parcours E2E à huit rôles réussissaient.
+Le bucket `isieco-private-media` du projet `isieco-report-staging` a été contrôlé le 5 novembre : privé, limite de 10 MiB et types JPEG/PNG/WebP. Le workflow [Staging Forward Migrate and Deploy #42308007540](https://github.com/fadellba/isieco-report/actions/runs/42308007540) a terminé avec succès sur le commit `29ce3f46634d80e33860ccda4abf21cf194f36a0`. Il a appliqué les trois migrations additives, vérifié l'historique Prisma, déployé la révision exacte sur Render, validé la readiness DB, liveness et Swagger, puis exécuté la matrice des huit rôles et le parcours citoyen → vérification → clôture.
 
-Ce workflow ne teste pas le flux complet API → Storage. Le secret runtime Storage, `MEDIA_RETENTION_DAYS`, la planification Cron et l'upload/lecture/purge réels restent à vérifier. Les objets Storage de test restent jetables. La migration d'audit des référentiels ajoutée dans la branche de durcissement n'est pas encore appliquée à ce staging.
+Ce run ne teste pas le flux complet API → Storage. Le test d'upload, la lecture par URL signée, l'expiration et la purge réelle avec objets synthétiques restent à exécuter. La durée métier de rétention et `MEDIA_RETENTION_DAYS` ne sont pas confirmés. Le workflow quotidien de purge staging est fusionné et programmé à 02:15 UTC ; son premier run réel reste à observer.
 
 ## Configuration API
 
