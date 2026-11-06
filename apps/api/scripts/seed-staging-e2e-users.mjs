@@ -1,4 +1,4 @@
-import { createHmac } from 'node:crypto';
+import { createHmac, randomUUID } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import pg from 'pg';
 
@@ -147,6 +147,19 @@ async function main() {
     throw new Error('STAGING_E2E_PASSWORD_SEED must contain at least 32 bytes.');
   }
 
+  const caCertificate = requiredEnv('STAGING_SUPABASE_CA_CERT').trim();
+  if (
+    !caCertificate.includes('-----BEGIN CERTIFICATE-----') ||
+    !caCertificate.includes('-----END CERTIFICATE-----')
+  ) {
+    throw new Error('STAGING_SUPABASE_CA_CERT must contain the Supabase staging CA certificate in PEM format.');
+  }
+
+  const databaseUrl = new URL(requiredEnv('DIRECT_URL'));
+  for (const parameter of ['sslmode', 'sslrootcert', 'sslcert', 'sslkey']) {
+    databaseUrl.searchParams.delete(parameter);
+  }
+
   const admin = createClient(STAGING_SUPABASE_URL, requiredEnv('SUPABASE_SECRET_KEY'), {
     auth: {
       autoRefreshToken: false,
@@ -156,7 +169,11 @@ async function main() {
   });
 
   const pool = new Pool({
-    connectionString: requiredEnv('DIRECT_URL'),
+    connectionString: databaseUrl.toString(),
+    ssl: {
+      ca: caCertificate,
+      rejectUnauthorized: true,
+    },
     max: 2,
     connectionTimeoutMillis: 10000,
     application_name: 'isieco-staging-e2e-user-seed',
@@ -216,8 +233,8 @@ async function main() {
         }
 
         const profileResult = await profileDb.query(
-          `INSERT INTO public.utilisateur (auth_user_id, nom, prenom, email, etat_compte)
-           VALUES ($1::uuid, $2, 'Staging', $3, 'ACTIF')
+          `INSERT INTO public.utilisateur (id_utilisateur, auth_user_id, nom, prenom, email, etat_compte)
+           VALUES ($1::uuid, $2::uuid, $3, 'Staging', $4, 'ACTIF')
            ON CONFLICT (auth_user_id)
            DO UPDATE SET
              nom = EXCLUDED.nom,
@@ -225,7 +242,7 @@ async function main() {
              email = EXCLUDED.email,
              etat_compte = 'ACTIF'
            RETURNING id_utilisateur`,
-          [authUserId, `Compte E2E - ${account.label}`, account.email],
+          [randomUUID(), authUserId, `Compte E2E - ${account.label}`, account.email],
         );
         const userProfileId = profileResult.rows[0]?.id_utilisateur;
         if (!userProfileId) {
