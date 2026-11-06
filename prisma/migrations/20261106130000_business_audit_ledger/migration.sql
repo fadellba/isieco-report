@@ -11,6 +11,7 @@ CREATE TABLE audit.evenement_metier (
   dossier_id UUID,
   reason TEXT,
   correlation_id TEXT,
+  source_event_id UUID,
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   CONSTRAINT evenement_metier_action_code_check
     CHECK (action_code ~ '^[A-Z][A-Z0-9_]{1,79}$'),
@@ -26,6 +27,9 @@ CREATE INDEX evenement_metier_entity_timeline_idx
   ON audit.evenement_metier (entity_type, entity_id, occurred_at DESC);
 CREATE INDEX evenement_metier_actor_timeline_idx
   ON audit.evenement_metier (actor_id, occurred_at DESC);
+CREATE UNIQUE INDEX evenement_metier_source_case_idx
+  ON audit.evenement_metier (source_event_id, dossier_id)
+  WHERE source_event_id IS NOT NULL;
 
 ALTER TABLE audit.evenement_metier ENABLE ROW LEVEL SECURITY;
 REVOKE ALL PRIVILEGES ON SCHEMA audit FROM PUBLIC;
