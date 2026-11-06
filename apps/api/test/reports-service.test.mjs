@@ -81,8 +81,8 @@ test('creates a signalement, qualification content and initial status history at
   const prisma = basePrisma();
   const tx = {
     signalement: {
-      create: async ({ data }) => {    $executeRaw: async () => { calls.audit += 1; return 1; },
-
+      create: async ({ data }) => {
+    $executeRaw: async () => { calls.audit += 1; return 1; },
         calls.report = data;
         return { idSignalement: reportId };
       },
@@ -146,8 +146,8 @@ test('answers an open supplement in the same transaction as the report status ch
   const calls = { demandUpdate: null, reportUpdate: null, status: null, audit: 0 };
   const tx = {
     demandeComplement: {
-      findFirst: async () => ({ idDemande: demandId, etatDemande: 'OUVERTE', reponse: null }),    $executeRaw: async () => { calls.audit += 1; return 1; },
-
+      findFirst: async () => ({ idDemande: demandId, etatDemande: 'OUVERTE', reponse: null }),
+    $executeRaw: async () => { calls.audit += 1; return 1; },
       update: async ({ data }) => { calls.demandUpdate = data; return data; },
     },
     signalement: {
