@@ -30,6 +30,7 @@ jobs:
       SUPABASE_URL: https://mlhbdautaxufubaybzyt.supabase.co
       SUPABASE_SECRET_KEY: ${{ secrets.STAGING_SUPABASE_SECRET_KEY }}
       DIRECT_URL: ${{ secrets.STAGING_PRISMA_URL }}
+      STAGING_SUPABASE_CA_CERT: ${{ secrets.STAGING_SUPABASE_CA_CERT }}
       STAGING_E2E_PASSWORD_SEED: ${{ secrets.STAGING_E2E_PASSWORD_SEED }}
     steps:
       - name: Validate staging-only credentials
@@ -42,6 +43,10 @@ jobs:
           }
           test -n "${DIRECT_URL:-}" || {
             echo "Missing staging environment secret: STAGING_PRISMA_URL"
+            exit 1
+          }
+          test -n "${STAGING_SUPABASE_CA_CERT:-}" || {
+            echo "Missing staging environment secret: STAGING_SUPABASE_CA_CERT"
             exit 1
           }
           test -n "${STAGING_E2E_PASSWORD_SEED:-}" || {
