@@ -44,7 +44,7 @@ jobs:
 
   migrate:
     name: Apply versioned Prisma migrations to staging
-    if: github.ref == 'refs/heads/main' && github.event.inputs.apply_staging_migrations == 'APPLY' && github.event.inputs.confirm_staging_data_disposable == 'true'
+    if: github.ref == 'refs/heads/main' && github.event.inputs.apply_staging_migrations == 'APPLY' && github.event.inputs.confirm_staging_data_disposable == 'YES'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: staging
