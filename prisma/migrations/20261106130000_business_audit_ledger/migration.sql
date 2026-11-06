@@ -69,10 +69,10 @@ CREATE TRIGGER evenement_metier_no_truncate
 
 REVOKE ALL PRIVILEGES ON FUNCTION audit.reject_event_mutation() FROM PUBLIC;
 
--- Backfill status history that is still associated with a dossier.
--- dossier_id is copied onto each event so later detachment cannot erase its timeline.
+-- Backfill all legacy status history, including reports not yet attached to a dossier.
+-- source_event_id retains the legacy history row identity; unattached events are associated when a dossier is later created.
 INSERT INTO audit.evenement_metier (
-  occurred_at, actor_id, action_code, entity_type, entity_id, dossier_id, reason, metadata
+  occurred_at, actor_id, action_code, entity_type, entity_id, dossier_id, reason, source_event_id, metadata
 )
 SELECT
   h.date_changement,
@@ -82,10 +82,11 @@ SELECT
   h.id_signalement,
   s.id_dossier,
   NULL,
+  h.id_historique_statut,
   jsonb_strip_nulls(jsonb_build_object(
     'previousStatus', h.ancien_statut,
     'nextStatus', h.nouveau_statut
   ))
 FROM public.historique_statut_signalement h
 JOIN public.signalement s ON s.id_signalement = h.id_signalement
-WHERE s.id_dossier IS NOT NULL;
+;
