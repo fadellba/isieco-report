@@ -59,6 +59,10 @@ CREATE TRIGGER evenement_metier_append_only
   BEFORE UPDATE OR DELETE ON audit.evenement_metier
   FOR EACH ROW EXECUTE FUNCTION audit.reject_event_mutation();
 
+CREATE TRIGGER evenement_metier_no_truncate
+  BEFORE TRUNCATE ON audit.evenement_metier
+  FOR EACH STATEMENT EXECUTE FUNCTION audit.reject_event_mutation();
+
 -- Backfill status history that is still associated with a dossier.
 -- dossier_id is copied onto each event so later detachment cannot erase its timeline.
 INSERT INTO audit.evenement_metier (
