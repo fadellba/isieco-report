@@ -221,3 +221,10 @@ jobs:
           fi
           echo "Swagger documentation endpoint is responding."
 
+      - name: Run eight-role access matrix and citizen-to-verification E2E journey
+        env:
+          SUPABASE_URL: https://mlhbdautaxufubaybzyt.supabase.co
+          STAGING_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+          STAGING_E2E_PASSWORD_SEED: ${{ secrets.STAGING_E2E_PASSWORD_SEED }}
+          STAGING_API_BASE_URL: https://isieco-api-staging.onrender.com/api/v1
+        run: node apps/api/scripts/run-staging-api-e2e.mjs
