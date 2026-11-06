@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../database/prisma.service.js';
+import { recordBusinessEvent } from '../../infrastructure/audit/business-audit.js';
 import { SupabaseStorageService } from '../../infrastructure/storage/supabase-storage.service.js';
 import { validateImageFile } from '../../infrastructure/storage/media-file.js';
 import type { CreateReportDto } from './dto/create-report.dto.js';
@@ -167,6 +168,13 @@ export class ReportsService {
             motif: 'Création du signalement.',
           },
         });
+        await recordBusinessEvent(tx, {
+          actorId: userId,
+          actionCode: 'SIGNALEMENT_SOUMIS',
+          entityType: 'SIGNALEMENT',
+          entityId: report.idSignalement,
+          metadata: { nextStatus: 'SOUMIS' },
+        });
         return report;
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
@@ -297,6 +305,13 @@ export class ReportsService {
             dateChangement: now,
             motif: 'Réponse citoyenne à une demande de complément.',
           },
+        });
+        await recordBusinessEvent(tx, {
+          actorId: userId,
+          actionCode: 'DEMANDE_COMPLEMENT_REPONDUE',
+          entityType: 'SIGNALEMENT',
+          entityId: idSignalement,
+          metadata: { previousStatus: 'EN_ATTENTE_COMPLEMENT', nextStatus: 'COMPLEMENT_REPONDU' },
         });
         return { idReponse: idDemande, idDemande, dateReponse: now, contenu: text };
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
