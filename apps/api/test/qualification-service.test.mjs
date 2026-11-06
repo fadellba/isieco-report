@@ -19,10 +19,9 @@ function actorPrisma() {
 test('requestSupplement changes the report state and creates the inline request in one transaction', async () => {
   const calls = { created: null, reportUpdate: null, history: null, isolation: null, audit: 0 };
   const tx = {
+    $executeRaw: async () => { calls.audit += 1; return 1; },
     signalement: {
       findUnique: async () => ({ idSignalement: reportId, statutSignalement: 'SOUMIS' }),
-    $executeRaw: async () => { calls.audit += 1; return 1; },
-    $executeRaw: async () => { calls.audit += 1; return 1; },
       update: async ({ data }) => { calls.reportUpdate = data; return data; },
     },
     demandeComplement: {
@@ -53,6 +52,7 @@ test('requestSupplement changes the report state and creates the inline request 
 test('acceptReport stores qualification fields directly on ContenuSignalement', async () => {
   const calls = { upserts: [], status: null, reportUpdate: null, audit: 0 };
   const tx = {
+    $executeRaw: async () => { calls.audit += 1; return 1; },
     signalement: {
       findUnique: async () => ({ idSignalement: reportId, statutSignalement: 'SOUMIS' }),
       update: async ({ data }) => { calls.reportUpdate = data; return data; },
