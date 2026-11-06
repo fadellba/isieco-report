@@ -6,8 +6,8 @@
 |---|---|
 | Architecture | Monorepo pnpm : API NestJS, Web React/Vite, Mobile Expo/React Native et packages partagés. |
 | Modèle métier | 18 modèles Prisma dans `public`. Le journal d'audit est un schéma PostgreSQL distinct `audit`, hors du modèle métier Prisma. |
-| Migrations sur `main` | Huit migrations Prisma présentes au commit de référence ; la migration de simplification transforme l'ancien schéma de 38 tables en 18 modèles métier. La migration du journal d'audit est incluse. |
-| CI sur `main` | Le run [#42268959982](https://github.com/fadellba/isieco-report/actions/runs/42268959982) a réussi sur le commit exact de référence. La branche PR #44 a aussi validé la CI complète au run [#42303745540](https://github.com/fadellba/isieco-report/actions/runs/42303745540), commit `7f3df4841993d8f0955422f33df9d391b17f2f4a` : migration vierge + répétition historique, UML, typecheck, tests et builds Web/API/Mobile. |
+| Migrations | Huit migrations Prisma sont présentes sur `main` au commit de référence. La branche PR #44 ajoute trois migrations (extension du ledger, 15 index FK, alignement des objets PostgreSQL) ; elles ont été appliquées et répétées dans la CI sur base vierge et fixture historique. Elles ne sont pas encore appliquées au staging partagé. |
+| CI | Le run main [#42268959982](https://github.com/fadellba/isieco-report/actions/runs/42268959982) a réussi sur le commit de référence. La CI complète de PR #44 a réussi sur le commit final `21b376a8a782c88b0d46b286b917d2bd659cd02f` au run [#42305048319](https://github.com/fadellba/isieco-report/actions/runs/42305048319) : migration vierge + rehearsal historique, UML, génération Prisma, typecheck, tests, OpenAPI et builds Web/API/Mobile. L'artefact `prisma-additive-migration-preview` ne contient aucun SQL résiduel (`-- This is an empty migration.`). |
 | Répétition historique | La CI rejoue les migrations historiques sur une base PostgreSQL jetable, les fixtures synthétiques, la simplification et les assertions de conservation documentées. |
 | UML/Merise | Générateur pour 18 classes, 32 associations et artefacts graphiques ; sources Mermaid et matrices de correspondance versionnées. |
 | API / Web / Mobile | Compilation, tests et builds intégrés à la CI. La compilation ne remplace pas la recette utilisateur ni les tests physiques Android/iOS. |
@@ -24,7 +24,7 @@
 
 ## Séquence de clôture
 
-1. La CI complète a réussi sur les commits précédents de la branche (runs #42303745540 et #42304670622). Le dernier alignement de noms de schéma doit encore passer sa propre CI et confirmer un diff Prisma vide.
+1. CI complète réussie sur le commit final de la branche : run #42305048319. Le diff Prisma est vide après les migrations d'index FK et d'alignement des noms PostgreSQL.
 2. Faire relire puis fusionner la PR de durcissement.
 3. Avant le déploiement staging de cette nouvelle migration, vérifier la nature des données présentes et satisfaire explicitement la confirmation de données jetables demandée par le workflow manuel. La migration ajoutée étend seulement les valeurs autorisées du journal d'audit, mais le workflow de migration exige une confirmation générale sur les données staging.
 4. Vérifier les variables runtime Storage sans exposer les secrets, faire valider `MEDIA_RETENTION_DAYS`, fusionner puis observer le workflow de purge staging quotidien, et tester upload, URL signée, expiration et purge avec données synthétiques.
