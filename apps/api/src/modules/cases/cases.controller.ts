@@ -12,6 +12,7 @@ import {
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiBody,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiForbiddenResponse,
@@ -30,6 +31,7 @@ import { SupabaseAuthGuard } from '../../auth/supabase-auth.guard.js';
 import { CasesService } from './cases.service.js';
 import { CaseListResponseDto, CaseResponseDto } from './dto/case-response.dto.js';
 import { CreateCaseFromReportDto } from './dto/create-case-from-report.dto.js';
+import { CaseReportLinkDto } from './dto/case-report-link.dto.js';
 import { ListCasesQueryDto } from './dto/list-cases-query.dto.js';
 import { UpdateCaseLocationDto } from './dto/update-case-location.dto.js';
 import { UpdateCasePriorityDto } from './dto/update-case-priority.dto.js';
@@ -133,15 +135,17 @@ export class CasesController {
   @ApiParam({ name: 'idDossier', format: 'uuid' })
   @ApiParam({ name: 'idSignalement', format: 'uuid' })
   @ApiCreatedResponse({ type: CaseResponseDto })
+  @ApiBody({ type: CaseReportLinkDto })
   @ApiBadRequestResponse({ description: 'Motif de rattachement invalide.' })
   @ApiConflictResponse({ description: 'Signalement déjà rattaché, dossier clôturé ou catégorie redondante.' })
   @ApiNotFoundResponse({ description: 'Dossier ou signalement introuvable.' })
   attachReport(
     @Param('idDossier', ParseUUIDPipe) idDossier: string,
     @Param('idSignalement', ParseUUIDPipe) idSignalement: string,
+    @Body() dto: CaseReportLinkDto,
     @CurrentAuthUser() user: User,
   ) {
-    return this.cases.attachReport(idDossier, idSignalement, user.id);
+    return this.cases.attachReport(idDossier, idSignalement, dto, user.id);
   }
 
   @Post(':idDossier/reports/:idSignalement/detach')
@@ -149,14 +153,16 @@ export class CasesController {
   @ApiParam({ name: 'idDossier', format: 'uuid' })
   @ApiParam({ name: 'idSignalement', format: 'uuid' })
   @ApiOkResponse({ type: CaseResponseDto })
+  @ApiBody({ type: CaseReportLinkDto })
   @ApiBadRequestResponse({ description: 'Motif de détachement invalide.' })
   @ApiConflictResponse({ description: 'Dossier clôturé ou rattachement modifié simultanément.' })
   @ApiNotFoundResponse({ description: 'Dossier ou rattachement actif introuvable.' })
   detachReport(
     @Param('idDossier', ParseUUIDPipe) idDossier: string,
     @Param('idSignalement', ParseUUIDPipe) idSignalement: string,
+    @Body() dto: CaseReportLinkDto,
     @CurrentAuthUser() user: User,
   ) {
-    return this.cases.detachReport(idDossier, idSignalement, user.id);
+    return this.cases.detachReport(idDossier, idSignalement, dto, user.id);
   }
 }

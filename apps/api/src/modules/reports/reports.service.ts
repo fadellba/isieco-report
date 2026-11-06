@@ -338,22 +338,42 @@ export class ReportsService {
       select: { idSignalement: true, statutSignalement: true },
     });
     if (!report) throw new NotFoundException('Signalement introuvable.');
-    const count = await this.prisma.photoSignalement.count({ where: { idSignalement } });
-    if (count >= 3) throw new BadRequestException('Un signalement peut contenir au maximum 3 photos.');
 
     const now = new Date();
-    const referencePhoto = `reports/${idSignalement}/${randomUUID()}.${file.extension}`;
+    const referencePhoto = \`reports/\${idSignalement}/\${randomUUID()}.\${file.extension}\`;
     await this.storage.upload(referencePhoto, file);
     try {
-      const photo = await this.prisma.photoSignalement.create({
-        data: {
+      const photo = await this.prisma.$transaction(async (tx) => {
+        // Lock the owning report so concurrent requests serialize across API instances.
+        const locked = await tx.$queryRawUnsafe<Array<{ idSignalement: string }>>(
+          'SELECT id_signalement AS "idSignalement" FROM public.signalement WHERE id_signalement = $1::uuid AND id_utilisateur = $2::uuid FOR UPDATE',
           idSignalement,
-          referencePhoto,
-          description: description?.trim() || null,
-          dateAjout: now,
-          dateExpiration: this.storage.getExpirationDate(now),
-        },
-        select: { idPhotoSignalement: true, description: true, dateAjout: true },
+          userId,
+        );
+        if (!locked.length) throw new NotFoundException('Signalement introuvable.');
+
+        const count = await tx.photoSignalement.count({ where: { idSignalement } });
+        if (count >= 3) {
+          throw new BadRequestException('Un signalement peut contenir au maximum 3 photos.');
+        }
+
+        const created = await tx.photoSignalement.create({
+          data: {
+            idSignalement,
+            referencePhoto,
+            description: description?.trim() || null,
+            dateAjout: now,
+            dateExpiration: this.storage.getExpirationDate(now),
+          },
+          select: { idPhotoSignalement: true, description: true, dateAjout: true },
+        });
+        await recordBusinessEvent(tx, {
+          actorId: userId,
+          actionCode: 'PHOTO_SIGNALEMENT_AJOUTEE',
+          entityType: 'SIGNALEMENT',
+          entityId: idSignalement,
+        });
+        return created;
       });
       return { ...photo, etatPublication: 'PRIVEE' };
     } catch (error) {

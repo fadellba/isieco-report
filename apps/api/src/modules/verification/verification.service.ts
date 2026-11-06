@@ -108,7 +108,7 @@ export class VerificationService {
   }
 
   async listPending(query: ListVerificationsQueryDto, authUserId: string) {
-    await this.actorId(authUserId);
+    const actorId = await this.actorId(authUserId);
     const page = Math.max(1, query.page ?? 1);
     const pageSize = Math.min(100, Math.max(1, query.pageSize ?? 20));
     const [total, rows] = await this.prisma.$transaction([
@@ -117,6 +117,7 @@ export class VerificationService {
           statutIntervention: 'SOUMISE',
           dateSoumissionCompteRendu: { not: null },
           verification: null,
+          renseignePar: { not: actorId },
           affectation: {
             dateFinAffectation: null,
             etatAffectation: 'ACTIVE',
@@ -129,6 +130,7 @@ export class VerificationService {
           statutIntervention: 'SOUMISE',
           dateSoumissionCompteRendu: { not: null },
           verification: null,
+          renseignePar: { not: actorId },
           affectation: {
             dateFinAffectation: null,
             etatAffectation: 'ACTIVE',
@@ -150,10 +152,11 @@ export class VerificationService {
   }
 
   async getPending(idAffectation: string, authUserId: string) {
-    await this.actorId(authUserId);
+    const actorId = await this.actorId(authUserId);
     const intervention = await this.prisma.intervention.findFirst({
       where: {
         idAffectation,
+        renseignePar: { not: actorId },
         statutIntervention: 'SOUMISE',
         dateSoumissionCompteRendu: { not: null },
         verification: null,
@@ -174,6 +177,7 @@ export class VerificationService {
     const pending = await this.prisma.intervention.findFirst({
       where: {
         idAffectation,
+        renseignePar: { not: actorId },
         statutIntervention: 'SOUMISE',
         dateSoumissionCompteRendu: { not: null },
         verification: null,

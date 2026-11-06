@@ -56,6 +56,7 @@ export function CaseDetailPage() {
   const [item, setItem] = useState<CaseDetail | null>(null);
   const [available, setAvailable] = useState<AvailableReport[]>([]);
   const [selectedReport, setSelectedReport] = useState('');
+  const [associationMotif, setAssociationMotif] = useState('');
   const [priority, setPriority] = useState('NORMALE');
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
@@ -146,17 +147,29 @@ export function CaseDetailPage() {
   async function attach(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!idDossier || !selectedReport) return;
+    if (associationMotif.trim().length < 5) {
+      setError('Un motif d’au moins 5 caractères est obligatoire.');
+      return;
+    }
     await mutate('Signalement associé au dossier.', () =>
       api.request(`/cases/${idDossier}/reports/${selectedReport}/attach`, {
         method: 'POST',
+        body: JSON.stringify({ motif: associationMotif.trim() }),
       }),
     );
   }
 
   async function detach(idSignalement: string) {
     if (!idDossier) return;
+    if (associationMotif.trim().length < 5) {
+      setError('Un motif d’au moins 5 caractères est obligatoire.');
+      return;
+    }
     await mutate('Signalement retiré du dossier.', () =>
-      api.request(`/cases/${idDossier}/reports/${idSignalement}/detach`, { method: 'POST' }),
+      api.request(`/cases/${idDossier}/reports/${idSignalement}/detach`, {
+        method: 'POST',
+        body: JSON.stringify({ motif: associationMotif.trim() }),
+      }),
     );
   }
 
@@ -213,6 +226,20 @@ export function CaseDetailPage() {
             <h2 className="font-bold text-slate-900">Signalements associés</h2>
             <span className="text-xs text-slate-500">{item.signalements.length} signalement(s)</span>
           </div>
+          {editable ? (
+            <label className="mt-3 block text-xs font-bold text-slate-600">
+              Motif obligatoire pour rattacher ou retirer un signalement
+              <textarea
+                value={associationMotif}
+                onChange={(event) => setAssociationMotif(event.target.value)}
+                minLength={5}
+                maxLength={500}
+                rows={2}
+                className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal"
+                placeholder="Expliquez la raison de cette modification."
+              />
+            </label>
+          ) : null}
           <div className="mt-3 space-y-3">
             {item.signalements.map((report) => (
               <div key={report.idSignalement} className="rounded-xl border border-slate-100 p-3">
@@ -224,7 +251,7 @@ export function CaseDetailPage() {
                 <p className="mt-1 text-xs text-slate-500">{report.utilisateur.prenom ? report.utilisateur.prenom + ' ' : ''}{report.utilisateur.nom}</p>
                 {editable ? (
                   <div className="mt-3">
-                    <button type="button" onClick={() => void detach(report.idSignalement)} disabled={busy} className="rounded-lg border border-red-200 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-50 disabled:opacity-40">Retirer du dossier</button>
+                    <button type="button" onClick={() => void detach(report.idSignalement)} disabled={busy || associationMotif.trim().length < 5} className="rounded-lg border border-red-200 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-50 disabled:opacity-40">Retirer du dossier</button>
                   </div>
                 ) : null}
               </div>
@@ -243,7 +270,7 @@ export function CaseDetailPage() {
                   ))}
                 </select>
               </label>
-              <button type="submit" disabled={!selectedReport || busy} className="rounded-lg bg-eco-700 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50">Associer le signalement</button>
+              <button type="submit" disabled={!selectedReport || busy || associationMotif.trim().length < 5} className="rounded-lg bg-eco-700 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50">Associer le signalement</button>
               {!available.length ? <p className="text-xs text-slate-500">Aucun signalement qualifié non associé n’est disponible.</p> : null}
             </form>
           ) : null}

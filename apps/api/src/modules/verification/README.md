@@ -5,7 +5,7 @@ Vérification indépendante du résultat terrain, consultation des preuves, dema
 ## Invariants métier
 
 - Une seule décision est possible pour la dernière soumission d'intervention. Une vérification est applicable lorsque `dateVerification >= dateSoumissionCompteRendu) ; une soumission ultérieure redevient vérifiable.
-- Le vérificateur ne peut pas vérifier sa propre intervention (séparation des tâches).
+- Le vérificateur ne peut pas vérifier sa propre intervention (séparation des tâches). Les interventions qu’il a lui-même renseignées sont exclues de la file et du détail en attente.
 - `CONFORME` est réservé à un résultat terrain `TERMINEE`. Les résultats `PARTIELLE` et `IMPOSSIBLE` nécessitent une reprise motivée.
 - `A_REPRENDRE` exige un motif ; l'affectation reste active et l'état `REPRISE` autorise une nouvelle intervention.
 - Une décision `CONFORME` clôt l'affectation, passe le contenu à `TERMINE`, et journalise la décision.

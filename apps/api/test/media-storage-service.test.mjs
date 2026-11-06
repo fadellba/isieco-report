@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import test from 'node:test';
 import { ReportsService } from '../dist/modules/reports/reports.service.js';
 import { InterventionsService } from '../dist/modules/interventions/interventions.service.js';
@@ -43,10 +43,15 @@ test('uploads report photos privately and rejects non-owners before storage acce
   photoPrisma.signalement = {
     findFirst: async () => ({ idSignalement: reportId, statutSignalement: 'SOUMIS' }),
   };
-  photoPrisma.photoSignalement = {
-    count: async () => 0,
-    create: async ({ data }) => ({ idPhotoSignalement: photoId, description: data.description, dateAjout: data.dateAjout }),
+  const reportTx = {
+    $queryRawUnsafe: async () => [{ idSignalement: reportId }],
+    $executeRaw: async () => 1,
+    photoSignalement: {
+      count: async () => 0,
+      create: async ({ data }) => ({ idPhotoSignalement: photoId, description: data.description, dateAjout: data.dateAjout }),
+    },
   };
+  photoPrisma.$transaction = async (operation) => operation(reportTx);
   const service = new ReportsService(photoPrisma, storage.storage);
   const uploaded = await service.addPhoto(reportId, authId, jpeg, 'Façade du site');
 
@@ -67,10 +72,14 @@ test('removes a report image from Storage when metadata persistence fails', asyn
   const storage = storageHarness();
   const prisma = activeUserPrisma();
   prisma.signalement = { findFirst: async () => ({ idSignalement: reportId }) };
-  prisma.photoSignalement = {
-    count: async () => 0,
-    create: async () => { throw new Error('database write failed'); },
+  const reportTx = {
+    $queryRawUnsafe: async () => [{ idSignalement: reportId }],
+    photoSignalement: {
+      count: async () => 0,
+      create: async () => { throw new Error('database write failed'); },
+    },
   };
+  prisma.$transaction = async (operation) => operation(reportTx);
   const service = new ReportsService(prisma, storage.storage);
 
   await assert.rejects(service.addPhoto(reportId, authId, jpeg), /database write failed/u);
@@ -103,9 +112,38 @@ test('uploads intervention proof only for its active author', async () => {
     }),
   };
   prisma.appartenanceEquipe = { findFirst: async () => ({ idEquipe: teamId }) };
-  prisma.photoIntervention = {
-    create: async ({ data }) => ({ idPhotoIntervention: photoId, description: data.description, dateAjout: data.dateAjout }),
+  const interventionTx = {
+    $queryRawUnsafe: async () => [{ idIntervention }],
+    $executeRaw: async () => 1,
+    intervention: {
+      findUnique: async () => ({
+        idIntervention,
+        statutIntervention: 'EN_COURS',
+        dateHeureFin: null,
+        dateSoumissionCompteRendu: null,
+        renseignePar: actorId,
+        affectation: {
+          idEquipe: teamId,
+          dateFinAffectation: null,
+          etatAffectation: 'ACTIVE',
+          decisionEquipe: 'ACCEPTEE',
+          equipe: { etatEquipe: 'ACTIVE' },
+          contenuDossier: {
+            idContenuDossier: '88888888-8888-4888-8888-888888888888',
+            idDossier: '99999999-9999-4999-8999-999999999999',
+            etatContenuDossier: 'ACTIF',
+            etatPriseEnCharge: 'EN_COURS',
+            dossier: { statutDossier: 'OUVERT' },
+          },
+        },
+      }),
+    },
+    appartenanceEquipe: { findFirst: async () => ({ idEquipe: teamId }) },
+    photoIntervention: {
+      create: async ({ data }) => ({ idPhotoIntervention: photoId, description: data.description, dateAjout: data.dateAjout }),
+    },
   };
+  prisma.$transaction = async (operation) => operation(interventionTx);
   const service = new InterventionsService(prisma, storage.storage);
   const result = await service.addPhoto(interventionId, { contextePhoto: 'Après collecte' }, jpeg, authId);
 
@@ -203,4 +241,26 @@ test('prevents an intervention author from receiving a verifier photo URL', asyn
     ForbiddenException,
   );
   assert.equal(storage.calls.signed.length, 0);
+});
+
+
+test('serializes report-photo quota checks under the report row lock', async () => {
+  const storage = storageHarness();
+  const prisma = activeUserPrisma();
+  const events = [];
+  prisma.signalement = { findFirst: async () => ({ idSignalement: reportId }) };
+  const tx = {
+    $queryRawUnsafe: async () => { events.push('lock'); return [{ idSignalement: reportId }]; },
+    photoSignalement: {
+      count: async () => { events.push('count'); return 3; },
+      create: async () => { events.push('create'); throw new Error('must not create'); },
+    },
+  };
+  prisma.$transaction = async (operation) => operation(tx);
+  const service = new ReportsService(prisma, storage.storage);
+
+  await assert.rejects(service.addPhoto(reportId, authId, jpeg), BadRequestException);
+  assert.deepEqual(events, ['lock', 'count']);
+  assert.equal(storage.calls.uploads.length, 1);
+  assert.equal(storage.calls.removals.length, 1);
 });

@@ -6,12 +6,12 @@ const reportPhotoId = '11111111-1111-4111-8111-111111111111';
 const interventionPhotoId = '22222222-2222-4222-8222-222222222222';
 
 function harness(options = {}) {
-  const calls = { removed: [], reportUpdates: [], interventionUpdates: [], reportBatch: null, interventionBatch: null };
+  const calls = { removed: [], reportUpdates: [], interventionUpdates: [], reportBatch: null, interventionBatch: null, audit: [] };
   const prisma = {
     photoSignalement: {
       findMany: async (args) => {
         calls.reportBatch = args;
-        return options.reportPhotos ?? [{ idPhotoSignalement: reportPhotoId, referencePhoto: 'private/report/photo.jpg' }];
+        return options.reportPhotos ?? [{ idPhotoSignalement: reportPhotoId, idSignalement: '33333333-3333-4333-8333-333333333333', referencePhoto: 'private/report/photo.jpg' }];
       },
       updateMany: async (args) => {
         calls.reportUpdates.push(args);
@@ -21,13 +21,18 @@ function harness(options = {}) {
     photoIntervention: {
       findMany: async (args) => {
         calls.interventionBatch = args;
-        return options.interventionPhotos ?? [{ idPhotoIntervention: interventionPhotoId, referencePhoto: 'private/intervention/photo.webp' }];
+        return options.interventionPhotos ?? [{ idPhotoIntervention: interventionPhotoId, idIntervention: '44444444-4444-4444-8444-444444444444', referencePhoto: 'private/intervention/photo.webp' }];
       },
       updateMany: async (args) => {
         calls.interventionUpdates.push(args);
         return { count: options.interventionUpdateCount ?? 1 };
       },
     },
+  };
+  prisma.$transaction = async (operation) => operation(prisma);
+  prisma.$executeRaw = async (strings, ...values) => {
+    calls.audit.push({ sql: strings.join('?'), values });
+    return 1;
   };
   const storage = {
     remove: async (path) => {
@@ -53,6 +58,8 @@ test('purges expired report and intervention objects and marks their metadata', 
   assert.deepEqual(calls.removed, ['private/report/photo.jpg', 'private/intervention/photo.webp']);
   assert.equal(calls.reportUpdates[0].data.mediaPurgeAt instanceof Date, true);
   assert.equal(calls.interventionUpdates[0].data.mediaPurgeAt instanceof Date, true);
+  assert.equal(calls.audit.length, 2);
+  assert.deepEqual(calls.audit.map((entry) => entry.values[1]), ['PHOTO_SIGNALEMENT_PURGEE', 'PHOTO_INTERVENTION_PURGEE']);
   assert.equal(calls.reportBatch.where.mediaPurgeAt, null);
   assert.equal(calls.interventionBatch.where.mediaPurgeAt, null);
 });

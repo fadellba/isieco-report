@@ -22,7 +22,19 @@ export type BusinessAuditAction =
   | 'VERIFICATION_REPRISE'
   | 'DOSSIER_CLOTURE'
   | 'ROLE_ATTRIBUE'
-  | 'ROLE_REVOQUE';
+  | 'ROLE_REVOQUE'
+  | 'PHOTO_SIGNALEMENT_AJOUTEE'
+  | 'PHOTO_INTERVENTION_AJOUTEE'
+  | 'PHOTO_SIGNALEMENT_PURGEE'
+  | 'PHOTO_INTERVENTION_PURGEE'
+  | 'TYPE_DECHET_CREE'
+  | 'TYPE_DECHET_MODIFIE'
+  | 'EQUIPE_CREEE'
+  | 'EQUIPE_MODIFIEE'
+  | 'APPARTENANCE_EQUIPE_AJOUTEE'
+  | 'APPARTENANCE_EQUIPE_TERMINEE'
+  | 'COMPETENCE_EQUIPE_AJOUTEE'
+  | 'COMPETENCE_EQUIPE_TERMINEE';
 
 export type BusinessAuditEntity =
   | 'DOSSIER'
@@ -30,7 +42,11 @@ export type BusinessAuditEntity =
   | 'AFFECTATION'
   | 'INTERVENTION'
   | 'VERIFICATION'
-  | 'UTILISATEUR';
+  | 'UTILISATEUR'
+  | 'REFERENTIEL'
+  | 'EQUIPE'
+  | 'APPARTENANCE'
+  | 'COMPETENCE';
 
 type AuditMetadataValue = string | number | boolean | null;
 export type BusinessAuditMetadata = Readonly<Record<string, AuditMetadataValue>>;
@@ -41,6 +57,7 @@ export interface BusinessAuditEvent {
   entityType: BusinessAuditEntity;
   entityId: string;
   dossierId?: string | null;
+  reason?: string | null;
   metadata?: BusinessAuditMetadata;
 }
 
@@ -80,9 +97,13 @@ export async function recordBusinessEvent(
   event: BusinessAuditEvent,
 ): Promise<void> {
   const metadata = safeMetadata(event.metadata);
+  const reason = event.reason?.trim() || null;
+  if (reason && reason.length > 500) {
+    throw new TypeError('Business audit reason must not exceed 500 characters.');
+  }
   await tx.$executeRaw`
     INSERT INTO audit.evenement_metier (
-      actor_id, action_code, entity_type, entity_id, dossier_id,
+      actor_id, action_code, entity_type, entity_id, dossier_id, reason,
       metadata
     )
     VALUES (
@@ -91,6 +112,7 @@ export async function recordBusinessEvent(
       ${event.entityType},
       ${event.entityId}::uuid,
       ${event.dossierId ?? null}::uuid,
+      ${reason},
       ${JSON.stringify(metadata)}::jsonb
     )
   `;

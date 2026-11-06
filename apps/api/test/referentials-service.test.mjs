@@ -11,13 +11,20 @@ const typeId = '55555555-5555-4555-8555-555555555555';
 const skillId = '66666666-6666-4666-8666-666666666666';
 
 function basePrisma() {
-  return {
+  const prisma = {
     utilisateur: {
       findUnique: async ({ where }) => where.authUserId
         ? { idUtilisateur: actorId, etatCompte: 'ACTIF' }
         : { idUtilisateur: memberId, etatCompte: 'ACTIF' },
     },
+    auditEvents: [],
   };
+  prisma.$executeRaw = async (strings, ...values) => {
+    prisma.auditEvents.push({ sql: strings.join('?'), values });
+    return 1;
+  };
+  prisma.$transaction = async (operation) => operation(prisma);
+  return prisma;
 }
 
 test('creates a waste type with the simplified active flag', async () => {
@@ -37,6 +44,8 @@ test('creates a waste type with the simplified active flag', async () => {
   assert.equal(created.libelle, 'Plastique');
   assert.equal(created.actif, true);
   assert.equal(result.idTypeDechet, typeId);
+  assert.equal(prisma.auditEvents[0].values[1], 'TYPE_DECHET_CREE');
+  assert.equal(prisma.auditEvents[0].values[2], 'REFERENTIEL');
 });
 
 test('reactivates an existing inactive team competence instead of inserting a duplicate', async () => {
@@ -66,6 +75,8 @@ test('reactivates an existing inactive team competence instead of inserting a du
   assert.equal(calls.update.where.idCompetenceEquipe, skillId);
   assert.equal(calls.update.data.actif, true);
   assert.equal(result.idCompetenceEquipe, skillId);
+  assert.equal(prisma.auditEvents[0].values[1], 'COMPETENCE_EQUIPE_AJOUTEE');
+  assert.equal(prisma.auditEvents[0].values[2], 'COMPETENCE');
 });
 
 test('does not insert a second active competence for the same team and waste type', async () => {
@@ -103,4 +114,6 @@ test('adds an active account to a team without delegation or availability record
   assert.equal(created.idUtilisateur, memberId);
   assert.equal(created.dateFin, null);
   assert.equal(created.fonction, 'Agent terrain');
+  assert.equal(prisma.auditEvents[0].values[1], 'APPARTENANCE_EQUIPE_AJOUTEE');
+  assert.equal(prisma.auditEvents[0].values[2], 'APPARTENANCE');
 });

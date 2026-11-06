@@ -1,37 +1,33 @@
 # Module Referentials
 
-Administration des données de référence sous `/api/v1/referentials`.
+Gestion des référentiels opérationnels par le rôle `GESTIONNAIRE_REFERENTIEL`.
 
-## Habilitation
+## Fonctionnalités effectivement exposées
 
-Toutes les routes sont protégées par Supabase Auth et exigent le rôle serveur `GESTIONNAIRE_REFERENTIEL`. Le compte de l'acteur est résolu depuis l'identité Supabase ; un identifiant ou un rôle fourni par le client ne donne aucune habilitation.
+- Types de déchets : liste, création et modification du libellé, de la description et de l'état actif.
+- Équipes : liste, création et modification du nom, de la description et de l'état.
+- Appartenances : ajout d'un compte actif à une équipe et clôture d'une période d'appartenance.
+- Compétences : ajout, réactivation et désactivation d'une compétence équipe/type de déchet.
 
-## Ressources exposées
+Les mutations écrivent un événement dans `audit.evenement_metier` dans la même transaction que la modification. Les cibles sont `REFERENTIEL`, `EQUIPE`, `APPARTENANCE` et `COMPETENCE`. Les événements ne stockent pas les coordonnées, e-mails, motifs libres ou données sensibles.
 
-| Ressource | Opérations |
-|---|---|
-| Types de déchets | Liste, création, modification des attributs descriptifs, clôture de la période de validité |
-| Géographie | Régions, départements et communes : lecture arborescente, création, activation/désactivation |
-| Équipes | Liste, création et modification |
-| Appartenances | Ajout d'un membre pour une période, clôture de cette période |
-| Compétences | Attribution d'une compétence par type de déchet, clôture |
-| Disponibilité | Mise à jour de l'état courant, création d'une ligne d'historique, consultation de l'historique |
-| Délégations | Création limitée à une appartenance valide, clôture et consultation des délégations actives via la liste des équipes |
+## Routes API
 
-`GET /api/v1/referentials/teams` retourne pour chaque équipe ses appartenances et compétences courantes, sa disponibilité courante et ses délégations actives. Chaque délégation inclut l'identité métier de son bénéficiaire (identifiant, nom, prénom et email) afin de permettre la consultation et la clôture par le gestionnaire des référentiels.
+Toutes les routes sont préfixées par `/api/v1`, authentifiées par Supabase Auth et protégées par le rôle serveur `GESTIONNAIRE_REFERENTIEL`.
 
-Les routes géographiques ne modifient pas les codes ou noms après création : le MLD ne contient pas de table d'historique de libellés permettant de préserver leur ancienne valeur. La désactivation est utilisée plutôt que la suppression physique. Une correction de code ou de nom nécessitera un nouveau référentiel et une décision de migration fonctionnelle.
+| Méthode | Route | Fonction |
+|---|---|---|
+| GET | `/referentials/waste-types` | Liste les types de déchets ; `includeInactive=true` inclut les inactifs |
+| POST | `/referentials/waste-types` | Crée un type de déchet |
+| PATCH | `/referentials/waste-types/:id` | Modifie un type de déchet |
+| GET | `/referentials/teams` | Liste équipes, membres actifs et compétences actives |
+| POST | `/referentials/teams` | Crée une équipe |
+| PATCH | `/referentials/teams/:teamId` | Modifie une équipe |
+| POST | `/referentials/teams/:teamId/memberships` | Ajoute une appartenance |
+| POST | `/referentials/teams/:teamId/memberships/close` | Termine une appartenance |
+| POST | `/referentials/teams/:teamId/skills` | Ajoute ou réactive une compétence |
+| POST | `/referentials/teams/:teamId/skills/close` | Désactive une compétence |
 
-## Intégrité temporelle
+## Limites du modèle simplifié
 
-Les appartenances, compétences et délégations portent des dates de début/fin. Les index uniques partiels PostgreSQL bloquent les appartenances, compétences et délégations concurrentes encore ouvertes. Une délégation ne peut pas dépasser la période d'appartenance du bénéficiaire et ce dernier doit disposer d'un compte actif.
-
-Une compétence ne peut débuter avant le début de validité du type de déchet ni après sa date de fin de validité. La disponibilité courante et son historique sont écrits dans la même transaction.
-
-## Audit
-
-Chaque mutation d'équipe, de compétence, d'appartenance, de disponibilité, de délégation ou de référentiel écrit son événement dans `EvenementMetier` dans la même transaction que le changement. Les événements géographiques ciblent explicitement une région, un département ou une commune par une clé étrangère.
-
-## Tests
-
-Les tests du service sont dans `apps/api/test/referentials-service.test.mjs`. Les contraintes relationnelles et cibles d'audit sont également testées sur PostgreSQL via `pnpm db:test:invariants` et la CI.
+Les routes de géographie, d'indisponibilité/calendrier d'équipe et de délégation ne sont pas exposées par cette version du modèle simplifié. Les documents historiques qui les décrivent comme livrées sont obsolètes. La sélection d'équipes affectables repose sur l'équipe active et la compétence active ; elle ne dépend pas d'un calendrier d'indisponibilité.

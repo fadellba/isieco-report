@@ -20,9 +20,9 @@ Le bucket se provisionne via le Dashboard ou l'outil d'administration Storage. N
 
 ### État du staging au 6 novembre 2026
 
-Le bucket `isieco-private-media` du projet `isieco-report-staging` avait été vérifié le 5 novembre : privé, limite de 10 MiB et types JPEG/PNG/WebP. La migration du schéma métier a été appliquée le 6 novembre via le run [#42136250612](https://github.com/fadellba/isieco-report/actions/runs/42136250612) ; sept migrations Prisma sont terminées et les 18 tables métier sont présentes.
+Le bucket `isieco-private-media` du projet `isieco-report-staging` a été vérifié le 5 novembre : privé, limite de 10 MiB et types JPEG/PNG/WebP. Le workflow [API Staging Deploy #42279020301](https://github.com/fadellba/isieco-report/actions/runs/42279020301) a confirmé, sur le commit `f14b89e6132fe2921e60449de8740d8f53c9ec50`, que le schéma Prisma était à jour, que l'API était prête sur cette révision et que les smoke tests publics ainsi que le parcours E2E à huit rôles réussissaient.
 
-Le contrôle de base ne valide pas le flux complet API → Storage. Les variables runtime du secret serveur, `MEDIA_RETENTION_DAYS`, la planification de purge et le test d'upload API restent à configurer/exécuter. Les objets Storage de test restent jetables.
+Ce workflow ne teste pas le flux complet API → Storage. Le secret runtime Storage, `MEDIA_RETENTION_DAYS`, la planification Cron et l'upload/lecture/purge réels restent à vérifier. Les objets Storage de test restent jetables. La migration d'audit des référentiels ajoutée dans la branche de durcissement n'est pas encore appliquée à ce staging.
 
 ## Configuration API
 
@@ -46,7 +46,7 @@ Le client envoie un multipart/form-data à l'API avec le champ `file`.
 
 L'API limite chaque requête à un fichier de 10 MiB, détecte JPEG/PNG/WebP à partir de la signature binaire et vérifie la cohérence du MIME déclaré. Le nom original du fichier n'est pas conservé. Un identifiant aléatoire et le contexte métier déterminent le chemin de stockage.
 
-L'API téléverse l'objet avec `upsert: false`, puis crée la ligne photo. Si l'écriture SQL échoue, elle tente de supprimer l'objet temporaire. Il n'existe pas de journal d'audit générique associé à l'upload dans le modèle simplifié.
+L'API téléverse l'objet avec `upsert: false`, puis crée la ligne photo dans une transaction. L'ajout d'une photo de signalement verrouille la ligne parente avant de compter les photos, ce qui rend le plafond de trois atomique entre plusieurs instances API. Les ajouts de photos de signalement et de preuves d'intervention écrivent un événement d'audit dans la même transaction que les métadonnées ; aucun chemin Storage, URL signée ou contenu binaire n'est journalisé.
 
 ## Consultation
 
@@ -63,7 +63,7 @@ La colonne `dateExpiration` est déterminée au dépôt depuis `MEDIA_RETENTION_
 
 Le service `MediaPurgeService` et la commande `pnpm storage:purge` exécutent une purge bornée : 100 photos de signalement et 100 photos d'intervention au maximum par exécution. Pour chaque objet, l'API supprime le fichier du bucket privé, puis renseigne `mediaPurgeAt`. Les lignes photo sont conservées pour préserver les références historiques.
 
-Le schéma simplifié ne comporte pas de table générique d'événements ni de journal d'audit de purge. La commande retourne les compteurs de traitement et d'échec, mais ne crée pas d'historique persistant des opérations de purge. Une exigence de traçabilité exhaustive devra être traitée dans une évolution de modèle dédiée.
+Le journal `audit.evenement_metier` conserve un événement système `PHOTO_SIGNALEMENT_PURGEE` ou `PHOTO_INTERVENTION_PURGEE` dans la même transaction que la mise à jour `mediaPurgeAt`. L'acteur est `NULL` pour ces traitements automatiques. Aucun chemin de stockage n'est conservé dans l'événement. La commande retourne également les compteurs de traitement et d'échec.
 
 Un échec Storage ou SQL laisse la ligne non purgée et incrémente `failed`. La commande renvoie un code de sortie non nul si une erreur est rencontrée. Le traitement peut être relancé ; il ne journalise ni chemins Storage ni données personnelles.
 

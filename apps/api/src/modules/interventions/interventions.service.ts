@@ -358,7 +358,7 @@ export class InterventionsService {
               select: {
                 etatContenuDossier: true,
                 etatPriseEnCharge: true,
-                dossier: { select: { statutDossier: true } },
+                dossier: { select: { idDossier: true, statutDossier: true } },
               },
             },
           },
@@ -387,26 +387,91 @@ export class InterventionsService {
 
     const now = new Date();
     const photoId = randomUUID();
-    const storagePath = `interventions/${idIntervention}/${photoId}.${file.extension}`;
+    const storagePath = \`interventions/\${idIntervention}/\${photoId}.\${file.extension}\`;
     const dateExpiration = this.storage.getExpirationDate(now);
     await this.storage.upload(storagePath, file);
 
     try {
-      const photo = await this.prisma.photoIntervention.create({
-        data: {
-          idPhotoIntervention: photoId,
+      const photo = await this.prisma.$transaction(async (tx) => {
+        // Serialize photo submission against report submission for this intervention.
+        const locked = await tx.$queryRawUnsafe<Array<{ idIntervention: string }>>(
+          'SELECT id_intervention AS "idIntervention" FROM public.intervention WHERE id_intervention = $1::uuid FOR UPDATE',
           idIntervention,
-          referencePhoto: storagePath,
-          contextePhoto: context,
-          description,
-          dateAjout: now,
-          dateExpiration,
-        },
-        select: {
-          idPhotoIntervention: true,
-          description: true,
-          dateAjout: true,
-        },
+        );
+        if (!locked.length) throw new NotFoundException('Intervention introuvable.');
+
+        const latest = await tx.intervention.findUnique({
+          where: { idIntervention },
+          select: {
+            idIntervention: true,
+            statutIntervention: true,
+            dateHeureFin: true,
+            dateSoumissionCompteRendu: true,
+            renseignePar: true,
+            affectation: {
+              select: {
+                idEquipe: true,
+                dateFinAffectation: true,
+                etatAffectation: true,
+                decisionEquipe: true,
+                equipe: { select: { etatEquipe: true } },
+                contenuDossier: {
+                  select: {
+                    idContenuDossier: true,
+                    idDossier: true,
+                    etatContenuDossier: true,
+                    etatPriseEnCharge: true,
+                    dossier: { select: { statutDossier: true } },
+                  },
+                },
+              },
+            },
+          },
+        });
+        if (!latest) throw new NotFoundException('Intervention introuvable.');
+        if (latest.renseignePar !== actorId) {
+          throw new ForbiddenException('Seul l’agent ayant démarré cette intervention peut joindre une photo.');
+        }
+        if (
+          latest.statutIntervention !== 'EN_COURS' ||
+          latest.dateHeureFin ||
+          latest.dateSoumissionCompteRendu ||
+          latest.affectation.dateFinAffectation ||
+          latest.affectation.etatAffectation !== 'ACTIVE' ||
+          latest.affectation.decisionEquipe !== 'ACCEPTEE' ||
+          latest.affectation.equipe.etatEquipe !== 'ACTIVE' ||
+          latest.affectation.contenuDossier.etatContenuDossier !== 'ACTIF' ||
+          latest.affectation.contenuDossier.etatPriseEnCharge !== 'EN_COURS' ||
+          latest.affectation.contenuDossier.dossier.statutDossier === 'CLOTURE'
+        ) {
+          throw new ConflictException('La mission ou le contenu n’est plus actif pour ajouter une preuve.');
+        }
+        await this.requireCurrentTeamMembership(tx, actorId, latest.affectation.idEquipe);
+
+        const created = await tx.photoIntervention.create({
+          data: {
+            idPhotoIntervention: photoId,
+            idIntervention,
+            referencePhoto: storagePath,
+            contextePhoto: context,
+            description,
+            dateAjout: now,
+            dateExpiration,
+          },
+          select: {
+            idPhotoIntervention: true,
+            description: true,
+            dateAjout: true,
+          },
+        });
+        await recordBusinessEvent(tx, {
+          actorId,
+          actionCode: 'PHOTO_INTERVENTION_AJOUTEE',
+          entityType: 'INTERVENTION',
+          entityId: idIntervention,
+          dossierId: latest.affectation.contenuDossier.idDossier,
+        });
+        return created;
       });
       return { ...photo, etatPublication: 'PRIVEE' };
     } catch (error) {
