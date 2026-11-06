@@ -2,7 +2,7 @@
 
 ## Projet cible
 
-Le projet Supabase de staging est `isieco-report-staging` (`mlhbdautaxufubaybzyt`), région `eu-west-1`. Au contrôle du 5 novembre 2026, six migrations Prisma historiques étaient terminées et le schéma correspondait encore au modèle historique. Le jeu de données présent est un jeu de test déclaré jetable ; son contenu n'entre pas dans les critères de validation de la migration.
+Le projet Supabase de staging est `isieco-report-staging` (`mlhbdautaxufubaybzyt`), région `eu-west-1`. Le 6 novembre 2026, le workflow [#42136250612](https://github.com/fadellba/isieco-report/actions/runs/42136250612) a terminé avec succès : la septième migration `20261105000000_simplified_domain_model` a été appliquée après les six migrations historiques. Le schéma compte 18 tables métier et `prisma migrate status` le déclare à jour. Le jeu de données de staging reste déclaré jetable.
 
 Le bucket privé `isieco-private-media` existe déjà, avec limite 10 MiB et types autorisés JPEG, PNG et WebP. Cette configuration Storage est distincte des migrations de la base métier.
 
@@ -42,15 +42,21 @@ pnpm db:deploy
 pnpm exec prisma migrate status
 ```
 
-Après réussite, vérifier dans Supabase :
+### Résultat vérifié le 6 novembre 2026
 
-- les 18 tables métier attendues dans le schéma `public` ;
-- les sept entrées de migration dans `_prisma_migrations` ;
-- RLS activé sur les 18 tables métier et sur `public._prisma_migrations` ;
-- aucun privilège direct `SELECT/INSERT/UPDATE/DELETE` pour `anon`, `authenticated` et `service_role` sur les tables métier ou sur `public._prisma_migrations` ;
-- absence de privilèges par défaut accordés à ces rôles sur les futures tables, séquences et fonctions.
+Le run [#42136250612](https://github.com/fadellba/isieco-report/actions/runs/42136250612) a réussi sur `main`. Les logs montrent l'application de `20261105000000_simplified_domain_model`, puis `Database schema is up to date!`.
 
-Le Security Advisor doit être relancé après l'application. Les tests d'API et d'upload ne doivent commencer qu'après configuration des variables serveur, notamment `DATABASE_URL`, `DIRECT_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SECRET_KEY` et une valeur approuvée pour `MEDIA_RETENTION_DAYS`.
+Un contrôle SQL en lecture seule confirme :
+
+- 18 tables métier dans `public`, plus `public._prisma_migrations` ;
+- sept migrations terminées, aucune migration annulée ;
+- RLS activé sur les 19 tables ;
+- aucune policy RLS et aucun privilège direct de table pour `anon`, `authenticated` ou `service_role` sur les 19 tables ;
+- les rôles Data API ne peuvent donc pas accéder directement au modèle métier ; les opérations restent exclusivement derrière NestJS.
+
+Le Security Advisor indique que le lint « RLS enabled without policy » est présent sur les 19 tables (INFO), ce qui correspond au verrouillage prévu. Il signale également la protection des mots de passe compromis désactivée (WARN) et 15 clés étrangères sans index couvrant (INFO). Ces deux derniers points restent ouverts avant production ou montée en charge. Les index signalés comme inutilisés ne doivent pas être supprimés sur la seule base d'un staging encore peu sollicité.
+
+Les tests d'API et d'upload nécessitent encore les variables runtime serveur : `DATABASE_URL`, `DIRECT_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SECRET_KEY`, `SUPABASE_STORAGE_BUCKET` et une valeur approuvée pour `MEDIA_RETENTION_DAYS`.
 
 ## Sécurité et exploitation
 
