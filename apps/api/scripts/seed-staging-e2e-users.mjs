@@ -156,7 +156,7 @@ async function main() {
   }
 
   const databaseUrl = new URL(requiredEnv('DIRECT_URL'));
-  for (const parameter of ['sslmode', 'sslrootcert', 'sslcert', 'sslkey']) {
+  for (const parameter of ['sslmode', 'sslrootcert', 'sslcert', 'sslkey', 'ssl']) {
     databaseUrl.searchParams.delete(parameter);
   }
 
