@@ -61,6 +61,7 @@ model UtilisateurRole {
 
   @@id([idUtilisateur, idRole, dateDebut])
   @@index([idRole, dateFin])
+  @@index([attribuePar], map: "utilisateur_role_attributed_by_idx")
   @@map("utilisateur_role")
 }
 
@@ -117,6 +118,7 @@ model CompetenceEquipe {
   affectations       Affectation[]
 
   @@unique([idEquipe, idTypeDechet], map: "competence_equipe_one_team_type_idx")
+  @@index([idTypeDechet], map: "competence_equipe_type_dechet_idx")
   @@map("competence_equipe")
 }
 
@@ -139,6 +141,7 @@ model DossierTraitement {
   contenus      ContenuDossier[]
 
   @@index([statutDossier, priorite])
+  @@index([creePar], map: "dossier_traitement_creator_idx")
   @@map("dossier_traitement")
 }
 
@@ -171,6 +174,7 @@ model Signalement {
   @@unique([idUtilisateur, cleIdempotence])
   @@index([idUtilisateur, dateSoumission])
   @@index([idDossier, statutSignalement])
+  @@index([decisionPar], map: "signalement_decision_maker_idx")
   @@map("signalement")
 }
 
@@ -207,6 +211,8 @@ model ContenuSignalement {
 
   @@unique([idSignalement, idTypeDechet])
   @@index([idSignalement, etatQualification], map: "contenu_signalement_report_qualification_idx")
+  @@index([idTypeDechet], map: "contenu_signalement_type_dechet_idx")
+  @@index([qualifiePar], map: "contenu_signalement_qualifier_idx")
   @@map("contenu_signalement")
 }
 
@@ -223,6 +229,7 @@ model HistoriqueStatutSignalement {
   utilisateur Utilisateur? @relation(fields: [idUtilisateur], references: [idUtilisateur], onDelete: SetNull)
 
   @@index([idSignalement, dateChangement], map: "historique_statut_signalement_date_idx")
+  @@index([idUtilisateur], map: "historique_statut_signalement_actor_idx")
   @@map("historique_statut_signalement")
 }
 
@@ -242,6 +249,8 @@ model DemandeComplement {
   repondant   Utilisateur? @relation("SupplementResponder", fields: [reponduPar], references: [idUtilisateur], onDelete: SetNull)
 
   @@index([idSignalement, etatDemande])
+  @@index([demandePar], map: "demande_complement_requester_idx")
+  @@index([reponduPar], map: "demande_complement_responder_idx")
   @@map("demande_complement")
 }
 
@@ -262,6 +271,7 @@ model ContenuDossier {
 
   @@unique([idDossier, idTypeDechet])
   @@index([idDossier, etatContenuDossier, etatPriseEnCharge], map: "contenu_dossier_case_content_state_idx")
+  @@index([idTypeDechet], map: "contenu_dossier_type_dechet_idx")
   @@map("contenu_dossier")
 }
 
@@ -291,6 +301,9 @@ model Affectation {
 
   @@index([idContenuDossier, dateFinAffectation], map: "affectation_content_closure_idx")
   @@index([idEquipe, etatAffectation])
+  @@index([idCompetenceEquipe], map: "affectation_competence_idx")
+  @@index([idDecideur], map: "affectation_decider_idx")
+  @@index([reponduPar], map: "affectation_responder_idx")
   @@map("affectation")
 }
 
@@ -312,6 +325,7 @@ model Intervention {
   verification Verification?
 
   @@index([idAffectation, statutIntervention])
+  @@index([renseignePar], map: "intervention_author_idx")
   @@map("intervention")
 }
 
@@ -344,5 +358,6 @@ model Verification {
   verificateur  Utilisateur @relation("VerificationActor", fields: [idVerificateur], references: [idUtilisateur], onDelete: Restrict)
 
   @@index([dateVerification], map: "verification_date_idx")
+  @@index([idVerificateur], map: "verification_verifier_idx")
   @@map("verification")
 }
