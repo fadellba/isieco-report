@@ -63,9 +63,17 @@ L'API reste l'autorité : elle vérifie le propriétaire du signalement ou l'aut
 
 ## Build et distribution native
 
-`eas.json` contient les profils `preview-apk` et `production-apk` (Android, format APK). La CI GitHub vérifie actuellement le typecheck, les tests et l'export JavaScript/bundles Android (`expo export --platform android`) ; cet export n'est **pas** un APK Android signé. Aucun build EAS, APK signé, SHA-256 de release ou GitHub Release n'a été vérifié au 6 novembre 2026.
+`eas.json` contient les profils `preview-apk` et `production-apk` (Android, format APK). La CI GitHub vérifie le typecheck, les tests et l'export JavaScript/bundles Android (`expo export --platform android`) ; cet export n'est **pas** un APK Android signé. Aucun build EAS, APK signé ou SHA-256 de binaire n'a été vérifié au 6 novembre 2026.
 
-Avant de distribuer une build de test, vérifier l'identifiant du projet Expo, les identifiants de signature Android et le secret `EXPO_TOKEN` dans l'environnement de build, puis lancer le profil `preview-apk`. Installer le binaire obtenu sur un Android physique et exécuter la recette. Le profil `production-apk` ne doit pas être utilisé avant les portes de sécurité, la recette mobile et la restauration du plan de reprise.
+EAS Free inclut jusqu'à **15 builds Android et 15 builds iOS par mois**, en file basse priorité, sans dépassement facturé sur l'offre gratuite : lorsque le quota est épuisé, les nouveaux builds attendent le renouvellement du quota. Le profil Android `preview-apk` peut donc être utilisé sans abonnement EAS payant si le quota est disponible. Les étapes de liaison du projet Expo, de configuration de `EXPO_TOKEN` et de gestion du keystore Android ne nécessitent pas en elles-mêmes un plan payant. Voir [Plans EAS](https://docs.expo.dev/billing/plans/) et [Tarifs EAS](https://expo.dev/pricing).
+
+Avant de produire l'APK de test, vérifier/lier l'identifiant du projet Expo, configurer `EXPO_TOKEN` comme secret CI, puis lancer uniquement le profil `preview-apk`. Télécharger le binaire, calculer son SHA-256, l'associer au SHA Git testé et l'installer sur Android physique. Ne pas utiliser `production-apk` pour cette recette.
+
+Pour iOS, une distribution interne ad hoc sur iPhone exige un compte Apple Developer payant et l'enregistrement des appareils. Cette variante est différée dans le périmètre sans frais. Un smoke test sur iPhone via Expo Go peut être effectué gratuitement pour les fonctionnalités compatibles avec Expo Go ; il ne remplace pas une validation d'une build native ad hoc. La publication sur Google Play ou l'App Store est hors périmètre et nécessite les adhésions développeur correspondantes. Voir [distribution interne EAS](https://docs.expo.dev/build/internal-distribution/).
+
+
+
+Les conditions et les tâches différées en raison d'un coût sont centralisées dans [Périmètre gratuit et reports liés aux coûts](../../docs/deployment/perimetre-offre-gratuite.md).
 
 ## Limites restantes
 

@@ -141,3 +141,12 @@ TEST_DATABASE_URL="$RESTORE_DB_URL" pnpm db:test:invariants
 Le résultat attendu est **7 migrations terminées** : les six historiques et la migration de simplification. Le test d'invariants vérifie les 18 tables, RLS et plusieurs contraintes relationnelles dans une transaction annulée à la fin. Comparer et conserver les inventaires de lignes avant/après ; analyser séparément les transformations explicitement documentées (qualification la plus récente, rattachement actif, réponses, vérifications non appariées et événements de statut).
 
 Le workflow staging demande deux confirmations : APPLY et YES pour attester que le schéma historique et les données du projet staging peuvent être supprimés ou transformés. La confirmation est limitée au projet `mlhbdautaxufubaybzyt`. Elle n'autorise aucune opération sur la production.
+
+
+## Export et restauration Storage séparés (offre Free)
+
+Le dump logique PostgreSQL ne contient pas les objets binaires Supabase Storage. Sur l'offre Free, les objets peuvent être exportés séparément sans activer de sauvegarde managée payante : utiliser `supabase storage ls` pour inventorier puis `supabase storage cp` pour copier les fichiers, ou un client S3 compatible si le protocole S3 est activé sur le bucket. La [documentation Supabase Download Objects](https://supabase.com/docs/guides/storage/management/download-objects) détaille les options disponibles.
+
+Pour ISI-Eco, limiter l'export au bucket privé `isieco-private-media`, conserver les chemins relatifs et calculer un SHA-256 pour chaque objet. Conserver le manifeste en dehors du dépôt et dans un emplacement protégé. Restaurer les binaires dans le bucket privé cible via l'API Storage/CLI, pas par insertion directe dans `storage.objects`. Contrôler ensuite chaque ligne photo métier : l'objet correspondant doit exister, le bucket doit rester privé et les URLs signées doivent être régénérées à la demande (ne jamais restaurer ou conserver des URLs signées).
+
+Cette opération manuelle PostgreSQL + Storage constitue la voie de reprise actuelle sans frais d'abonnement. Les sauvegardes quotidiennes gérées (Pro+) et PITR (option payante) restent différées. Le périmètre et les limites sont récapitulés dans [Périmètre gratuit et reports liés aux coûts](perimetre-offre-gratuite.md).
