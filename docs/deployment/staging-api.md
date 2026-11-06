@@ -14,9 +14,9 @@ La production est exclue de ce workflow. Il ne lit ni n'utilise `PRODUCTION_DEPL
 
 Dans **Settings → Environments → staging → Environment secrets**, conserver `STAGING_PRISMA_URL` et ajouter `STAGING_RENDER_DEPLOY_HOOK_URL`.
 
-Dans **Settings → Environments → staging → Environment variables**, définir `STAGING_API_DEPLOY_ENABLED=true` uniquement après avoir ajouté et vérifié le secret du Deploy Hook. Tant que cette variable vaut autre chose que `true` ou n'existe pas, un push sur `main` ne déclenche pas de déploiement automatique. Le lancement manuel avec le choix explicite `DEPLOY` reste disponible.
+Dans **Settings → Secrets and variables → Actions → Variables**, créer la variable de dépôt `STAGING_API_DEPLOY_ENABLED=true` uniquement après avoir ajouté et vérifié le secret du Deploy Hook dans l'environnement `staging`. Tant que cette variable de dépôt n'existe pas ou vaut autre chose que `true`, un push sur `main` ne déclenche pas de déploiement automatique. Le lancement manuel avec le choix explicite `DEPLOY` reste disponible.
 
-Créer ce dernier depuis **Render → isieco-api-staging → Settings → Deploy Hook**. Le conserver uniquement comme secret GitHub. Le workflow valide l'hôte et le service ID du hook avant toute requête et ne l'affiche jamais.
+Créer le Deploy Hook depuis **Render → isieco-api-staging → Settings → Deploy Hook**. Conserver son URL uniquement comme secret `STAGING_RENDER_DEPLOY_HOOK_URL` dans l'environnement GitHub `staging`. Le workflow valide l'hôte et le service ID du hook avant toute requête et ne l'affiche jamais.
 
 Le workflow valide également que `STAGING_PRISMA_URL` vise le pooler Session du projet Supabase staging (port 5432, utilisateur du projet, base `postgres`, TLS). Il exécute ensuite `prisma migrate status` en lecture seule. Si les migrations ne sont pas à jour, le déploiement applicatif est bloqué ; appliquer d'abord les migrations approuvées via le workflow staging dédié.
 
