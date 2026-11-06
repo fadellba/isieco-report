@@ -7,7 +7,7 @@
 | Architecture | Monorepo pnpm : API NestJS, Web React/Vite, Mobile Expo/React Native et packages partagés. |
 | Modèle métier | 18 modèles Prisma dans `public`. Le journal d'audit est un schéma PostgreSQL distinct `audit`, hors du modèle métier Prisma. |
 | Migrations sur `main` | Huit migrations Prisma présentes au commit de référence ; la migration de simplification transforme l'ancien schéma de 38 tables en 18 modèles métier. La migration du journal d'audit est incluse. |
-| CI sur `main` | Le run [#42268959982](https://github.com/fadellba/isieco-report/actions/runs/42268959982) a réussi sur le commit exact de référence. |
+| CI sur `main` | Le run [#42268959982](https://github.com/fadellba/isieco-report/actions/runs/42268959982) a réussi sur le commit exact de référence. La branche PR #44 a aussi validé la CI complète au run [#42303745540](https://github.com/fadellba/isieco-report/actions/runs/42303745540), commit `7f3df4841993d8f0955422f33df9d391b17f2f4a` : migration vierge + répétition historique, UML, typecheck, tests et builds Web/API/Mobile. |
 | Répétition historique | La CI rejoue les migrations historiques sur une base PostgreSQL jetable, les fixtures synthétiques, la simplification et les assertions de conservation documentées. |
 | UML/Merise | Générateur pour 18 classes, 32 associations et artefacts graphiques ; sources Mermaid et matrices de correspondance versionnées. |
 | API / Web / Mobile | Compilation, tests et builds intégrés à la CI. La compilation ne remplace pas la recette utilisateur ni les tests physiques Android/iOS. |
@@ -15,7 +15,7 @@
 | Supabase staging | Au moment du run #42279020301, `prisma migrate status` a confirmé l'absence de migration en attente sur le commit de référence. Le schéma public contenait les 18 tables métier et la table Prisma de suivi. |
 | Storage staging | Le bucket privé `isieco-private-media` a été vérifié le 5 novembre (10 MiB, JPEG/PNG/WebP). Le workflow staging ne prouve pas encore l'upload, la lecture signée, l'expiration ou la purge depuis l'API. |
 | Secrets et rétention | Les valeurs des secrets runtime ne sont pas lisibles par le connecteur. `SUPABASE_SECRET_KEY`, `MEDIA_RETENTION_DAYS` et la politique métier de conservation restent à contrôler dans l'environnement ; aucune durée ne doit être inventée. |
-| Purge média | Le code de purge est borné à 100 objets par type par exécution. La planification Cron et une exécution staging bout en bout restent à faire. Les événements d'ajout/purge des médias sont inclus dans la branche de durcissement, pas encore dans le commit de référence staging. |
+| Purge média | Le workflow `.github/workflows/staging-media-purge.yml` de la branche de durcissement planifie une exécution quotidienne à 02:15 UTC sur staging et propose un déclenchement manuel `RUN`. Il utilise les secrets existants de l'environnement GitHub `staging`, valide l'URL DB et le bucket cible, et traite au plus 100 médias de chaque type. Il ne devient actif qu'après fusion dans `main` ; une exécution réelle devra encore être vérifiée. |
 | Sécurité staging | RLS et les révocations de privilèges du schéma métier et du journal d'audit sont présents. Les alertes historiques à contrôler restent la protection des mots de passe compromis désactivée et les index FK sans index dédié. |
 | Sauvegarde | Aucune restauration complète d'une sauvegarde PostgreSQL et Storage n'est prouvée. Une sauvegarde non restaurée ne constitue pas un plan de reprise validé. |
 | Production | Les workflows Render/Vercel existent mais le drapeau de déploiement production reste désactivé. Aucun déploiement production ni smoke test production n'est confirmé. |
@@ -24,10 +24,10 @@
 
 ## Séquence de clôture
 
-1. Obtenir une CI réussie sur la branche de durcissement, incluant tests, typecheck, OpenAPI et builds.
+1. CI complète réussie sur la branche de durcissement : run #42303745540, incluant tests, typecheck, OpenAPI et builds.
 2. Faire relire puis fusionner la PR de durcissement.
 3. Avant le déploiement staging de cette nouvelle migration, vérifier la nature des données présentes et satisfaire explicitement la confirmation de données jetables demandée par le workflow manuel. La migration ajoutée étend seulement les valeurs autorisées du journal d'audit, mais le workflow de migration exige une confirmation générale sur les données staging.
-4. Vérifier les variables runtime Storage sans exposer les secrets, valider la rétention, planifier le Cron et tester upload, URL signée, expiration et purge avec données synthétiques.
+4. Vérifier les variables runtime Storage sans exposer les secrets, faire valider `MEDIA_RETENTION_DAYS`, fusionner puis observer le workflow de purge staging quotidien, et tester upload, URL signée, expiration et purge avec données synthétiques.
 5. Tester Web/Mobile et les droits inter-comptes sur appareils réels Android/iOS ; produire et vérifier l'APK signé.
 6. Effectuer une sauvegarde réelle et une restauration complète, incluant séparément les objets Storage.
 7. N'activer la production qu'après validation formelle de la restauration, des secrets, de la rétention, de la purge, des tests, des Deploy Hooks et des smoke tests.

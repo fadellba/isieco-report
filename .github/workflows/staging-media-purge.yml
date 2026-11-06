@@ -1,0 +1,93 @@
+name: Staging Media Purge
+
+on:
+  schedule:
+    - cron: "15 2 * * *"
+  workflow_dispatch:
+    inputs:
+      run_staging_purge:
+        description: "Select RUN to purge expired media from staging now."
+        required: true
+        type: choice
+        options:
+          - NO
+          - RUN
+        default: NO
+
+permissions:
+  contents: read
+
+concurrency:
+  group: staging-media-purge
+  cancel-in-progress: false
+
+jobs:
+  purge:
+    name: Purge expired staging media
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event.inputs.run_staging_purge == 'RUN')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: staging
+    env:
+      SUPABASE_URL: https://mlhbdautaxufubaybzyt.supabase.co
+      SUPABASE_SECRET_KEY: ${{ secrets.STAGING_SUPABASE_SECRET_KEY }}
+      SUPABASE_STORAGE_BUCKET: isieco-private-media
+      DATABASE_URL: ${{ secrets.STAGING_PRISMA_URL }}
+      DIRECT_URL: ${{ secrets.STAGING_PRISMA_URL }}
+    steps:
+      - name: Validate staging-only configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_SECRET_KEY:-}" || {
+            echo "Missing staging environment secret: STAGING_SUPABASE_SECRET_KEY"
+            exit 1
+          }
+          test -n "${DATABASE_URL:-}" || {
+            echo "Missing staging environment secret: STAGING_PRISMA_URL"
+            exit 1
+          }
+          node --input-type=module <<'NODE'
+          const db = new URL(process.env.DATABASE_URL);
+          const expectedProjectRef = 'mlhbdautaxufubaybzyt';
+          if (!['postgres:', 'postgresql:'].includes(db.protocol)
+            || !db.hostname.endsWith('.pooler.supabase.com')
+            || db.port !== '5432'
+            || decodeURIComponent(db.username) !== `postgres.${expectedProjectRef}`
+            || db.pathname !== '/postgres'
+            || !['require', 'verify-ca', 'verify-full'].includes(db.searchParams.get('sslmode'))
+            || !db.password) {
+            throw new Error('DATABASE_URL does not match the approved Supabase staging target.');
+          }
+          if (process.env.SUPABASE_URL !== 'https://mlhbdautaxufubaybzyt.supabase.co'
+            || process.env.SUPABASE_STORAGE_BUCKET !== 'isieco-private-media') {
+            throw new Error('Storage target is not the approved staging bucket.');
+          }
+          console.log('Staging database and private Storage targets validated; secrets were not printed.');
+          NODE
+
+      - name: Checkout source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7.1.0
+        with:
+          node-version-file: .nvmrc
+          check-latest: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6.1.0
+        with:
+          version: 12.16.1
+          run_install: false
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm db:generate
+
+      - name: Purge expired private media
+        run: pnpm storage:purge

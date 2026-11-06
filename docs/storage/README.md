@@ -67,7 +67,9 @@ Le journal `audit.evenement_metier` conserve un événement système `PHOTO_SIGN
 
 Un échec Storage ou SQL laisse la ligne non purgée et incrémente `failed`. La commande renvoie un code de sortie non nul si une erreur est rencontrée. Le traitement peut être relancé ; il ne journalise ni chemins Storage ni données personnelles.
 
-La commande n'est pas planifiée par le dépôt. Configurer un job Cron dans l'environnement d'hébergement, avec le même code, `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SECRET_KEY` et `SUPABASE_STORAGE_BUCKET`. Choisir une fréquence compatible avec la politique de conservation et le volume attendu. Une exécution traite au plus 200 objets ; si le volume dépasse ce lot, prévoir une fréquence suffisante pour résorber la file.
+Le workflow GitHub Actions `.github/workflows/staging-media-purge.yml` planifie désormais la purge du **staging** chaque jour à 02:15 UTC (concurrence limitée à une exécution). Il utilise les secrets de l'environnement GitHub `staging` (`STAGING_PRISMA_URL` et `STAGING_SUPABASE_SECRET_KEY`) et valide explicitement le projet Supabase et le bucket attendus avant d'exécuter la commande. Une exécution manuelle est disponible avec le choix `RUN` ; le choix par défaut `NO` ne fait rien.
+
+Chaque exécution traite au plus 100 photos de signalement et 100 photos d'intervention. Une fréquence quotidienne convient si le volume expiré reste inférieur à la capacité de traitement cumulée ; surveiller le compteur `failed` et les volumes en attente. Le job n'applique aucune migration et ne touche qu'au bucket de staging. La planification de la purge en production reste désactivée jusqu'à validation de la politique de conservation, des secrets production et du plan de reprise.
 
 ## Vérifications avant mise en production
 
