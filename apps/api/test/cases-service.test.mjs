@@ -129,3 +129,36 @@ test('qualified report queue only includes reports without a dossier', async () 
   assert.equal(where.idDossier, null);
   assert.equal(where.statutSignalement, 'QUALIFIE');
 });
+
+
+test('returns the dossier audit timeline by its historical dossier id', async () => {
+  const events = [{
+    id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    occurredAt: new Date('2026-11-06T12:00:00.000Z'),
+    actorId,
+    actionCode: 'SIGNALEMENT_DETACHE',
+    entityType: 'SIGNALEMENT',
+    entityId: reportId,
+    dossierId,
+    reason: null,
+    metadata: {},
+  }];
+  const calls = { sql: '', values: [] };
+  const prisma = {
+    dossierTraitement: {
+      findUnique: async () => ({ idDossier: dossierId }),
+    },
+    $queryRaw: async (strings, ...values) => {
+      calls.sql = strings.join('?');
+      calls.values = values;
+      return events;
+    },
+  };
+  const service = new CasesService(prisma);
+
+  const result = await service.getCaseHistory(dossierId);
+
+  assert.deepEqual(result, events);
+  assert.match(calls.sql, /WHERE dossier_id = \?::uuid/);
+  assert.deepEqual(calls.values, [dossierId]);
+});
