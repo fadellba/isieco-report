@@ -1,0 +1,242 @@
+name: Staging Forward Migrate and Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/staging-forward-deploy.yml"
+      - "apps/api/**"
+      - "packages/**"
+      - "prisma/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".nvmrc"
+  workflow_dispatch:
+    inputs:
+      apply_and_deploy:
+        description: "Select RUN to apply only the allowlisted additive migrations and deploy staging."
+        required: true
+        type: choice
+        options: [NO, RUN]
+        default: NO
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: staging-forward-migrate-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Apply reviewed staging migrations and deploy exact revision
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.apply_and_deploy == 'RUN'))
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 40
+    env:
+      DIRECT_URL: ${{ secrets.STAGING_PRISMA_URL }}
+      DATABASE_URL: ${{ secrets.STAGING_PRISMA_URL }}
+      DEPLOY_HOOK_URL: ${{ secrets.STAGING_RENDER_DEPLOY_HOOK_URL }}
+      SUPABASE_URL: https://mlhbdautaxufubaybzyt.supabase.co
+      STAGING_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+      STAGING_E2E_PASSWORD_SEED: ${{ secrets.STAGING_E2E_PASSWORD_SEED }}
+      STAGING_API_BASE_URL: https://isieco-api-staging.onrender.com/api/v1
+
+    steps:
+      - name: Wait for successful CI on this exact commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_API_URL: ${{ github.api_url }}
+          GH_REPOSITORY: ${{ github.repository }}
+          TARGET_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 40); do
+            response="$(curl --fail --silent --show-error \
+              --header "Authorization: Bearer $GH_TOKEN" \
+              --header "Accept: application/vnd.github+json" \
+              "$GH_API_URL/repos/$GH_REPOSITORY/actions/workflows/ci.yml/runs?branch=main&per_page=30")"
+            run="$(jq -c --arg sha "$TARGET_SHA" \
+              '[.workflow_runs[] | select(.head_sha == $sha and .event == "push" and .name == "CI")] | sort_by(.created_at) | reverse | .[0] // empty' \
+              <<< "$response")"
+            if [ -n "$run" ]; then
+              status="$(jq -r '.status' <<< "$run")"
+              conclusion="$(jq -r '.conclusion // empty' <<< "$run")"
+              run_id="$(jq -r '.id' <<< "$run")"
+              echo "CI run $run_id for $TARGET_SHA: $status"
+              if [ "$status" = "completed" ]; then
+                if [ "$conclusion" = "success" ]; then
+                  echo "Successful CI confirmed for the exact commit."
+                  exit 0
+                fi
+                echo "CI did not succeed; staging operation is blocked."
+                exit 1
+              fi
+            fi
+            echo "Waiting for CI on $TARGET_SHA (attempt $attempt/40)."
+            sleep 15
+          done
+          echo "No successful CI run found for the exact commit."
+          exit 1
+
+      - name: Validate staging-only secrets and targets
+        shell: bash
+        run: |
+          set -euo pipefail
+          for variable in DIRECT_URL DEPLOY_HOOK_URL STAGING_SUPABASE_ANON_KEY STAGING_E2E_PASSWORD_SEED; do
+            if [ -z "${!variable:-}" ]; then
+              echo "Required staging environment secret is missing: $variable"
+              exit 1
+            fi
+          done
+          node --input-type=module <<'NODE'
+          const db = new URL(process.env.DIRECT_URL);
+          const expectedRef = 'mlhbdautaxufubaybzyt';
+          if (!['postgres:', 'postgresql:'].includes(db.protocol)
+            || !db.hostname.endsWith('.pooler.supabase.com')
+            || db.port !== '5432'
+            || decodeURIComponent(db.username) !== `postgres.${expectedRef}`
+            || db.pathname !== '/postgres'
+            || !['require', 'verify-ca', 'verify-full'].includes(db.searchParams.get('sslmode'))
+            || !db.password) {
+            throw new Error('STAGING_PRISMA_URL does not match the approved staging database.');
+          }
+          if (process.env.SUPABASE_URL !== 'https://mlhbdautaxufubaybzyt.supabase.co') {
+            throw new Error('Unexpected Supabase project URL.');
+          }
+          const hook = new URL(process.env.DEPLOY_HOOK_URL);
+          if (hook.protocol !== 'https:' || hook.hostname !== 'api.render.com'
+            || hook.pathname !== '/deploy/srv-dbj97gh42hec73cc2olg'
+            || !hook.searchParams.has('key')) {
+            throw new Error('Render deploy hook does not target the approved staging service.');
+          }
+          console.log('Staging database, Supabase project, and Render service are validated. Secret values were not printed.');
+          NODE
+
+      - name: Checkout source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7.1.0
+        with:
+          node-version-file: .nvmrc
+          check-latest: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6.1.0
+        with:
+          version: 12.16.1
+          run_install: false
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm db:generate
+
+      - name: Verify the only pending migrations are the reviewed additive set
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+
+          failed="$(psql "$DIRECT_URL" -X -A -t -v ON_ERROR_STOP=1 \
+            -c "SELECT migration_name FROM public._prisma_migrations WHERE finished_at IS NULL AND rolled_back_at IS NULL ORDER BY migration_name")"
+          if [ -n "$failed" ]; then
+            echo "A failed/incomplete Prisma migration exists; refusing to continue."
+            echo "$failed"
+            exit 1
+          fi
+
+          applied="$(psql "$DIRECT_URL" -X -A -t -v ON_ERROR_STOP=1 \
+            -c "SELECT migration_name FROM public._prisma_migrations WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL ORDER BY migration_name")"
+          repository_migrations="$(find prisma/migrations -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort)"
+          pending="$(comm -23 <(printf '%s\n' "$repository_migrations") <(printf '%s\n' "$applied"))"
+          expected="$(printf '%s\n' \
+            20261106140000_business_audit_referential_targets \
+            20261106150000_foreign_key_indexes \
+            20261106160000_prisma_schema_alignment | sort)"
+
+          if [ "$pending" != "$expected" ]; then
+            echo "Pending migration set differs from the reviewed allowlist."
+            echo "Expected:"
+            printf '%s\n' "$expected"
+            echo "Actual:"
+            printf '%s\n' "${pending:-<none>}"
+            exit 1
+          fi
+          echo "Exactly the three reviewed additive migrations are pending. No data-destructive migration is allowed by this workflow."
+
+      - name: Apply the reviewed additive migrations
+        run: pnpm db:deploy
+
+      - name: Verify Prisma migration history
+        run: pnpm exec prisma migrate status
+
+      - name: Trigger Render staging deployment for this exact commit
+        env:
+          TARGET_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          deploy_url="$(DEPLOY_HOOK_URL="$DEPLOY_HOOK_URL" TARGET_SHA="$TARGET_SHA" node --input-type=module -e '
+            const url = new URL(process.env.DEPLOY_HOOK_URL);
+            url.searchParams.set("ref", process.env.TARGET_SHA);
+            process.stdout.write(url.toString());
+          ')"
+          response_file="$(mktemp)"
+          trap 'rm -f "$response_file"' EXIT
+          http_status="$(curl --silent --show-error --output "$response_file" \
+            --write-out '%{http_code}' --request POST "$deploy_url")"
+          case "$http_status" in
+            200) echo "Render accepted the staging deployment request." ;;
+            202) echo "Render queued the staging deployment behind an existing deploy." ;;
+            *) echo "Render deploy hook failed with HTTP $http_status."; exit 1 ;;
+          esac
+
+      - name: Wait for exact revision and database readiness
+        env:
+          READY_URL: https://isieco-api-staging.onrender.com/api/v1/health/ready
+          TARGET_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          body_file="$(mktemp)"
+          trap 'rm -f "$body_file"' EXIT
+          for attempt in $(seq 1 50); do
+            http_status="$(curl --silent --show-error --location --max-time 15 \
+              --output "$body_file" --write-out '%{http_code}' "$READY_URL" || true)"
+            if [ "$http_status" = "200" ] && jq -e --arg sha "$TARGET_SHA" \
+              '.status == "ok" and .checks.database == "ok" and .revision == $sha' "$body_file" >/dev/null 2>&1; then
+              echo "Staging is ready on the exact commit; database check passed."
+              exit 0
+            fi
+            echo "Waiting for exact revision/readiness (attempt $attempt/50, HTTP ${http_status:-000})."
+            sleep 12
+          done
+          echo "Staging did not report the expected revision and healthy database."
+          exit 1
+
+      - name: Run public API smoke checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          health="$(curl --fail --silent --show-error --location --max-time 15 "$STAGING_API_BASE_URL/health")"
+          node --input-type=module -e '
+            const body = JSON.parse(process.argv[1]);
+            if (body.status !== "ok" || body.service !== "isieco-api") throw new Error("Unexpected liveness response.");
+          ' "$health"
+          docs_status="$(curl --silent --show-error --location --max-time 15 --output /tmp/staging-swagger.html --write-out '%{http_code}' "https://isieco-api-staging.onrender.com/docs")"
+          test "$docs_status" = "200"
+          grep -qi "swagger-ui" /tmp/staging-swagger.html
+          echo "Liveness and Swagger smoke checks passed."
+
+      - name: Run eight-role matrix and citizen-to-verification E2E journey
+        run: node apps/api/scripts/run-staging-api-e2e.mjs
