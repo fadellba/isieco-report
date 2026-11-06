@@ -113,11 +113,11 @@ test('uploads intervention proof only for its active author', async () => {
   };
   prisma.appartenanceEquipe = { findFirst: async () => ({ idEquipe: teamId }) };
   const interventionTx = {
-    $queryRawUnsafe: async () => [{ idIntervention }],
+    $queryRawUnsafe: async () => [{ idIntervention: interventionId }],
     $executeRaw: async () => 1,
     intervention: {
       findUnique: async () => ({
-        idIntervention,
+        idIntervention: interventionId,
         statutIntervention: 'EN_COURS',
         dateHeureFin: null,
         dateSoumissionCompteRendu: null,
