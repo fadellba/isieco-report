@@ -56,7 +56,7 @@ Un contrôle SQL en lecture seule confirme :
 
 Le Security Advisor indique que le lint « RLS enabled without policy » est présent sur les 19 tables (INFO), ce qui correspond au verrouillage prévu. Il signale également la protection des mots de passe compromis désactivée (WARN) et 15 clés étrangères sans index couvrant (INFO). Ces deux derniers points restent ouverts avant production ou montée en charge. Les index signalés comme inutilisés ne doivent pas être supprimés sur la seule base d'un staging encore peu sollicité.
 
-Les tests d'API et d'upload nécessitent encore les variables runtime serveur : `DATABASE_URL`, `DIRECT_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SECRET_KEY`, `SUPABASE_STORAGE_BUCKET` et une valeur approuvée pour `MEDIA_RETENTION_DAYS`.
+Les tests d'API et d'upload nécessitent les variables runtime serveur : `DATABASE_URL`, `DIRECT_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SECRET_KEY`, `SUPABASE_STORAGE_BUCKET` et `MEDIA_RETENTION_DAYS=365`. La politique de conservation de 365 jours à compter du dépôt a été approuvée le 7 novembre 2026 ; la variable a été enregistrée sur Render staging et le déploiement associé est `live`. La readiness DB et les tests synthétiques d'upload restent à vérifier.
 
 ## Sécurité et exploitation
 
