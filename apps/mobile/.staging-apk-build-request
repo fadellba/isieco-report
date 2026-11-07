@@ -1,4 +1,5 @@
-Staging APK build request: 2026-11-07
+Staging APK build request: 2026-11-07 retry 2
+Fix: compile workspace packages during EAS install.
+Preflight: Metro Android export using staging environment values.
 Profile: preview-apk
-Target: Android APK
 Environment: preview (staging only)
