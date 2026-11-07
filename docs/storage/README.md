@@ -24,7 +24,7 @@ Le bucket `isieco-private-media` du projet `isieco-report-staging` a été contr
 
 Un contrôle en lecture seule du 6 novembre a croisé les métadonnées métier et les objets Storage : 1 ligne `photo_signalement`, 1 objet correspondant présent, 0 objet manquant, 0 objet orphelin, 0 ligne `photo_intervention` et 0 média expiré. Ce contrôle de cohérence ne remplace pas un test d'upload ou de restauration.
 
-Le test d'upload, la lecture par URL signée, l'expiration et la purge réelle avec objets synthétiques restent à exécuter. La durée métier de rétention et `MEDIA_RETENTION_DAYS` ne sont pas confirmés. Ces opérations utilisent les fonctions déjà disponibles sur l'offre gratuite ; elles ne nécessitent pas une montée en offre payante. Le workflow quotidien de purge staging est programmé à 02:15 UTC ; son premier run planifié reste à observer.
+La politique métier de conservation a été approuvée le 7 novembre 2026 : les photos de signalement et les preuves d'intervention sont conservées **365 jours à compter de leur dépôt**. La variable `MEDIA_RETENTION_DAYS=365` a été enregistrée sur le service Render `isieco-api-staging` le 7 novembre ; un nouveau déploiement a été déclenché. La prise en compte effective par le processus API reste à confirmer par l'état du déploiement et un test d'upload synthétique. Le test d'upload, la lecture par URL signée, l'expiration et la purge réelle avec objets synthétiques restent à exécuter. Ces opérations utilisent les fonctions déjà disponibles sur l'offre gratuite ; elles ne nécessitent pas une montée en offre payante. Le workflow quotidien de purge staging est programmé à 02:15 UTC ; son premier run planifié reste à observer.
 
 ## Configuration API
 
@@ -33,9 +33,9 @@ Variables côté serveur uniquement :
 - `SUPABASE_URL` : URL du projet.
 - `SUPABASE_SECRET_KEY` : secret API Supabase réservé aux environnements de confiance.
 - `SUPABASE_STORAGE_BUCKET` : `isieco-private-media` par défaut.
-- `MEDIA_RETENTION_DAYS` : durée de conservation décidée par le responsable du service, entier entre 1 et 3650.
+- `MEDIA_RETENTION_DAYS` : `365` en staging et dans l'exemple local, soit 365 jours à compter de l'upload (valeur entière autorisée : 1 à 3650).
 
-`MEDIA_RETENTION_DAYS` doit rester non configuré tant que la politique métier de conservation n'a pas été validée. Dans ce cas, l'API refuse l'upload plutôt que d'inventer une durée. La clé `SUPABASE_SECRET_KEY` ne doit apparaître dans aucune variable `VITE_*` ou `EXPO_PUBLIC_*`, aucun bundle client, aucun log ou artefact CI.
+La politique métier étant validée à 365 jours, configurez `MEDIA_RETENTION_DAYS=365` dans chaque environnement API qui doit accepter des uploads. Si la variable est absente ou invalide, l'API refuse l'upload plutôt que d'inventer une durée. La clé `SUPABASE_SECRET_KEY` ne doit apparaître dans aucune variable `VITE_*` ou `EXPO_PUBLIC_*`, aucun bundle client, aucun log ou artefact CI.
 
 L'authentification des utilisateurs continue d'utiliser `SUPABASE_ANON_KEY`. Le secret Storage est indépendant et n'est chargé que par `SupabaseStorageService` dans l'API.
 
