@@ -284,6 +284,43 @@ async function ensureTeamAndMembership(tokens, wasteTypeId, terrainProfileId) {
   return team;
 }
 
+async function purgePreviousSyntheticMedia(prisma, purge) {
+  const stalePhotos = await prisma.photoSignalement.findMany({
+    where: {
+      description: 'Preuve synthétique de test Storage staging.',
+      mediaPurgeAt: null,
+      signalement: {
+        description: { startsWith: 'Signalement de test E2E staging ' },
+        utilisateur: { email: accounts[0].email },
+      },
+    },
+    orderBy: [{ dateAjout: 'asc' }, { idPhotoSignalement: 'asc' }],
+    take: 501,
+    select: { idPhotoSignalement: true },
+  });
+
+  if (stalePhotos.length === 0) return;
+  assert.ok(
+    stalePhotos.length <= 500,
+    'More than 500 stale synthetic staging photos found; refusing broad cleanup.',
+  );
+
+  const photoIds = stalePhotos.map((photo) => photo.idPhotoSignalement);
+  const expiredAt = new Date(Date.now() - 5_000);
+  const addedAt = new Date(expiredAt.getTime() - (365 * 24 * 60 * 60 * 1000) - 5_000);
+  const updated = await prisma.photoSignalement.updateMany({
+    where: { idPhotoSignalement: { in: photoIds }, mediaPurgeAt: null },
+    data: { dateAjout: addedAt, dateExpiration: expiredAt },
+  });
+  assert.equal(updated.count, photoIds.length, 'Every stale synthetic fixture must be expired before cleanup.');
+
+  const result = await purge.purgeExpiredMedia(500, { reportPhotoIds: photoIds });
+  assert.equal(result.scannedSignalement, photoIds.length, 'Cleanup must scan exactly the identified synthetic photos.');
+  assert.equal(result.purgedSignalement, photoIds.length, 'Every stale synthetic photo must be purged.');
+  assert.equal(result.failed, 0, 'Stale synthetic media cleanup must not report failures.');
+  console.log('PASS cleanup: purged ' + photoIds.length + ' prior synthetic staging media fixture(s).');
+}
+
 async function verifyReportPhotoLifecycle(citizenToken, reportId) {
   const app = await NestFactory.createApplicationContext(StorageMaintenanceModule, {
     logger: ['error', 'warn'],
@@ -293,6 +330,8 @@ async function verifyReportPhotoLifecycle(citizenToken, reportId) {
   const storageAdmin = createClient(SUPABASE_URL, SECRET_KEY, {
     auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
   });
+  await purgePreviousSyntheticMedia(prisma, purge);
+
   let photoId = null;
   let purgeVerified = false;
 
