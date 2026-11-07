@@ -1,6 +1,10 @@
 name: Staging Media Purge
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/staging-media-purge.yml"
   schedule:
     - cron: "15 2 * * *"
   workflow_dispatch:
@@ -24,7 +28,7 @@ concurrency:
 jobs:
   purge:
     name: Purge expired staging media
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event.inputs.run_staging_purge == 'RUN')
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule' || github.event.inputs.run_staging_purge == 'RUN')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: staging
@@ -88,6 +92,9 @@ jobs:
 
       - name: Generate Prisma Client
         run: pnpm db:generate
+
+      - name: Build shared workspace packages
+        run: pnpm build:packages
 
       - name: Purge expired private media
         run: pnpm storage:purge
