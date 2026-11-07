@@ -192,11 +192,13 @@ jobs:
             set -eu
             until pg_isready -h 127.0.0.1 -p 55432 -U postgres -d restore; do sleep 1; done
           '
-          docker run --rm --network host postgres:17 sh -lc '
-            set -eu
-            psql "$RESTORE_DATABASE_URL" --set ON_ERROR_STOP=1 \
-              --command "DROP SCHEMA IF EXISTS audit CASCADE; DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public AUTHORIZATION postgres;"
-          '
+          docker run --rm --network host \
+            --env RESTORE_DATABASE_URL \
+            postgres:17 sh -lc '
+              set -eu
+              psql "$RESTORE_DATABASE_URL" --set ON_ERROR_STOP=1 \
+                --command "DROP SCHEMA IF EXISTS audit CASCADE; DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public AUTHORIZATION postgres;"
+            '
           docker run --rm --network host \
             --env RESTORE_DATABASE_URL \
             --volume "$RUNNER_TEMP/isieco-restore-drill:/backup:ro" \
