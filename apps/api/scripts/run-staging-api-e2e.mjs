@@ -330,12 +330,11 @@ async function verifyReportPhotoLifecycle(citizenToken, reportId) {
   const storageAdmin = createClient(SUPABASE_URL, SECRET_KEY, {
     auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
   });
-  await purgePreviousSyntheticMedia(prisma, purge);
-
   let photoId = null;
   let purgeVerified = false;
 
   try {
+    await purgePreviousSyntheticMedia(prisma, purge);
     const [expiredReports, expiredInterventions] = await Promise.all([
       prisma.photoSignalement.count({
         where: { dateExpiration: { lte: new Date() }, mediaPurgeAt: null },
