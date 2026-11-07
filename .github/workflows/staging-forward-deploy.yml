@@ -168,15 +168,19 @@ jobs:
             20261106150000_foreign_key_indexes \
             20261106160000_prisma_schema_alignment | sort)"
 
-          if [ "$pending" != "$expected" ]; then
+          if [ "$pending" = "$expected" ]; then
+            echo "Exactly the three reviewed additive migrations are pending."
+          elif [ -z "$pending" ]; then
+            echo "No pending migrations. This is a deploy-only run."
+          else
             echo "Pending migration set differs from the reviewed allowlist."
-            echo "Expected:"
-            printf '%s\n' "$expected"
+            echo "Expected either no pending migrations or exactly:"
+            printf '%s\\n' "$expected"
             echo "Actual:"
-            printf '%s\n' "\${pending:-<none>}"
+            printf '%s\\n' "${pending:-<none>}"
             exit 1
           fi
-          echo "Exactly the three reviewed additive migrations are pending. No data-destructive migration is allowed by this workflow."
+          echo "No unreviewed or data-destructive migration is allowed by this workflow."
 
       - name: Apply the reviewed additive migrations
         run: pnpm db:deploy
