@@ -46,6 +46,7 @@ jobs:
     env:
       STAGING_PRISMA_URL: ${{ secrets.STAGING_PRISMA_URL }}
       STAGING_SUPABASE_SECRET_KEY: ${{ secrets.STAGING_SUPABASE_SECRET_KEY }}
+      STAGING_SUPABASE_CA_CERT: ${{ secrets.STAGING_SUPABASE_CA_CERT }}
       SUPABASE_URL: https://mlhbdautaxufubaybzyt.supabase.co
       SOURCE_BUCKET: isieco-private-media
       RESTORE_DATABASE_URL: postgresql://postgres:restore-only@127.0.0.1:55432/restore
@@ -61,6 +62,10 @@ jobs:
           }
           test -n "${STAGING_SUPABASE_SECRET_KEY:-}" || {
             echo "Missing staging environment secret: STAGING_SUPABASE_SECRET_KEY"
+            exit 1
+          }
+          test -n "${STAGING_SUPABASE_CA_CERT:-}" || {
+            echo "Missing staging environment secret: STAGING_SUPABASE_CA_CERT"
             exit 1
           }
           node --input-type=module <<'NODE'
@@ -91,7 +96,11 @@ jobs:
           if (key.startsWith('sb_publishable_') || key.startsWith('sb_anon_')) {
             throw new Error('Storage restore requires a server-side staging key.');
           }
-          console.log('Staging source and isolated local PostgreSQL restore target validated; secrets were not printed.');
+          const ca = process.env.STAGING_SUPABASE_CA_CERT;
+          if (!ca.includes('-----BEGIN CERTIFICATE-----') || !ca.includes('-----END CERTIFICATE-----')) {
+            throw new Error('STAGING_SUPABASE_CA_CERT must contain a PEM certificate.');
+          }
+          console.log('Staging source, CA certificate, and isolated local PostgreSQL restore target validated; secrets were not printed.');
           NODE
 
       - name: Check out source
@@ -104,6 +113,30 @@ jobs:
         with:
           node-version-file: .nvmrc
           check-latest: false
+
+      - name: Prepare strict libpq TLS connection to staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { appendFileSync, writeFileSync } from 'node:fs';
+          const source = new URL(process.env.STAGING_PRISMA_URL);
+          const fields = {
+            PGHOST: source.hostname,
+            PGPORT: source.port,
+            PGUSER: decodeURIComponent(source.username),
+            PGDATABASE: decodeURIComponent(source.pathname.slice(1)),
+            PGPASSWORD: decodeURIComponent(source.password),
+            PGSSLMODE: 'verify-full',
+            PGSSLROOTCERT: '/certs/supabase-ca.pem',
+          };
+          for (const [key, value] of Object.entries(fields)) {
+            if (!value || /[\r\n]/u.test(value)) throw new Error('Invalid PostgreSQL connection field: ' + key);
+          }
+          process.stdout.write('::add-mask::' + fields.PGPASSWORD + '\n');
+          appendFileSync(process.env.GITHUB_ENV, Object.entries(fields).map(([key, value]) => key + '=' + value).join('\n') + '\n');
+          writeFileSync(process.env.RUNNER_TEMP + '/supabase-ca.pem', process.env.STAGING_SUPABASE_CA_CERT, { mode: 0o600 });
+          NODE
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v6.1.0
@@ -157,26 +190,30 @@ jobs:
           chmod 700 "$RUNNER_TEMP/isieco-restore-drill"
           docker run --rm --network host \
             --user "$(id -u):$(id -g)" \
-            --env STAGING_PRISMA_URL \
-            --env GITHUB_RUN_ID \
+            --env PGHOST --env PGPORT --env PGUSER --env PGDATABASE --env PGPASSWORD \
+            --env PGSSLMODE --env PGSSLROOTCERT --env GITHUB_RUN_ID \
+            --volume "$RUNNER_TEMP/supabase-ca.pem:/certs/supabase-ca.pem:ro" \
             --volume "$RUNNER_TEMP/isieco-restore-drill:/backup" \
             postgres:17 sh -lc '
               set -eu
-              pg_dump "$STAGING_PRISMA_URL" \
+              pg_dump --host="$PGHOST" --port="$PGPORT" --username="$PGUSER" --dbname="$PGDATABASE" \
                 --schema=public --schema=audit \
                 --no-owner --no-acl --format=plain \
                 --file="/backup/staging-app-$GITHUB_RUN_ID.sql"
               test -s "/backup/staging-app-$GITHUB_RUN_ID.sql"
             '
           docker run --rm --network host \
-            --env STAGING_PRISMA_URL \
+            --user "$(id -u):$(id -g)" \
+            --env PGHOST --env PGPORT --env PGUSER --env PGDATABASE --env PGPASSWORD \
+            --env PGSSLMODE --env PGSSLROOTCERT \
+            --volume "$RUNNER_TEMP/supabase-ca.pem:/certs/supabase-ca.pem:ro" \
             --volume "$RUNNER_TEMP/count-application-tables.sql:/count-application-tables.sql:ro" \
             --volume "$RUNNER_TEMP/isieco-restore-drill:/backup" \
             postgres:17 sh -lc '
               set -eu
-              psql "$STAGING_PRISMA_URL" --quiet --tuples-only --no-align \
-                --set ON_ERROR_STOP=1 --file=/count-application-tables.sql \
-                > "/backup/source-counts.txt"
+              psql --host="$PGHOST" --port="$PGPORT" --username="$PGUSER" --dbname="$PGDATABASE" \
+                --quiet --tuples-only --no-align --set ON_ERROR_STOP=1 \
+                --file=/count-application-tables.sql > "/backup/source-counts.txt"
               test -s "/backup/source-counts.txt"
             '
           sha256sum "$RUNNER_TEMP/isieco-restore-drill/staging-app-$GITHUB_RUN_ID.sql" \
@@ -200,6 +237,7 @@ jobs:
                 --command "DROP SCHEMA IF EXISTS audit CASCADE; DROP SCHEMA IF EXISTS public CASCADE;"
             '
           docker run --rm --network host \
+            --user "$(id -u):$(id -g)" \
             --env RESTORE_DATABASE_URL \
             --env GITHUB_RUN_ID \
             --volume "$RUNNER_TEMP/isieco-restore-drill:/backup:ro" \
@@ -210,6 +248,7 @@ jobs:
                 --file="/backup/staging-app-$GITHUB_RUN_ID.sql"
             '
           docker run --rm --network host \
+            --user "$(id -u):$(id -g)" \
             --env RESTORE_DATABASE_URL \
             --volume "$RUNNER_TEMP/count-application-tables.sql:/count-application-tables.sql:ro" \
             --volume "$RUNNER_TEMP/isieco-restore-drill:/backup" \
@@ -228,4 +267,4 @@ jobs:
       - name: Clean up temporary local backup
         if: always()
         shell: bash
-        run: rm -rf "$RUNNER_TEMP/isieco-restore-drill" "$RUNNER_TEMP/isieco-storage-restore-$GITHUB_RUN_ID"
+        run: rm -rf "$RUNNER_TEMP/isieco-restore-drill" "$RUNNER_TEMP/isieco-storage-restore-$GITHUB_RUN_ID" "$RUNNER_TEMP/supabase-ca.pem"
