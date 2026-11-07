@@ -175,9 +175,9 @@ jobs:
           else
             echo "Pending migration set differs from the reviewed allowlist."
             echo "Expected either no pending migrations or exactly:"
-            printf '%s\\n' "$expected"
+            printf '%s\n' "$expected"
             echo "Actual:"
-            printf '%s\\n' "${pending:-<none>}"
+            printf '%s\n' "${pending:-<none>}"
             exit 1
           fi
           echo "No unreviewed or data-destructive migration is allowed by this workflow."
