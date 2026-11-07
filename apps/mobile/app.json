@@ -24,8 +24,26 @@
         }
       ]
     ],
-    "android": {"package":"com.isieco.report","permissions":["CAMERA","ACCESS_FINE_LOCATION","ACCESS_COARSE_LOCATION"]},
-    "ios": {"bundleIdentifier":"com.isieco.report"},
-    "experiments": {"typedRoutes":true}
+    "android": {
+      "package": "com.isieco.report",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ]
+    },
+    "ios": {
+      "bundleIdentifier": "com.isieco.report"
+    },
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "20fe4494-6425-4720-a6a6-c586c13a94be"
+      }
+    },
+    "owner": "fadelba"
   }
 }
