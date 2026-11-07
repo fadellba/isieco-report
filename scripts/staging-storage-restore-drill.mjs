@@ -100,14 +100,8 @@ async function cleanupTemporaryBucket(supabase, bucketId) {
     }
 
     const deleted = await supabase.storage.deleteBucket(bucketId);
-    if (!deleted.error) {
-      const verify = await supabase.storage.listBuckets();
-      if (verify.error) {
-        throw new Error('Unable to verify temporary restore bucket deletion: ' + verify.error.message);
-      }
-      if (!(verify.data || []).some((bucket) => bucket.id === bucketId)) return;
-      lastDeleteError = new Error('Temporary restore bucket is still visible after deletion.');
-    } else {
+    if (!deleted.error) return;
+    else {
       lastDeleteError = new Error(deleted.error.message);
       if (!/not empty|bucket.*empty/iu.test(deleted.error.message)) {
         throw new Error('Unable to delete temporary restore bucket: ' + deleted.error.message);
