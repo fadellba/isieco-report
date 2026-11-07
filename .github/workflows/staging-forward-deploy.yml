@@ -43,6 +43,7 @@ jobs:
       SUPABASE_URL: https://mlhbdautaxufubaybzyt.supabase.co
       STAGING_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
       STAGING_E2E_PASSWORD_SEED: ${{ secrets.STAGING_E2E_PASSWORD_SEED }}
+      STAGING_SUPABASE_CA_CERT: ${{ secrets.STAGING_SUPABASE_CA_CERT }}
       STAGING_API_BASE_URL: https://isieco-api-staging.onrender.com/api/v1
       SUPABASE_SECRET_KEY: ${{ secrets.STAGING_SUPABASE_SECRET_KEY }}
       SUPABASE_STORAGE_BUCKET: isieco-private-media
@@ -90,7 +91,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for variable in DIRECT_URL DEPLOY_HOOK_URL STAGING_SUPABASE_ANON_KEY STAGING_E2E_PASSWORD_SEED SUPABASE_SECRET_KEY; do
+          for variable in DIRECT_URL DEPLOY_HOOK_URL STAGING_SUPABASE_ANON_KEY STAGING_E2E_PASSWORD_SEED STAGING_SUPABASE_CA_CERT SUPABASE_SECRET_KEY; do
             if [ -z "${!variable:-}" ]; then
               echo "Required staging environment secret is missing: $variable"
               exit 1
@@ -107,6 +108,11 @@ jobs:
             || !['require', 'verify-ca', 'verify-full'].includes(db.searchParams.get('sslmode'))
             || !db.password) {
             throw new Error('STAGING_PRISMA_URL does not match the approved staging database.');
+          }
+          const caCertificate = process.env.STAGING_SUPABASE_CA_CERT;
+          if (!caCertificate.includes('-----BEGIN CERTIFICATE-----')
+            || !caCertificate.includes('-----END CERTIFICATE-----')) {
+            throw new Error('STAGING_SUPABASE_CA_CERT must contain a PEM-encoded CA certificate.');
           }
           if (process.env.SUPABASE_URL !== 'https://mlhbdautaxufubaybzyt.supabase.co') {
             throw new Error('Unexpected Supabase project URL.');
