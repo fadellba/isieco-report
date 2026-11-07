@@ -18,13 +18,13 @@ Dans le projet Supabase de l'environnement :
 
 Le bucket se provisionne via le Dashboard ou l'outil d'administration Storage. Ne pas créer ni modifier directement les tables internes du schéma `storage` par une migration SQL du projet applicatif.
 
-### État du staging au 6 novembre 2026
+### État du staging au 7 novembre 2026
 
-Le bucket `isieco-private-media` du projet `isieco-report-staging` a été contrôlé le 6 novembre : privé (`public=false`), limite de 10 MiB et types JPEG/PNG/WebP. Le workflow [Staging Forward Migrate and Deploy #42308007540](https://github.com/fadellba/isieco-report/actions/runs/42308007540) a terminé avec succès sur le commit applicatif `29ce3f46634d80e33860ccda4abf21cf194f36a0`. Il a appliqué les trois migrations additives, vérifié l'historique Prisma, déployé la révision exacte sur Render, validé la readiness DB, liveness et Swagger, puis exécuté la matrice des huit rôles et le parcours citoyen → vérification → clôture.
+Le bucket `isieco-private-media` du projet `isieco-report-staging` a été contrôlé le 6 novembre : privé (`public=false`), limite de 10 MiB et types JPEG/PNG/WebP. Le workflow récent [Staging Forward Migrate and Deploy #42319641856](https://github.com/fadellba/isieco-report/actions/runs/42319641856) a terminé avec succès le 7 novembre sur le commit `d0a0deabd239e5adde8833a8488f5ff7a00442d6`. Il a vérifié l'historique Prisma sans nouvelle migration, déployé la révision exacte sur Render (`dep-dbn78bbrjlhs739mvl0g`, `live`), validé la readiness DB, liveness et Swagger, puis exécuté la matrice des huit rôles et le parcours citoyen → vérification → clôture.
 
-Un contrôle en lecture seule du 6 novembre a croisé les métadonnées métier et les objets Storage : 1 ligne `photo_signalement`, 1 objet correspondant présent, 0 objet manquant, 0 objet orphelin, 0 ligne `photo_intervention` et 0 média expiré. Ce contrôle de cohérence ne remplace pas un test d'upload ou de restauration.
+Le test Storage E2E du 7 novembre a réellement téléversé une image synthétique via l'API, vérifié que le bucket reste privé (téléchargement anonyme refusé), généré une URL signée de 60 secondes et téléchargé les octets attendus. Il a confirmé une expiration calculée à 365 jours, puis exécuté une purge bornée sur l'identifiant synthétique : `mediaPurgeAt` a été renseigné et l'objet a disparu du bucket (`storage.objects_remaining=0`). Aucun objet de la fixture ne reste à purger. Le contrôle du 6 novembre reste un état historique antérieur à ce test.
 
-La politique métier de conservation a été approuvée le 7 novembre 2026 : les photos de signalement et les preuves d'intervention sont conservées **365 jours à compter de leur dépôt**. La variable `MEDIA_RETENTION_DAYS=365` a été enregistrée sur le service Render `isieco-api-staging` le 7 novembre ; un nouveau déploiement a été déclenché. La prise en compte effective par le processus API reste à confirmer par l'état du déploiement et un test d'upload synthétique. Le test d'upload, la lecture par URL signée, l'expiration et la purge réelle avec objets synthétiques restent à exécuter. Ces opérations utilisent les fonctions déjà disponibles sur l'offre gratuite ; elles ne nécessitent pas une montée en offre payante. Le workflow quotidien de purge staging est programmé à 02:15 UTC ; son premier run planifié reste à observer.
+La politique métier de conservation a été approuvée le 7 novembre 2026 : les photos de signalement et les preuves d'intervention sont conservées **365 jours à compter de leur dépôt**. `MEDIA_RETENTION_DAYS=365` est configuré sur `isieco-api-staging` et le run E2E #42319641856 a confirmé la prise en compte effective par l'API : l'écart `dateExpiration - dateAjout` est de 365 jours. Le même test a validé l'URL signée de 60 secondes, le téléchargement autorisé, le refus anonyme, la purge ciblée, la disparition de l'objet et l'écriture de l'audit. Il couvre le média de signalement ; le chemin des preuves d'intervention et les scénarios d'échec/reprise restent à tester. Le workflow quotidien de purge staging est programmé à 02:15 UTC ; son premier run planifié reste à observer.
 
 ## Configuration API
 
@@ -65,7 +65,7 @@ La colonne `dateExpiration` est déterminée au dépôt depuis `MEDIA_RETENTION_
 
 Le service `MediaPurgeService` et la commande `pnpm storage:purge` exécutent une purge bornée : 100 photos de signalement et 100 photos d'intervention au maximum par exécution. Pour chaque objet, l'API supprime le fichier du bucket privé, puis renseigne `mediaPurgeAt`. Les lignes photo sont conservées pour préserver les références historiques.
 
-Le journal `audit.evenement_metier` conserve un événement système `PHOTO_SIGNALEMENT_PURGEE` ou `PHOTO_INTERVENTION_PURGEE` dans la même transaction que la mise à jour `mediaPurgeAt`. L'acteur est `NULL` pour ces traitements automatiques. Aucun chemin de stockage n'est conservé dans l'événement. La commande retourne également les compteurs de traitement et d'échec.
+Le journal `audit.evenement_metier` conserve un événement système `PHOTO_SIGNALEMENT_PURGEE` ou `PHOTO_INTERVENTION_PURGEE` dans la même transaction que la mise à jour `mediaPurgeAt`. L'acteur est `NULL` pour ces traitements automatiques. Aucun chemin de stockage n'est conservé dans l'événement. La commande retourne également les compteurs de traitement et d'échec. Lorsqu'un signalement est rattaché à un dossier, l'événement source reste dans la timeline du signalement et une projection liée au dossier est créée via `source_event_id` ; ces deux lignes représentent le même événement dans deux timelines, pas deux suppressions Storage.
 
 Un échec Storage ou SQL laisse la ligne non purgée et incrémente `failed`. La commande renvoie un code de sortie non nul si une erreur est rencontrée. Le traitement peut être relancé ; il ne journalise ni chemins Storage ni données personnelles.
 
@@ -77,9 +77,9 @@ Chaque exécution traite au plus 100 photos de signalement et 100 photos d'inter
 
 - Confirmer que le bucket est privé et que l'API utilise le bon projet Supabase.
 - Contrôler que le secret est absent des variables client et des logs.
-- Valider la durée de rétention avant de renseigner `MEDIA_RETENTION_DAYS`.
-- Tester l'upload, le lien signé, l'expiration et les contrôles de propriété depuis l'API.
-- Tester une purge réussie, un échec Storage, la reprise et les compteurs.
+- Observer le premier run du workflow quotidien `staging-media-purge.yml` à 02:15 UTC et vérifier ses compteurs.
+- Compléter la recette des preuves d'intervention et des contrôles de propriété associés ; le parcours photo de signalement a été validé par le run E2E #42319641856.
+- Injecter un échec Storage/SQL contrôlé, vérifier la reprise, les compteurs `failed` et l'absence de ligne déclarée purgée tant que l'objet n'a pas été supprimé.
 - Vérifier séparément la sauvegarde/restauration des objets Storage ; les dumps PostgreSQL ne contiennent pas les fichiers binaires.
 
 
