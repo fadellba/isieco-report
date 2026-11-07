@@ -8,6 +8,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "build": "expo export --platform android",
+    "postinstall": "cd ../.. && pnpm build:packages",
     "typecheck": "tsc --noEmit",
     "test": "node --test"
   },
