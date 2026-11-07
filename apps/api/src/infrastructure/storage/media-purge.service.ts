@@ -1,7 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
 import { SupabaseStorageService } from './supabase-storage.service.js';
 import { recordBusinessEvent } from '../audit/business-audit.js';
+
+type PurgeScope = {
+  reportPhotoIds?: string[];
+  interventionPhotoIds?: string[];
+};
 
 type PurgeCounts = {
   scannedSignalement: number;
@@ -22,7 +27,15 @@ export class MediaPurgeService {
     private readonly storage: SupabaseStorageService,
   ) {}
 
-  async purgeExpiredMedia(batchSize = DEFAULT_BATCH_SIZE): Promise<PurgeCounts> {
+  async purgeExpiredMedia(batchSize = DEFAULT_BATCH_SIZE, scope?: PurgeScope): Promise<PurgeCounts> {
+    if (
+      scope &&
+      (!((scope.reportPhotoIds?.length ?? 0) + (scope.interventionPhotoIds?.length ?? 0)) ||
+        (scope.reportPhotoIds?.length ?? 0) > MAX_BATCH_SIZE ||
+        (scope.interventionPhotoIds?.length ?? 0) > MAX_BATCH_SIZE)
+    ) {
+      throw new BadRequestException('Un scope de purge doit contenir entre 1 et 500 identifiants photo.');
+    }
     const safeBatchSize = Number.isInteger(batchSize)
       ? Math.min(MAX_BATCH_SIZE, Math.max(1, batchSize))
       : DEFAULT_BATCH_SIZE;
@@ -30,13 +43,21 @@ export class MediaPurgeService {
 
     const [reportPhotos, interventionPhotos] = await Promise.all([
       this.prisma.photoSignalement.findMany({
-        where: { dateExpiration: { lte: now }, mediaPurgeAt: null },
+        where: {
+          dateExpiration: { lte: now },
+          mediaPurgeAt: null,
+          ...(scope ? { idPhotoSignalement: { in: scope.reportPhotoIds ?? [] } } : {}),
+        },
         orderBy: [{ dateExpiration: 'asc' }, { idPhotoSignalement: 'asc' }],
         take: safeBatchSize,
         select: { idPhotoSignalement: true, idSignalement: true, referencePhoto: true },
       }),
       this.prisma.photoIntervention.findMany({
-        where: { dateExpiration: { lte: now }, mediaPurgeAt: null },
+        where: {
+          dateExpiration: { lte: now },
+          mediaPurgeAt: null,
+          ...(scope ? { idPhotoIntervention: { in: scope.interventionPhotoIds ?? [] } } : {}),
+        },
         orderBy: [{ dateExpiration: 'asc' }, { idPhotoIntervention: 'asc' }],
         take: safeBatchSize,
         select: { idPhotoIntervention: true, idIntervention: true, referencePhoto: true },

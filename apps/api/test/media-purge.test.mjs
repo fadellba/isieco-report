@@ -99,3 +99,20 @@ test('clamps the batch size and handles an empty expiry queue', async () => {
     failed: 0,
   });
 });
+
+test('scopes a synthetic purge to the explicitly requested photo IDs', async () => {
+  const { service, calls } = harness({ interventionPhotos: [] });
+  const result = await service.purgeExpiredMedia(10, {
+    reportPhotoIds: [reportPhotoId],
+  });
+
+  assert.deepEqual(calls.reportBatch.where.idPhotoSignalement, {
+    in: [reportPhotoId],
+  });
+  assert.deepEqual(calls.interventionBatch.where.idPhotoIntervention, {
+    in: [],
+  });
+  assert.deepEqual(calls.removed, ['private/report/photo.jpg']);
+  assert.equal(result.purgedSignalement, 1);
+  assert.equal(result.purgedIntervention, 0);
+});
