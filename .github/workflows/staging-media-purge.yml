@@ -34,6 +34,7 @@ jobs:
     environment: staging
     env:
       SUPABASE_URL: https://mlhbdautaxufubaybzyt.supabase.co
+      STAGING_SUPABASE_CA_CERT: ${{ secrets.STAGING_SUPABASE_CA_CERT }}
       SUPABASE_SECRET_KEY: ${{ secrets.STAGING_SUPABASE_SECRET_KEY }}
       SUPABASE_STORAGE_BUCKET: isieco-private-media
       DATABASE_URL: ${{ secrets.STAGING_PRISMA_URL }}
@@ -51,6 +52,10 @@ jobs:
             echo "Missing staging environment secret: STAGING_PRISMA_URL"
             exit 1
           }
+          test -n "${STAGING_SUPABASE_CA_CERT:-}" || {
+            echo "Missing staging environment secret: STAGING_SUPABASE_CA_CERT"
+            exit 1
+          }
           node --input-type=module <<'NODE'
           const db = new URL(process.env.DATABASE_URL);
           const expectedProjectRef = 'mlhbdautaxufubaybzyt';
@@ -62,6 +67,11 @@ jobs:
             || !['require', 'verify-ca', 'verify-full'].includes(db.searchParams.get('sslmode'))
             || !db.password) {
             throw new Error('DATABASE_URL does not match the approved Supabase staging target.');
+          }
+          const caCertificate = process.env.STAGING_SUPABASE_CA_CERT;
+          if (!caCertificate.includes('-----BEGIN CERTIFICATE-----')
+            || !caCertificate.includes('-----END CERTIFICATE-----')) {
+            throw new Error('STAGING_SUPABASE_CA_CERT must contain a PEM-encoded CA certificate.');
           }
           if (process.env.SUPABASE_URL !== 'https://mlhbdautaxufubaybzyt.supabase.co'
             || process.env.SUPABASE_STORAGE_BUCKET !== 'isieco-private-media') {
