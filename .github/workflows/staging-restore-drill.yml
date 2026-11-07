@@ -133,8 +133,8 @@ jobs:
           for (const [key, value] of Object.entries(fields)) {
             if (!value || /[\r\n]/u.test(value)) throw new Error('Invalid PostgreSQL connection field: ' + key);
           }
-          process.stdout.write('::add-mask::' + fields.PGPASSWORD + '\\n');
-          appendFileSync(process.env.GITHUB_ENV, Object.entries(fields).map(([key, value]) => key + '=' + value).join('\\n') + '\\n');
+          process.stdout.write('::add-mask::' + fields.PGPASSWORD + '\n');
+          appendFileSync(process.env.GITHUB_ENV, Object.entries(fields).map(([key, value]) => key + '=' + value).join('\n') + '\n');
           writeFileSync(process.env.RUNNER_TEMP + '/supabase-ca.pem', process.env.STAGING_SUPABASE_CA_CERT, { mode: 0o600 });
           NODE
 
