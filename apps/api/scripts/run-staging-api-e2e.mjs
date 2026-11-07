@@ -348,6 +348,20 @@ async function verifyReportPhotoLifecycle(citizenToken, reportId) {
       'API must persist a 365-day media expiry from upload time.',
     );
 
+    const anonymousStorage = createClient(SUPABASE_URL, PUBLIC_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+    });
+    const anonymousDownload = await anonymousStorage.storage.from(STORAGE_BUCKET).download(photo.referencePhoto);
+    assert.ok(
+      anonymousDownload.error,
+      'Private report object must not be downloadable with the public anon key.',
+    );
+    expectStatus(
+      await api(null, '/reports/' + reportId + '/photos/' + photoId + '/url'),
+      401,
+      'Anonymous API access to private photo URL',
+    );
+
     const signed = expectSuccess(
       await api(citizenToken, '/reports/' + reportId + '/photos/' + photoId + '/url'),
       'Create private signed photo URL',
