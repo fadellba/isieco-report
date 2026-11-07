@@ -72,6 +72,75 @@ async function enumerateObjects(storage) {
   return files.sort((left, right) => left.path.localeCompare(right.path));
 }
 
+async function removeObjectPaths(storage, paths) {
+  for (let offset = 0; offset < paths.length; offset += 1000) {
+    const result = await storage.remove(paths.slice(offset, offset + 1000));
+    if (result.error) {
+      throw new Error('Unable to remove residual temporary Storage objects: ' + result.error.message);
+    }
+  }
+}
+
+async function cleanupTemporaryBucket(supabase, bucketId) {
+  if (!/^restore-check-\d+$/u.test(bucketId)) {
+    throw new Error('Refusing to clean a bucket outside the reserved restore-drill namespace.');
+  }
+
+  const storage = supabase.storage.from(bucketId);
+  const emptied = await supabase.storage.emptyBucket(bucketId);
+  if (emptied.error) {
+    process.stderr.write('Temporary bucket empty warning: ' + safeError(emptied.error) + '\n');
+  }
+
+  let lastDeleteError = null;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const remaining = await enumerateObjects(storage);
+    if (remaining.length > 0) {
+      await removeObjectPaths(storage, remaining.map((file) => file.path));
+    }
+
+    const deleted = await supabase.storage.deleteBucket(bucketId);
+    if (!deleted.error) {
+      const verify = await supabase.storage.listBuckets();
+      if (verify.error) {
+        throw new Error('Unable to verify temporary restore bucket deletion: ' + verify.error.message);
+      }
+      if (!(verify.data || []).some((bucket) => bucket.id === bucketId)) return;
+      lastDeleteError = new Error('Temporary restore bucket is still visible after deletion.');
+    } else {
+      lastDeleteError = new Error(deleted.error.message);
+      if (!/not empty|bucket.*empty/iu.test(deleted.error.message)) {
+        throw new Error('Unable to delete temporary restore bucket: ' + deleted.error.message);
+      }
+    }
+
+    if (attempt < 4) {
+      await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
+    }
+  }
+
+  throw new Error(
+    'Temporary restore bucket cleanup did not converge: ' +
+    (lastDeleteError?.message || 'bucket still exists'),
+  );
+}
+
+async function cleanupStaleRestoreBuckets(supabase) {
+  const listed = await supabase.storage.listBuckets();
+  if (listed.error) {
+    throw new Error('Unable to inspect temporary restore buckets: ' + listed.error.message);
+  }
+
+  const stale = (listed.data || []).filter((bucket) => /^restore-check-\d+$/u.test(bucket.id));
+  for (const bucket of stale) {
+    if (bucket.public !== false) {
+      throw new Error('Refusing to clean a restore-drill bucket that is not private.');
+    }
+    await cleanupTemporaryBucket(supabase, bucket.id);
+    process.stdout.write('Cleaned stale private restore-drill bucket ' + bucket.id + '.\n');
+  }
+}
+
 async function run() {
   if (!SECRET_KEY) throw new Error('Missing staging server-side Supabase key.');
   if (SECRET_KEY.startsWith('sb_') && !SECRET_KEY.startsWith('sb_secret_')) {
@@ -101,6 +170,8 @@ async function run() {
   let totalBytes = 0;
 
   try {
+    await cleanupStaleRestoreBuckets(supabase);
+
     const listedBuckets = await supabase.storage.listBuckets();
     if (listedBuckets.error) throw new Error('Unable to inspect Storage buckets: ' + listedBuckets.error.message);
     const sourceBucket = (listedBuckets.data || []).find((bucket) => bucket.id === SOURCE_BUCKET);
@@ -185,10 +256,7 @@ async function run() {
   } finally {
     if (temporaryBucketCreated) {
       try {
-        const emptied = await supabase.storage.emptyBucket(RESTORE_BUCKET);
-        if (emptied.error) throw new Error('Unable to empty temporary restore bucket: ' + emptied.error.message);
-        const deleted = await supabase.storage.deleteBucket(RESTORE_BUCKET);
-        if (deleted.error) throw new Error('Unable to delete temporary restore bucket: ' + deleted.error.message);
+        await cleanupTemporaryBucket(supabase, RESTORE_BUCKET);
       } catch (cleanupError) {
         if (!primaryError) primaryError = cleanupError;
         else process.stderr.write('Temporary bucket cleanup warning: ' + safeError(cleanupError) + '\n');
