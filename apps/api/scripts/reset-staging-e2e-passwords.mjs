@@ -113,7 +113,6 @@ async function main() {
   for (const account of targets) {
     const { data, error } = await admin.auth.admin.updateUserById(account.userId, {
       password,
-      email_confirm: true,
     });
     if (error || !data.user) {
       throw new Error(
