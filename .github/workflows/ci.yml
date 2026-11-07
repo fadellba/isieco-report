@@ -142,6 +142,9 @@ jobs:
       - name: Validate staging E2E user seed script syntax
         run: node --check apps/api/scripts/seed-staging-e2e-users.mjs
 
+      - name: Validate staging E2E password reset script syntax
+        run: node --check apps/api/scripts/reset-staging-e2e-passwords.mjs
+
       - name: Validate staging API E2E script syntax
         run: node --check apps/api/scripts/run-staging-api-e2e.mjs
       - name: Validate staging Storage restore drill script syntax

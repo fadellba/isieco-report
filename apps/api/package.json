@@ -12,7 +12,8 @@
     "test:database:invariants": "node --test test/database-invariants.test.mjs",
     "openapi:generate": "nest build && node dist/openapi/generate-openapi.js",
     "seed:staging:e2e-users": "node scripts/seed-staging-e2e-users.mjs",
-    "storage:purge": "nest build && node dist/infrastructure/storage/media-purge.cli.js"
+    "storage:purge": "nest build && node dist/infrastructure/storage/media-purge.cli.js",
+    "reset:staging:e2e-passwords": "node scripts/reset-staging-e2e-passwords.mjs"
   },
   "dependencies": {
     "@nestjs/common": "11.2.5",
