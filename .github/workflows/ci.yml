@@ -144,6 +144,8 @@ jobs:
 
       - name: Validate staging API E2E script syntax
         run: node --check apps/api/scripts/run-staging-api-e2e.mjs
+      - name: Validate staging Storage restore drill script syntax
+        run: node --check scripts/staging-storage-restore-drill.mjs
 
       - name: Rehearse the simplified migration against populated legacy data
         env:
