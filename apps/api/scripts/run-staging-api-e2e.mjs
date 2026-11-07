@@ -387,9 +387,14 @@ async function verifyReportPhotoLifecycle(citizenToken, reportId) {
       'Stored object bytes must match the uploaded image.',
     );
 
+    const expiredAt = new Date(Date.now() - 5_000);
+    const expiredAddedAt = new Date(expiredAt.getTime() - expectedRetentionMs - 5_000);
     await prisma.photoSignalement.update({
       where: { idPhotoSignalement: photoId },
-      data: { dateExpiration: new Date(Date.now() - 5_000) },
+      data: {
+        dateAjout: expiredAddedAt,
+        dateExpiration: expiredAt,
+      },
     });
 
     const purgeResult = await purge.purgeExpiredMedia(1, { reportPhotoIds: [photoId] });
@@ -437,9 +442,16 @@ async function verifyReportPhotoLifecycle(citizenToken, reportId) {
   } finally {
     if (photoId && !purgeVerified) {
       try {
+        const cleanupExpiredAt = new Date(Date.now() - 5_000);
+        const cleanupAddedAt = new Date(
+          cleanupExpiredAt.getTime() - (365 * 24 * 60 * 60 * 1000) - 5_000,
+        );
         await prisma.photoSignalement.updateMany({
           where: { idPhotoSignalement: photoId, mediaPurgeAt: null },
-          data: { dateExpiration: new Date(Date.now() - 5_000) },
+          data: {
+            dateAjout: cleanupAddedAt,
+            dateExpiration: cleanupExpiredAt,
+          },
         });
         const cleanup = await purge.purgeExpiredMedia(1, { reportPhotoIds: [photoId] });
         if (cleanup.failed > 0 || cleanup.purgedSignalement > 1) {
