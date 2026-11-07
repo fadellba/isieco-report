@@ -10,6 +10,11 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       throw new Error('DATABASE_URL doit être défini avant le démarrage de l’API.');
     }
     const caCertificate = process.env.STAGING_SUPABASE_CA_CERT?.trim();
+    let adapterConfig: {
+      connectionString: string;
+      ssl?: { ca: string; rejectUnauthorized: true };
+    } = { connectionString };
+
     if (caCertificate) {
       if (
         !caCertificate.includes('-----BEGIN CERTIFICATE-----') ||
@@ -23,17 +28,13 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       for (const parameter of ['sslmode', 'sslrootcert', 'sslcert', 'sslkey', 'ssl']) {
         databaseUrl.searchParams.delete(parameter);
       }
-
-      super({
-        adapter: new PrismaPg({
-          connectionString: databaseUrl.toString(),
-          ssl: { ca: caCertificate, rejectUnauthorized: true },
-        }),
-      });
-      return;
+      adapterConfig = {
+        connectionString: databaseUrl.toString(),
+        ssl: { ca: caCertificate, rejectUnauthorized: true },
+      };
     }
 
-    super({ adapter: new PrismaPg({ connectionString }) });
+    super({ adapter: new PrismaPg(adapterConfig) });
   }
 
   async onModuleInit(): Promise<void> {
