@@ -215,6 +215,7 @@ jobs:
                 --quiet --tuples-only --no-align --set ON_ERROR_STOP=1 \
                 --file=/count-application-tables.sql > "/backup/source-counts.txt"
               test -s "/backup/source-counts.txt"
+              LC_ALL=C sort -o "/backup/source-counts.txt" "/backup/source-counts.txt"
             '
           sha256sum "$RUNNER_TEMP/isieco-restore-drill/staging-app-$GITHUB_RUN_ID.sql" \
             > "$RUNNER_TEMP/isieco-restore-drill/SHA256SUMS"
@@ -257,6 +258,7 @@ jobs:
               psql "$RESTORE_DATABASE_URL" --quiet --tuples-only --no-align \
                 --set ON_ERROR_STOP=1 --file=/count-application-tables.sql \
                 > /backup/restored-counts.txt
+              LC_ALL=C sort -o /backup/restored-counts.txt /backup/restored-counts.txt
               diff -u /backup/source-counts.txt /backup/restored-counts.txt
             '
           echo "DATABASE_RESTORE_DRILL=SUCCESS schemas=public,audit table_row_counts=match"
