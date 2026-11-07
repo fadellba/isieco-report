@@ -11,7 +11,7 @@ Cette page distingue les fonctions payantes des tâches qui restent réalisables
 | Supabase Auth | Protection HaveIBeenPwned contre les mots de passe compromis | **Différée** : disponible sur Pro et supérieur. L'organisation liée à ISI-Eco est sur l'offre Free. Ne pas passer à Pro sans approbation. Issue [#55](https://github.com/fadellba/isieco-report/issues/55). |
 | Supabase Database | Sauvegardes quotidiennes gérées | **Différées** : disponibles sur Pro, Team et Enterprise. Sur Free, effectuer un export logique manuel avec `supabase db dump` et le conserver hors site. |
 | Supabase Database | Point-in-Time Recovery (PITR) | **Différé** : option payante pour les projets Pro/Team/Enterprise, avec contraintes de capacité de calcul. La voie actuelle est l'export logique manuel et la restauration testée dans un environnement isolé. |
-| Supabase Storage | Durée de conservation des médias | **Approuvée** le 7 novembre 2026 : 365 jours à compter du dépôt, pour les photos de signalement et les preuves d'intervention. `MEDIA_RETENTION_DAYS=365` a été enregistré sur le service Render staging ; le déploiement de prise en compte doit être vérifié. |
+| Supabase Storage | Durée de conservation des médias | **Approuvée et vérifiée** le 7 novembre 2026 : 365 jours à compter du dépôt. `MEDIA_RETENTION_DAYS=365` est pris en compte par l'API staging ; le run E2E #42319641856 a vérifié l'échéance calculée à 365 jours. |
 | Supabase Storage | Export/restauration des binaires du bucket privé | **Dans le périmètre gratuit** : exporter séparément les objets avec Supabase CLI (`storage ls` / `storage cp`) ou un client S3 compatible. Un dump PostgreSQL ne contient pas les binaires. |
 | EAS Build | Build Android APK de test interne | **Dans le périmètre gratuit** : EAS Free inclut jusqu'à 15 builds Android et 15 builds iOS par mois, avec file basse priorité. Aucun abonnement EAS payant n'est requis tant que le quota est suffisant. |
 | EAS Build | Build iOS interne ad hoc installable sur un iPhone physique | **Différée si elle exige l'adhésion Apple** : la distribution ad hoc nécessite un compte Apple Developer payant et des UDID enregistrés. Pour les parcours compatibles, utiliser Expo Go comme smoke test gratuit ; cela ne remplace pas une build native ad hoc. |
@@ -31,15 +31,15 @@ Sources officielles consultées le 6 novembre 2026 :
 
 ### Stockage privé — issue #52
 
-La validation de Storage ne requiert pas Supabase Pro. Le bucket staging est privé, plafonné à 10 MiB et limité à JPEG/PNG/WebP. Le contrôle SQL/Storage du 6 novembre confirme qu'une ligne photo possède son objet ; aucun objet manquant, orphelin ou expiré n'a été observé.
+La validation de Storage ne requiert pas Supabase Pro. Le bucket staging est privé, plafonné à 10 MiB et limité à JPEG/PNG/WebP. Le run E2E #42319641856 confirme un upload via l'API, le refus anonyme, une URL signée de 60 secondes, le téléchargement des octets attendus, l'expiration à 365 jours et la purge ciblée avec suppression de l'objet et audit.
 
-La politique de conservation est maintenant approuvée à **365 jours**. La variable `MEDIA_RETENTION_DAYS=365` a été enregistrée sur le service Render staging et un déploiement a été déclenché ; il reste à confirmer que la nouvelle révision est prête.
+La politique de conservation est approuvée à **365 jours** et sa prise en compte par le runtime staging a été vérifiée par le test d'upload réel du run #42319641856. Render sert le commit `d0a0deabd239e5adde8833a8488f5ff7a00442d6`.
 
-Restent à exécuter avec des comptes et médias synthétiques :
+Restent à exécuter :
 
-1. confirmer la prise en compte de `MEDIA_RETENTION_DAYS=365` par le processus API ;
-2. tester l'upload citoyen et la preuve d'intervention, les contrôles d'accès et les URL signées de 60 secondes ;
-3. vérifier l'expiration à 365 jours, la purge ciblée, les compteurs, la reprise après échec et l'audit.
+1. tester le chemin d'upload des preuves d'intervention et les droits associés ;
+2. observer le premier run du workflow quotidien `staging-media-purge.yml` à 02:15 UTC ;
+3. vérifier un échec Storage/SQL contrôlé, la reprise et les compteurs `failed`.
 
 La durée est une décision métier validée ; ne pas la modifier sans nouvelle approbation.
 
