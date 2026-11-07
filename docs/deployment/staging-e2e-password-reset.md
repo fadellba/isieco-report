@@ -38,4 +38,11 @@ Le mot de passe temporaire est identique pour ces huit comptes :
 | Gestionnaire référentiel | `e2e.gestionnaire-referentiel@staging.isieco.test` |
 | Administrateur comptes | `e2e.administrateur-comptes@staging.isieco.test` |
 
-Ce mot de passe partagé est une facilité temporaire pour la recette staging, pas un modèle à reprendre en production. Après les tests, remplacer le secret GitHub et relancer le workflow pour faire tourner les identifiants, ou revenir à des mots de passe distincts. Aucun mot de passe ni secret n'est écrit dans le dépôt ou les logs.
+Ce mot de passe partagé est une facilité temporaire pour la recette staging, pas un modèle à reprendre en production. Pendant son utilisation, les prochains parcours E2E automatisés qui attendent les mots de passe propres à chaque rôle ne pourront pas s'authentifier.
+
+**Après la recette**, rétablir les mots de passe distincts attendus par l'E2E :
+1. Ouvrir **Actions → Staging E2E Test Users**.
+2. Depuis `main`, choisir `CREATE` et lancer le workflow.
+3. Ce workflow réattribue à chaque rôle son mot de passe dérivé de `STAGING_E2E_PASSWORD_SEED`, sans afficher les mots de passe.
+
+Les secrets sensibles sont transmis uniquement aux étapes de validation et de réinitialisation, pas à l'installation des dépendances. Aucun mot de passe ni secret n'est écrit dans le dépôt ou les logs.
