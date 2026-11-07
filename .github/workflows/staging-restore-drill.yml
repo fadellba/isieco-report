@@ -201,6 +201,7 @@ jobs:
             '
           docker run --rm --network host \
             --env RESTORE_DATABASE_URL \
+            --env GITHUB_RUN_ID \
             --volume "$RUNNER_TEMP/isieco-restore-drill:/backup:ro" \
             postgres:17 sh -lc '
               set -eu
@@ -210,7 +211,7 @@ jobs:
             '
           docker run --rm --network host \
             --env RESTORE_DATABASE_URL \
-            --volume "$RUNNER_TEMP/count-application-tables.sql:/restore/counts.sql:ro" \
+            --volume "$RUNNER_TEMP/count-application-tables.sql:/count-application-tables.sql:ro" \
             --volume "$RUNNER_TEMP/isieco-restore-drill:/backup" \
             postgres:17 sh -lc '
               set -eu
