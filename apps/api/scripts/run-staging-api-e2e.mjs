@@ -290,8 +290,10 @@ async function purgePreviousSyntheticMedia(prisma, purge) {
       description: 'Preuve synthétique de test Storage staging.',
       mediaPurgeAt: null,
       signalement: {
-        description: { startsWith: 'Signalement de test E2E staging ' },
-        utilisateur: { email: accounts[0].email },
+        is: {
+          description: { startsWith: 'Signalement de test E2E staging ' },
+          utilisateur: { is: { email: accounts[0].email } },
+        },
       },
     },
     orderBy: [{ dateAjout: 'asc' }, { idPhotoSignalement: 'asc' }],
