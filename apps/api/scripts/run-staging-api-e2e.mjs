@@ -646,11 +646,11 @@ async function verifyInterventionPhotoLifecycle(fieldAgentToken, verifierToken, 
     purgeCompleted = true;
 
     const auditEvents = await prisma.$queryRawUnsafe(
-      \`SELECT action_code AS "actionCode", entity_type AS "entityType", entity_id AS "entityId", metadata
-       FROM audit.evenement_metier
-       WHERE action_code = 'PHOTO_INTERVENTION_PURGEE'
-         AND entity_type = 'INTERVENTION'
-         AND entity_id = $1::uuid\`,
+      "SELECT action_code AS \"actionCode\", entity_type AS \"entityType\", entity_id AS \"entityId\", metadata " +
+      "FROM audit.evenement_metier " +
+      "WHERE action_code = 'PHOTO_INTERVENTION_PURGEE' " +
+      "AND entity_type = 'INTERVENTION' " +
+      'AND entity_id = $1::uuid',
       interventionId,
     );
     assert.ok(
