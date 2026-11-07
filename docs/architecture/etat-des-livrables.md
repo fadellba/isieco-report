@@ -1,6 +1,6 @@
 # État des livrables
 
-État vérifié le **6 novembre 2026**. Le commit courant de `main` est `ec7e8b57c1b41cbc9e5f35a63bc4a11ea248e3ac`. La politique de périmètre sans abonnement payant est détaillée dans [Périmètre gratuit et reports liés aux coûts](../deployment/perimetre-offre-gratuite.md).
+État technique de référence vérifié le **6 novembre 2026** ; mise à jour opérationnelle le **7 novembre 2026** pour la décision de conservation des médias et le déploiement staging associé. La politique de périmètre sans abonnement payant est détaillée dans [Périmètre gratuit et reports liés aux coûts](../deployment/perimetre-offre-gratuite.md).
 
 ## Résultat des phases exécutables
 
