@@ -116,3 +116,90 @@ test('scopes a synthetic purge to the explicitly requested photo IDs', async () 
   assert.equal(result.purgedSignalement, 1);
   assert.equal(result.purgedIntervention, 0);
 });
+
+
+test('recovers safely after Storage and SQL failures without marking an uncommitted purge', async () => {
+  const state = { mediaPurgeAt: null };
+  const calls = { removePaths: [], auditCount: 0 };
+  let storageAvailable = false;
+  let databaseAvailable = false;
+  let objectExists = true;
+
+  const prisma = {
+    photoSignalement: {
+      findMany: async () => state.mediaPurgeAt === null
+        ? [{
+            idPhotoSignalement: reportPhotoId,
+            idSignalement: '33333333-3333-4333-8333-333333333333',
+            referencePhoto: 'private/report/retry.jpg',
+          }]
+        : [],
+    },
+    photoIntervention: {
+      findMany: async () => [],
+    },
+    $transaction: async (operation) => {
+      const transactionalState = { mediaPurgeAt: state.mediaPurgeAt };
+      let transactionalAuditCount = 0;
+      const tx = {
+        photoSignalement: {
+          updateMany: async ({ data }) => {
+            if (transactionalState.mediaPurgeAt !== null) return { count: 0 };
+            transactionalState.mediaPurgeAt = data.mediaPurgeAt;
+            return { count: 1 };
+          },
+        },
+        $executeRaw: async () => {
+          if (!databaseAvailable) throw new Error('SQL transaction unavailable');
+          transactionalAuditCount += 1;
+          return 1;
+        },
+      };
+
+      const result = await operation(tx);
+      state.mediaPurgeAt = transactionalState.mediaPurgeAt;
+      calls.auditCount += transactionalAuditCount;
+      return result;
+    },
+  };
+
+  const storage = {
+    remove: async (path) => {
+      calls.removePaths.push(path);
+      if (!storageAvailable) throw new Error('Storage unavailable');
+      // Model an idempotent object delete: retry succeeds even if the first
+      // successful DELETE removed the object before the database transaction failed.
+      objectExists = false;
+    },
+  };
+  const service = new MediaPurgeService(prisma, storage);
+
+  const storageFailure = await service.purgeExpiredMedia();
+  assert.equal(storageFailure.failed, 1);
+  assert.equal(storageFailure.purgedSignalement, 0);
+  assert.equal(state.mediaPurgeAt, null);
+  assert.equal(calls.auditCount, 0);
+  assert.equal(objectExists, true);
+
+  storageAvailable = true;
+  const sqlFailure = await service.purgeExpiredMedia();
+  assert.equal(sqlFailure.failed, 1);
+  assert.equal(sqlFailure.purgedSignalement, 0);
+  assert.equal(state.mediaPurgeAt, null, 'A failed SQL transaction must roll back the purge marker.');
+  assert.equal(calls.auditCount, 0, 'A failed SQL transaction must not append an audit event.');
+  assert.equal(objectExists, false, 'Storage may already have deleted the object before SQL failed.');
+
+  databaseAvailable = true;
+  const recovered = await service.purgeExpiredMedia();
+  assert.deepEqual(recovered, {
+    scannedSignalement: 1,
+    scannedIntervention: 0,
+    purgedSignalement: 1,
+    purgedIntervention: 0,
+    skipped: 0,
+    failed: 0,
+  });
+  assert.ok(state.mediaPurgeAt instanceof Date, 'The retry must commit the purge marker.');
+  assert.equal(calls.auditCount, 1, 'The successful retry must append exactly one audit event.');
+  assert.equal(calls.removePaths.length, 3, 'Storage deletion must be retried safely.');
+});
