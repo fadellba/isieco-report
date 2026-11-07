@@ -505,6 +505,186 @@ async function verifyReportPhotoLifecycle(citizenToken, reportId) {
   }
 }
 
+async function verifyInterventionPhotoLifecycle(fieldAgentToken, verifierToken, assignmentId, interventionId) {
+  const app = await NestFactory.createApplicationContext(StorageMaintenanceModule, {
+    logger: ['error', 'warn'],
+  });
+  const prisma = app.get(PrismaService);
+  const purge = app.get(MediaPurgeService);
+  const storageAdmin = createClient(SUPABASE_URL, SECRET_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+  });
+  const anonymousStorage = createClient(SUPABASE_URL, PUBLIC_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+  });
+  const photoUrlPath = (photoId) =>
+    '/verification/assignments/' + assignmentId + '/photos/' + photoId + '/url';
+  let photoId = null;
+  let purgeCompleted = false;
+
+  try {
+    const uploaded = expectSuccess(
+      await apiMultipart(
+        fieldAgentToken,
+        '/interventions/' + interventionId + '/photos',
+        REPORT_IMAGE_FIXTURE,
+        'isieco-staging-intervention-e2e.png',
+        {
+          contextePhoto: 'Après intervention',
+          description: 'Preuve synthétique de test Storage intervention staging.',
+        },
+      ),
+      'Upload synthetic intervention photo',
+    );
+    photoId = uploaded.idPhotoIntervention || uploaded.idPhoto;
+    assert.ok(photoId, 'Uploaded intervention photo must expose its photo identifier.');
+
+    const photo = await prisma.photoIntervention.findUnique({
+      where: { idPhotoIntervention: photoId },
+      select: {
+        idPhotoIntervention: true,
+        idIntervention: true,
+        referencePhoto: true,
+        dateAjout: true,
+        dateExpiration: true,
+        mediaPurgeAt: true,
+      },
+    });
+    assert.ok(photo, 'Uploaded intervention photo metadata must exist.');
+    assert.equal(photo.idIntervention, interventionId, 'Synthetic photo must belong to the synthetic intervention.');
+    assert.ok(
+      photo.referencePhoto.startsWith('interventions/' + interventionId + '/'),
+      'Synthetic object must be in the exact intervention-scoped Storage prefix.',
+    );
+    assert.equal(photo.mediaPurgeAt, null, 'New intervention photo must not be marked as purged.');
+
+    const expectedRetentionMs = 365 * 24 * 60 * 60 * 1000;
+    const actualRetentionMs = photo.dateExpiration.getTime() - photo.dateAjout.getTime();
+    assert.ok(
+      Math.abs(actualRetentionMs - expectedRetentionMs) < 10_000,
+      'Intervention API must persist a 365-day media expiry from upload time.',
+    );
+
+    const anonymousDownload = await anonymousStorage.storage.from(STORAGE_BUCKET).download(photo.referencePhoto);
+    assert.ok(anonymousDownload.error, 'Private intervention object must not be downloadable with the public anon key.');
+
+    const adminDownload = await storageAdmin.storage.from(STORAGE_BUCKET).download(photo.referencePhoto);
+    if (adminDownload.error || !adminDownload.data) {
+      throw new Error('Storage admin read could not verify the uploaded synthetic intervention object.');
+    }
+    assert.deepEqual(
+      Buffer.from(await adminDownload.data.arrayBuffer()),
+      REPORT_IMAGE_FIXTURE,
+      'Stored intervention object bytes must match the uploaded image.',
+    );
+
+    const submitted = expectSuccess(
+      await api(fieldAgentToken, '/interventions/' + interventionId + '/submit', {
+        method: 'POST',
+        body: {
+          resultatIntervention: 'TERMINEE',
+          compteRendu: 'La zone a été nettoyée et les déchets collectés.',
+        },
+      }),
+      'Submit intervention report with photo evidence',
+    );
+    assert.equal(submitted.statutIntervention, 'SOUMISE', 'Intervention must be submitted before verification.');
+
+    expectStatus(await api(null, photoUrlPath(photoId)), 401, 'Anonymous intervention photo URL access');
+    expectStatus(
+      await api(fieldAgentToken, photoUrlPath(photoId)),
+      403,
+      'Field agent must not access verifier-only intervention photo URL',
+    );
+
+    const signed = expectSuccess(
+      await api(verifierToken, photoUrlPath(photoId)),
+      'Create verifier-only private intervention photo URL',
+    );
+    assert.equal(signed.expiresInSeconds, 60, 'Intervention proof URLs must expire after 60 seconds.');
+    assert.ok(typeof signed.signedUrl === 'string' && signed.signedUrl.startsWith('https://'));
+
+    const signedDownload = await fetch(signed.signedUrl, { signal: AbortSignal.timeout(25_000) });
+    assert.equal(signedDownload.status, 200, 'Authorized verifier signed URL must allow temporary download.');
+    assert.deepEqual(
+      Buffer.from(await signedDownload.arrayBuffer()),
+      REPORT_IMAGE_FIXTURE,
+      'Downloaded intervention proof bytes must match the synthetic image.',
+    );
+
+    const expiredAt = new Date(Date.now() - 5_000);
+    const expiredAddedAt = new Date(expiredAt.getTime() - expectedRetentionMs - 5_000);
+    await prisma.photoIntervention.update({
+      where: { idPhotoIntervention: photoId },
+      data: { dateAjout: expiredAddedAt, dateExpiration: expiredAt },
+    });
+
+    const purgeResult = await purge.purgeExpiredMedia(1, { interventionPhotoIds: [photoId] });
+    assert.deepEqual(purgeResult, {
+      scannedSignalement: 0,
+      scannedIntervention: 1,
+      purgedSignalement: 0,
+      purgedIntervention: 1,
+      skipped: 0,
+      failed: 0,
+    }, 'Scoped purge must remove only the synthetic intervention photo.');
+
+    const purgedPhoto = await prisma.photoIntervention.findUnique({
+      where: { idPhotoIntervention: photoId },
+      select: { mediaPurgeAt: true, dateExpiration: true },
+    });
+    assert.ok(purgedPhoto && purgedPhoto.mediaPurgeAt, 'Purge must mark the synthetic intervention photo metadata.');
+    assert.ok(purgedPhoto.dateExpiration <= new Date(), 'Synthetic intervention photo must remain expired after purge.');
+
+    const storageAfterPurge = await storageAdmin.storage.from(STORAGE_BUCKET).download(photo.referencePhoto);
+    assert.ok(storageAfterPurge.error, 'Purged intervention object must no longer be downloadable from private Storage.');
+    expectStatus(
+      await api(verifierToken, photoUrlPath(photoId)),
+      404,
+      'Verifier signed URL after intervention media purge',
+    );
+    purgeCompleted = true;
+
+    const auditEvents = await prisma.$queryRawUnsafe(
+      "SELECT action_code AS \"actionCode\", entity_type AS \"entityType\", entity_id AS \"entityId\", metadata " +
+      "FROM audit.evenement_metier " +
+      "WHERE action_code = 'PHOTO_INTERVENTION_PURGEE' " +
+      "AND entity_type = 'INTERVENTION' " +
+      'AND entity_id = $1::uuid',
+      interventionId,
+    );
+    assert.ok(
+      auditEvents.length > 0,
+      'Scoped purge must append PHOTO_INTERVENTION_PURGEE to the business audit ledger.',
+    );
+
+    console.log(
+      'PASS intervention media lifecycle: API upload -> private Storage -> verifier-only 60s signed URL -> 365-day expiry -> targeted purge -> Storage deletion -> audit.',
+    );
+    return submitted;
+  } finally {
+    if (photoId && !purgeCompleted) {
+      try {
+        const cleanupExpiredAt = new Date(Date.now() - 5_000);
+        const cleanupAddedAt = new Date(
+          cleanupExpiredAt.getTime() - (365 * 24 * 60 * 60 * 1000) - 5_000,
+        );
+        await prisma.photoIntervention.updateMany({
+          where: { idPhotoIntervention: photoId, mediaPurgeAt: null },
+          data: { dateAjout: cleanupAddedAt, dateExpiration: cleanupExpiredAt },
+        });
+        const cleanup = await purge.purgeExpiredMedia(1, { interventionPhotoIds: [photoId] });
+        if (cleanup.failed > 0 || cleanup.purgedIntervention > 1) {
+          console.error('INTERVENTION_MEDIA_E2E_CLEANUP=INCOMPLETE');
+        }
+      } catch {
+        console.error('INTERVENTION_MEDIA_E2E_CLEANUP=FAILED');
+      }
+    }
+    await app.close();
+  }
+}
+
 async function runBusinessJourney(tokens) {
   const citizen = tokens.get('CITOYEN');
   const qualification = tokens.get('AGENT_QUALIFICATION');
@@ -614,14 +794,12 @@ async function runBusinessJourney(tokens) {
   }), 'Start field intervention');
   assert.ok(intervention.idIntervention, 'Started intervention must expose idIntervention.');
 
-  const submittedIntervention = expectSuccess(await api(fieldAgent, '/interventions/' + intervention.idIntervention + '/submit', {
-    method: 'POST',
-    body: {
-      resultatIntervention: 'TERMINEE',
-      compteRendu: 'Intervention E2E staging terminée et prête pour vérification métier.',
-    },
-  }), 'Submit intervention report');
-  assert.equal(submittedIntervention.statutIntervention, 'SOUMISE');
+  const submittedIntervention = await verifyInterventionPhotoLifecycle(
+    fieldAgent,
+    verifier,
+    createdAssignment.idAffectation,
+    intervention.idIntervention,
+  );
 
   const pendingVerification = expectSuccess(
     await api(verifier, '/verification/pending?page=1&pageSize=100'),
