@@ -170,12 +170,12 @@ jobs:
             '
           docker run --rm --network host \
             --env STAGING_PRISMA_URL \
-            --volume "$RUNNER_TEMP/count-application-tables.sql:/restore/counts.sql:ro" \
+            --volume "$RUNNER_TEMP/count-application-tables.sql:/count-application-tables.sql:ro" \
             --volume "$RUNNER_TEMP/isieco-restore-drill:/backup" \
             postgres:17 sh -lc '
               set -eu
               psql "$STAGING_PRISMA_URL" --quiet --tuples-only --no-align \
-                --set ON_ERROR_STOP=1 --file=/restore/counts.sql \
+                --set ON_ERROR_STOP=1 --file=/count-application-tables.sql \
                 > "/backup/source-counts.txt"
               test -s "/backup/source-counts.txt"
             '
@@ -197,7 +197,7 @@ jobs:
             postgres:17 sh -lc '
               set -eu
               psql "$RESTORE_DATABASE_URL" --set ON_ERROR_STOP=1 \
-                --command "DROP SCHEMA IF EXISTS audit CASCADE; DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public AUTHORIZATION postgres;"
+                --command "DROP SCHEMA IF EXISTS audit CASCADE; DROP SCHEMA IF EXISTS public CASCADE;"
             '
           docker run --rm --network host \
             --env RESTORE_DATABASE_URL \
@@ -215,7 +215,7 @@ jobs:
             postgres:17 sh -lc '
               set -eu
               psql "$RESTORE_DATABASE_URL" --quiet --tuples-only --no-align \
-                --set ON_ERROR_STOP=1 --file=/restore/counts.sql \
+                --set ON_ERROR_STOP=1 --file=/count-application-tables.sql \
                 > /backup/restored-counts.txt
               diff -u /backup/source-counts.txt /backup/restored-counts.txt
             '
