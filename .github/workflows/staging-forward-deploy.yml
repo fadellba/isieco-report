@@ -44,6 +44,9 @@ jobs:
       STAGING_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
       STAGING_E2E_PASSWORD_SEED: ${{ secrets.STAGING_E2E_PASSWORD_SEED }}
       STAGING_API_BASE_URL: https://isieco-api-staging.onrender.com/api/v1
+      SUPABASE_SECRET_KEY: ${{ secrets.STAGING_SUPABASE_SECRET_KEY }}
+      SUPABASE_STORAGE_BUCKET: isieco-private-media
+      MEDIA_RETENTION_DAYS: "365"
 
     steps:
       - name: Wait for successful CI on this exact commit
@@ -87,7 +90,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for variable in DIRECT_URL DEPLOY_HOOK_URL STAGING_SUPABASE_ANON_KEY STAGING_E2E_PASSWORD_SEED; do
+          for variable in DIRECT_URL DEPLOY_HOOK_URL STAGING_SUPABASE_ANON_KEY STAGING_E2E_PASSWORD_SEED SUPABASE_SECRET_KEY; do
             if [ -z "${!variable:-}" ]; then
               echo "Required staging environment secret is missing: $variable"
               exit 1
@@ -107,6 +110,20 @@ jobs:
           }
           if (process.env.SUPABASE_URL !== 'https://mlhbdautaxufubaybzyt.supabase.co') {
             throw new Error('Unexpected Supabase project URL.');
+          }
+          if (process.env.SUPABASE_STORAGE_BUCKET !== 'isieco-private-media'
+            || process.env.MEDIA_RETENTION_DAYS !== '365') {
+            throw new Error('Unexpected staging media bucket or approved retention period.');
+          }
+          const secret = process.env.SUPABASE_SECRET_KEY;
+          if (secret.startsWith('sb_publishable_') || secret.startsWith('sb_anon_')) {
+            throw new Error('Storage requires a server-side Supabase secret, not a publishable key.');
+          }
+          if (!secret.startsWith('sb_secret_')) {
+            const payload = secret.split('.')[1];
+            if (!payload) throw new Error('Storage key must be an sb_secret key or legacy service_role JWT.');
+            const claims = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+            if (claims.role !== 'service_role') throw new Error('Legacy Supabase Storage key must have service_role.');
           }
           const hook = new URL(process.env.DEPLOY_HOOK_URL);
           if (hook.protocol !== 'https:' || hook.hostname !== 'api.render.com'
@@ -139,6 +156,9 @@ jobs:
 
       - name: Generate Prisma Client
         run: pnpm db:generate
+
+      - name: Build shared packages and API runtime for media E2E
+        run: pnpm build:packages && pnpm --filter @isieco/api build
 
       - name: Verify the only pending migrations are the reviewed additive set
         shell: bash
