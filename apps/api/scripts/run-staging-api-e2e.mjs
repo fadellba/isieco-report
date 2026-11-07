@@ -1,12 +1,23 @@
 import assert from 'node:assert/strict';
 import { createHmac, randomUUID } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
+import { NestFactory } from '@nestjs/core';
+import { PrismaService } from '../dist/database/prisma.service.js';
+import { MediaPurgeService } from '../dist/infrastructure/storage/media-purge.service.js';
+import { StorageMaintenanceModule } from '../dist/infrastructure/storage/storage-maintenance.module.js';
 
 const PROJECT_REF = 'mlhbdautaxufubaybzyt';
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://' + PROJECT_REF + '.supabase.co';
 const API_BASE_URL = process.env.STAGING_API_BASE_URL || 'https://isieco-api-staging.onrender.com/api/v1';
 const PASSWORD_SEED = process.env.STAGING_E2E_PASSWORD_SEED || '';
 const PUBLIC_KEY = process.env.STAGING_SUPABASE_ANON_KEY || '';
+const SECRET_KEY = process.env.SUPABASE_SECRET_KEY || '';
+const STORAGE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || '';
+const MEDIA_RETENTION_DAYS = Number(process.env.MEDIA_RETENTION_DAYS || '0');
+const REPORT_IMAGE_FIXTURE = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j6ZkAAAAASUVORK5CYII=',
+  'base64',
+);
 const RUN_ID = process.env.GITHUB_RUN_ID || ('manual-' + Date.now());
 const RUN_ATTEMPT = process.env.GITHUB_RUN_ATTEMPT || '1';
 
@@ -57,6 +68,33 @@ function validateTargets() {
   assert.ok(Buffer.byteLength(required(PASSWORD_SEED, 'STAGING_E2E_PASSWORD_SEED'), 'utf8') >= 32,
     'STAGING_E2E_PASSWORD_SEED must contain at least 32 bytes.');
   required(PUBLIC_KEY, 'STAGING_SUPABASE_ANON_KEY');
+  const secretKey = required(SECRET_KEY, 'SUPABASE_SECRET_KEY');
+  assert.equal(STORAGE_BUCKET, 'isieco-private-media', 'Unexpected private Storage bucket.');
+  assert.equal(MEDIA_RETENTION_DAYS, 365, 'Staging media retention must be 365 days.');
+
+  if (secretKey.startsWith('sb_publishable_') || secretKey.startsWith('sb_anon_')) {
+    throw new Error('SUPABASE_SECRET_KEY must be a server-side Storage secret.');
+  }
+  if (!secretKey.startsWith('sb_secret_')) {
+    const payload = secretKey.split('.')[1];
+    if (!payload) throw new Error('SUPABASE_SECRET_KEY must be an sb_secret key or legacy service_role JWT.');
+    try {
+      const claims = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+      if (claims.role !== 'service_role') throw new Error('SUPABASE_SECRET_KEY is not a service_role key.');
+    } catch (error) {
+      if (error instanceof SyntaxError) throw new Error('SUPABASE_SECRET_KEY is not a valid server-side key.');
+      throw error;
+    }
+  }
+
+  const databaseUrl = new URL(required(process.env.DATABASE_URL, 'DATABASE_URL'));
+  assert.ok(['postgres:', 'postgresql:'].includes(databaseUrl.protocol), 'DATABASE_URL must be PostgreSQL.');
+  assert.ok(databaseUrl.hostname.endsWith('.pooler.supabase.com'), 'DATABASE_URL must use the staging Session Pooler.');
+  assert.equal(databaseUrl.port, '5432', 'DATABASE_URL must use port 5432.');
+  assert.equal(decodeURIComponent(databaseUrl.username), 'postgres.' + PROJECT_REF, 'Unexpected staging database user.');
+  assert.equal(databaseUrl.pathname, '/postgres', 'DATABASE_URL must target the staging postgres database.');
+  assert.ok(['require', 'verify-ca', 'verify-full'].includes(databaseUrl.searchParams.get('sslmode')), 'DATABASE_URL must require TLS.');
+
 
   if (PUBLIC_KEY.startsWith('sb_secret_')) {
     throw new Error('Use the Supabase publishable/anon key, never the secret key, for E2E sign-in.');
@@ -91,6 +129,27 @@ async function api(token, path, options = {}) {
     method,
     headers: requestHeaders,
     body: body === undefined ? undefined : JSON.stringify(body),
+    signal: AbortSignal.timeout(25_000),
+  });
+  const raw = await response.text();
+  let parsed = null;
+  if (raw) {
+    try { parsed = JSON.parse(raw); } catch { parsed = raw.slice(0, 1000); }
+  }
+  return { status: response.status, body: parsed };
+}
+
+async function apiMultipart(token, path, fileBytes, filename, fields = {}) {
+  const form = new FormData();
+  form.set('file', new Blob([fileBytes], { type: 'image/png' }), filename);
+  for (const [key, value] of Object.entries(fields)) form.set(key, value);
+
+  const headers = { accept: 'application/json' };
+  if (token) headers.authorization = 'Bearer ' + token;
+  const response = await fetch(apiUrl(path), {
+    method: 'POST',
+    headers,
+    body: form,
     signal: AbortSignal.timeout(25_000),
   });
   const raw = await response.text();
@@ -224,6 +283,161 @@ async function ensureTeamAndMembership(tokens, wasteTypeId, terrainProfileId) {
   return team;
 }
 
+async function verifyReportPhotoLifecycle(citizenToken, reportId) {
+  const app = await NestFactory.createApplicationContext(StorageMaintenanceModule, {
+    logger: ['error', 'warn'],
+  });
+  const prisma = app.get(PrismaService);
+  const purge = app.get(MediaPurgeService);
+  const storageAdmin = createClient(SUPABASE_URL, SECRET_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+  });
+  let photoId = null;
+  let purgeVerified = false;
+
+  try {
+    const [expiredReports, expiredInterventions] = await Promise.all([
+      prisma.photoSignalement.count({
+        where: { dateExpiration: { lte: new Date() }, mediaPurgeAt: null },
+      }),
+      prisma.photoIntervention.count({
+        where: { dateExpiration: { lte: new Date() }, mediaPurgeAt: null },
+      }),
+    ]);
+    assert.equal(
+      expiredReports + expiredInterventions,
+      0,
+      'Refusing the synthetic purge test because unrelated expired media already exists in staging.',
+    );
+
+    const uploaded = expectSuccess(
+      await apiMultipart(
+        citizenToken,
+        '/reports/' + reportId + '/photos',
+        REPORT_IMAGE_FIXTURE,
+        'isieco-staging-media-e2e.png',
+        { description: 'Preuve synthétique de test Storage staging.' },
+      ),
+      'Upload synthetic report photo',
+    );
+    photoId = uploaded.idPhotoSignalement || uploaded.idPhoto;
+    assert.ok(photoId, 'Uploaded photo must expose its photo identifier.');
+
+    const photo = await prisma.photoSignalement.findUnique({
+      where: { idPhotoSignalement: photoId },
+      select: {
+        idPhotoSignalement: true,
+        idSignalement: true,
+        referencePhoto: true,
+        dateAjout: true,
+        dateExpiration: true,
+        mediaPurgeAt: true,
+      },
+    });
+    assert.ok(photo, 'Uploaded photo metadata must exist.');
+    assert.equal(photo.idSignalement, reportId, 'Synthetic photo must belong to the synthetic report.');
+    assert.ok(
+      photo.referencePhoto.startsWith('reports/' + reportId + '/'),
+      'Synthetic object must be in the exact report-scoped Storage prefix.',
+    );
+    const expectedRetentionMs = 365 * 24 * 60 * 60 * 1000;
+    const actualRetentionMs = photo.dateExpiration.getTime() - photo.dateAjout.getTime();
+    assert.ok(
+      Math.abs(actualRetentionMs - expectedRetentionMs) < 10_000,
+      'API must persist a 365-day media expiry from upload time.',
+    );
+
+    const signed = expectSuccess(
+      await api(citizenToken, '/reports/' + reportId + '/photos/' + photoId + '/url'),
+      'Create private signed photo URL',
+    );
+    assert.equal(signed.expiresInSeconds, 60, 'Signed URLs must expire after 60 seconds.');
+    assert.ok(typeof signed.signedUrl === 'string' && signed.signedUrl.startsWith('https://'));
+
+    const signedDownload = await fetch(signed.signedUrl, { signal: AbortSignal.timeout(25_000) });
+    assert.equal(signedDownload.status, 200, 'Private signed URL must allow authorized temporary download.');
+    assert.deepEqual(
+      Buffer.from(await signedDownload.arrayBuffer()),
+      REPORT_IMAGE_FIXTURE,
+      'Downloaded bytes must match the synthetic image uploaded through the API.',
+    );
+
+    const adminDownload = await storageAdmin.storage.from(STORAGE_BUCKET).download(photo.referencePhoto);
+    if (adminDownload.error || !adminDownload.data) {
+      throw new Error('Storage admin read could not verify the uploaded synthetic object.');
+    }
+    assert.deepEqual(
+      Buffer.from(await adminDownload.data.arrayBuffer()),
+      REPORT_IMAGE_FIXTURE,
+      'Stored object bytes must match the uploaded image.',
+    );
+
+    await prisma.photoSignalement.update({
+      where: { idPhotoSignalement: photoId },
+      data: { dateExpiration: new Date(Date.now() - 5_000) },
+    });
+
+    const purgeResult = await purge.purgeExpiredMedia(1, { reportPhotoIds: [photoId] });
+    assert.deepEqual(purgeResult, {
+      scannedSignalement: 1,
+      scannedIntervention: 0,
+      purgedSignalement: 1,
+      purgedIntervention: 0,
+      skipped: 0,
+      failed: 0,
+    }, 'Scoped purge must remove only the synthetic report photo.');
+
+    const purgedPhoto = await prisma.photoSignalement.findUnique({
+      where: { idPhotoSignalement: photoId },
+      select: { mediaPurgeAt: true, dateExpiration: true },
+    });
+    assert.ok(purgedPhoto && purgedPhoto.mediaPurgeAt, 'Purge must mark the synthetic photo metadata.');
+    assert.ok(purgedPhoto.dateExpiration <= new Date(), 'Synthetic photo must remain expired after purge.');
+
+    const storageAfterPurge = await storageAdmin.storage.from(STORAGE_BUCKET).download(photo.referencePhoto);
+    assert.ok(storageAfterPurge.error, 'Purged synthetic object must no longer be downloadable from private Storage.');
+
+    const newSignedUrl = await api(
+      citizenToken,
+      '/reports/' + reportId + '/photos/' + photoId + '/url',
+    );
+    expectStatus(newSignedUrl, 404, 'Signed URL after media purge');
+
+    const auditEvents = await prisma.$queryRawUnsafe(
+      `SELECT action_code AS "actionCode", entity_type AS "entityType", entity_id AS "entityId", metadata
+       FROM audit.evenement_metier
+       WHERE action_code = 'PHOTO_SIGNALEMENT_PURGEE'
+         AND entity_type = 'SIGNALEMENT'
+         AND entity_id = $1::uuid`,
+      reportId,
+    );
+    assert.ok(
+      auditEvents.length > 0,
+      'Scoped purge must append PHOTO_SIGNALEMENT_PURGEE to the business audit ledger.',
+    );
+    purgeVerified = true;
+    console.log(
+      'PASS media lifecycle: API upload -> private 60s signed URL -> 365-day expiry -> targeted purge -> Storage deletion -> audit.',
+    );
+  } finally {
+    if (photoId && !purgeVerified) {
+      try {
+        await prisma.photoSignalement.updateMany({
+          where: { idPhotoSignalement: photoId, mediaPurgeAt: null },
+          data: { dateExpiration: new Date(Date.now() - 5_000) },
+        });
+        const cleanup = await purge.purgeExpiredMedia(1, { reportPhotoIds: [photoId] });
+        if (cleanup.failed > 0 || cleanup.purgedSignalement > 1) {
+          console.error('MEDIA_E2E_CLEANUP=INCOMPLETE');
+        }
+      } catch {
+        console.error('MEDIA_E2E_CLEANUP=FAILED');
+      }
+    }
+    await app.close();
+  }
+}
+
 async function runBusinessJourney(tokens) {
   const citizen = tokens.get('CITOYEN');
   const qualification = tokens.get('AGENT_QUALIFICATION');
@@ -264,6 +478,8 @@ async function runBusinessJourney(tokens) {
 
   const ownReport = expectSuccess(await api(citizen, '/reports/' + report.idSignalement), 'Read own report');
   assert.equal(ownReport.statutSignalement, 'SOUMIS');
+
+  await verifyReportPhotoLifecycle(citizen, report.idSignalement);
 
   const qualificationQueue = expectSuccess(
     await api(qualification, '/qualification/queue?page=1&pageSize=100'),
