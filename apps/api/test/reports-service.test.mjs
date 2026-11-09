@@ -173,7 +173,12 @@ test('answers an open supplement in the same transaction as the report status ch
 
 test('does not reveal a report owned by another citizen', async () => {
   const prisma = basePrisma();
-  prisma.signalement.findFirst = async () => null;
+  let lookup;
+  prisma.signalement.findFirst = async ({ where }) => {
+    lookup = where;
+    return null;
+  };
   const service = new ReportsService(prisma, {});
   await assert.rejects(service.getMine(reportId, authId), NotFoundException);
+  assert.deepEqual(lookup, { idSignalement: reportId, idUtilisateur: userId });
 });
