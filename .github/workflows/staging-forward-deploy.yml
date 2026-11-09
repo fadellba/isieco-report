@@ -227,5 +227,5 @@ jobs:
           grep -qi "swagger-ui" /tmp/staging-swagger.html
           echo "Liveness and Swagger smoke checks passed."
 
-      - name: Run eight-role matrix and citizen-to-verification E2E journey
+      - name: Run eight-role matrix, cross-citizen isolation, and citizen-to-closure E2E journey
         run: node apps/api/scripts/run-staging-api-e2e.mjs
