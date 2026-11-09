@@ -270,7 +270,7 @@ export class CasesService {
         metadata
       FROM audit.evenement_metier
       WHERE dossier_id = ${idDossier}::uuid
-      ORDER BY occurred_at DESC, id DESC
+      ORDER BY occurred_at DESC, event_sequence DESC
     `;
   }
 
