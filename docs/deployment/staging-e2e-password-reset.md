@@ -1,6 +1,6 @@
 # Réinitialiser les mots de passe des comptes E2E staging
 
-Cette procédure applique un mot de passe temporaire commun aux huit comptes E2E isolés du projet Supabase staging `mlhbdautaxufubaybzyt`. Elle ne modifie ni les profils métier ni les rôles.
+Cette procédure applique un mot de passe temporaire commun aux neuf comptes E2E isolés du projet Supabase staging `mlhbdautaxufubaybzyt`. Elle ne modifie ni les profils métier ni les rôles.
 
 ## Préparer le secret
 
@@ -8,7 +8,7 @@ Dans GitHub, ouvrir **Settings → Environments → staging → Environment secr
 
 | Secret | Valeur |
 |---|---|
-| `STAGING_E2E_SHARED_PASSWORD` | Mot de passe temporaire choisi pour les huit comptes, 16 octets minimum |
+| `STAGING_E2E_SHARED_PASSWORD` | Mot de passe temporaire choisi pour les neuf comptes, 16 octets minimum |
 
 Saisir le secret directement dans GitHub. Ne pas le mettre dans le dépôt, les variables publiques, les issues ou les messages. Le workflow n'imprime jamais sa valeur.
 
@@ -19,17 +19,18 @@ Les deux secrets déjà utilisés par l'E2E doivent également être présents d
 1. Ouvrir **Actions → Staging E2E Reset All Passwords**.
 2. Choisir la branche `main`.
 3. Choisir `RESET_ALL`, puis lancer le workflow.
-4. Attendre la conclusion `success`. Le job met à jour les huit comptes explicitement autorisés puis vérifie une connexion Supabase Auth pour chacun.
+4. Attendre la conclusion `success`. Le job met à jour les neuf comptes explicitement autorisés puis vérifie une connexion Supabase Auth pour chacun.
 
 Le workflow refuse toute autre branche, tout projet Supabase autre que le staging attendu, tout compte dépourvu du marqueur `app_metadata.isieco_seed`, et toute liste incomplète. Le choix par défaut est `NO`.
 
 ## Comptes disponibles
 
-Le mot de passe temporaire est identique pour ces huit comptes :
+Le mot de passe temporaire est identique pour ces neuf comptes :
 
 | Rôle | Identifiant |
 |---|---|
-| Citoyen | `e2e.citoyen@staging.isieco.test` |
+| Citoyen principal | `e2e.citoyen@staging.isieco.test` |
+| Citoyen secondaire | `e2e.citoyen-secondaire@staging.isieco.test` |
 | Agent qualification | `e2e.agent-qualification@staging.isieco.test` |
 | Responsable traitement | `e2e.responsable-traitement@staging.isieco.test` |
 | Responsable affectation | `e2e.responsable-affectation@staging.isieco.test` |
