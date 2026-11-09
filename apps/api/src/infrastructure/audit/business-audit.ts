@@ -156,6 +156,7 @@ export async function associateReportEventsWithCase(
     WHERE source.entity_type = 'SIGNALEMENT'
       AND source.entity_id = ${reportId}::uuid
       AND source.dossier_id IS NULL
+    ORDER BY source.occurred_at ASC, source.event_sequence ASC
     ON CONFLICT (source_event_id, dossier_id)
       WHERE source_event_id IS NOT NULL
     DO NOTHING
