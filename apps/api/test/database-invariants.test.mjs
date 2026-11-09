@@ -325,3 +325,84 @@ test('business audit ledger is private and append-only', { skip: !databaseUrl },
     await pool.end();
   }
 });
+
+
+test('business audit preserves same-transaction event order when copied to a dossier', { skip: !databaseUrl }, async () => {
+  const pool = new Pool({ connectionString: databaseUrl, max: 1 });
+  const client = await pool.connect();
+  const reportId = randomUUID();
+  const dossierId = randomUUID();
+  const sameTimestamp = new Date('2026-11-05T12:00:00.000Z');
+
+  try {
+    await client.query('BEGIN');
+    await client.query(
+      `INSERT INTO audit.evenement_metier
+        (occurred_at, action_code, entity_type, entity_id, metadata)
+       VALUES
+        ($1, 'SIGNALEMENT_SOUMIS', 'SIGNALEMENT', $2, '{}'::jsonb),
+        ($1, 'SIGNALEMENT_QUALIFIE', 'SIGNALEMENT', $2, '{}'::jsonb)`,
+      [sameTimestamp, reportId],
+    );
+
+    const sourceEvents = await client.query(
+      `SELECT action_code, event_sequence
+         FROM audit.evenement_metier
+        WHERE entity_type = 'SIGNALEMENT'
+          AND entity_id = $1
+          AND dossier_id IS NULL
+        ORDER BY occurred_at ASC, event_sequence ASC`,
+      [reportId],
+    );
+    assert.deepEqual(
+      sourceEvents.rows.map((row) => row.action_code),
+      ['SIGNALEMENT_SOUMIS', 'SIGNALEMENT_QUALIFIE'],
+    );
+    assert.ok(
+      BigInt(sourceEvents.rows[0].event_sequence) < BigInt(sourceEvents.rows[1].event_sequence),
+      'The sequence must preserve insertion order for events sharing a transaction timestamp.',
+    );
+
+    await client.query(
+      `INSERT INTO audit.evenement_metier (
+         occurred_at, actor_id, action_code, entity_type, entity_id,
+         dossier_id, reason, correlation_id, source_event_id, metadata
+       )
+       SELECT
+         source.occurred_at, source.actor_id, source.action_code, source.entity_type,
+         source.entity_id, $2, source.reason, source.correlation_id, source.id, source.metadata
+       FROM audit.evenement_metier AS source
+       WHERE source.entity_type = 'SIGNALEMENT'
+         AND source.entity_id = $1
+         AND source.dossier_id IS NULL
+       ORDER BY source.occurred_at ASC, source.event_sequence ASC
+       ON CONFLICT (source_event_id, dossier_id)
+         WHERE source_event_id IS NOT NULL
+       DO NOTHING`,
+      [reportId, dossierId],
+    );
+
+    const copiedEvents = await client.query(
+      `SELECT action_code, event_sequence
+         FROM audit.evenement_metier
+        WHERE dossier_id = $1
+          AND entity_type = 'SIGNALEMENT'
+          AND entity_id = $2
+          AND source_event_id IS NOT NULL
+        ORDER BY occurred_at ASC, event_sequence ASC`,
+      [dossierId, reportId],
+    );
+    assert.deepEqual(
+      copiedEvents.rows.map((row) => row.action_code),
+      ['SIGNALEMENT_SOUMIS', 'SIGNALEMENT_QUALIFIE'],
+    );
+    assert.ok(
+      BigInt(copiedEvents.rows[0].event_sequence) < BigInt(copiedEvents.rows[1].event_sequence),
+      'Copied history must retain the source event order.',
+    );
+  } finally {
+    await client.query('ROLLBACK');
+    client.release();
+    await pool.end();
+  }
+});
