@@ -8,6 +8,7 @@ const PAGE_SIZE = 1000;
 
 const accounts = [
   { email: 'e2e.citoyen@staging.isieco.test', role: 'CITOYEN' },
+  { email: 'e2e.citoyen-secondaire@staging.isieco.test', role: 'CITOYEN' },
   { email: 'e2e.agent-qualification@staging.isieco.test', role: 'AGENT_QUALIFICATION' },
   { email: 'e2e.responsable-traitement@staging.isieco.test', role: 'RESPONSABLE_TRAITEMENT' },
   { email: 'e2e.responsable-affectation@staging.isieco.test', role: 'RESPONSABLE_AFFECTATION' },
@@ -148,7 +149,7 @@ async function main() {
     await verifier.auth.signOut({ scope: 'local' });
   }
 
-  console.log('PASS: all 8 isolated staging E2E accounts have the temporary password and login was verified.');
+  console.log('PASS: all 9 isolated staging E2E accounts have the temporary password and login was verified.');
   for (const account of targets) {
     console.log(account.role + ': ' + account.email);
   }
