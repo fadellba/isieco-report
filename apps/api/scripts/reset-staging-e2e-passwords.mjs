@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHmac } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 
 const PROJECT_REF = 'mlhbdautaxufubaybzyt';
@@ -8,6 +9,7 @@ const PAGE_SIZE = 1000;
 
 const accounts = [
   { email: 'e2e.citoyen@staging.isieco.test', role: 'CITOYEN' },
+  { email: 'e2e.citoyen-secondaire@staging.isieco.test', role: 'CITOYEN' },
   { email: 'e2e.agent-qualification@staging.isieco.test', role: 'AGENT_QUALIFICATION' },
   { email: 'e2e.responsable-traitement@staging.isieco.test', role: 'RESPONSABLE_TRAITEMENT' },
   { email: 'e2e.responsable-affectation@staging.isieco.test', role: 'RESPONSABLE_AFFECTATION' },
@@ -60,12 +62,18 @@ function validateTargets() {
     assert.notEqual(claims.role, 'service_role', 'The verification key must not be service_role.');
   }
 
-  const password = requiredEnv('STAGING_E2E_SHARED_PASSWORD');
+  const passwordSeed = requiredEnv('STAGING_E2E_PASSWORD_SEED');
   assert.ok(
-    Buffer.byteLength(password, 'utf8') >= 16,
-    'STAGING_E2E_SHARED_PASSWORD must contain at least 16 bytes.',
+    Buffer.byteLength(passwordSeed, 'utf8') >= 32,
+    'STAGING_E2E_PASSWORD_SEED must contain at least 32 bytes.',
   );
-  return { secretKey, publicKey, password };
+  return { secretKey, publicKey, passwordSeed };
+}
+
+function passwordForRole(role, seed) {
+  return createHmac('sha256', seed)
+    .update('isieco-staging-e2e:' + role)
+    .digest('base64url') + 'A1!';
 }
 
 async function listAllUsers(admin) {
@@ -83,7 +91,7 @@ async function listAllUsers(admin) {
 }
 
 async function main() {
-  const { secretKey, publicKey, password } = validateTargets();
+  const { secretKey, publicKey, passwordSeed } = validateTargets();
 
   const admin = createClient(SUPABASE_URL, secretKey, {
     auth: {
@@ -112,7 +120,7 @@ async function main() {
 
   for (const account of targets) {
     const { data, error } = await admin.auth.admin.updateUserById(account.userId, {
-      password,
+      password: passwordForRole(account.role, passwordSeed),
     });
     if (error || !data.user) {
       throw new Error(
@@ -138,7 +146,7 @@ async function main() {
     });
     const { data, error } = await verifier.auth.signInWithPassword({
       email: account.email,
-      password,
+      password: passwordForRole(account.role, passwordSeed),
     });
     if (error || !data.session) {
       throw new Error(
@@ -148,7 +156,7 @@ async function main() {
     await verifier.auth.signOut({ scope: 'local' });
   }
 
-  console.log('PASS: all 8 isolated staging E2E accounts have the temporary password and login was verified.');
+  console.log('PASS: all 9 isolated staging E2E accounts have role-derived passwords and login was verified.');
   for (const account of targets) {
     console.log(account.role + ': ' + account.email);
   }
