@@ -857,7 +857,7 @@ async function runBusinessJourney(tokens) {
 async function main() {
   validateTargets();
   console.log('Staging target: ' + API_BASE_URL);
-  console.log('Signing in the eight pre-provisioned staging E2E identities.');
+  console.log('Signing in the nine pre-provisioned staging E2E identities.');
   const ready = await api(null, '/health/ready');
   const readyBody = expectStatus(ready, 200, 'Staging API readiness');
   assert.equal(readyBody.status, 'ok');
