@@ -725,6 +725,11 @@ async function runBusinessJourney(tokens) {
 
   const ownReport = expectSuccess(await api(citizen, '/reports/' + report.idSignalement), 'Read own report');
   assert.equal(ownReport.statutSignalement, 'SOUMIS');
+  expectStatus(
+    await api(tokens.get('AGENT_QUALIFICATION'), '/reports/' + report.idSignalement),
+    403,
+    'A non-citizen role must not read a citizen-owned report',
+  );
 
   await verifyReportPhotoLifecycle(citizen, report.idSignalement);
 
@@ -831,10 +836,31 @@ async function runBusinessJourney(tokens) {
     'Read business case history',
   );
   assert.ok(Array.isArray(history), 'Case history must be an array.');
-  const actions = new Set(history.map((event) => event.actionCode));
-  assert.ok(actions.has('DOSSIER_CREE'), 'Business ledger must include DOSSIER_CREE.');
-  assert.ok(actions.has('DOSSIER_CLOTURE'), 'Business ledger must include DOSSIER_CLOTURE.');
-
+  const chronologicalHistory = [...history].reverse();
+  const requiredChronology = [
+    'SIGNALEMENT_SOUMIS',
+    'SIGNALEMENT_QUALIFIE',
+    'DOSSIER_CREE',
+    'SIGNALEMENT_RATTACHE',
+    'AFFECTATION_CREEE',
+    'AFFECTATION_ACCEPTEE',
+    'INTERVENTION_DEMARREE',
+    'INTERVENTION_SOUMISE',
+    'VERIFICATION_CONFORME',
+    'DOSSIER_CLOTURE',
+  ];
+  let previousIndex = -1;
+  for (const actionCode of requiredChronology) {
+    const nextIndex = chronologicalHistory.findIndex(
+      (event, index) => index > previousIndex && event.actionCode === actionCode,
+    );
+    assert.ok(
+      nextIndex > previousIndex,
+      'Business audit history must contain ' + actionCode + ' after the preceding lifecycle event.',
+    );
+    previousIndex = nextIndex;
+  }
+  console.log('PASS audit chronology: pre-dossier report events are retained and lifecycle events remain causally ordered.');
   console.log('PASS business journey: citizen report -> qualification -> case -> assignment -> field intervention -> verification -> closure.');
   console.log('E2E_FIXTURE report=' + report.idSignalement +
     ' case=' + createdCase.idDossier +
