@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       seed_staging_test_users:
-        description: "Select CREATE to provision the eight isolated role accounts in staging."
+        description: "Select CREATE to provision the nine isolated test accounts in staging."
         required: true
         type: choice
         options:
@@ -78,5 +78,5 @@ jobs:
       - name: Validate seed script syntax
         run: node --check apps/api/scripts/seed-staging-e2e-users.mjs
 
-      - name: Provision and verify eight isolated test users
+      - name: Provision and verify nine isolated test users
         run: pnpm --filter @isieco/api seed:staging:e2e-users
