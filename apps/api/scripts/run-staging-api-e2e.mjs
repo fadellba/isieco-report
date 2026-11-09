@@ -23,14 +23,15 @@ const RUN_ID = process.env.GITHUB_RUN_ID || ('manual-' + Date.now());
 const RUN_ATTEMPT = process.env.GITHUB_RUN_ATTEMPT || '1';
 
 const accounts = [
-  { email: 'e2e.citoyen@staging.isieco.test', role: 'CITOYEN' },
-  { email: 'e2e.agent-qualification@staging.isieco.test', role: 'AGENT_QUALIFICATION' },
-  { email: 'e2e.responsable-traitement@staging.isieco.test', role: 'RESPONSABLE_TRAITEMENT' },
-  { email: 'e2e.responsable-affectation@staging.isieco.test', role: 'RESPONSABLE_AFFECTATION' },
-  { email: 'e2e.agent-terrain@staging.isieco.test', role: 'AGENT_TERRAIN' },
-  { email: 'e2e.verificateur-cloture@staging.isieco.test', role: 'VERIFICATEUR_CLOTURE' },
-  { email: 'e2e.gestionnaire-referentiel@staging.isieco.test', role: 'GESTIONNAIRE_REFERENTIEL' },
-  { email: 'e2e.administrateur-comptes@staging.isieco.test', role: 'ADMINISTRATEUR_COMPTES' },
+  { key: 'CITOYEN', email: 'e2e.citoyen@staging.isieco.test', role: 'CITOYEN' },
+  { key: 'CITOYEN_SECONDARY', email: 'e2e.citoyen-secondaire@staging.isieco.test', role: 'CITOYEN' },
+  { key: 'AGENT_QUALIFICATION', email: 'e2e.agent-qualification@staging.isieco.test', role: 'AGENT_QUALIFICATION' },
+  { key: 'RESPONSABLE_TRAITEMENT', email: 'e2e.responsable-traitement@staging.isieco.test', role: 'RESPONSABLE_TRAITEMENT' },
+  { key: 'RESPONSABLE_AFFECTATION', email: 'e2e.responsable-affectation@staging.isieco.test', role: 'RESPONSABLE_AFFECTATION' },
+  { key: 'AGENT_TERRAIN', email: 'e2e.agent-terrain@staging.isieco.test', role: 'AGENT_TERRAIN' },
+  { key: 'VERIFICATEUR_CLOTURE', email: 'e2e.verificateur-cloture@staging.isieco.test', role: 'VERIFICATEUR_CLOTURE' },
+  { key: 'GESTIONNAIRE_REFERENTIEL', email: 'e2e.gestionnaire-referentiel@staging.isieco.test', role: 'GESTIONNAIRE_REFERENTIEL' },
+  { key: 'ADMINISTRATEUR_COMPTES', email: 'e2e.administrateur-comptes@staging.isieco.test', role: 'ADMINISTRATEUR_COMPTES' },
 ];
 
 const protectedReadRoutes = [
@@ -193,7 +194,7 @@ async function signInAccounts() {
       throw new Error('Supabase sign-in failed for role ' + account.role + ': ' +
         (result.error ? result.error.message : 'No access token returned'));
     }
-    tokens.set(account.role, result.data.session.access_token);
+    tokens.set(account.key, result.data.session.access_token);
   }
   return tokens;
 }
@@ -205,14 +206,14 @@ async function verifyRoleMatrix(tokens) {
 
     const results = await Promise.all(accounts.map(async (account) => ({
       role: account.role,
-      result: await api(tokens.get(account.role), route.path),
+      result: await api(tokens.get(account.key), route.path),
     })));
 
     for (const item of results) {
       const expected = item.role === route.role ? 200 : 403;
       expectStatus(item.result, expected, item.role + ' -> ' + route.path);
     }
-    console.log('PASS role matrix: ' + route.path + ' allows ' + route.role + '; denies the other 7 roles.');
+    console.log('PASS role matrix: ' + route.path + ' allows ' + route.role + '; denies every non-authorized identity.');
   }
   console.log('PASS access-control matrix: ' + (protectedReadRoutes.length * accounts.length) +
     ' role/route checks and ' + protectedReadRoutes.length + ' anonymous checks.');
@@ -323,7 +324,7 @@ async function purgePreviousSyntheticMedia(prisma, purge) {
   console.log('PASS cleanup: purged ' + photoIds.length + ' prior synthetic staging media fixture(s).');
 }
 
-async function verifyReportPhotoLifecycle(citizenToken, reportId) {
+async function verifyReportPhotoLifecycle(citizenToken, reportId, otherCitizenToken) {
   const app = await NestFactory.createApplicationContext(StorageMaintenanceModule, {
     logger: ['error', 'warn'],
   });
@@ -363,6 +364,11 @@ async function verifyReportPhotoLifecycle(citizenToken, reportId) {
     );
     photoId = uploaded.idPhotoSignalement || uploaded.idPhoto;
     assert.ok(photoId, 'Uploaded photo must expose its photo identifier.');
+    expectStatus(
+      await api(otherCitizenToken, '/reports/' + reportId + '/photos/' + photoId + '/url'),
+      404,
+      'A second citizen must not obtain another citizen private photo URL',
+    );
 
     const photo = await prisma.photoSignalement.findUnique({
       where: { idPhotoSignalement: photoId },
@@ -687,6 +693,7 @@ async function verifyInterventionPhotoLifecycle(fieldAgentToken, verifierToken, 
 
 async function runBusinessJourney(tokens) {
   const citizen = tokens.get('CITOYEN');
+  const secondaryCitizen = tokens.get('CITOYEN_SECONDARY');
   const qualification = tokens.get('AGENT_QUALIFICATION');
   const treatment = tokens.get('RESPONSABLE_TRAITEMENT');
   const assignmentManager = tokens.get('RESPONSABLE_AFFECTATION');
@@ -725,8 +732,13 @@ async function runBusinessJourney(tokens) {
 
   const ownReport = expectSuccess(await api(citizen, '/reports/' + report.idSignalement), 'Read own report');
   assert.equal(ownReport.statutSignalement, 'SOUMIS');
+  expectStatus(
+    await api(secondaryCitizen, '/reports/' + report.idSignalement),
+    404,
+    'A second citizen must not read another citizen report',
+  );
 
-  await verifyReportPhotoLifecycle(citizen, report.idSignalement);
+  await verifyReportPhotoLifecycle(citizen, report.idSignalement, secondaryCitizen);
 
   const qualificationQueue = expectSuccess(
     await api(qualification, '/qualification/queue?page=1&pageSize=100'),
