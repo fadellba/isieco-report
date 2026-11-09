@@ -1,35 +1,28 @@
 # Réinitialiser les mots de passe des comptes E2E staging
 
-Cette procédure applique un mot de passe temporaire commun aux huit comptes E2E isolés du projet Supabase staging `mlhbdautaxufubaybzyt`. Elle ne modifie ni les profils métier ni les rôles.
+Cette procédure restaure les mots de passe déterministes attendus par le parcours E2E pour les neuf identités isolées du projet Supabase staging `mlhbdautaxufubaybzyt`. Les deux comptes citoyens partagent le mot de passe dérivé du rôle `CITOYEN`; leurs identités Auth et profils métier restent distincts.
 
-## Préparer le secret
+## Secret utilisé
 
-Dans GitHub, ouvrir **Settings → Environments → staging → Environment secrets** et ajouter :
+Le workflow utilise le secret existant `STAGING_E2E_PASSWORD_SEED` dans **Settings → Environments → staging → Environment secrets**. Il doit contenir au moins 32 octets. C'est le même secret que celui déjà utilisé par le workflow de provisionnement et le parcours E2E.
 
-| Secret | Valeur |
-|---|---|
-| `STAGING_E2E_SHARED_PASSWORD` | Mot de passe temporaire choisi pour les huit comptes, 16 octets minimum |
-
-Saisir le secret directement dans GitHub. Ne pas le mettre dans le dépôt, les variables publiques, les issues ou les messages. Le workflow n'imprime jamais sa valeur.
-
-Les deux secrets déjà utilisés par l'E2E doivent également être présents dans l'environnement `staging` : `STAGING_SUPABASE_SECRET_KEY` et `STAGING_SUPABASE_ANON_KEY`.
+Aucun mot de passe n'est affiché. Le secret n'est jamais écrit dans le dépôt ou les logs. Le secret historique `STAGING_E2E_SHARED_PASSWORD` n'est plus nécessaire à cette procédure.
 
 ## Lancer la réinitialisation
 
 1. Ouvrir **Actions → Staging E2E Reset All Passwords**.
 2. Choisir la branche `main`.
 3. Choisir `RESET_ALL`, puis lancer le workflow.
-4. Attendre la conclusion `success`. Le job met à jour les huit comptes explicitement autorisés puis vérifie une connexion Supabase Auth pour chacun.
+4. Attendre la conclusion `success`. Le job met à jour les neuf comptes explicitement autorisés puis vérifie une connexion Supabase Auth pour chacun avec le mot de passe dérivé de son rôle.
 
 Le workflow refuse toute autre branche, tout projet Supabase autre que le staging attendu, tout compte dépourvu du marqueur `app_metadata.isieco_seed`, et toute liste incomplète. Le choix par défaut est `NO`.
 
 ## Comptes disponibles
 
-Le mot de passe temporaire est identique pour ces huit comptes :
-
 | Rôle | Identifiant |
 |---|---|
-| Citoyen | `e2e.citoyen@staging.isieco.test` |
+| Citoyen principal | `e2e.citoyen@staging.isieco.test` |
+| Citoyen secondaire, pour les tests d'isolation inter-utilisateurs | `e2e.citoyen-secondaire@staging.isieco.test` |
 | Agent qualification | `e2e.agent-qualification@staging.isieco.test` |
 | Responsable traitement | `e2e.responsable-traitement@staging.isieco.test` |
 | Responsable affectation | `e2e.responsable-affectation@staging.isieco.test` |
@@ -38,11 +31,4 @@ Le mot de passe temporaire est identique pour ces huit comptes :
 | Gestionnaire référentiel | `e2e.gestionnaire-referentiel@staging.isieco.test` |
 | Administrateur comptes | `e2e.administrateur-comptes@staging.isieco.test` |
 
-Ce mot de passe partagé est une facilité temporaire pour la recette staging, pas un modèle à reprendre en production. Pendant son utilisation, les prochains parcours E2E automatisés qui attendent les mots de passe propres à chaque rôle ne pourront pas s'authentifier.
-
-**Après la recette**, rétablir les mots de passe distincts attendus par l'E2E :
-1. Ouvrir **Actions → Staging E2E Test Users**.
-2. Depuis `main`, choisir `CREATE` et lancer le workflow.
-3. Ce workflow réattribue à chaque rôle son mot de passe dérivé de `STAGING_E2E_PASSWORD_SEED`, sans afficher les mots de passe.
-
-Les secrets sensibles sont transmis uniquement aux étapes de validation et de réinitialisation, pas à l'installation des dépendances. Aucun mot de passe ni secret n'est écrit dans le dépôt ou les logs.
+Après un changement temporaire de mot de passe, relancer ce workflow pour restaurer les identifiants dérivés attendus par l'E2E. Le workflow de provisionnement **Staging E2E Test Users** utilise le même secret et peut également remettre les neuf comptes dans cet état.
