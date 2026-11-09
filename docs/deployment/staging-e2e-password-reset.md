@@ -44,6 +44,6 @@ Ce mot de passe partagé est une facilité temporaire pour la recette staging, p
 **Après la recette**, rétablir les mots de passe distincts attendus par l'E2E :
 1. Ouvrir **Actions → Staging E2E Test Users**.
 2. Depuis `main`, choisir `CREATE` et lancer le workflow.
-3. Ce workflow réattribue à chaque rôle son mot de passe dérivé de `STAGING_E2E_PASSWORD_SEED`, sans afficher les mots de passe.
+3. Ce workflow réattribue à chaque compte son mot de passe dérivé du code rôle ou de sa clé de compte secondaire dans `STAGING_E2E_PASSWORD_SEED`, sans afficher les mots de passe.
 
 Les secrets sensibles sont transmis uniquement aux étapes de validation et de réinitialisation, pas à l'installation des dépendances. Aucun mot de passe ni secret n'est écrit dans le dépôt ou les logs.
