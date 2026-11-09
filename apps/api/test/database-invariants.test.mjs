@@ -325,3 +325,63 @@ test('business audit ledger is private and append-only', { skip: !databaseUrl },
     await pool.end();
   }
 });
+
+
+test('business audit ledger preserves insertion order for events sharing a transaction timestamp', { skip: !databaseUrl }, async () => {
+  const pool = new Pool({ connectionString: databaseUrl, max: 1 });
+  const client = await pool.connect();
+  const reportId = randomUUID();
+  const firstEventId = randomUUID();
+  const secondEventId = randomUUID();
+  let transactionOpen = false;
+
+  try {
+    await client.query('BEGIN');
+    transactionOpen = true;
+
+    const first = await client.query(
+      `INSERT INTO audit.evenement_metier
+        (id, action_code, entity_type, entity_id, metadata)
+       VALUES ($1, 'SIGNALEMENT_SOUMIS', 'SIGNALEMENT', $2, '{}'::jsonb)
+       RETURNING occurred_at, event_order`,
+      [firstEventId, reportId],
+    );
+    const second = await client.query(
+      `INSERT INTO audit.evenement_metier
+        (id, action_code, entity_type, entity_id, metadata)
+       VALUES ($1, 'SIGNALEMENT_QUALIFIE', 'SIGNALEMENT', $2, '{}'::jsonb)
+       RETURNING occurred_at, event_order`,
+      [secondEventId, reportId],
+    );
+
+    assert.equal(
+      first.rows[0].occurred_at.toISOString(),
+      second.rows[0].occurred_at.toISOString(),
+      'CURRENT_TIMESTAMP must be identical for writes in the same transaction.',
+    );
+    assert.ok(
+      BigInt(second.rows[0].event_order) > BigInt(first.rows[0].event_order),
+      'The later audit insert must receive a larger event_order.',
+    );
+
+    const ordered = await client.query(
+      `SELECT id
+         FROM audit.evenement_metier
+        WHERE id = ANY($1::uuid[])
+        ORDER BY occurred_at ASC, event_order ASC`,
+      [[firstEventId, secondEventId]],
+    );
+    assert.deepEqual(
+      ordered.rows.map((row) => row.id),
+      [firstEventId, secondEventId],
+      'The timeline sort must preserve causal insert order when timestamps tie.',
+    );
+
+    await client.query('ROLLBACK');
+    transactionOpen = false;
+  } finally {
+    if (transactionOpen) await client.query('ROLLBACK');
+    client.release();
+    await pool.end();
+  }
+});
