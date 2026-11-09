@@ -160,7 +160,7 @@ async function main() {
   for (const account of targets) {
     console.log(account.role + ': ' + account.email);
   }
-  console.log('The shared password was not printed.');
+  console.log('Derived passwords were not printed.');
 }
 
 main().catch((error) => {
