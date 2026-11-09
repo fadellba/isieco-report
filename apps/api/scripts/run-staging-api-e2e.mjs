@@ -24,6 +24,7 @@ const RUN_ATTEMPT = process.env.GITHUB_RUN_ATTEMPT || '1';
 
 const accounts = [
   { email: 'e2e.citoyen@staging.isieco.test', role: 'CITOYEN' },
+  { email: 'e2e.citoyen-secondaire@staging.isieco.test', role: 'CITOYEN', passwordKey: 'CITOYEN_SECONDARY' },
   { email: 'e2e.agent-qualification@staging.isieco.test', role: 'AGENT_QUALIFICATION' },
   { email: 'e2e.responsable-traitement@staging.isieco.test', role: 'RESPONSABLE_TRAITEMENT' },
   { email: 'e2e.responsable-affectation@staging.isieco.test', role: 'RESPONSABLE_AFFECTATION' },
@@ -49,9 +50,13 @@ function required(value, name) {
   return value;
 }
 
-function passwordForRole(role) {
+function accountKey(account) {
+  return account.passwordKey ?? account.role;
+}
+
+function passwordForAccount(account) {
   return createHmac('sha256', PASSWORD_SEED)
-    .update('isieco-staging-e2e:' + role)
+    .update('isieco-staging-e2e:' + accountKey(account))
     .digest('base64url') + 'A1!';
 }
 
@@ -187,13 +192,13 @@ async function signInAccounts() {
   for (const account of accounts) {
     const result = await supabase.auth.signInWithPassword({
       email: account.email,
-      password: passwordForRole(account.role),
+      password: passwordForAccount(account),
     });
     if (result.error || !result.data.session || !result.data.session.access_token) {
       throw new Error('Supabase sign-in failed for role ' + account.role + ': ' +
         (result.error ? result.error.message : 'No access token returned'));
     }
-    tokens.set(account.role, result.data.session.access_token);
+    tokens.set(accountKey(account), result.data.session.access_token);
   }
   return tokens;
 }
@@ -205,14 +210,14 @@ async function verifyRoleMatrix(tokens) {
 
     const results = await Promise.all(accounts.map(async (account) => ({
       role: account.role,
-      result: await api(tokens.get(account.role), route.path),
+      result: await api(tokens.get(accountKey(account)), route.path),
     })));
 
     for (const item of results) {
       const expected = item.role === route.role ? 200 : 403;
       expectStatus(item.result, expected, item.role + ' -> ' + route.path);
     }
-    console.log('PASS role matrix: ' + route.path + ' allows ' + route.role + '; denies the other 7 roles.');
+    console.log('PASS role matrix: ' + route.path + ' allows ' + route.role + '; denies accounts with every other role.');
   }
   console.log('PASS access-control matrix: ' + (protectedReadRoutes.length * accounts.length) +
     ' role/route checks and ' + protectedReadRoutes.length + ' anonymous checks.');
@@ -687,6 +692,7 @@ async function verifyInterventionPhotoLifecycle(fieldAgentToken, verifierToken, 
 
 async function runBusinessJourney(tokens) {
   const citizen = tokens.get('CITOYEN');
+  const secondaryCitizen = tokens.get('CITOYEN_SECONDARY');
   const qualification = tokens.get('AGENT_QUALIFICATION');
   const treatment = tokens.get('RESPONSABLE_TRAITEMENT');
   const assignmentManager = tokens.get('RESPONSABLE_AFFECTATION');
@@ -730,6 +736,20 @@ async function runBusinessJourney(tokens) {
     403,
     'A non-citizen role must not read a citizen-owned report',
   );
+  const secondaryReports = expectSuccess(
+    await api(secondaryCitizen, '/reports?page=1&pageSize=100'),
+    'List reports as a second citizen',
+  );
+  assert.ok(
+    !secondaryReports.items.some((item) => item.idSignalement === report.idSignalement),
+    'A second citizen must not see another citizen report in their own list.',
+  );
+  expectStatus(
+    await api(secondaryCitizen, '/reports/' + report.idSignalement),
+    404,
+    'A second citizen must not read another citizen report',
+  );
+  console.log('PASS cross-citizen isolation: list and detail endpoints expose only the authenticated citizen reports.');
 
   await verifyReportPhotoLifecycle(citizen, report.idSignalement);
 
@@ -871,7 +891,7 @@ async function runBusinessJourney(tokens) {
 async function main() {
   validateTargets();
   console.log('Staging target: ' + API_BASE_URL);
-  console.log('Signing in the eight pre-provisioned staging E2E identities.');
+  console.log('Signing in the nine pre-provisioned staging E2E identities.');
   const ready = await api(null, '/health/ready');
   const readyBody = expectStatus(ready, 200, 'Staging API readiness');
   assert.equal(readyBody.status, 'ok');
