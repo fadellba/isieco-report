@@ -56,8 +56,9 @@ test('uploads report photos privately and rejects non-owners before storage acce
   const uploaded = await service.addPhoto(reportId, authId, jpeg, 'Façade du site');
 
   assert.equal(uploaded.idPhotoSignalement, photoId);
-  assert.equal(storage.calls.uploads.length, 1);
+  assert.equal('idPhoto' in uploaded, false);
   assert.equal(uploaded.etatPublication, 'PRIVEE');
+  assert.equal(storage.calls.uploads.length, 1);
 
   const unauthorizedStorage = storageHarness();
   const unauthorizedPrisma = activeUserPrisma();
@@ -148,6 +149,8 @@ test('uploads intervention proof only for its active author', async () => {
   const result = await service.addPhoto(interventionId, { contextePhoto: 'Après collecte' }, jpeg, authId);
 
   assert.equal(result.idPhotoIntervention, photoId);
+  assert.equal('idPhoto' in result, false);
+  assert.equal(result.etatPublication, 'PRIVEE');
   assert.equal(storage.calls.uploads.length, 1);
 });
 

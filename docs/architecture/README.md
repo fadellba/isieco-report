@@ -29,4 +29,4 @@ La plateforme comprend une application Web, une application Mobile, l'API NestJS
 | interventions | Exécution terrain, preuves et compte rendu. |
 | verification | Contrôle indépendant, clôture et reprise. |
 
-Ces frontières sont des modules internes de l'API, pas des services séparés. Le modèle relationnel ne contient plus de module autonome Audit, de référentiels géographiques, de disponibilités et délégations historisées ou de fonctions de gamification/publication.
+Ces frontières sont des modules internes de l'API, pas des services séparés. Le modèle métier Prisma de 18 tables dans `public` ne contient plus de module Audit, de référentiels géographiques, de disponibilités/délégations historisées ou de fonctions de gamification/publication. Une couche d'infrastructure d'audit distincte subsiste : `audit.evenement_metier` dans le schéma PostgreSQL `audit`, hors des 18 modèles métier, journalise les mutations couvertes et expose uniquement la chronologie d'un dossier via Cases.

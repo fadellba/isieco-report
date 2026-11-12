@@ -1,8 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export class PhotoUploadResponseDto {
-  @ApiProperty({ format: 'uuid', description: 'Identifiant de la photo, sans référence de stockage.' })
-  idPhoto!: string;
+export class ReportPhotoUploadResponseDto {
+  @ApiProperty({
+    format: 'uuid',
+    description: 'Identifiant de la photo de signalement, sans référence de stockage.',
+  })
+  idPhotoSignalement!: string;
 
   @ApiProperty({ type: 'string', nullable: true })
   description!: string | null;
@@ -10,8 +13,33 @@ export class PhotoUploadResponseDto {
   @ApiProperty({ format: 'date-time' })
   dateAjout!: Date;
 
-  @ApiProperty({ example: 'EN_ATTENTE' })
-  etatPublication!: string;
+  @ApiProperty({
+    enum: ['PRIVEE'],
+    example: 'PRIVEE',
+    description: 'La photo reste privée et n’est pas publiée.',
+  })
+  etatPublication!: 'PRIVEE';
+}
+
+export class InterventionPhotoUploadResponseDto {
+  @ApiProperty({
+    format: 'uuid',
+    description: 'Identifiant de la preuve photo d’intervention, sans référence de stockage.',
+  })
+  idPhotoIntervention!: string;
+
+  @ApiProperty({ type: 'string', nullable: true })
+  description!: string | null;
+
+  @ApiProperty({ format: 'date-time' })
+  dateAjout!: Date;
+
+  @ApiProperty({
+    enum: ['PRIVEE'],
+    example: 'PRIVEE',
+    description: 'La preuve reste privée et n’est pas publiée.',
+  })
+  etatPublication!: 'PRIVEE';
 }
 
 export class SignedMediaUrlResponseDto {

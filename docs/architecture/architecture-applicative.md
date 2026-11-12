@@ -56,7 +56,7 @@ flowchart TB
 | `interventions` | Démarrage terrain, photos de preuve et compte rendu. |
 | `verification` | Contrôle indépendant, décision conforme ou demande de reprise. |
 
-Ce sont des frontières applicatives internes, pas des services déployés séparément. Le modèle relationnel ne contient plus de module autonome Audit, de gamification/publication, de disponibilité historisée ou de géographie hiérarchique. L'historique de statut est porté par `HistoriqueStatutSignalement`.
+Ce sont des frontières applicatives internes, pas des services déployés séparément. Le modèle métier Prisma de 18 tables dans `public` ne contient plus de module autonome Audit, de gamification/publication, de disponibilité historisée ou de géographie hiérarchique. L'historique de statut source reste porté par `HistoriqueStatutSignalement`. En parallèle, une infrastructure d'audit transverse écrit les événements métier dans `audit.evenement_metier`, une table append-only du schéma PostgreSQL distinct `audit` (elle n'est pas un modèle Prisma parmi les 18).
 
 ## Cycle métier courant
 
@@ -95,4 +95,4 @@ Le MVP suppose une connexion réseau pour les opérations métier. Le mode hors 
 
 Supabase Auth gère les identités et sessions ; `Utilisateur.authUserId` relie l'identité au profil métier. Les clients ne détiennent aucune clé privilégiée et ne se connectent pas directement à PostgreSQL. Les tables métier sont protégées par RLS et les droits Data API sont retirés ; NestJS utilise les secrets serveur.
 
-Les photos sont privées. Les chemins de stockage ne sont pas communiqués au client ; l'API valide l'accès métier et émet les URL signées temporaires. Les dates d'expiration et de purge restent dans les entités photo.
+Les photos sont privées. Les chemins de stockage ne sont pas communiqués au client ; l'API valide l'accès métier et émet les URL signées temporaires. Les dates d'expiration et de purge restent dans les entités photo. Les événements d'audit sont écrits transactionnellement dans `audit.evenement_metier` ; seuls les événements liés au dossier sont consultables par `GET /api/v1/cases/:idDossier/history`. Il n'existe pas de flux global ou personnel d'audit.

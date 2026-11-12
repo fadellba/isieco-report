@@ -63,7 +63,7 @@ Les photos d'intervention restent invisibles dans la file de vérification aprè
 
 La colonne `dateExpiration` est déterminée au dépôt depuis `MEDIA_RETENTION_DAYS`. La colonne `mediaPurgeAt` suit la suppression effective de l'objet.
 
-Le service `MediaPurgeService` et la commande `pnpm storage:purge` exécutent une purge bornée : 100 photos de signalement et 100 photos d'intervention au maximum par exécution. Pour chaque objet, l'API supprime le fichier du bucket privé, puis renseigne `mediaPurgeAt`. Les lignes photo sont conservées pour préserver les références historiques.
+Le service `MediaPurgeService` et la commande `pnpm storage:purge` exécutent une purge bornée. Le lot par défaut est de 100 photos de signalement et 100 photos d'intervention par exécution ; le service accepte un lot explicite de 1 à 500 par type. La CLI et le workflow Cron appellent le service sans surcharge : leur capacité par exécution reste donc 100 par type. Pour chaque objet, l'API supprime le fichier du bucket privé, puis renseigne `mediaPurgeAt`. Les lignes photo sont conservées pour préserver les références historiques.
 
 Le journal `audit.evenement_metier` conserve un événement système `PHOTO_SIGNALEMENT_PURGEE` ou `PHOTO_INTERVENTION_PURGEE` dans la même transaction que la mise à jour `mediaPurgeAt`. L'acteur est `NULL` pour ces traitements automatiques. Aucun chemin de stockage n'est conservé dans l'événement. La commande retourne également les compteurs de traitement et d'échec. Lorsqu'un signalement est rattaché à un dossier, l'événement source reste dans la timeline du signalement et une projection liée au dossier est créée via `source_event_id` ; ces deux lignes représentent le même événement dans deux timelines, pas deux suppressions Storage.
 
@@ -71,7 +71,7 @@ Un échec Storage ou SQL laisse la ligne non purgée et incrémente `failed`. La
 
 Le workflow GitHub Actions `.github/workflows/staging-media-purge.yml` planifie désormais la purge du **staging** chaque jour à 02:15 UTC (concurrence limitée à une exécution). Il utilise les secrets de l'environnement GitHub `staging` (`STAGING_PRISMA_URL` et `STAGING_SUPABASE_SECRET_KEY`) et valide explicitement le projet Supabase et le bucket attendus avant d'exécuter la commande. Une exécution manuelle est disponible avec le choix `RUN` ; le choix par défaut `NO` ne fait rien.
 
-Chaque exécution traite au plus 100 photos de signalement et 100 photos d'intervention. Une fréquence quotidienne convient si le volume expiré reste inférieur à la capacité de traitement cumulée ; surveiller le compteur `failed` et les volumes en attente. Le job n'applique aucune migration et ne touche qu'au bucket de staging. La planification de la purge en production reste désactivée jusqu'à validation de la politique de conservation, des secrets production et du plan de reprise.
+Chaque exécution du workflow programmé traite au plus 100 photos de signalement et 100 photos d'intervention, car il utilise le lot par défaut. Le service peut traiter jusqu'à 500 photos de chaque type lorsqu'un appelant lui fournit explicitement une autre taille de lot. Une fréquence quotidienne convient si le volume expiré reste inférieur à la capacité de traitement cumulée ; surveiller le compteur `failed` et les volumes en attente. Le job n'applique aucune migration et ne touche qu'au bucket de staging. La planification de la purge en production reste désactivée jusqu'à validation de la politique de conservation, des secrets production et du plan de reprise.
 
 ## Vérifications avant mise en production
 

@@ -28,25 +28,24 @@ L'application utilise `VITE_API_BASE_URL`, `VITE_SUPABASE_URL` et `VITE_SUPABASE
 | `/administration/comptes` | `ADMINISTRATEUR_COMPTES` | Liste paginée, attribution et révocation des rôles |
 | `/qualification` et `/qualification/:idSignalement` | `AGENT_QUALIFICATION` | File, détail, photos signées, compléments et décisions |
 | `/dossiers` et `/dossiers/:idDossier` | `RESPONSABLE_TRAITEMENT` | Liste, création, rattachements, priorité et localisation |
-| `/referentiels` | `GESTIONNAIRE_REFERENTIEL` | Types de déchets, géographie, équipes et relations temporelles |
+| `/referentiels` | `GESTIONNAIRE_REFERENTIEL` | Types de déchets, équipes, appartenances et compétences |
 | `/affectations` | `RESPONSABLE_AFFECTATION` | Création, suivi, filtres et réaffectation |
 | `/interventions` | `AGENT_TERRAIN` | Équipes du compte, réponses aux missions, démarrage, preuves et comptes rendus |
 | `/verification` | `VERIFICATEUR_CLOTURE` | File des soumissions, preuves signées, validation ou demande de reprise |
-| `/activite` | Compte actif | Historique personnel, filtres de type et de dates |
+| `/acces-refuse` | Session active | Page de refus d'accès |
 
-La gestion des comptes consomme les endpoints Accounts. L'écran d'activité consomme `GET /api/v1/audit/me`. Qualification et Cases réutilisent les services métier et leurs contrôles côté API ; les gardes Web ne servent qu'à adapter l'expérience. Les parcours métier Web des phases 12 à 17 sont intégrés dans `main` (PR #17 à #22).
+La gestion des comptes consomme les endpoints Accounts. Il n'existe pas d'écran d'activité personnel ni de route `GET /api/v1/audit/me`. L'API expose uniquement la chronologie métier ciblée d'un dossier via `GET /api/v1/cases/:idDossier/history`, réservée à `RESPONSABLE_TRAITEMENT`. Qualification et Cases réutilisent les services métier et leurs contrôles côté API ; les gardes Web ne servent qu'à adapter l'expérience. Les parcours métier Web principaux sont intégrés dans `main`.
 
 ## Administration des référentiels — Phase 14
 
-La PR #19 a intégré la route protégée `/referentiels`, réservée au rôle `GESTIONNAIRE_REFERENTIEL`. L'écran couvre :
+La PR #19 a intégré la route protégée `/referentiels`, réservée au rôle `GESTIONNAIRE_REFERENTIEL`. L'écran couvre les éléments du modèle simplifié :
 
-- types de déchets : création, modification des attributs descriptifs et clôture de validité ;
-- géographie : création de régions, départements et communes, activation/désactivation sans suppression physique ;
-- équipes : création et modification ;
+- types de déchets : création et activation/désactivation ;
+- équipes : création et activation/désactivation ;
 - appartenances : consultation des membres courants, ajout et clôture ;
-- compétences : consultation, attribution et clôture ;
-- disponibilités : mise à jour et consultation de l'historique ;
-- délégations : création, consultation des délégations actives et clôture.
+- compétences : consultation, attribution et désactivation.
+
+Les régions, départements, communes, calendriers d'indisponibilité et délégations ne font pas partie du modèle ni des routes actuelles.
 
 L'ajout d'un membre utilise actuellement son UUID métier, car l'API Referentials ne fournit pas encore de route de recherche des comptes. La validation de l'identifiant, de l'état actif du compte et des périodes reste effectuée côté API.
 
@@ -70,11 +69,10 @@ L'interface masque les commandes de décision et de consultation des preuves lor
 
 - `src/app` : contexte d'authentification, navigation, shell et gardes de routes.
 - `src/features/accounts` : administration des comptes et rôles.
-- `src/features/audit` : historique d'activité.
 - `src/features/dashboard` : vue d'ensemble.
 - `src/features/qualification` : file et décisions de qualification.
 - `src/features/cases` : liste et gestion des dossiers.
-- `src/features/referentials` : administration des références, de la géographie et des équipes.
+- `src/features/referentials` : types de déchets, équipes, appartenances et compétences.
 - `src/features/assignments` : création, suivi et réaffectation des affectations.
 - `src/features/interventions` : espace Agent terrain, preuves privées et comptes rendus.
 - `src/features/verification` : file et décisions de vérification indépendante.
@@ -83,4 +81,4 @@ L'interface masque les commandes de décision et de consultation des preuves lor
 
 ## Limites restantes
 
-Les principaux parcours métier Web sont intégrés. La consultation des photos de qualification et l'upload des preuves d'intervention sont couverts par les parcours concernés. Le dépôt de photos de signalement depuis le back-office citoyen n'est pas un parcours Web livré : le dépôt citoyen est porté par l'application Mobile. La recherche multi-critères de comptes, les détails d'événements et l'historique des rôles par compte ne sont pas encore exposés dans l'interface. La recette utilisateur, l'accessibilité et la couverture média des écrans secondaires restent à compléter.
+Les principaux parcours métier Web sont intégrés. La consultation des photos de qualification et l'upload des preuves d'intervention sont couverts par les parcours concernés. Le dépôt de photos de signalement depuis le back-office citoyen n'est pas un parcours Web livré : le dépôt citoyen est porté par l'application Mobile. Il n'existe pas d'écran d'audit personnel, de liste globale d'événements, de détail d'événement ni d'historique des rôles par compte. La recherche multi-critères de comptes n'est pas non plus exposée dans l'interface. La recette utilisateur, l'accessibilité et la couverture média des écrans secondaires restent à compléter.

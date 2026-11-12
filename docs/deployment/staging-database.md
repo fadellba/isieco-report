@@ -2,7 +2,7 @@
 
 ## Projet cible
 
-Le projet Supabase de staging est `isieco-report-staging` (`mlhbdautaxufubaybzyt`), région `eu-west-1`. Le 6 novembre 2026, le workflow [#42136250612](https://github.com/fadellba/isieco-report/actions/runs/42136250612) a terminé avec succès : la septième migration `20261105000000_simplified_domain_model` a été appliquée après les six migrations historiques. Le schéma compte 18 tables métier et `prisma migrate status` le déclare à jour. Le jeu de données de staging reste déclaré jetable.
+Le projet Supabase de staging est `isieco-report-staging` (`mlhbdautaxufubaybzyt`), région `eu-west-1`. Le 6 novembre 2026, le workflow [#42136250612](https://github.com/fadellba/isieco-report/actions/runs/42136250612) a d'abord appliqué la septième migration `20261105000000_simplified_domain_model` après les six migrations historiques. Les migrations additives suivantes ont ensuite porté l'historique staging à 11 migrations Prisma : création du ledger `audit.evenement_metier`, extension des cibles d'audit, index FK et alignement Prisma. Le registre des livrables du 7 novembre rapporte `prisma migrate status` à jour. Le modèle comprend 18 tables métier dans public, le ledger dans audit et la table de métadonnées `_prisma_migrations`. Le jeu de données de staging reste déclaré jetable.
 
 Le bucket privé `isieco-private-media` existe déjà, avec limite 10 MiB et types autorisés JPEG, PNG et WebP. Cette configuration Storage est distincte des migrations de la base métier.
 
@@ -48,13 +48,13 @@ Le run [#42136250612](https://github.com/fadellba/isieco-report/actions/runs/421
 
 Un contrôle SQL en lecture seule confirme :
 
-- 18 tables métier dans `public`, plus `public._prisma_migrations` ;
-- sept migrations terminées, aucune migration annulée ;
-- RLS activé sur les 19 tables ;
-- aucune policy RLS et aucun privilège direct de table pour `anon`, `authenticated` ou `service_role` sur les 19 tables ;
+- 18 tables métier dans `public`, `public._prisma_migrations` et `audit.evenement_metier` dans le schéma `audit` ;
+- 11 migrations Prisma terminées, aucune migration annulée selon le registre de livrables du 7 novembre ;
+- RLS activé sur les 20 tables observées (18 métier + métadonnées Prisma + ledger d'audit) ;
+- aucune policy RLS permissive et aucun privilège direct de table pour `anon`, `authenticated` ou `service_role` sur ces tables ;
 - les rôles Data API ne peuvent donc pas accéder directement au modèle métier ; les opérations restent exclusivement derrière NestJS.
 
-Le Security Advisor indique que le lint « RLS enabled without policy » est présent sur les 19 tables (INFO), ce qui correspond au verrouillage prévu. Il signale également la protection des mots de passe compromis désactivée (WARN) et 15 clés étrangères sans index couvrant (INFO). Ces deux derniers points restent ouverts avant production ou montée en charge. Les index signalés comme inutilisés ne doivent pas être supprimés sur la seule base d'un staging encore peu sollicité.
+Le lint « RLS enabled without policy » est attendu sur les tables verrouillées par privilèges : ne pas ajouter de policy permissive pour faire disparaître cet avis. Le registre indique que les 15 index FK manquants ont été ajoutés par `20261106150000_foreign_key_indexes` ; l'ancien constat d'Advisor est donc historique et doit être réexécuté avant d'en tirer une conclusion actuelle. La protection des mots de passe compromis était signalée désactivée (WARN) dans le dernier contrôle documenté ; revérifier ce réglage avant production. Les index signalés comme inutilisés ne doivent pas être supprimés sur la seule base d'un staging encore peu sollicité.
 
 Les tests d'API et d'upload nécessitent les variables runtime serveur : `DATABASE_URL`, `DIRECT_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SECRET_KEY`, `SUPABASE_STORAGE_BUCKET` et `MEDIA_RETENTION_DAYS=365`. Pour le runner E2E qui ouvre Prisma directement depuis GitHub Actions, le secret `STAGING_SUPABASE_CA_CERT` fournit le certificat CA Supabase avec vérification TLS stricte (`rejectUnauthorized=true`). Le run [#42319641856](https://github.com/fadellba/isieco-report/actions/runs/42319641856) a validé le déploiement Render exact, la readiness DB, les smoke tests et le cycle réel d'upload privé, URL signée de 60 secondes, expiration à 365 jours et purge ciblée. Le workflow planifié de purge quotidienne à 02:15 UTC reste à observer séparément.
 

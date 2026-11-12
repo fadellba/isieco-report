@@ -84,6 +84,6 @@ Les routes de dépôt sont `POST /api/v1/reports/:id/photos` et `POST /api/v1/in
 
 Les liens temporaires sont délivrés par `GET /api/v1/reports/:id/photos/:photoId/url`, `GET /api/v1/qualification/:idSignalement/photos/:idPhotoSignalement/url` et `GET /api/v1/verification/assignments/:idAffectation/photos/:idPhotoIntervention/url`. Ils expirent après 60 secondes et sont précédés d'un contrôle de droit métier. Voir [la procédure Storage](../../docs/storage/README.md).
 
-La commande `pnpm storage:purge` supprime les objets dont la période de conservation est échue, conserve les lignes photo pour l'historique, renseigne `mediaPurgeAt` et écrit l'événement de purge. Elle traite au maximum 100 photos par type et doit être appelée par un job Cron externe.
+La commande `pnpm storage:purge` supprime les objets dont la période de conservation est échue, conserve les lignes photo pour l'historique, renseigne `mediaPurgeAt` et écrit l'événement de purge. La CLI appelle le service avec son lot par défaut de 100 photos par type. `MediaPurgeService` accepte un lot explicite de 1 à 500 par type ; le workflow Cron actuel n'envoie pas de surcharge et reste donc à 100. La commande doit être appelée par un job externe.
 
 Le bucket distant, la politique de rétention et la planification Cron restent des opérations d'environnement.
