@@ -31,7 +31,7 @@ import {
 import type { User } from '@supabase/supabase-js';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { MAX_IMAGE_SIZE_BYTES } from '../../infrastructure/storage/media-file.js';
-import { PhotoUploadResponseDto, SignedMediaUrlResponseDto } from '../../infrastructure/storage/dto/media-response.dto.js';
+import { ReportPhotoUploadResponseDto, SignedMediaUrlResponseDto } from '../../infrastructure/storage/dto/media-response.dto.js';
 import { CurrentAuthUser } from '../../auth/current-auth-user.decorator.js';
 import { Roles } from '../../auth/roles.decorator.js';
 import { RolesGuard } from '../../auth/roles.guard.js';
@@ -119,7 +119,7 @@ export class ReportsController {
       required: ['file'],
     },
   })
-  @ApiCreatedResponse({ type: PhotoUploadResponseDto })
+  @ApiCreatedResponse({ type: ReportPhotoUploadResponseDto })
   @ApiBadRequestResponse({ description: 'Fichier absent, trop volumineux ou image JPEG, PNG ou WebP invalide.' })
   @ApiNotFoundResponse({ description: 'Signalement introuvable.' })
   @ApiForbiddenResponse({ description: 'Le signalement doit appartenir à un compte citoyen actif.' })

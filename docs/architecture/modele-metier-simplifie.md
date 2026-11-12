@@ -15,7 +15,7 @@ La [matrice UML/Prisma/PostgreSQL](../uml/diagramme-classes.md) détaille les at
 - Une affectation référence un `ContenuDossier`, une équipe et une compétence d'équipe.
 - Une vérification référence une intervention. La relation est unique ; elle reste nullable pour les anciennes vérifications sans correspondance.
 - Les types de déchets et les compétences d'équipe utilisent un indicateur actif.
-- Les hiérarchies géographiques, délégations, disponibilités détaillées, provenances, audit générique, notifications, gamification et publications sortent du périmètre simplifié.
+- Les hiérarchies géographiques, délégations, disponibilités détaillées, provenances, notifications, gamification et publications sortent du périmètre simplifié. L'ancien modèle d'événements génériques du schéma `public` ne fait pas partie des 18 modèles Prisma ; un ledger métier distinct a depuis été créé dans le schéma PostgreSQL `audit`.
 
 ## Champs techniques conservés
 
@@ -33,7 +33,7 @@ Les photos utilisent une référence de stockage privée `referencePhoto`, et no
 | `reponse_complement` | Réponse, répondant et date copiés dans `demande_complement` | Le modèle cible ne permet qu'une réponse. |
 | `contenu_dossier` | Ajout d'un identifiant UUID propre | Des colonnes de workflow historiques sont supprimées. |
 | `verification_resolution` | Chaque vérification est associée par rang chronologique à une intervention de la même affectation | Une vérification sans intervention correspondante garde `id_intervention = NULL`. |
-| `evenement_metier` | Seules les transitions de statut détectables sont copiées | Les événements génériques non liés à un changement de statut sont supprimés. |
+| `evenement_metier` | Seules les transitions de statut détectables sont copiées | Les événements legacy non liés à une transition de statut ne sont pas migrés depuis l'ancien modèle. Le ledger append-only actuel, créé ensuite dans le schéma distinct `audit`, enregistre les mutations métier à partir de son déploiement ; il ne reconstitue pas rétroactivement les événements legacy supprimés. |
 | Validité TypeDechet/CompetenceEquipe | Conversion en booléen `actif` | Les dates de fin/début sont perdues ; `dateAttribution` conserve le début de compétence. |
 
 Les hiérarchies Région/Département/Commune, historiques de localisation/priorité, provenance, disponibilité et délégation, notifications, points, badges et publications sont supprimés par choix de périmètre. Les colonnes de publication/approbation des photos sont également supprimées ; les références de stockage et dates d'expiration/purge sont conservées.

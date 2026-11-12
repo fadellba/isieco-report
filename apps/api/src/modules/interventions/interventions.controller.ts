@@ -27,7 +27,7 @@ import {
 import type { User } from '@supabase/supabase-js';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { MAX_IMAGE_SIZE_BYTES } from '../../infrastructure/storage/media-file.js';
-import { PhotoUploadResponseDto } from '../../infrastructure/storage/dto/media-response.dto.js';
+import { InterventionPhotoUploadResponseDto } from '../../infrastructure/storage/dto/media-response.dto.js';
 import { CurrentAuthUser } from '../../auth/current-auth-user.decorator.js';
 import { Roles } from '../../auth/roles.decorator.js';
 import { RolesGuard } from '../../auth/roles.guard.js';
@@ -107,7 +107,7 @@ export class InterventionsController {
       required: ['file', 'contextePhoto'],
     },
   })
-  @ApiCreatedResponse({ type: PhotoUploadResponseDto })
+  @ApiCreatedResponse({ type: InterventionPhotoUploadResponseDto })
   @ApiBadRequestResponse({ description: 'Fichier ou contexte invalide.' })
   @ApiConflictResponse({ description: 'L’intervention ou la mission n’est plus ouverte.' })
   @ApiNotFoundResponse({ description: 'Intervention introuvable.' })

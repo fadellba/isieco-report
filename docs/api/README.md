@@ -96,14 +96,14 @@ Toutes les routes ci-dessous exigent `RESPONSABLE_TRAITEMENT`.
 | GET | `/cases/qualified-reports` | Liste les signalements qualifiés sans dossier. |
 | GET | `/cases` | Liste paginée des dossiers, avec filtre de statut. |
 | GET | `/cases/:idDossier` | Détail du dossier, de ses contenus et signalements. |
-| GET | `/cases/:idDossier/history` | Historique des transitions de statut des signalements liés au dossier. |
+| GET | `/cases/:idDossier/history` | Chronologie des événements métier associés au dossier dans le journal d'audit : transitions de signalement, opérations sur le dossier et événements opérationnels couverts. |
 | POST | `/cases/from-reports/:idSignalement` | Crée un dossier et le relie directement au signalement qualifié. |
 | PATCH | `/cases/:idDossier/priority` | Modifie la priorité d'un dossier non clôturé. |
 | PATCH | `/cases/:idDossier/location` | Modifie sa localisation. |
 | POST | `/cases/:idDossier/reports/:idSignalement/attach` | Lie un signalement qualifié à un dossier existant. |
 | POST | `/cases/:idDossier/reports/:idSignalement/detach` | Supprime ce lien direct. |
 
-L'association courante est matérialisée par `signalement.id_dossier`. Aucun motif de rattachement/détachement n'est persisté par le modèle simplifié.
+L'association courante est matérialisée par `signalement.id_dossier`. Aucun historique dédié de rattachement n'existe parmi les 18 modèles métier ; le motif fourni au rattachement/détachement est conservé comme `reason` dans l'événement du journal `audit.evenement_metier`, consultable via la chronologie du dossier.
 
 ### Affectations — `assignments`
 
@@ -145,6 +145,10 @@ Toutes les routes exigent `VERIFICATEUR_CLOTURE`. L'auto-vérification est inter
 | POST | `/verification/assignments/:idAffectation/decision` | Valide ou demande une reprise motivée. |
 
 Une décision conforme clôt l'affectation et termine le contenu ; le dossier n'est clôturé que lorsque tous ses contenus actifs sont terminés.
+
+## Contrats de réponse des uploads média
+
+`POST /reports/:id/photos` renvoie `idPhotoSignalement`, tandis que `POST /interventions/:idIntervention/photos` renvoie `idPhotoIntervention`. Les deux réponses contiennent `description`, `dateAjout` et `etatPublication: PRIVEE`. Elles n'exposent jamais `referencePhoto`, un chemin Storage ou une URL signée. Les schémas OpenAPI utilisent deux DTO distincts pour préserver ces noms de propriété.
 
 ## Stockage de médias
 

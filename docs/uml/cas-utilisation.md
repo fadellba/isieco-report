@@ -1,28 +1,55 @@
 # Diagramme UML des cas d’utilisation
 
-![Diagramme UML détaillé des cas d’utilisation ISI-Eco Report](cas-utilisation.svg)
+Le diagramme ci-dessous est la vue fonctionnelle courante d'ISI-Eco Report. Il est volontairement limité aux parcours présents dans le code et dans les écrans livrés. Les fonctionnalités de l'ancien MLD v2.13 (géographie hiérarchique, délégations, disponibilités, notifications, publications, points et badges) ne sont pas représentées.
 
-Le diagramme présente les huit acteurs métier et leurs interactions avec ISI-Eco Report. Il distingue les cas principaux des comportements obligatoires ou conditionnels qui les complètent.
+~~~~mermaid
+flowchart TB
+  Citizen["CITOYEN"] --> C1["Déposer un signalement"]
+  Citizen --> C2["Suivre ses signalements"]
+  Citizen --> C3["Ajouter des photos privées"]
+  Citizen --> C4["Répondre à un complément"]
+
+  Qual["AGENT_QUALIFICATION"] --> Q1["Examiner la file et les preuves"]
+  Qual --> Q2["Demander un complément"]
+  Qual --> Q3["Qualifier ou rejeter"]
+
+  CaseOwner["RESPONSABLE_TRAITEMENT"] --> D1["Créer un dossier"]
+  CaseOwner --> D2["Associer / détacher un signalement"]
+  CaseOwner --> D3["Modifier priorité / localisation"]
+  CaseOwner --> D4["Lire la chronologie d'audit du dossier"]
+
+  Dispatcher["RESPONSABLE_AFFECTATION"] --> A1["Lister les contenus en attente"]
+  Dispatcher --> A2["Choisir une équipe compétente"]
+  Dispatcher --> A3["Affecter / réaffecter"]
+
+  Field["AGENT_TERRAIN"] --> I1["Consulter ses équipes et missions"]
+  Field --> I2["Accepter / refuser une affectation"]
+  Field --> I3["Démarrer une intervention"]
+  Field --> I4["Ajouter des preuves et soumettre le compte rendu"]
+
+  Verifier["VERIFICATEUR_CLOTURE"] --> V1["Examiner une soumission et ses preuves"]
+  Verifier --> V2["Valider ou demander une reprise"]
+
+  RefManager["GESTIONNAIRE_REFERENTIEL"] --> R1["Gérer les types de déchets"]
+  RefManager --> R2["Gérer les équipes, membres et compétences"]
+
+  Admin["ADMINISTRATEUR_COMPTES"] --> U1["Lister les comptes"]
+  Admin --> U2["Attribuer / révoquer les rôles"]
+~~~~
 
 ## Lire les relations UML
 
-| Relation | Sens de la flèche | Signification |
-|---|---|---|
-| `<<include>>` | Du cas principal vers le cas inclus | Le comportement inclus est exécuté obligatoirement dans le cadre du cas principal. Il factorise une étape commune ou indispensable. |
-| `<<extend>>` | Du cas complémentaire vers le cas de base | Le comportement complémentaire intervient uniquement sous une condition ou lorsqu'une option est choisie. Le cas de base reste valide sans cette extension. |
-| Association acteur | Trait plein entre acteur et cas | L’acteur participe directement au cas d’utilisation. |
+| Relation | Signification |
+|---|---|
+| \`<<include>>\` | Le comportement inclus est exécuté obligatoirement dans le cas principal. |
+| \`<<extend>>\` | Le comportement complémentaire intervient uniquement sous une condition ou lorsqu'une option est choisie. |
+| Association acteur | L'acteur participe directement au cas d'utilisation. |
 
-Les libellés du SVG utilisent la notation UML française `«include»` et `«extend»`, équivalente aux stéréotypes UML `<<include>>` et `<<extend>>`.
+Le détail des préconditions, des règles métier et des limites par acteur se trouve dans [Cas d’utilisation détaillés par acteur](cas-utilisation-par-acteur.md).
 
-## Périmètre et règles de lecture
+## Règles de lecture
 
-- Les acteurs sont les huit rôles métier définis dans [Sécurité et habilitations](../architecture/securite-et-habilitations.md).
-- L’authentification et la vérification du jeton sont des préconditions transversales, pas des étapes métier répétées dans chaque cas. Supabase Auth reste un service externe.
-- Les droits sont vérifiés par l’API à chaque opération. L’affichage d’un bouton dans un client ne constitue jamais une autorisation.
-- Les fonctions de notifications, préférences, publications, points et badges apparaissent parce qu’elles sont représentées dans le MLD v2.13. Leur présence dans ce modèle ne prouve pas qu’elles sont déjà implémentées ni que leur périmètre de première version est définitivement validé.
-
-La description des objectifs, préconditions, scénarios et règles propres à chaque acteur se trouve dans [Cas d’utilisation par acteur](cas-utilisation-par-acteur.md).
-
-## Correspondance avec les fiches détaillées
-
-Les identifiants affichés dans les ovales du diagramme sont repris dans la fiche par acteur : `CIT`, `QUAL`, `DOS`, `AFF`, `INT`, `VER`, `REF` et `ADM`.
+- Les huit acteurs correspondent aux rôles métier déclarés dans le package partagé et contrôlés par l'API.
+- Supabase Auth authentifie l'utilisateur ; l'API contrôle le profil actif, le rôle, la propriété et l'appartenance à chaque opération.
+- Les photos restent privées ; les clients reçoivent des URLs signées de courte durée après contrôle métier.
+- Le journal audit.evenement_metier est une infrastructure PostgreSQL séparée du modèle métier Prisma de 18 tables. L'API expose une chronologie limitée au dossier, pas un audit personnel/global.
