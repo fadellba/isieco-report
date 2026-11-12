@@ -25,7 +25,7 @@ ISIECO ne doit pas être perçu comme un simple formulaire de signalement associ
 
 ### 1.3 Cycle opérationnel de référence
 
-\`\`\`mermaid
+```mermaid
 flowchart LR
     A["Observer un problème"] --> B["Signaler et localiser"]
     B --> C["Qualifier"]
@@ -36,7 +36,7 @@ flowchart LR
     G --> H["Vérifier le résultat"]
     H -->|Conforme| I["Clôturer"]
     H -->|À reprendre| E
-\`\`\`
+```
 
 Chaque écran doit accélérer une étape de ce cycle. Une fonctionnalité qui n'aide ni à agir, ni à décider, ni à comprendre l'état d'une opération doit être secondaire.
 
