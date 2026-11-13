@@ -1,68 +1,52 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
-import { Link, useRouter } from 'expo-router';
-import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
-import type { AuthenticatedProfile } from '@isieco/shared';
-import { api } from '../src/lib/api';
-import { supabase } from '../src/lib/supabase';
+import { useRouter } from 'expo-router';
+import { Text, TouchableOpacity, View } from 'react-native';
+import { useMobileAuth } from '../src/features/auth/mobile-auth-context';
+import { LoadingScreen } from '../src/ui/LoadingScreen';
 
-export default function HomeScreen() {
+const ONBOARDING_KEY = 'isieco.onboarding.v1.complete';
+
+export default function IndexScreen() {
   const router = useRouter();
-  const [profile, setProfile] = useState<AuthenticatedProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { profile, loading, error, refreshProfile } = useMobileAuth();
+  const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(null);
+
   useEffect(() => {
     let active = true;
-    async function loadProfile() {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) { router.replace('/sign-in'); return; }
-      try {
-        const result = await api.request<AuthenticatedProfile>('/accounts/me');
-        if (active) setProfile(result);
-      } catch {
-        if (active) setError('Impossible de charger votre profil. Vérifiez la connexion à l’API.');
-      } finally { if (active) setLoading(false); }
-    }
-    void loadProfile();
+    AsyncStorage.getItem(ONBOARDING_KEY)
+      .then((value) => { if (active) setOnboardingComplete(value === 'true'); })
+      .catch(() => { if (active) setOnboardingComplete(false); });
     return () => { active = false; };
-  }, [router]);
-  async function signOut() { await supabase.auth.signOut(); router.replace('/sign-in'); }
-  if (loading) return <View className="flex-1 items-center justify-center bg-eco-50"><ActivityIndicator size="large" color="#166534" /><Text className="mt-4 text-slate-600">Chargement du profil…</Text></View>;
-  return (
-    <View className="flex-1 justify-center bg-eco-50 px-7 py-10">
-      <Text className="text-xs font-extrabold uppercase tracking-[0.18em] text-eco-600">ISI-ECO REPORT</Text>
-      {profile ? (
-        <>
-          <Text className="mt-4 text-3xl font-extrabold text-eco-950">Bonjour {profile.prenom ? `${profile.prenom} ` : ''}{profile.nom}</Text>
-          <Text className="mt-2 text-base text-slate-600">{profile.email}</Text>
-          <View className="mt-8 rounded-2xl border border-eco-100 bg-white p-5">
-            <Text className="text-sm font-bold uppercase tracking-wide text-eco-700">Vos rôles</Text>
-            {profile.roles.map((role) => <Text className="mt-2 text-base text-eco-950" key={role.code}>• {role.libelle}</Text>)}
-            <Text className="mt-4 text-sm leading-6 text-slate-600">Les fonctionnalités affichées suivent les habilitations de votre compte. L’API revérifie chaque droit à chaque opération.</Text>
-          </View>
-          {profile.roles.some((role) => role.code === 'CITOYEN') ? (
-            <Link href="/(citizen)/reports" asChild>
-              <TouchableOpacity className="mt-6 rounded-xl bg-eco-700 px-5 py-4">
-                <Text className="text-center font-bold text-white">Mes signalements</Text>
-              </TouchableOpacity>
-            </Link>
-          ) : null}
-          {profile.roles.some((role) => role.code === 'AGENT_TERRAIN') ? (
-            <Link href="/(agent)/missions" asChild>
-              <TouchableOpacity className="mt-4 rounded-xl border border-eco-200 bg-white px-5 py-4">
-                <Text className="text-center font-bold text-eco-800">Mes missions terrain</Text>
-              </TouchableOpacity>
-            </Link>
-          ) : null}
-          {!profile.roles.some((role) => role.code === 'CITOYEN' || role.code === 'AGENT_TERRAIN') ? (
-            <View className="mt-6 rounded-xl border border-eco-100 bg-white p-4">
-              <Text className="text-sm leading-6 text-slate-600">Votre parcours mobile n’est pas encore disponible pour ce rôle. Les écrans métier Web restent accessibles sur le back-office.</Text>
-            </View>
-          ) : null}
-        </>
-      ) : null}
-      {error ? <Text className="mt-6 rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</Text> : null}
-      <TouchableOpacity className="mt-8 rounded-xl bg-eco-700 px-5 py-4" onPress={signOut}><Text className="text-center font-bold text-white">Se déconnecter</Text></TouchableOpacity>
-      <Link className="mt-6 text-center font-semibold text-eco-700" href="/sign-in">Écran de connexion</Link>
-    </View>
-  );
+  }, []);
+
+  useEffect(() => {
+    if (loading || onboardingComplete === null) return;
+    if (!profile) {
+      router.replace(onboardingComplete ? '/sign-in' : '/onboarding');
+      return;
+    }
+
+    const hasCitizen = profile.roles.some((role) => role.code === 'CITOYEN');
+    const hasAgent = profile.roles.some((role) => role.code === 'AGENT_TERRAIN');
+
+    if (hasCitizen && hasAgent) router.replace('/choose-space');
+    else if (hasCitizen) router.replace('/(citizen)/home');
+    else if (hasAgent) router.replace('/(agent)/home');
+    else router.replace('/no-mobile-access');
+  }, [loading, onboardingComplete, profile, router]);
+
+  if (error && !profile) {
+    return (
+      <View className="flex-1 justify-center bg-surface-base px-6">
+        <Text className="text-2xl font-extrabold text-ink-900">Connexion indisponible</Text>
+        <Text className="mt-3 text-sm leading-6 text-ink-500">{error}</Text>
+        <TouchableOpacity onPress={() => void refreshProfile()} className="mt-6 rounded-2xl bg-brand-forest px-5 py-4">
+          <Text className="text-center text-sm font-bold text-white">Réessayer</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  return <LoadingScreen />;
 }
