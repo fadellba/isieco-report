@@ -20,7 +20,7 @@ Ne pas placer ces valeurs dans le dépôt, dans un fichier `.env` commité ou da
 1. Ouvrir **GitHub → Actions → Staging E2E Test Users**.
 2. Lancer le workflow depuis la branche `main`.
 3. Choisir `CREATE` pour `seed_staging_test_users`.
-4. Vérifier le résumé du job : neuf comptes Auth, neuf profils métier et neuf profils métier et huit rôles actifs représentés, dont deux citoyens.
+4. Vérifier le résumé du job : neuf comptes Auth, neuf profils métier et huit rôles actifs distincts, dont deux identités `CITOYEN`.
 
 Le choix par défaut est `NO`. Le job ne s'exécute pas depuis une autre branche.
 
@@ -44,14 +44,14 @@ Chaque mot de passe est dérivé dans le job par HMAC-SHA256 à partir du secret
 
 ## Exécuter le parcours métier et la matrice d'accès
 
-Après le provisioning des neuf comptes, configurer aussi `STAGING_SUPABASE_ANON_KEY` dans l'environnement GitHub `staging` avec la clé publique/publishable du même projet Supabase. Le runner refuse une clé secrète ou `service_role`.
+Après le provisioning des neuf comptes, configurer aussi `STAGING_SUPABASE_ANON_KEY` dans l'environnement GitHub `staging` avec la clé publique/publishable du même projet Supabase. Le runner refuse une clé secrète ou `service_role`. Le second compte citoyen utilise la clé de dérivation `CITOYEN_SECONDARY`, distincte de celle du compte citoyen principal.
 
 1. Ouvrir **GitHub → Actions → API Staging Deploy**.
 2. Lancer depuis `main` avec `deploy_staging = DEPLOY`.
 3. Le workflow attend la CI du commit exact, vérifie la cible PostgreSQL staging, déploie ce commit sur le service Render staging, attend sa readiness et vérifie liveness/Swagger.
 4. Le workflow exécute ensuite `apps/api/scripts/run-staging-api-e2e.mjs`.
 
-La matrice teste les neuf identités contre une route de lecture réservée à chacun des neuf rôles : 72 combinaisons (200 pour le rôle attendu, 403 pour les sept autres ; les deux comptes citoyens testent la même habilitation), ainsi qu'un appel sans jeton par route (401). Le parcours métier crée un signalement citoyen, le qualifie, crée un dossier, affecte une équipe, démarre et soumet une intervention, puis valide la conformité et vérifie la clôture ainsi que le journal d'audit.
+La matrice teste les neuf identités contre les huit routes de lecture des rôles métier : 72 combinaisons (200 pour le ou les comptes disposant du rôle attendu, 403 pour les autres comptes), ainsi qu'un appel sans jeton par route (401). Le parcours métier vérifie aussi qu'un autre citoyen ne peut pas obtenir l'URL signée de la photo d'un signalement qui ne lui appartient pas (404). Il crée ensuite un signalement citoyen, le qualifie, crée un dossier, affecte une équipe, démarre et soumet une intervention, puis valide la conformité et vérifie la clôture ainsi que le journal d'audit.
 
 Le runner ajoute l'agent terrain à une équipe staging compétente via l'API des référentiels si nécessaire. Il ne supprime aucune donnée : chaque exécution réussie laisse un dossier E2E clôturé et ses événements d'audit en staging. Les données sont identifiées comme fixtures E2E. Ce parcours n'appelle aucun déploiement de production.
 

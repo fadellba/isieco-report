@@ -7,6 +7,7 @@ on:
       - "apps/api/**"
       - "packages/**"
       - "prisma/**"
+      - "tsconfig.base.json"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
@@ -25,7 +26,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: api-staging-deploy
+  group: staging-deploy-e2e
   cancel-in-progress: false
 
 jobs:
@@ -221,10 +222,16 @@ jobs:
           fi
           echo "Swagger documentation endpoint is responding."
 
-      - name: Run eight-role access matrix and citizen-to-verification E2E journey
+      - name: Run nine-identity role matrix, cross-citizen isolation, and citizen-to-closure E2E journey
         env:
           SUPABASE_URL: https://mlhbdautaxufubaybzyt.supabase.co
+          DATABASE_URL: ${{ secrets.STAGING_PRISMA_URL }}
+          DIRECT_URL: ${{ secrets.STAGING_PRISMA_URL }}
           STAGING_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
           STAGING_E2E_PASSWORD_SEED: ${{ secrets.STAGING_E2E_PASSWORD_SEED }}
+          SUPABASE_SECRET_KEY: ${{ secrets.STAGING_SUPABASE_SECRET_KEY }}
+          SUPABASE_STORAGE_BUCKET: isieco-private-media
+          MEDIA_RETENTION_DAYS: "365"
+          STAGING_SUPABASE_CA_CERT: ${{ secrets.STAGING_SUPABASE_CA_CERT }}
           STAGING_API_BASE_URL: https://isieco-api-staging.onrender.com/api/v1
         run: node apps/api/scripts/run-staging-api-e2e.mjs

@@ -328,7 +328,7 @@ async function purgePreviousSyntheticMedia(prisma, purge) {
   console.log('PASS cleanup: purged ' + photoIds.length + ' prior synthetic staging media fixture(s).');
 }
 
-async function verifyReportPhotoLifecycle(citizenToken, reportId) {
+async function verifyReportPhotoLifecycle(citizenToken, secondaryCitizenToken, reportId) {
   const app = await NestFactory.createApplicationContext(StorageMaintenanceModule, {
     logger: ['error', 'warn'],
   });
@@ -368,6 +368,12 @@ async function verifyReportPhotoLifecycle(citizenToken, reportId) {
     );
     photoId = uploaded.idPhotoSignalement || uploaded.idPhoto;
     assert.ok(photoId, 'Uploaded photo must expose its photo identifier.');
+
+    expectStatus(
+      await api(secondaryCitizenToken, '/reports/' + reportId + '/photos/' + photoId + '/url'),
+      404,
+      'A second citizen must not obtain a signed URL for another citizen photo',
+    );
 
     const photo = await prisma.photoSignalement.findUnique({
       where: { idPhotoSignalement: photoId },
@@ -751,7 +757,7 @@ async function runBusinessJourney(tokens) {
   );
   console.log('PASS cross-citizen isolation: list and detail endpoints expose only the authenticated citizen reports.');
 
-  await verifyReportPhotoLifecycle(citizen, report.idSignalement);
+  await verifyReportPhotoLifecycle(citizen, secondaryCitizen, report.idSignalement);
 
   const qualificationQueue = expectSuccess(
     await api(qualification, '/qualification/queue?page=1&pageSize=100'),
