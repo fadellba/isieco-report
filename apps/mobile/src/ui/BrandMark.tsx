@@ -1,4 +1,4 @@
-import { Text, View } from 'react-native';
+import { Image, Text, View } from 'react-native';
 
 interface BrandMarkProps {
   compact?: boolean;
@@ -9,7 +9,12 @@ export function BrandMark({ compact = false, inverted = false }: BrandMarkProps)
   return (
     <View className="flex-row items-center">
       <View className={`h-11 w-11 items-center justify-center rounded-2xl ${inverted ? 'bg-white' : 'bg-brand-forest'}`}>
-        <Text className={`text-base font-extrabold tracking-tight ${inverted ? 'text-brand-forest' : 'text-white'}`}>IE</Text>
+        <Image
+          source={require('../../assets/brand-mark.png')}
+          resizeMode="contain"
+          style={{ width: 28, height: 28, tintColor: inverted ? '#14532D' : '#FFFFFF' }}
+          accessibilityIgnoresInvertColors
+        />
       </View>
       {!compact ? (
         <View className="ml-3">
