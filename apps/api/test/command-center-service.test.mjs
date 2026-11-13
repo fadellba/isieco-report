@@ -303,8 +303,8 @@ test('paginates the combined dossier and report stream with a stable keyset curs
   assert.ok(reportFindQueries[1].where.AND.some((filter) => filter.OR?.some((part) => part.dateSoumission?.lte)));
   const mapCaseCounts = caseCountQueries.filter((where) => where.latitude?.not === null);
   const mapReportCounts = reportCountQueries.filter((where) => where.latitude?.not === null);
-  assert.equal(mapCaseCounts.length, 2);
-  assert.equal(mapReportCounts.length, 2);
+  assert.equal(mapCaseCounts.length, 4);
+  assert.equal(mapReportCounts.length, 4);
   assert.ok(mapCaseCounts.every((where) => !where.AND?.some((filter) => filter.OR?.some((part) => part.dateCreationDossier?.lt))));
   assert.ok(mapReportCounts.every((where) => !where.AND?.some((filter) => filter.OR?.some((part) => part.dateSoumission?.lte))));
 });
