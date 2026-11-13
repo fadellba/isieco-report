@@ -44,7 +44,7 @@ export class CommandCenterController {
   @Header('X-Accel-Buffering', 'no')
   @ApiOperation({
     summary: 'Diffuse les invalidations de la carte du centre de commandement',
-    description: 'Flux Server-Sent Events réservé aux comptes back-office actifs. Les messages ne contiennent aucune donnée métier : ils signalent uniquement qu’une nouvelle lecture de l’API est nécessaire. La connexion est renouvelée toutes les 60 secondes pour réévaluer l’authentification et les habilitations.',
+    description: 'Flux réservé aux comptes actifs porteurs de l’un des rôles AGENT_QUALIFICATION, RESPONSABLE_TRAITEMENT, RESPONSABLE_AFFECTATION, VERIFICATEUR_CLOTURE, GESTIONNAIRE_REFERENTIEL ou ADMINISTRATEUR_COMPTES. Les messages ne contiennent aucune donnée métier : ils signalent uniquement qu’une nouvelle lecture de l’API est nécessaire. La connexion est renouvelée toutes les 60 secondes pour réévaluer l’authentification et les habilitations.',
   })
   @ApiProduces('text/event-stream')
   @ApiOkResponse({ description: 'Flux SSE command_center_changed et heartbeats.' })
