@@ -121,7 +121,7 @@ export default function NewCitizenReportScreen() {
             }
           : {}),
       };
-      const fingerprint = JSON.stringify({ payload, photoUri: photo.uri });
+      const fingerprint = JSON.stringify({ payload, photoUri: photo?.uri ?? null });
       if (!idempotencyRef.current || idempotencyRef.current.fingerprint !== fingerprint) {
         idempotencyRef.current = { fingerprint, key: createReportIdempotencyKey() };
       }
