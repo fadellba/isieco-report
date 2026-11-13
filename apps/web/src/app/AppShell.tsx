@@ -1,6 +1,9 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from './auth-context';
-import { navigationItems } from './navigation';
+import { navigationItems, type NavigationGroup } from './navigation';
+import { AppIcon } from '../components/AppIcon';
+
+const groups: NavigationGroup[] = ['Opérations', 'Administration'];
 
 export function AppShell() {
   const { profile, signOut } = useAuth();
@@ -9,88 +12,106 @@ export function AppShell() {
   const links = navigationItems.filter((item) =>
     item.roles.some((role) => activeRoles.some((active) => active.code === role)),
   );
+  const initials = [profile?.prenom?.[0], profile?.nom?.[0]].filter(Boolean).join('').toUpperCase() || 'IS';
 
   async function handleSignOut() {
     try {
       await signOut();
-      navigate('/connexion', { replace: true });
-    } catch {
+    } finally {
       navigate('/connexion', { replace: true });
     }
   }
 
   return (
-    <div className="min-h-screen bg-[#f3f6f4] text-slate-900">
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 border-r border-eco-100 bg-white lg:flex lg:flex-col">
-        <Link to="/" className="flex items-center gap-3 border-b border-slate-100 px-6 py-6">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-eco-700 text-lg font-black text-white">E</span>
-          <span>
-            <span className="block text-sm font-extrabold tracking-tight text-eco-900">ISI-Eco Report</span>
-            <span className="mt-0.5 block text-xs text-slate-500">Back-office opérationnel</span>
+    <div className="app-shell">
+      <aside className="app-sidebar">
+        <Link to="/" className="app-brand" aria-label="ISIECO, accueil du back office">
+          <span className="app-brand__mark">IE</span>
+          <span className="app-brand__copy">
+            <strong>ISIECO</strong>
+            <small>PROPRETÉ URBAINE</small>
           </span>
         </Link>
 
-        <nav className="flex-1 space-y-1 px-3 py-5" aria-label="Navigation principale">
-          <p className="px-3 pb-2 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Espace de travail</p>
+        <div className="app-sidebar__context">
+          <span className="app-sidebar__context-dot" />
+          <span>Centre opérationnel</span>
+        </div>
+
+        <nav className="app-sidebar__nav" aria-label="Navigation principale">
+          <p className="app-nav-caption">ESPACE DE TRAVAIL</p>
           <NavLink
             to="/"
             end
-            className={({ isActive }) =>
-              `flex items-center rounded-xl px-3 py-2.5 text-sm font-semibold transition ${isActive ? 'bg-eco-50 text-eco-800' : 'text-slate-600 hover:bg-slate-50'}`
-            }
+            className={({ isActive }) => `app-nav-link ${isActive ? 'is-active' : ''}`}
           >
-            Vue d'ensemble
+            <span className="app-nav-link__icon"><AppIcon name="overview" /></span>
+            <span>Vue d’ensemble</span>
+          </NavLink>
+
+          {groups.map((group) => {
+            const groupedLinks = links.filter((item) => item.group === group);
+            if (!groupedLinks.length) return null;
+            return (
+              <div className="app-nav-group" key={group}>
+                <p className="app-nav-caption">{group.toUpperCase()}</p>
+                {groupedLinks.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    className={({ isActive }) => `app-nav-link ${isActive ? 'is-active' : ''}`}
+                    title={item.description}
+                  >
+                    <span className="app-nav-link__icon"><AppIcon name={item.icon} /></span>
+                    <span>{item.label}</span>
+                  </NavLink>
+                ))}
+              </div>
+            );
+          })}
+        </nav>
+
+        <div className="app-sidebar__footer">
+          <div className="app-user-card">
+            <span className="app-user-avatar">{initials}</span>
+            <span className="app-user-card__identity">
+              <strong>{profile?.prenom ? `${profile.prenom} ${profile.nom}` : profile?.nom}</strong>
+              <small>{profile?.email}</small>
+            </span>
+          </div>
+          <button type="button" onClick={() => void handleSignOut()} className="app-signout">
+            <AppIcon name="logout" size={16} />
+            <span>Déconnexion</span>
+          </button>
+        </div>
+      </aside>
+
+      <div className="app-main">
+        <header className="app-topbar">
+          <div className="app-topbar__titles">
+            <span className="app-topbar__eyebrow">ISIECO / GESTION DES OPÉRATIONS</span>
+            <strong>Plateforme de propreté urbaine</strong>
+          </div>
+          <div className="app-topbar__account">
+            <span className="app-role-count">{activeRoles.length} habilitation{activeRoles.length > 1 ? 's' : ''}</span>
+            <span className="app-user-avatar app-user-avatar--small">{initials}</span>
+          </div>
+        </header>
+
+        <nav className="app-mobile-nav" aria-label="Navigation des espaces">
+          <NavLink to="/" end className={({ isActive }) => `app-mobile-nav__link ${isActive ? 'is-active' : ''}`}>
+            <AppIcon name="overview" size={16} />
+            <span>Vue d’ensemble</span>
           </NavLink>
           {links.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                `flex items-center rounded-xl px-3 py-2.5 text-sm font-semibold transition ${isActive ? 'bg-eco-50 text-eco-800' : 'text-slate-600 hover:bg-slate-50'}`
-              }
-            >
-              {item.label}
+            <NavLink key={item.to} to={item.to} className={({ isActive }) => `app-mobile-nav__link ${isActive ? 'is-active' : ''}`}>
+              <AppIcon name={item.icon} size={16} />
+              <span>{item.label}</span>
             </NavLink>
           ))}
         </nav>
 
-        <div className="border-t border-slate-100 p-4">
-          <div className="rounded-xl bg-slate-50 p-3">
-            <p className="truncate text-sm font-bold text-slate-800">
-              {profile?.prenom ? `${profile.prenom} ${profile.nom}` : profile?.nom}
-            </p>
-            <p className="mt-1 truncate text-xs text-slate-500">{profile?.email}</p>
-            <button
-              type="button"
-              onClick={handleSignOut}
-              className="mt-3 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100"
-            >
-              Déconnexion
-            </button>
-          </div>
-        </div>
-      </aside>
-
-      <div className="lg:pl-64">
-        <header className="sticky top-0 z-10 flex min-h-16 items-center justify-between border-b border-slate-200 bg-white/95 px-5 backdrop-blur sm:px-8">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-eco-700">ISI-Eco Report</p>
-            <p className="text-sm text-slate-500">Plateforme de suivi environnemental</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="hidden text-xs text-slate-500 sm:inline">{profile?.roles.length ?? 0} habilitation(s)</span>
-            <button type="button" onClick={handleSignOut} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 lg:hidden">
-              Sortir
-            </button>
-          </div>
-        </header>
-        <nav className="flex gap-2 overflow-x-auto border-b border-slate-200 bg-white px-4 py-2 lg:hidden" aria-label="Navigation mobile">
-          <Link to="/" className="whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">Accueil</Link>
-          {links.map((item) => (
-            <Link key={item.to} to={item.to} className="whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">{item.label}</Link>
-          ))}
-        </nav>
-        <main className="mx-auto max-w-7xl px-4 py-7 sm:px-8 sm:py-9">
+        <main className="app-content">
           <Outlet />
         </main>
       </div>
