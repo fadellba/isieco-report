@@ -2,6 +2,16 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../app/auth-context';
 import { navigationItems } from '../../app/navigation';
 import { AppIcon } from '../../components/AppIcon';
+import { OperationalCommandCenter } from './OperationalCommandCenter';
+
+const COMMAND_CENTER_ROLES = [
+  'AGENT_QUALIFICATION',
+  'RESPONSABLE_TRAITEMENT',
+  'RESPONSABLE_AFFECTATION',
+  'VERIFICATEUR_CLOTURE',
+  'GESTIONNAIRE_REFERENTIEL',
+  'ADMINISTRATEUR_COMPTES',
+];
 
 export function DashboardPage() {
   const { profile } = useAuth();
@@ -9,6 +19,7 @@ export function DashboardPage() {
   const availableItems = navigationItems.filter((item) =>
     item.roles.some((role) => roles.some((active) => active.code === role)),
   );
+  const canViewCommandCenter = roles.some((role) => COMMAND_CENTER_ROLES.includes(role.code));
 
   return (
     <div className="dashboard-page">
@@ -44,20 +55,17 @@ export function DashboardPage() {
         </article>
       </section>
 
-      <section className="dashboard-map-card" aria-label="Carte opérationnelle">
-        <div className="dashboard-map-visual">
-          <span className="dashboard-map-label">VUE CARTOGRAPHIQUE ISIECO</span>
-        </div>
-        <div className="dashboard-map-copy">
-          <p className="dashboard-eyebrow">SUPERVISION GÉOGRAPHIQUE</p>
-          <h2>La carte opérationnelle est la prochaine évolution.</h2>
-          <p>
-            Elle réunira les signalements, les dossiers, les affectations et les interventions.
-            Son intégration dépend de la mise à disposition des données géographiques et des filtres côté API.
-            Aucun point fictif n’est affiché ici.
-          </p>
-        </div>
-      </section>
+      {canViewCommandCenter ? (
+        <OperationalCommandCenter />
+      ) : (
+        <section className="dashboard-restricted-note">
+          <span className="dashboard-restricted-note__icon"><AppIcon name="overview" size={18} /></span>
+          <div>
+            <strong>Vos espaces de travail</strong>
+            <p>Le centre de commandement est réservé aux habilitations de supervision. Vos accès métier restent disponibles ci-dessous.</p>
+          </div>
+        </section>
+      )}
 
       <section>
         <div className="dashboard-section-heading">

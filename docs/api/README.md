@@ -148,6 +148,16 @@ Toutes les routes exigent `VERIFICATEUR_CLOTURE`. L'auto-vérification est inter
 
 Une décision conforme clôt l'affectation et termine le contenu ; le dossier n'est clôturé que lorsque tous ses contenus actifs sont terminés.
 
+### Centre de commandement — `command-center`
+
+| Méthode | Route | Accès |
+|---|---|---|
+| GET | `/command-center/overview` | Rôles back-office actifs : `AGENT_QUALIFICATION`, `RESPONSABLE_TRAITEMENT`, `RESPONSABLE_AFFECTATION`, `VERIFICATEUR_CLOTURE`, `GESTIONNAIRE_REFERENTIEL`, `ADMINISTRATEUR_COMPTES`. |
+
+La réponse agrège les compteurs de signalements en attente, dossiers ouverts/prioritaires, affectations actives, interventions en cours, vérifications attendues et qualité de géolocalisation. La carte retourne les dossiers ouverts géolocalisés et les signalements actifs non encore associés à un dossier, avec un plafond de 250 éléments par réponse (paramètre `limit`, 150 par défaut). Les dossiers agrègent les noms d'équipes actives, le nombre d'interventions en cours et les catégories actives. Aucun nom de citoyen, téléphone, courriel, identifiant d'agent ou événement d'audit brut n'est exposé.
+
+Les objets dépourvus de latitude ou de longitude sont comptabilisés dans `withoutLocation`, mais ne sont jamais placés sur la carte. Les marqueurs sont des données métier existantes, pas une approximation d'adresse. La date `generatedAt` décrit l'instant de lecture de l'API ; cet endpoint n'est pas un flux de suivi GPS ni un service temps réel.
+
 ## Contrats de réponse des uploads média
 
 `POST /reports/:id/photos` renvoie `idPhotoSignalement`, tandis que `POST /interventions/:idIntervention/photos` renvoie `idPhotoIntervention`. Les deux réponses contiennent `description`, `dateAjout` et `etatPublication: PRIVEE`. Elles n'exposent jamais `referencePhoto`, un chemin Storage ou une URL signée. Les schémas OpenAPI utilisent deux DTO distincts pour préserver ces noms de propriété.

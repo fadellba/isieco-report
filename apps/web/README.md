@@ -24,7 +24,7 @@ L'application utilise `VITE_API_BASE_URL`, `VITE_SUPABASE_URL` et `VITE_SUPABASE
 |---|---|---|
 | `/connexion` | Public | Connexion Supabase Auth |
 | `/telecharger` | Public | Page de distribution Android |
-| `/` | Session active | Vue d'ensemble et espaces autorisés |
+| `/` | Session active | Centre de commandement cartographique pour les rôles back-office autorisés, puis espaces de travail disponibles |
 | `/administration/comptes` | `ADMINISTRATEUR_COMPTES` | Liste paginée, attribution et révocation des rôles |
 | `/qualification` et `/qualification/:idSignalement` | `AGENT_QUALIFICATION` | File, détail, photos signées, compléments et décisions |
 | `/dossiers` et `/dossiers/:idDossier` | `RESPONSABLE_TRAITEMENT` | Liste, création, rattachements, priorité et localisation |
@@ -65,11 +65,32 @@ La PR #22 a intégré `/verification`, réservée au rôle `VERIFICATEUR_CLOTURE
 
 L'interface masque les commandes de décision et de consultation des preuves lorsque le vérificateur est l'auteur de l'intervention. L'API vérifie indépendamment la séparation des tâches, la fraîcheur de la soumission et l'état du dossier.
 
+## Centre de commandement cartographique
+
+La page d'accueil affiche, pour les rôles back-office autorisés, un tableau de bord agrégé alimenté par `GET /api/v1/command-center/overview` :
+
+- compteurs de signalements à qualifier ou en attente du citoyen, dossiers ouverts et prioritaires, affectations/interventions actives et vérifications à traiter ;
+- carte interactive avec dossiers ouverts et signalements actifs non rattachés disposant de coordonnées enregistrées ;
+- sélection d'un marqueur pour consulter son statut, sa priorité, son libellé de localisation, ses équipes actives et ses catégories ;
+- nombre d'objets sans coordonnées et indication claire lorsque la réponse est tronquée ;
+- actualisation manuelle et rafraîchissement périodique toutes les 60 secondes lorsque l'onglet est visible.
+
+Les données cartographiques ne contiennent pas de nom, d'adresse électronique ou de téléphone de citoyen, et n'exposent pas les identités d'agents ni le journal d'audit brut. Les objets sans coordonnées sont comptés, mais ne sont jamais positionnés par approximation. Le panneau n'affiche aucune position GPS d'équipe : aucune télémétrie temps réel n'est encore modélisée.
+
+### Fournisseur de fond cartographique
+
+Le rendu utilise des tuiles raster XYZ chargées uniquement pour la zone visible. La configuration navigateur accepte :
+
+- `VITE_MAP_TILE_URL` : modèle URL avec les placeholders `{z}`, `{x}`, `{y}` ;
+- `VITE_MAP_ATTRIBUTION` : attribution textuelle visible dans le coin de la carte.
+
+Sans configuration, le mode de développement utilise `https://tile.openstreetmap.org/{z}/{x}/{y}.png` et affiche l'attribution OpenStreetMap ainsi que le lien de signalement d'erreur. Le client respecte le cache normal du navigateur et ne précharge pas de zones hors écran. Consulter la [politique officielle d'utilisation des tuiles OSM](https://operations.osmfoundation.org/policies/tiles/) avant d'exploiter ce fournisseur : son service est best-effort, sans SLA, avec des règles d'attribution, de cache, d'identification et d'usage. Pour un trafic de production important, configurer un fournisseur adapté ou un hébergement de tuiles maîtrisé, et définir son attribution exacte dans `VITE_MAP_ATTRIBUTION`.
+
 ## Organisation réelle du code
 
 - `src/app` : contexte d'authentification, navigation, shell et gardes de routes.
 - `src/features/accounts` : administration des comptes et rôles.
-- `src/features/dashboard` : vue d'ensemble.
+- `src/features/dashboard` : vue d'ensemble, centre de commandement et carte interactive.
 - `src/features/qualification` : file et décisions de qualification.
 - `src/features/cases` : liste et gestion des dossiers.
 - `src/features/referentials` : types de déchets, équipes, appartenances et compétences.
@@ -81,4 +102,4 @@ L'interface masque les commandes de décision et de consultation des preuves lor
 
 ## Limites restantes
 
-Les principaux parcours métier Web sont intégrés. La consultation des photos de qualification et l'upload des preuves d'intervention sont couverts par les parcours concernés. Le dépôt de photos de signalement depuis le back-office citoyen n'est pas un parcours Web livré : le dépôt citoyen est porté par l'application Mobile. Il n'existe pas d'écran d'audit personnel, de liste globale d'événements, de détail d'événement ni d'historique des rôles par compte. La recherche multi-critères de comptes n'est pas non plus exposée dans l'interface. La recette utilisateur, l'accessibilité et la couverture média des écrans secondaires restent à compléter.
+Les principaux parcours métier Web sont intégrés. Le centre de commandement affiche les entités géolocalisées connues et actualise les compteurs périodiquement. Les positions GPS temps réel, les notifications d'événements et les données de couverture territoriale restent à réaliser. La consultation des photos de qualification et l'upload des preuves d'intervention sont couverts par les parcours concernés. Le dépôt de photos de signalement depuis le back-office citoyen n'est pas un parcours Web livré : le dépôt citoyen est porté par l'application Mobile. Il n'existe pas d'écran d'audit personnel, de liste globale d'événements, de détail d'événement ni d'historique des rôles par compte. La recherche multi-critères de comptes n'est pas non plus exposée dans l'interface. La recette utilisateur, l'accessibilité et la couverture média des écrans secondaires restent à compléter.
