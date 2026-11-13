@@ -32,12 +32,14 @@ export class AccountsService {
       ? metadata.prenom.trim()
       : null;
 
+    let profileExistedAtStart = false;
     try {
       await this.prisma.$transaction(async (tx) => {
         const existing = await tx.utilisateur.findUnique({
           where: { authUserId: authUser.id },
-          select: { idUtilisateur: true },
+          select: { idUtilisateur: true, email: true },
         });
+        profileExistedAtStart = existing !== null;
         const citizenRole = await tx.role.upsert({
           where: { codeRole: 'CITOYEN' },
           update: {},
@@ -81,12 +83,23 @@ export class AccountsService {
             entityId: profile.idUtilisateur,
             metadata: { result: 'CITOYEN' },
           });
+        } else if (existing.email !== email) {
+          // Supabase email synchronization changes the business account too.
+          // Keep the new address out of audit metadata.
+          await recordBusinessEvent(tx, {
+            actorId: null,
+            actionCode: 'COMPTE_PROFIL_MODIFIE',
+            entityType: 'UTILISATEUR',
+            entityId: profile.idUtilisateur,
+          });
         }
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     } catch (error) {
-      // A concurrent first sign-in may win the unique insert. Its committed account
-      // and audit events are authoritative; only suppress the conflict if it exists.
-      if (!isPrismaCode(error, 'P2002') && !isPrismaCode(error, 'P2034')) throw error;
+      // Only suppress a unique/serialization conflict when this transaction was
+      // attempting first-time provisioning and another transaction committed it.
+      if (profileExistedAtStart || (!isPrismaCode(error, 'P2002') && !isPrismaCode(error, 'P2034'))) {
+        throw error;
+      }
       const concurrentProfile = await this.prisma.utilisateur.findUnique({
         where: { authUserId: authUser.id },
         select: { idUtilisateur: true },
