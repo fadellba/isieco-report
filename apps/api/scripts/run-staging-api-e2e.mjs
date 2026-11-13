@@ -24,6 +24,7 @@ const RUN_ATTEMPT = process.env.GITHUB_RUN_ATTEMPT || '1';
 
 const accounts = [
   { email: 'e2e.citoyen@staging.isieco.test', role: 'CITOYEN' },
+  { email: 'e2e.citoyen-secondaire@staging.isieco.test', role: 'CITOYEN', passwordKey: 'CITOYEN_SECONDARY' },
   { email: 'e2e.agent-qualification@staging.isieco.test', role: 'AGENT_QUALIFICATION' },
   { email: 'e2e.responsable-traitement@staging.isieco.test', role: 'RESPONSABLE_TRAITEMENT' },
   { email: 'e2e.responsable-affectation@staging.isieco.test', role: 'RESPONSABLE_AFFECTATION' },
@@ -49,9 +50,13 @@ function required(value, name) {
   return value;
 }
 
-function passwordForRole(role) {
+function accountKey(account) {
+  return account.passwordKey ?? account.role;
+}
+
+function passwordForAccount(account) {
   return createHmac('sha256', PASSWORD_SEED)
-    .update('isieco-staging-e2e:' + role)
+    .update('isieco-staging-e2e:' + accountKey(account))
     .digest('base64url') + 'A1!';
 }
 
@@ -187,13 +192,13 @@ async function signInAccounts() {
   for (const account of accounts) {
     const result = await supabase.auth.signInWithPassword({
       email: account.email,
-      password: passwordForRole(account.role),
+      password: passwordForAccount(account),
     });
     if (result.error || !result.data.session || !result.data.session.access_token) {
       throw new Error('Supabase sign-in failed for role ' + account.role + ': ' +
         (result.error ? result.error.message : 'No access token returned'));
     }
-    tokens.set(account.role, result.data.session.access_token);
+    tokens.set(accountKey(account), result.data.session.access_token);
   }
   return tokens;
 }
@@ -205,14 +210,14 @@ async function verifyRoleMatrix(tokens) {
 
     const results = await Promise.all(accounts.map(async (account) => ({
       role: account.role,
-      result: await api(tokens.get(account.role), route.path),
+      result: await api(tokens.get(accountKey(account)), route.path),
     })));
 
     for (const item of results) {
       const expected = item.role === route.role ? 200 : 403;
       expectStatus(item.result, expected, item.role + ' -> ' + route.path);
     }
-    console.log('PASS role matrix: ' + route.path + ' allows ' + route.role + '; denies the other 7 roles.');
+    console.log('PASS role matrix: ' + route.path + ' allows ' + route.role + '; denies accounts with every other role.');
   }
   console.log('PASS access-control matrix: ' + (protectedReadRoutes.length * accounts.length) +
     ' role/route checks and ' + protectedReadRoutes.length + ' anonymous checks.');
@@ -323,7 +328,7 @@ async function purgePreviousSyntheticMedia(prisma, purge) {
   console.log('PASS cleanup: purged ' + photoIds.length + ' prior synthetic staging media fixture(s).');
 }
 
-async function verifyReportPhotoLifecycle(citizenToken, reportId) {
+async function verifyReportPhotoLifecycle(citizenToken, secondaryCitizenToken, reportId) {
   const app = await NestFactory.createApplicationContext(StorageMaintenanceModule, {
     logger: ['error', 'warn'],
   });
@@ -363,6 +368,12 @@ async function verifyReportPhotoLifecycle(citizenToken, reportId) {
     );
     photoId = uploaded.idPhotoSignalement || uploaded.idPhoto;
     assert.ok(photoId, 'Uploaded photo must expose its photo identifier.');
+
+    expectStatus(
+      await api(secondaryCitizenToken, '/reports/' + reportId + '/photos/' + photoId + '/url'),
+      404,
+      'A second citizen must not obtain a signed URL for another citizen photo',
+    );
 
     const photo = await prisma.photoSignalement.findUnique({
       where: { idPhotoSignalement: photoId },
@@ -687,6 +698,7 @@ async function verifyInterventionPhotoLifecycle(fieldAgentToken, verifierToken, 
 
 async function runBusinessJourney(tokens) {
   const citizen = tokens.get('CITOYEN');
+  const secondaryCitizen = tokens.get('CITOYEN_SECONDARY');
   const qualification = tokens.get('AGENT_QUALIFICATION');
   const treatment = tokens.get('RESPONSABLE_TRAITEMENT');
   const assignmentManager = tokens.get('RESPONSABLE_AFFECTATION');
@@ -725,8 +737,27 @@ async function runBusinessJourney(tokens) {
 
   const ownReport = expectSuccess(await api(citizen, '/reports/' + report.idSignalement), 'Read own report');
   assert.equal(ownReport.statutSignalement, 'SOUMIS');
+  expectStatus(
+    await api(tokens.get('AGENT_QUALIFICATION'), '/reports/' + report.idSignalement),
+    403,
+    'A non-citizen role must not read a citizen-owned report',
+  );
+  const secondaryReports = expectSuccess(
+    await api(secondaryCitizen, '/reports?page=1&pageSize=100'),
+    'List reports as a second citizen',
+  );
+  assert.ok(
+    !secondaryReports.items.some((item) => item.idSignalement === report.idSignalement),
+    'A second citizen must not see another citizen report in their own list.',
+  );
+  expectStatus(
+    await api(secondaryCitizen, '/reports/' + report.idSignalement),
+    404,
+    'A second citizen must not read another citizen report',
+  );
+  console.log('PASS cross-citizen isolation: list and detail endpoints expose only the authenticated citizen reports.');
 
-  await verifyReportPhotoLifecycle(citizen, report.idSignalement);
+  await verifyReportPhotoLifecycle(citizen, secondaryCitizen, report.idSignalement);
 
   const qualificationQueue = expectSuccess(
     await api(qualification, '/qualification/queue?page=1&pageSize=100'),
@@ -831,10 +862,31 @@ async function runBusinessJourney(tokens) {
     'Read business case history',
   );
   assert.ok(Array.isArray(history), 'Case history must be an array.');
-  const actions = new Set(history.map((event) => event.actionCode));
-  assert.ok(actions.has('DOSSIER_CREE'), 'Business ledger must include DOSSIER_CREE.');
-  assert.ok(actions.has('DOSSIER_CLOTURE'), 'Business ledger must include DOSSIER_CLOTURE.');
-
+  const chronologicalHistory = [...history].reverse();
+  const requiredChronology = [
+    'SIGNALEMENT_SOUMIS',
+    'SIGNALEMENT_QUALIFIE',
+    'DOSSIER_CREE',
+    'SIGNALEMENT_RATTACHE',
+    'AFFECTATION_CREEE',
+    'AFFECTATION_ACCEPTEE',
+    'INTERVENTION_DEMARREE',
+    'INTERVENTION_SOUMISE',
+    'VERIFICATION_CONFORME',
+    'DOSSIER_CLOTURE',
+  ];
+  let previousIndex = -1;
+  for (const actionCode of requiredChronology) {
+    const nextIndex = chronologicalHistory.findIndex(
+      (event, index) => index > previousIndex && event.actionCode === actionCode,
+    );
+    assert.ok(
+      nextIndex > previousIndex,
+      'Business audit history must contain ' + actionCode + ' after the preceding lifecycle event.',
+    );
+    previousIndex = nextIndex;
+  }
+  console.log('PASS audit chronology: pre-dossier report events are retained and lifecycle events remain causally ordered.');
   console.log('PASS business journey: citizen report -> qualification -> case -> assignment -> field intervention -> verification -> closure.');
   console.log('E2E_FIXTURE report=' + report.idSignalement +
     ' case=' + createdCase.idDossier +
@@ -845,7 +897,7 @@ async function runBusinessJourney(tokens) {
 async function main() {
   validateTargets();
   console.log('Staging target: ' + API_BASE_URL);
-  console.log('Signing in the eight pre-provisioned staging E2E identities.');
+  console.log('Signing in the nine pre-provisioned staging E2E identities.');
   const ready = await api(null, '/health/ready');
   const readyBody = expectStatus(ready, 200, 'Staging API readiness');
   assert.equal(readyBody.status, 'ok');
