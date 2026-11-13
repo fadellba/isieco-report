@@ -1,5 +1,6 @@
--- Publish a minimal invalidation signal after a committed business audit event.
--- The payload contains only the monotonic sequence, never entity data or personal information.
+-- Publish a constant invalidation marker after a committed business audit event.
+-- No event ID, sequence, entity data or personal information is exposed to listeners.
+BEGIN;
 CREATE OR REPLACE FUNCTION audit.notify_command_center_change()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -9,7 +10,7 @@ BEGIN
   IF NEW.entity_type <> 'UTILISATEUR' THEN
     PERFORM pg_catalog.pg_notify(
       'command_center_changed',
-      NEW.event_sequence::text
+      'invalidate'
     );
   END IF;
   RETURN NEW;
@@ -40,3 +41,5 @@ BEGIN
   END LOOP;
 END
 $lockdown$;
+
+COMMIT;

@@ -4,7 +4,7 @@ import test from 'node:test';
 import { firstValueFrom, filter, take } from 'rxjs';
 import { CommandCenterEventsService } from '../dist/modules/command-center/command-center-events.service.js';
 
-test('forwards only minimal command-center invalidations from PostgreSQL notifications', async () => {
+test('forwards only constant command-center invalidation markers from PostgreSQL notifications', async () => {
   const previousDirectUrl = process.env.DIRECT_URL;
   const previousOpenApiFlag = process.env.OPENAPI_GENERATION;
   process.env.DIRECT_URL = 'postgresql://listener:listener-password@localhost:5432/isieco_test';
@@ -35,11 +35,12 @@ test('forwards only minimal command-center invalidations from PostgreSQL notific
         take(1),
       ),
     );
-    client.emit('notification', { channel: 'another_channel', payload: '999' });
+    client.emit('notification', { channel: 'another_channel', payload: 'invalidate' });
     client.emit('notification', { channel: 'command_center_changed', payload: '42' });
+    client.emit('notification', { channel: 'command_center_changed', payload: 'invalidate' });
 
     const event = await eventPromise;
-    assert.deepEqual(event.data, { sequence: '42' });
+    assert.deepEqual(event.data, { invalidated: true });
   } finally {
     await service.onModuleDestroy();
     if (previousDirectUrl === undefined) delete process.env.DIRECT_URL;

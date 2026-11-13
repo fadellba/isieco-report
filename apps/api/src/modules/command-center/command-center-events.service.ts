@@ -108,14 +108,13 @@ export class CommandCenterEventsService implements OnModuleInit, OnModuleDestroy
       client = this.createClient(this.listenerConfig());
       this.listenerClient = client;
       client.on('notification', (notification) => {
-        if (notification.channel !== COMMAND_CENTER_NOTIFY_CHANNEL) return;
+        if (
+          notification.channel !== COMMAND_CENTER_NOTIFY_CHANNEL ||
+          notification.payload !== 'invalidate'
+        ) return;
         this.events.next({
           type: 'command_center_changed',
-          data: {
-            sequence: notification.payload && /^\d+$/.test(notification.payload)
-              ? notification.payload
-              : null,
-          },
+          data: { invalidated: true },
         });
       });
       client.on('error', () => this.handleDisconnect(client!));
