@@ -195,7 +195,7 @@ export class ReportsController {
     @Param('photoId', ParseUUIDPipe) photoId: string,
     @CurrentAuthUser() user: User,
   ) {
-    return this.storage.createSignedUrl(photo.referencePhoto);
+    return this.reports.createPhotoUrl(id, photoId, user.id);
   }
 
   @Get(':id/supplements')
