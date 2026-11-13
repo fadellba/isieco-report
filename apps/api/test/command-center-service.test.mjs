@@ -107,7 +107,7 @@ test('filters map counts and features by a validated geographic viewport', async
           assertViewport(where);
           return 3;
         }
-        return 1;
+        return 5;
       },
       findMany: async ({ where }) => {
         assertViewport(where);
@@ -120,7 +120,7 @@ test('filters map counts and features by a validated geographic viewport', async
           assertViewport(where);
           return 2;
         }
-        return 1;
+        return 5;
       },
       findMany: async ({ where }) => {
         assertViewport(where);
@@ -140,7 +140,7 @@ test('filters map counts and features by a validated geographic viewport', async
   });
 
   assert.equal(result.map.totalLocated, 5);
-  assert.equal(result.summary.locatedItems, 2);
+  assert.equal(result.summary.locatedItems, 10);
   assert.equal(result.map.truncated, true);
 });
 
