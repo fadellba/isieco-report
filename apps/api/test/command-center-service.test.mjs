@@ -281,7 +281,13 @@ test('paginates the combined dossier and report stream with a stable keyset curs
     intervention: { count: async () => 0 },
   };
 
-  const firstPage = await new CommandCenterService(prisma).getOverview({ limit: 1 });
+  const viewport = {
+    minLat: 14.6,
+    maxLat: 14.8,
+    minLon: -17.6,
+    maxLon: -17.4,
+  };
+  const firstPage = await new CommandCenterService(prisma).getOverview({ limit: 1, ...viewport });
   assert.equal(firstPage.map.items.length, 1);
   assert.equal(firstPage.map.items[0].kind, 'DOSSIER');
   assert.equal(firstPage.map.hasMore, true);
@@ -293,6 +299,7 @@ test('paginates the combined dossier and report stream with a stable keyset curs
   const secondPage = await new CommandCenterService(prisma).getOverview({
     limit: 1,
     cursor: firstPage.map.nextCursor,
+    ...viewport,
   });
   assert.equal(secondPage.map.totalLocated, 2);
   assert.equal(secondPage.map.items.length, 1);
@@ -307,8 +314,10 @@ test('paginates the combined dossier and report stream with a stable keyset curs
   const mapReportCounts = reportCountQueries.filter((where) =>
     where.AND?.some((filter) => filter.latitude?.gte !== undefined),
   );
-  assert.equal(mapCaseCounts.length, 4);
-  assert.equal(mapReportCounts.length, 4);
+  assert.equal(mapCaseCounts.length, 2);
+  assert.equal(mapReportCounts.length, 2);
+  assert.ok(mapCaseCounts.every((where) => where.AND?.length === 1));
+  assert.ok(mapReportCounts.every((where) => where.AND?.length === 1));
   assert.ok(mapCaseCounts.every((where) => !where.AND?.some((filter) => filter.OR?.some((part) => part.dateCreationDossier?.lt))));
   assert.ok(mapReportCounts.every((where) => !where.AND?.some((filter) => filter.OR?.some((part) => part.dateSoumission?.lte))));
 });
