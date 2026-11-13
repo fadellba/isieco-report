@@ -1,11 +1,12 @@
 # Documentation ISI-Eco Report
 
-Cette documentation distingue le modèle conceptuel du PFE, le schéma réellement implémenté et l'état des validations.
+Cette documentation distingue le modèle conceptuel du PFE, le schéma réellement implémenté, l'état des validations et le cadrage produit/UX.
 
 ## Navigation
 
 | Rubrique | Contenu |
 |---|---|
+| [Vision produit & UX](product/vision-ux-blueprint.md) | Vision ISIECO, personas, parcours Web/Mobile, design system, écarts API et feuille de route UX. |
 | [Architecture](architecture/README.md) | Architecture applicative, décisions, sécurité et état des livrables. |
 | [Déploiement](deployment/README.md) | GitHub Actions, Vercel, Render, Supabase et distribution mobile. |
 | [Technologies](technologies/README.md) | Stack, versions épinglées et compatibilités. |
