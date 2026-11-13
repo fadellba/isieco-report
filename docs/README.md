@@ -36,3 +36,5 @@ En cas de divergence, ne pas recopier une ancienne référence MLD v2.13 sans la
 ## Règle de validation
 
 Une migration verte sur une base vierge ne prouve pas la conservation de données historiques. Un test synthétique ne remplace pas la validation sur une sauvegarde réelle restaurée. Un workflow de déploiement dont l'appel de déploiement est ignoré ne constitue pas une mise en production.
+
+- [Répétition de restauration staging](deployment/staging-restore-drill.md) : périmètre, déclenchement manuel, confidentialité et limites RPO/RTO.
