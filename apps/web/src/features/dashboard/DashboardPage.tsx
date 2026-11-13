@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../app/auth-context';
 import { navigationItems } from '../../app/navigation';
+import { AppIcon } from '../../components/AppIcon';
 
 export function DashboardPage() {
   const { profile } = useAuth();
@@ -10,68 +11,79 @@ export function DashboardPage() {
   );
 
   return (
-    <div className="space-y-8">
-      <section>
-        <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-eco-700">Vue d'ensemble</p>
-        <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
-              Bonjour{profile?.prenom ? ` ${profile.prenom}` : ''}.
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              Votre espace de travail ISI-Eco Report. Les accès ci-dessous sont calculés à partir des habilitations retournées par l'API.
-            </p>
-          </div>
-          <span className="rounded-full border border-eco-100 bg-white px-3 py-1.5 text-xs font-semibold text-eco-800">
-            Compte {profile?.etatCompte?.toLowerCase()}
-          </span>
+    <div className="dashboard-page">
+      <section className="dashboard-hero">
+        <div>
+          <p className="dashboard-eyebrow">ESPACE DE SUPERVISION</p>
+          <h1 className="dashboard-title">
+            Bonjour{profile?.prenom ? ` ${profile.prenom}` : ''}.
+          </h1>
+          <p className="dashboard-lede">
+            Retrouvez vos espaces de travail et accédez directement aux opérations qui relèvent de vos habilitations.
+            ISIECO centralise le suivi des signalements, des équipes et des interventions sur le territoire.
+          </p>
+        </div>
+        <span className="dashboard-state">Compte {profile?.etatCompte?.toLowerCase()}</span>
+      </section>
+
+      <section className="dashboard-summary-grid" aria-label="Résumé du compte">
+        <article className="dashboard-summary-card">
+          <p className="dashboard-summary-card__label">Espaces métier actifs</p>
+          <p className="dashboard-summary-card__value">{availableItems.length}</p>
+          <p className="dashboard-summary-card__hint">Accès disponibles selon vos rôles actuels</p>
+        </article>
+        <article className="dashboard-summary-card">
+          <p className="dashboard-summary-card__label">Habilitations</p>
+          <p className="dashboard-summary-card__value">{roles.length}</p>
+          <p className="dashboard-summary-card__hint">Les droits sont contrôlés côté API</p>
+        </article>
+        <article className="dashboard-summary-card">
+          <p className="dashboard-summary-card__label">Profil</p>
+          <p className="dashboard-summary-card__value dashboard-summary-card__value--profile">Actif</p>
+          <p className="dashboard-summary-card__hint">{profile?.email}</p>
+        </article>
+      </section>
+
+      <section className="dashboard-map-card" aria-label="Carte opérationnelle">
+        <div className="dashboard-map-visual">
+          <span className="dashboard-map-label">VUE CARTOGRAPHIQUE ISIECO</span>
+        </div>
+        <div className="dashboard-map-copy">
+          <p className="dashboard-eyebrow">SUPERVISION GÉOGRAPHIQUE</p>
+          <h2>La carte opérationnelle est la prochaine évolution.</h2>
+          <p>
+            Elle réunira les signalements, les dossiers, les affectations et les interventions.
+            Son intégration dépend de la mise à disposition des données géographiques et des filtres côté API.
+            Aucun point fictif n’est affiché ici.
+          </p>
         </div>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <article className="rounded-2xl border border-slate-200 bg-white p-5">
-          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Identité</p>
-          <h2 className="mt-3 text-lg font-bold text-slate-900">{profile?.prenom ? `${profile.prenom} ${profile.nom}` : profile?.nom}</h2>
-          <p className="mt-1 text-sm text-slate-500">{profile?.email}</p>
-        </article>
-        <article className="rounded-2xl border border-slate-200 bg-white p-5">
-          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Habilitations actives</p>
-          <p className="mt-3 text-3xl font-extrabold text-eco-800">{roles.length}</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {roles.map((role) => (
-              <span key={role.code} className="rounded-full bg-eco-50 px-2.5 py-1 text-xs font-semibold text-eco-800">{role.libelle}</span>
-            ))}
-          </div>
-        </article>
-        <article className="rounded-2xl border border-slate-200 bg-white p-5">
-          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">État du compte</p>
-          <p className="mt-3 text-xl font-extrabold text-slate-900">{profile?.etatCompte}</p>
-          <p className="mt-2 text-sm text-slate-500">Les décisions d'accès sont vérifiées côté serveur à chaque requête protégée.</p>
-        </article>
-      </section>
-
       <section>
-        <div className="flex items-end justify-between gap-4">
+        <div className="dashboard-section-heading">
           <div>
-            <h2 className="text-xl font-extrabold text-slate-900">Vos espaces</h2>
-            <p className="mt-1 text-sm text-slate-500">Seuls les modules accessibles à votre compte sont affichés.</p>
+            <h2>Vos espaces de travail</h2>
+            <p>Seuls les modules autorisés pour votre compte sont proposés.</p>
           </div>
         </div>
         {availableItems.length ? (
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="dashboard-access-grid" style={{ marginTop: 16 }}>
             {availableItems.map((item) => (
-              <Link key={item.to} to={item.to} className="group rounded-2xl border border-slate-200 bg-white p-5 transition hover:border-eco-300 hover:shadow-sm">
-                <div className="flex items-start justify-between gap-3">
-                  <h3 className="font-bold text-slate-900">{item.label}</h3>
-                  <span className="text-eco-700 transition group-hover:translate-x-1" aria-hidden="true">→</span>
+              <Link key={item.to} to={item.to} className="dashboard-access-card">
+                <div className="dashboard-access-card__top">
+                  <AppIcon name={item.icon} size={21} />
+                  <AppIcon name="arrow" size={17} />
                 </div>
-                <p className="mt-2 text-sm text-slate-500">{item.description}</p>
+                <div>
+                  <h3>{item.label}</h3>
+                  <p>{item.description}</p>
+                </div>
               </Link>
             ))}
           </div>
         ) : (
           <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900">
-            Aucun espace de back-office n'est associé à ce compte. Les parcours citoyen sont accessibles depuis l'application mobile.
+            Aucun espace de back-office n'est associé à ce compte. Les parcours citoyen et agent sont disponibles dans l'application mobile selon vos habilitations.
           </div>
         )}
       </section>
