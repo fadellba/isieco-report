@@ -204,3 +204,23 @@ button { cursor: pointer; }
   .operational-map__viewport { height: 380px; }
   .command-center__selected { flex-direction: column; }
 }
+
+
+/* Command center filters and role-aware entity actions */
+.command-center__filters { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+.command-center__filter-tabs { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px; border: 1px solid var(--line-subtle); border-radius: 11px; background: white; }
+.command-center__filter-tabs button { padding: 8px 12px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--ink-500); font-size: 10px; font-weight: 750; }
+.command-center__filter-tabs button:hover { background: var(--surface-soft); color: var(--ink-900); }
+.command-center__filter-tabs button.is-active { border-color: #dce9dd; background: var(--brand-mist); color: var(--brand-forest); }
+.command-center__search { display: flex; min-width: min(100%, 310px); flex-direction: column; gap: 5px; color: var(--ink-500); font-size: 10px; font-weight: 750; }
+.command-center__search input { min-height: 37px; padding: 8px 11px; border: 1px solid var(--line-strong); border-radius: 9px; background: white; color: var(--ink-900); font-size: 11px; font-weight: 500; outline: none; }
+.command-center__search input:focus { border-color: #7ca98a; box-shadow: 0 0 0 3px rgba(20,83,45,.08); }
+.command-center__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.command-center__actions a { display: inline-flex; align-items: center; justify-content: center; min-height: 34px; padding: 8px 11px; border: 1px solid #c8ddcd; border-radius: 9px; background: #f2f8f2; color: var(--brand-forest); font-size: 10px; font-weight: 800; transition: background .15s ease, border-color .15s ease; }
+.command-center__actions a:hover { border-color: #9bbda3; background: #e5f1e7; }
+.command-center__read-only { align-self: center; color: var(--ink-400); font-size: 10px; line-height: 1.5; }
+@media (max-width: 620px) {
+  .command-center__filters { align-items: stretch; flex-direction: column; }
+  .command-center__filter-tabs { width: fit-content; }
+  .command-center__search { min-width: 0; }
+}

@@ -72,10 +72,12 @@ La page d'accueil affiche, pour les rôles back-office autorisés, un tableau de
 - compteurs de signalements à qualifier ou en attente du citoyen, dossiers ouverts et prioritaires, affectations/interventions actives et vérifications à traiter ;
 - carte interactive avec dossiers ouverts et signalements actifs non rattachés disposant de coordonnées enregistrées ;
 - sélection d'un marqueur pour consulter son statut, sa priorité, son libellé de localisation, ses équipes actives et ses catégories ;
+- liens d'action depuis la fiche sélectionnée, proposés selon les rôles actifs : qualification d'un signalement, détail du dossier, ou vue des affectations filtrée par dossier ;
+- filtres par type d'entité et recherche sur référence, statut, lieu, équipe et catégorie.
 - nombre d'objets sans coordonnées et indication claire lorsque la réponse est tronquée ;
 - actualisation manuelle et rafraîchissement périodique toutes les 60 secondes lorsque l'onglet est visible.
 
-Les données cartographiques ne contiennent pas de nom, d'adresse électronique ou de téléphone de citoyen, et n'exposent pas les identités d'agents ni le journal d'audit brut. Les objets sans coordonnées sont comptés, mais ne sont jamais positionnés par approximation. Le panneau n'affiche aucune position GPS d'équipe : aucune télémétrie temps réel n'est encore modélisée.
+Les liens proposés ne remplacent pas les gardes API : chaque page cible et chaque mutation revalident les habilitations côté serveur. Les données cartographiques ne contiennent pas de nom, d'adresse électronique ou de téléphone de citoyen, et n'exposent pas les identités d'agents ni le journal d'audit brut. Les objets sans coordonnées sont comptés, mais ne sont jamais positionnés par approximation. Le panneau n'affiche aucune position GPS d'équipe : aucune télémétrie temps réel n'est encore modélisée.
 
 ### Fournisseur de fond cartographique
 

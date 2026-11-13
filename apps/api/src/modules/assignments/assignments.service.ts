@@ -120,6 +120,7 @@ export class AssignmentsService {
     const page = Math.max(1, query.page ?? 1);
     const pageSize = Math.min(100, Math.max(1, query.pageSize ?? 20));
     const where: Prisma.ContenuDossierWhereInput = {
+      ...(query.idDossier ? { idDossier: query.idDossier } : {}),
       etatContenuDossier: 'ACTIF',
       etatPriseEnCharge: 'EN_ATTENTE',
       dossier: { statutDossier: { not: 'CLOTURE' } },

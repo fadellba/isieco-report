@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../../app/auth-context';
 import { api } from '../../lib/api';
 import { OperationalMap } from './OperationalMap';
 
@@ -76,8 +78,12 @@ const metricCards = [
 type MetricKey = (typeof metricCards)[number]['key'];
 
 export function OperationalCommandCenter() {
+  const { profile } = useAuth();
+  const roles = new Set(profile?.roles.map((role) => role.code) ?? []);
   const [data, setData] = useState<CommandCenterOverview | null>(null);
   const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(null);
+  const [kindFilter, setKindFilter] = useState<'TOUS' | 'DOSSIER' | 'SIGNALEMENT'>('TOUS');
+  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -108,10 +114,47 @@ export function OperationalCommandCenter() {
     return () => window.clearInterval(timer);
   }, [load]);
 
+  const filteredFeatures = useMemo(() => {
+    const query = searchTerm.trim().toLocaleLowerCase('fr-FR');
+    return (data?.map.items ?? []).filter((item) => {
+      if (kindFilter !== 'TOUS' && item.kind !== kindFilter) return false;
+      if (!query) return true;
+      const searchable = [
+        item.title,
+        item.status,
+        item.priority,
+        item.locationLabel,
+        ...item.teamNames,
+        ...item.wasteTypes,
+      ].filter(Boolean).join(' ').toLocaleLowerCase('fr-FR');
+      return searchable.includes(query);
+    });
+  }, [data, kindFilter, searchTerm]);
+
   const selectedFeature = useMemo(
-    () => data?.map.items.find((item) => item.id === selectedFeatureId) ?? null,
-    [data, selectedFeatureId],
+    () => filteredFeatures.find((item) => item.id === selectedFeatureId) ?? null,
+    [filteredFeatures, selectedFeatureId],
   );
+
+  const selectedActions = useMemo(() => {
+    if (!selectedFeature) return [];
+    if (selectedFeature.kind === 'SIGNALEMENT') {
+      return roles.has('AGENT_QUALIFICATION')
+        ? [{ to: `/qualification/${selectedFeature.id}`, label: 'Ouvrir la qualification' }]
+        : [];
+    }
+    const actions: Array<{ to: string; label: string }> = [];
+    if (roles.has('RESPONSABLE_TRAITEMENT')) {
+      actions.push({ to: `/dossiers/${selectedFeature.id}`, label: 'Ouvrir le dossier' });
+    }
+    if (roles.has('RESPONSABLE_AFFECTATION')) {
+      actions.push({
+        to: `/affectations?idDossier=${encodeURIComponent(selectedFeature.id)}`,
+        label: 'Voir les affectations de ce dossier',
+      });
+    }
+    return actions;
+  }, [selectedFeature, roles]);
 
   return (
     <section className="command-center" aria-label="Centre de commandement opérationnel">
@@ -151,7 +194,7 @@ export function OperationalCommandCenter() {
           <h3>Carte des opérations</h3>
           <p>
             {data
-              ? `${numberFormat.format(data.map.totalLocated)} entité(s) géolocalisée(s) · ${numberFormat.format(data.summary.withoutLocation)} sans coordonnées`
+              ? `${numberFormat.format(filteredFeatures.length)} / ${numberFormat.format(data.map.totalLocated)} entité(s) affichée(s) · ${numberFormat.format(data.summary.withoutLocation)} sans coordonnées`
               : 'Chargement des données géographiques…'}
           </p>
         </div>
@@ -161,9 +204,44 @@ export function OperationalCommandCenter() {
         </div>
       </div>
 
+      <div className="command-center__filters">
+        <div className="command-center__filter-tabs" role="group" aria-label="Filtrer les types d'entités">
+          {([
+            ['TOUS', 'Tout'],
+            ['DOSSIER', 'Dossiers'],
+            ['SIGNALEMENT', 'Signalements'],
+          ] as const).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              className={kindFilter === value ? 'is-active' : ''}
+              aria-pressed={kindFilter === value}
+              onClick={() => {
+                setKindFilter(value);
+                setSelectedFeatureId(null);
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <label className="command-center__search">
+          <span>Rechercher</span>
+          <input
+            type="search"
+            value={searchTerm}
+            onChange={(event) => {
+              setSearchTerm(event.target.value);
+              setSelectedFeatureId(null);
+            }}
+            placeholder="Référence, statut, lieu, équipe, déchet…"
+          />
+        </label>
+      </div>
+
       {data ? (
         <OperationalMap
-          features={data.map.items}
+          features={filteredFeatures}
           selectedFeatureId={selectedFeatureId}
           onSelectFeature={setSelectedFeatureId}
         />
@@ -194,6 +272,15 @@ export function OperationalCommandCenter() {
             <small>{selectedFeature.locationLabel || 'Localisation textuelle non renseignée'} · {dateTimeLabel(selectedFeature.occurredAt)}</small>
             {selectedFeature.teamNames.length ? <small>Équipe(s) : {selectedFeature.teamNames.join(', ')}</small> : null}
             {selectedFeature.wasteTypes.length ? <small>Déchets : {selectedFeature.wasteTypes.join(', ')}</small> : null}
+            <div className="command-center__actions">
+              {selectedActions.length ? selectedActions.map((action) => (
+                <Link key={action.to} to={action.to}>{action.label}</Link>
+              )) : (
+                <span className="command-center__read-only">
+                  Aucune action directe disponible pour vos habilitations sur cette entité.
+                </span>
+              )}
+            </div>
           </div>
           <button type="button" onClick={() => setSelectedFeatureId(null)}>Fermer</button>
         </div>

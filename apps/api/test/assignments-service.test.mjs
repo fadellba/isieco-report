@@ -156,3 +156,33 @@ test('only an active team member can view the team assignment queue', async () =
 
   await assert.rejects(service.listTeamAssignments(teamId, authId), ForbiddenException);
 });
+
+test('filters pending contents by dossier when a dossier ID is supplied', async () => {
+  const calls = { countWhere: null, findManyWhere: null };
+  const prisma = basePrisma();
+  prisma.contenuDossier = {
+    count: async ({ where }) => {
+      calls.countWhere = where;
+      return 1;
+    },
+    findMany: async ({ where }) => {
+      calls.findManyWhere = where;
+      return [];
+    },
+  };
+  prisma.$transaction = async (operations) => Promise.all(operations);
+
+  const service = new AssignmentsService(prisma);
+  const result = await service.listPendingContents({ idDossier: dossierId, page: 1, pageSize: 20 });
+
+  assert.equal(result.total, 1);
+  assert.deepEqual(calls.countWhere, {
+    idDossier: dossierId,
+    etatContenuDossier: 'ACTIF',
+    etatPriseEnCharge: 'EN_ATTENTE',
+    dossier: { statutDossier: { not: 'CLOTURE' } },
+    affectations: { none: { dateFinAffectation: null } },
+  });
+  assert.deepEqual(calls.findManyWhere, calls.countWhere);
+});
+
