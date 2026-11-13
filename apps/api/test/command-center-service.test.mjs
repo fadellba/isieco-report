@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
+import { CommandCenterQueryDto } from '../dist/modules/command-center/dto/command-center-query.dto.js';
 import { CommandCenterService } from '../dist/modules/command-center/command-center.service.js';
 
 test('returns operational counts and only real, geolocated active entities', async () => {
@@ -158,4 +161,35 @@ test('rejects partial or inverted geographic viewports', async () => {
     service.getOverview({ minLat: 15, maxLat: 14, minLon: -18, maxLon: -17 }),
     /latitude minimale/,
   );
+});
+
+
+test('rejects blank viewport coordinates instead of coercing them to zero', async () => {
+  const query = plainToInstance(CommandCenterQueryDto, {
+    minLat: '',
+    maxLat: '',
+    minLon: '',
+    maxLon: '',
+  });
+  const errors = await validate(query);
+  assert.ok(errors.some((error) => ['minLat', 'maxLat', 'minLon', 'maxLon'].includes(error.property)));
+  assert.ok(Number.isNaN(query.minLat));
+  assert.ok(Number.isNaN(query.maxLat));
+  assert.ok(Number.isNaN(query.minLon));
+  assert.ok(Number.isNaN(query.maxLon));
+});
+
+test('parses valid viewport coordinates without accepting empty strings', async () => {
+  const query = plainToInstance(CommandCenterQueryDto, {
+    minLat: '14.6',
+    maxLat: '14.8',
+    minLon: '-17.6',
+    maxLon: '-17.4',
+  });
+  const errors = await validate(query);
+  assert.equal(errors.length, 0);
+  assert.equal(query.minLat, 14.6);
+  assert.equal(query.maxLat, 14.8);
+  assert.equal(query.minLon, -17.6);
+  assert.equal(query.maxLon, -17.4);
 });

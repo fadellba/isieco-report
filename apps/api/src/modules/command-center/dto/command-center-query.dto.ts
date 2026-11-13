@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { IsInt, IsNumber, IsOptional, Max, Min } from 'class-validator';
 
 export class CommandCenterQueryDto {
@@ -13,7 +13,12 @@ export class CommandCenterQueryDto {
   
   @ApiPropertyOptional({ type: Number, minimum: -90, maximum: 90 })
   @IsOptional()
-  @Type(() => Number)
+  @Transform(({ value }) => {
+    if (value === undefined || value === null) return value;
+    if (typeof value !== 'string') return value;
+    const normalized = value.trim();
+    return normalized.length === 0 ? Number.NaN : Number(normalized);
+  })
   @IsNumber()
   @Min(-90)
   @Max(90)
@@ -29,7 +34,12 @@ export class CommandCenterQueryDto {
 
   @ApiPropertyOptional({ type: Number, minimum: -180, maximum: 180 })
   @IsOptional()
-  @Type(() => Number)
+  @Transform(({ value }) => {
+    if (value === undefined || value === null) return value;
+    if (typeof value !== 'string') return value;
+    const normalized = value.trim();
+    return normalized.length === 0 ? Number.NaN : Number(normalized);
+  })
   @IsNumber()
   @Min(-180)
   @Max(180)
