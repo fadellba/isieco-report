@@ -6,21 +6,21 @@ import { BrandMark } from '../src/ui/BrandMark';
 
 const slides = [
   {
-    eyebrow: 'Ensemble, plus propres',
-    title: 'Votre quartier mérite mieux.',
-    body: 'Repérez un dépôt ou un problème de propreté et signalez-le directement depuis votre téléphone.',
+    eyebrow: 'Une ville plus propre, ensemble',
+    title: 'Chaque signalement peut déclencher une action.',
+    body: 'ISIECO relie les citoyens qui signalent un problème aux équipes chargées de le traiter.',
     glyph: '⌖',
   },
   {
-    eyebrow: 'Simple et utile',
-    title: 'Une photo suffit pour commencer.',
-    body: 'Ajoutez une photo, indiquez le lieu et transmettez les informations utiles pour aider les équipes à intervenir.',
+    eyebrow: 'Du terrain au bon service',
+    title: 'Des informations utiles, sans parcours complexe.',
+    body: 'Une photo et une localisation aident à décrire un dépôt. Les équipes disposent des informations nécessaires pour organiser leur intervention.',
     glyph: '＋',
   },
   {
-    eyebrow: 'Un suivi transparent',
-    title: 'Suivez les actions jusqu’à la résolution.',
-    body: 'Retrouvez vos signalements et consultez les étapes de leur traitement depuis votre espace personnel.',
+    eyebrow: 'Un suivi adapté à votre rôle',
+    title: 'Chaque profil a son espace de travail.',
+    body: 'Les citoyens retrouvent leurs signalements. Les agents consultent leurs missions, interviennent et transmettent leur compte rendu.',
     glyph: '↗',
   },
 ];
@@ -35,9 +35,11 @@ export default function OnboardingScreen() {
     setBusy(true);
     try {
       await AsyncStorage.setItem('isieco.onboarding.v1.complete', 'true');
-      router.replace('/sign-in');
+    } catch {
+      // Keep onboarding non-blocking if local persistence is temporarily unavailable.
     } finally {
       setBusy(false);
+      router.replace('/sign-in');
     }
   }
 

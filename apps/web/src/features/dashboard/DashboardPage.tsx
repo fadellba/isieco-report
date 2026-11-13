@@ -38,8 +38,8 @@ export function DashboardPage() {
           <p className="dashboard-summary-card__hint">Les droits sont contrôlés côté API</p>
         </article>
         <article className="dashboard-summary-card">
-          <p className="dashboard-summary-card__label">Profil</p>
-          <p className="dashboard-summary-card__value dashboard-summary-card__value--profile">Actif</p>
+          <p className="dashboard-summary-card__label">Statut du compte</p>
+          <p className="dashboard-summary-card__value dashboard-summary-card__value--profile">{profile?.etatCompte ?? 'Non renseigné'}</p>
           <p className="dashboard-summary-card__hint">{profile?.email}</p>
         </article>
       </section>

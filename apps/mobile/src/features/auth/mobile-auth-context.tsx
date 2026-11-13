@@ -85,7 +85,9 @@ export function MobileAuthProvider({ children }: PropsWithChildren) {
           setError(null);
           setLoading(false);
         }
-      } else if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
+      } else if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+        // Token refreshes do not change the business profile. Avoid blocking the
+        // current screen on routine Supabase session renewal.
         void Promise.resolve().then(load);
       }
     });
