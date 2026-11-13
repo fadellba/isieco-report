@@ -236,7 +236,7 @@ export class ReportsService {
           actionCode: 'SIGNALEMENT_SOUMIS',
           entityType: 'SIGNALEMENT',
           entityId: idSignalement,
-          metadata: { nextStatus: 'SOUMIS', hasInitialPhoto: Boolean(file) },
+          metadata: { nextStatus: 'SOUMIS' },
         });
         if (file) {
           await recordBusinessEvent(tx, {
@@ -244,7 +244,7 @@ export class ReportsService {
             actionCode: 'PHOTO_SIGNALEMENT_AJOUTEE',
             entityType: 'SIGNALEMENT',
             entityId: idSignalement,
-            metadata: { initialPhoto: true },
+            metadata: { reportId: idSignalement },
           });
         }
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
