@@ -57,6 +57,7 @@ Le client Prisma doit être généré. Préparer le dépôt avec `pnpm install` 
 - Assignments : découverte des contenus affectables et équipes éligibles, affectation idempotente, contrôle de l'équipe active et de la compétence active, réponse d'équipe et réaffectation.
 - Interventions : démarrage, compte rendu, exceptions et preuves photo privées.
 - Verification : vérification indépendante, reprise et clôture contrôlée.
+- CommandCenter : indicateurs de supervision et liste cartographique des dossiers/signalements géolocalisés, filtrée par habilitations back-office et sans données personnelles.
 - Audit : journal métier append-only dans `audit.evenement_metier`, avec événements de cycle de vie, référentiels et médias ; lecture de l'historique ciblé d'un dossier via Cases.
 
 Le module historique « Audit personnel » décrit dans d'anciens documents n'existe pas dans le modèle simplifié. Le journal actuel ne propose ni flux personnel, ni listing global, ni export. Les motifs de rattachement/détachement sont conservés dans la colonne `reason`, tandis que les métadonnées restent allowlistées et sans données personnelles.
