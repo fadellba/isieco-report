@@ -69,4 +69,12 @@ export class CommandCenterQueryDto {
   @IsNotEmpty()
   @MaxLength(512)
   cursor?: string;
+  
+  @ApiPropertyOptional({ maxLength: 512, description: 'Curseur opaque de continuation renvoyé par la page précédente. Il doit être réutilisé avec le même viewport.' })
+  @IsOptional()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(512)
+  cursor?: string;
 }

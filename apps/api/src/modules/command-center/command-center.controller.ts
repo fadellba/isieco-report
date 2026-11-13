@@ -38,7 +38,7 @@ export class CommandCenterController {
     description: 'Réservé aux comptes back-office actifs. Les marqueurs sont issus des dossiers ouverts et des signalements non rattachés disposant de coordonnées. Les données personnelles et les identifiants des agents ne sont pas exposés.',
   })
   @ApiOkResponse({ type: CommandCenterOverviewResponseDto })
-  @ApiBadRequestResponse({ description: 'Le viewport est invalide : les quatre bornes minLat, maxLat, minLon et maxLon doivent être fournies ensemble ; minLat doit être inférieur ou égal à maxLat.' })
+  @ApiBadRequestResponse({ description: 'Les paramètres de viewport doivent être fournis ensemble et minLat doit être inférieur ou égal à maxLat ; le curseur est invalide ou appartient à un autre viewport.' })
   @ApiUnauthorizedResponse({ description: 'Jeton Supabase absent ou invalide.' })
   @ApiForbiddenResponse({ description: 'Un rôle back-office autorisé est requis.' })
   getOverview(

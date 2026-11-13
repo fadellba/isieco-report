@@ -317,7 +317,8 @@ export class CommandCenterService {
         (right.occurredAt?.getTime() ?? 0) - (left.occurredAt?.getTime() ?? 0);
       if (occurredAtDifference !== 0) return occurredAtDifference;
       if (left.kind !== right.kind) return left.kind === 'DOSSIER' ? -1 : 1;
-      return right.id.localeCompare(left.id);
+      if (left.id === right.id) return 0;
+      return left.id < right.id ? 1 : -1;
     });
     const pageItems = mapItems.slice(0, limit);
     const hasMore = pageItems.length > 0 && remainingCount > pageItems.length;

@@ -52,7 +52,7 @@ test('returns operational counts and only real, geolocated active entities', asy
       count: count('dossierTraitement'),
       findMany: async ({ where, take }) => {
         assert.equal(where.latitude.not, null);
-        assert.equal(take, 100);
+        assert.equal(take, 101);
         return [dossier];
       },
     },
@@ -192,4 +192,108 @@ test('parses valid viewport coordinates without accepting empty strings', async 
   assert.equal(query.maxLat, 14.8);
   assert.equal(query.minLon, -17.6);
   assert.equal(query.maxLon, -17.4);
+});
+
+
+test('paginates map features with a stable cursor across dossiers and reports', async () => {
+  const caseA = {
+    idDossier: '11111111-1111-4111-8111-111111111111',
+    referenceDossier: 'DOS-A',
+    dateCreationDossier: new Date('2026-11-13T13:00:00.000Z'),
+    statutDossier: 'EN_COURS',
+    priorite: 'NORMALE',
+    latitude: 14.7,
+    longitude: -17.4,
+    descriptionLocalisation: 'Point A',
+    contenus: [],
+  };
+  const caseB = {
+    ...caseA,
+    idDossier: '22222222-2222-4222-8222-222222222222',
+    referenceDossier: 'DOS-B',
+    dateCreationDossier: new Date('2026-11-13T11:00:00.000Z'),
+  };
+  const report = {
+    idSignalement: '33333333-3333-4333-8333-333333333333',
+    dateSoumission: new Date('2026-11-13T12:00:00.000Z'),
+    description: 'Signalement C',
+    localisation: 'Point C',
+    latitude: 14.71,
+    longitude: -17.41,
+    statutSignalement: 'SOUMIS',
+  };
+  const prisma = {
+    dossierTraitement: {
+      count: async ({ where }) => {
+        if (where.AND) return 1;
+        if (where.latitude?.not === null) return 2;
+        return 2;
+      },
+      findMany: async ({ where, take }) => {
+        assert.equal(take, 3);
+        return where.AND ? [caseB] : [caseA, caseB];
+      },
+    },
+    signalement: {
+      count: async ({ where }) => {
+        if (where.AND) return 0;
+        if (where.latitude?.not === null) return 1;
+        return 1;
+      },
+      findMany: async ({ where, take }) => {
+        assert.equal(take, 3);
+        return where.AND ? [] : [report];
+      },
+    },
+    affectation: { count: async () => 0 },
+    intervention: { count: async () => 0 },
+  };
+
+  const service = new CommandCenterService(prisma);
+  const firstPage = await service.getOverview({ limit: 2 });
+
+  assert.deepEqual(firstPage.map.items.map((item) => item.title), ['DOS-A', 'Signalement C']);
+  assert.equal(firstPage.map.totalLocated, 3);
+  assert.equal(firstPage.map.hasMore, true);
+  assert.ok(firstPage.map.nextCursor);
+
+  const secondPage = await service.getOverview({
+    limit: 2,
+    cursor: firstPage.map.nextCursor,
+  });
+
+  assert.deepEqual(secondPage.map.items.map((item) => item.title), ['DOS-B']);
+  assert.equal(secondPage.map.totalLocated, 3);
+  assert.equal(secondPage.map.hasMore, false);
+  assert.equal(secondPage.map.nextCursor, null);
+});
+
+test('rejects a cursor reused with a different viewport', async () => {
+  const prisma = {
+    signalement: { count: async () => 0, findMany: async () => [] },
+    dossierTraitement: { count: async () => 0, findMany: async () => [] },
+    affectation: { count: async () => 0 },
+    intervention: { count: async () => 0 },
+  };
+  const service = new CommandCenterService(prisma);
+  const firstPage = await service.getOverview({ limit: 1 });
+  const fakeCursor = Buffer.from(JSON.stringify({
+    version: 1,
+    occurredAt: '2026-11-13T12:00:00.000Z',
+    kind: 'DOSSIER',
+    id: '11111111-1111-4111-8111-111111111111',
+    viewport: null,
+  })).toString('base64url');
+
+  await assert.rejects(
+    service.getOverview({
+      minLat: 14,
+      maxLat: 15,
+      minLon: -18,
+      maxLon: -17,
+      cursor: fakeCursor,
+    }),
+    /ne correspond pas au viewport courant/,
+  );
+  assert.equal(firstPage.map.hasMore, false);
 });
