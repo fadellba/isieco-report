@@ -86,9 +86,13 @@ function assertStagingTargets() {
   }
 }
 
-function passwordForRole(role, seed) {
+function accountKey(account) {
+  return account.passwordKey ?? account.role;
+}
+
+function passwordForAccount(account, seed) {
   return createHmac('sha256', seed)
-    .update(`isieco-staging-e2e:${role}`)
+    .update(`isieco-staging-e2e:${accountKey(account)}`)
     .digest('base64url') + 'A1!';
 }
 
@@ -309,7 +313,7 @@ async function main() {
       for (const account of accounts) {
         console.log(`- ${account.role}: ${account.email}`);
       }
-      console.log('Passwords were not printed. They are derived per role from STAGING_E2E_PASSWORD_SEED.');
+      console.log('Passwords were not printed. They are derived per account key from STAGING_E2E_PASSWORD_SEED.');
     } catch (error) {
       await profileDb.query('ROLLBACK');
       throw error;

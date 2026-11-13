@@ -160,7 +160,7 @@ async function main() {
     await verifier.auth.signOut({ scope: 'local' });
   }
 
-  console.log('PASS: all 9 isolated staging E2E accounts have role-derived passwords and login was verified.');
+  console.log('PASS: all 9 isolated staging E2E accounts have account-specific derived passwords and login was verified.');
   for (const account of targets) {
     console.log(account.role + ': ' + account.email);
   }
