@@ -290,18 +290,18 @@ jobs:
           set -euo pipefail
           now="$(date +%s)"
           if [[ -n "$RESTORE_STARTED_EPOCH" ]]; then
-            elapsed="$((now - RESTORE_STARTED_EPOCH))"
+            elapsed_label="$((now - RESTORE_STARTED_EPOCH)) seconds"
           else
-            elapsed="not started"
+            elapsed_label="not started"
           fi
           {
-            echo "## Staging recovery drill"
-            echo "- Commit: `$GITHUB_SHA`"
-            echo "- Database restore: `$DATABASE_RESTORE_OUTCOME`"
-            echo "- Storage restore: `$STORAGE_RESTORE_OUTCOME`"
-            echo "- Observed elapsed time (RTO proxy): `$elapsed seconds`"
-            echo "- RPO: not measured by this live-source drill; managed backup timestamp and retention must be documented separately."
-            echo "- Scope: staging only; database restored to ephemeral local PostgreSQL; Storage restored to a temporary private bucket and removed."
-            echo "- No backup files or media objects are uploaded as workflow artifacts."
+            printf '%s\n' "## Staging recovery drill"
+            printf '%s\n' "- Commit: ${GITHUB_SHA}"
+            printf '%s\n' "- Database restore: ${DATABASE_RESTORE_OUTCOME:-not run}"
+            printf '%s\n' "- Storage restore: ${STORAGE_RESTORE_OUTCOME:-not run}"
+            printf '%s\n' "- Observed elapsed time (RTO proxy): ${elapsed_label}"
+            printf '%s\n' "- RPO: not measured by this live-source drill; managed backup timestamp and retention must be documented separately."
+            printf '%s\n' "- Scope: staging only; database restored to ephemeral local PostgreSQL; Storage restored to a temporary private bucket and removed."
+            printf '%s\n' "- No backup files or media objects are uploaded as workflow artifacts."
           } >> "$GITHUB_STEP_SUMMARY"
 
