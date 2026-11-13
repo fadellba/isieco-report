@@ -25,15 +25,16 @@ En cas de divergence, ne pas recopier une ancienne référence MLD v2.13 sans la
 
 ## État du dépôt au 13 novembre 2026
 
-- Le commit courant de `main` est `47f846abd006cdff66a3bc4c396d84d408a64486` ; la PR #86 est fusionnée.
-- Le dépôt contient 13 migrations Prisma. Le dernier état staging vérifié le 7 novembre en comptait 11 ; les deux migrations du 9 novembre restent en attente. Le workflow staging [#43484030393](https://github.com/fadellba/isieco-report/actions/runs/43484030393) s'est arrêté sur cette divergence avant le déclenchement de Render.
-- La CI du commit courant est verte ([run #43484030472](https://github.com/fadellba/isieco-report/actions/runs/43484030472)). Cela ne vaut pas validation du déploiement staging.
-- Le mode hors ligne et la carte native agent ne sont pas implémentés ([#87](https://github.com/fadellba/isieco-report/issues/87), [#88](https://github.com/fadellba/isieco-report/issues/88)). Les notifications métier restent à créer ([#90](https://github.com/fadellba/isieco-report/issues/90)).
-- Le centre Web dispose d'une réponse cartographique bornée, mais n'a ni filtre viewport, ni pagination spatiale, ni actualisation événementielle ([#89](https://github.com/fadellba/isieco-report/issues/89)).
-- Aucun test Android/iOS sur appareil physique n'est attesté ([#53](https://github.com/fadellba/isieco-report/issues/53)).
-- La répétition de restauration disponible ne prouve pas une restauration indépendante depuis des sauvegardes PostgreSQL et Storage datées ([#54](https://github.com/fadellba/isieco-report/issues/54)).
+- Le commit courant de `main` est `dab3b2dc3aecc140709beae91cefa1525edec0be`. Il inclut les PR #86 et #94.
+- La CI du commit de fusion est verte ([run #43513727264](https://github.com/fadellba/isieco-report/actions/runs/43513727264)).
+- Le dépôt contient 13 migrations Prisma ; le workflow staging [#43513727249](https://github.com/fadellba/isieco-report/actions/runs/43513727249) s'arrête avant Render car les deux migrations du 9 novembre ne sont pas appliquées.
+- Les workflows de déploiement Web/API ont été volontairement ignorés : `PRODUCTION_DEPLOY_ENABLED` n'est pas activé et aucun smoke test de production n'a été exécuté ([Web #43513727175](https://github.com/fadellba/isieco-report/actions/runs/43513727175), [API #43513727195](https://github.com/fadellba/isieco-report/actions/runs/43513727195)).
+- Le mode hors ligne et la carte native agent restent absents ([#87](https://github.com/fadellba/isieco-report/issues/87), [#88](https://github.com/fadellba/isieco-report/issues/88)) ; les notifications métier sont à réaliser ([#90](https://github.com/fadellba/isieco-report/issues/90)).
+- Le centre Web filtre désormais selon le viewport et pagine les résultats par curseur stable. L'actualisation événementielle reste à faire ; polling 60 secondes conservé ([#89](https://github.com/fadellba/isieco-report/issues/89)).
+- Aucun test physique Android/iOS n'est attesté ([#53](https://github.com/fadellba/isieco-report/issues/53)).
+- La restauration indépendante PostgreSQL + Storage depuis des sauvegardes datées n'est pas démontrée ([#54](https://github.com/fadellba/isieco-report/issues/54)).
 
-La feuille de route exécutable, les dépendances et les critères de sortie sont détaillés dans [architecture/roadmap-lots-1-4.md](architecture/roadmap-lots-1-4.md). Le registre des validations distingue les preuves obtenues, les fonctionnalités manquantes et les contrôles à réaliser.
+La feuille de route exécutable, les dépendances et les critères de sortie sont détaillés dans [architecture/roadmap-lots-1-4.md](architecture/roadmap-lots-1-4.md).
 
 ## Règle de validation
 
