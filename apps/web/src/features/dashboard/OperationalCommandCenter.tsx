@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../app/auth-context';
 import { api } from '../../lib/api';
+import { supabase } from '../../lib/supabase';
 import { OperationalMap } from './OperationalMap';
 
 interface CommandCenterFeature {
@@ -50,6 +51,7 @@ interface MapViewportBounds {
 }
 
 const numberFormat = new Intl.NumberFormat('fr-FR');
+const commandCenterApiBaseUrl = String(import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '');
 
 function dateTimeLabel(value: string | null) {
   if (!value) return 'Date non renseignée';
@@ -138,6 +140,110 @@ export function OperationalCommandCenter() {
     }, 60_000);
     return () => window.clearInterval(timer);
   }, [load]);
+
+  const loadRef = useRef(load);
+
+  useEffect(() => {
+    loadRef.current = load;
+  }, [load]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const { signal } = controller;
+    let refreshTimer: number | undefined;
+
+    const refreshAfterEvent = () => {
+      if (refreshTimer !== undefined) window.clearTimeout(refreshTimer);
+      refreshTimer = window.setTimeout(() => {
+        void loadRef.current(true);
+      }, 250);
+    };
+
+    const wait = (milliseconds: number) => new Promise<void>((resolve) => {
+      if (signal.aborted) {
+        resolve();
+        return;
+      }
+      const timerId = window.setTimeout(finish, milliseconds);
+      function finish() {
+        window.clearTimeout(timerId);
+        signal.removeEventListener('abort', finish);
+        resolve();
+      }
+      signal.addEventListener('abort', finish, { once: true });
+    });
+
+    const connectToEvents = async () => {
+      let retryDelay = 1_000;
+      while (!signal.aborted) {
+        try {
+          const { data, error: sessionError } = await supabase.auth.getSession();
+          if (sessionError) throw sessionError;
+          const accessToken = data.session?.access_token;
+          if (!accessToken) {
+            await wait(3_000);
+            continue;
+          }
+          if (!commandCenterApiBaseUrl) {
+            throw new Error('VITE_API_BASE_URL est absent.');
+          }
+
+          const response = await fetch(`${commandCenterApiBaseUrl}/command-center/events`, {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              Accept: 'text/event-stream',
+            },
+            cache: 'no-store',
+            signal,
+          });
+          if (!response.ok) {
+            throw new Error(`Le flux événementiel a répondu HTTP ${response.status}.`);
+          }
+          if (!response.body) throw new Error('Le flux événementiel ne fournit pas de corps lisible.');
+
+          retryDelay = 1_000;
+          refreshAfterEvent();
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+
+          while (!signal.aborted) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true }).replace(/\r/g, '');
+
+            let separator = buffer.indexOf('\n\n');
+            while (separator >= 0) {
+              const frame = buffer.slice(0, separator);
+              buffer = buffer.slice(separator + 2);
+              const eventName = frame
+                .split('\n')
+                .find((line) => line.startsWith('event:'))
+                ?.slice(6)
+                .trim();
+              if (eventName === 'command_center_changed') refreshAfterEvent();
+              separator = buffer.indexOf('\n\n');
+            }
+          }
+
+          await reader.cancel().catch(() => undefined);
+          if (!signal.aborted) throw new Error('Le flux événementiel a été fermé.');
+        } catch {
+          if (signal.aborted) return;
+          await wait(retryDelay);
+          retryDelay = Math.min(retryDelay * 2, 30_000);
+        }
+      }
+    };
+
+    void connectToEvents();
+    return () => {
+      controller.abort();
+      if (refreshTimer !== undefined) window.clearTimeout(refreshTimer);
+    };
+  }, []);
+
 
   const loadMore = useCallback(async () => {
     const cursor = data?.map.nextCursor;
