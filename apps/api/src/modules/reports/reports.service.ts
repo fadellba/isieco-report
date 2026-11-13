@@ -44,6 +44,28 @@ const reportSelect = {
 
 type ReportRecord = Prisma.SignalementGetPayload<{ select: typeof reportSelect }>;
 
+
+const reportStatusLabels: Record<string, string> = {
+  SOUMIS: 'Signalement reçu',
+  EN_ATTENTE_COMPLEMENT: 'Informations complémentaires demandées',
+  COMPLEMENT_REPONDU: 'Complément transmis',
+  QUALIFIE: 'Signalement qualifié',
+  REJETE: 'Signalement non retenu',
+};
+
+const operationalTimelineLabels: Record<string, string> = {
+  DOSSIER_CREE: 'Dossier de traitement créé',
+  AFFECTATION_CREEE: 'Une équipe a été affectée',
+  AFFECTATION_ACCEPTEE: 'L’équipe a accepté la mission',
+  AFFECTATION_REFUSEE: 'L’équipe n’a pas pu accepter la mission',
+  AFFECTATION_REAFFECTEE: 'L’affectation a été réorganisée',
+  INTERVENTION_DEMARREE: 'L’intervention a commencé',
+  INTERVENTION_SOUMISE: 'Le compte rendu a été transmis',
+  VERIFICATION_CONFORME: 'L’intervention a été validée',
+  VERIFICATION_REPRISE: 'Une reprise a été demandée',
+  DOSSIER_CLOTURE: 'Le traitement est terminé',
+};
+
 @Injectable()
 export class ReportsService {
   constructor(
@@ -71,7 +93,12 @@ export class ReportsService {
     });
   }
 
-  async createReport(dto: CreateReportDto, authUserId: string, idempotencyKey: string) {
+  async createReport(
+    dto: CreateReportDto,
+    authUserId: string,
+    idempotencyKey: string,
+    incomingFile?: unknown,
+  ) {
     const userId = await this.citizenId(authUserId);
     const key = idempotencyKey.trim();
     if (key.length < 8 || key.length > 128) {
@@ -80,11 +107,12 @@ export class ReportsService {
     if ((dto.latitude === undefined) !== (dto.longitude === undefined)) {
       throw new BadRequestException('La latitude et la longitude doivent être fournies ensemble.');
     }
-
-    const contents = dto.contenus ?? [];
-    if (contents.length === 0) {
-      throw new BadRequestException('Au moins une catégorie de déchets doit être sélectionnée.');
+    if (dto.precisionLocalisation !== undefined && dto.latitude === undefined) {
+      throw new BadRequestException('La précision exige une latitude et une longitude.');
     }
+
+    const file = incomingFile === undefined ? null : validateImageFile(incomingFile);
+    const contents = dto.contenus ?? [];
     if (contents.length) {
       const typeIds = [...new Set(contents.map((item) => item.idTypeDechet))];
       const activeTypes = await this.prisma.typeDechet.findMany({
@@ -96,12 +124,22 @@ export class ReportsService {
       }
     }
 
+    const description = dto.description?.trim() || null;
+    const localisation = dto.descriptionLocalisation?.trim() || null;
+    const latitude = dto.latitude ?? null;
+    const longitude = dto.longitude ?? null;
+    if (!file && !description && contents.length === 0 && !localisation && latitude === null) {
+      throw new BadRequestException(
+        'Ajoutez une photo, une description, une catégorie ou une localisation pour envoyer le signalement.',
+      );
+    }
+
     const payload = {
-      description: dto.description.trim(),
+      description,
       dateConstat: dto.dateConstat ? new Date(dto.dateConstat).toISOString() : null,
-      localisation: dto.descriptionLocalisation?.trim() || null,
-      latitude: dto.latitude ?? null,
-      longitude: dto.longitude ?? null,
+      localisation,
+      latitude,
+      longitude,
       precisionLocalisation: dto.precisionLocalisation ?? null,
       contenus: [...contents]
         .map((item) => ({
@@ -111,6 +149,7 @@ export class ReportsService {
           remarque: item.remarque?.trim() || null,
         }))
         .sort((a, b) => a.idTypeDechet.localeCompare(b.idTypeDechet)),
+      imageSha256: file ? createHash('sha256').update(file.buffer).digest('hex') : null,
     };
     const fingerprint = createHash('sha256').update(JSON.stringify(payload)).digest('hex');
 
@@ -126,10 +165,22 @@ export class ReportsService {
     }
 
     const now = new Date();
+    const idSignalement = randomUUID();
+    const referencePhoto = file
+      ? 'reports/' + idSignalement + '/' + randomUUID() + '.' + file.extension
+      : null;
+    let uploaded = false;
+
     try {
-      const created = await this.prisma.$transaction(async (tx) => {
-        const report = await tx.signalement.create({
+      if (file && referencePhoto) {
+        await this.storage.upload(referencePhoto, file);
+        uploaded = true;
+      }
+
+      await this.prisma.$transaction(async (tx) => {
+        await tx.signalement.create({
           data: {
+            idSignalement,
             idUtilisateur: userId,
             dateConstat: payload.dateConstat ? new Date(payload.dateConstat) : null,
             dateSoumission: now,
@@ -148,7 +199,7 @@ export class ReportsService {
         if (contents.length) {
           await tx.contenuSignalement.createMany({
             data: payload.contenus.map((item) => ({
-              idSignalement: report.idSignalement,
+              idSignalement,
               idTypeDechet: item.idTypeDechet,
               quantiteEstimee: item.quantiteEstimee,
               volumeEstime: item.volumeEstime,
@@ -158,9 +209,21 @@ export class ReportsService {
           });
         }
 
+        if (file && referencePhoto) {
+          await tx.photoSignalement.create({
+            data: {
+              idSignalement,
+              referencePhoto,
+              description: null,
+              dateAjout: now,
+              dateExpiration: this.storage.getExpirationDate(now),
+            },
+          });
+        }
+
         await tx.historiqueStatutSignalement.create({
           data: {
-            idSignalement: report.idSignalement,
+            idSignalement,
             idUtilisateur: userId,
             ancienStatut: null,
             nouveauStatut: 'SOUMIS',
@@ -172,14 +235,24 @@ export class ReportsService {
           actorId: userId,
           actionCode: 'SIGNALEMENT_SOUMIS',
           entityType: 'SIGNALEMENT',
-          entityId: report.idSignalement,
+          entityId: idSignalement,
           metadata: { nextStatus: 'SOUMIS' },
         });
-        return report;
+        if (file) {
+          await recordBusinessEvent(tx, {
+            actorId: userId,
+            actionCode: 'PHOTO_SIGNALEMENT_AJOUTEE',
+            entityType: 'SIGNALEMENT',
+            entityId: idSignalement,
+            metadata: { reportId: idSignalement },
+          });
+        }
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
-      return this.getMine(created.idSignalement, authUserId);
     } catch (error) {
+      if (uploaded && referencePhoto) {
+        await this.storage.remove(referencePhoto).catch(() => undefined);
+      }
       if (isPrismaCode(error, 'P2002') || isPrismaCode(error, 'P2034')) {
         const replay = await this.prisma.signalement.findFirst({
           where: { idUtilisateur: userId, cleIdempotence: key },
@@ -192,6 +265,8 @@ export class ReportsService {
       }
       throw error;
     }
+
+    return this.getMine(idSignalement, authUserId);
   }
 
   async listMine(authUserId: string, query: ListReportsQueryDto) {
@@ -220,6 +295,80 @@ export class ReportsService {
     });
     if (!row) throw new NotFoundException('Signalement introuvable.');
     return this.toReportResponse(row);
+  }
+
+  async getMyHistory(idSignalement: string, authUserId: string) {
+    const userId = await this.citizenId(authUserId);
+    const report = await this.prisma.signalement.findFirst({
+      where: { idSignalement, idUtilisateur: userId },
+      select: { idSignalement: true, idDossier: true },
+    });
+    if (!report) throw new NotFoundException('Signalement introuvable.');
+
+    const statusRows = await this.prisma.historiqueStatutSignalement.findMany({
+      where: { idSignalement },
+      orderBy: [{ dateChangement: 'asc' }, { idHistoriqueStatut: 'asc' }],
+      select: {
+        idHistoriqueStatut: true,
+        dateChangement: true,
+        nouveauStatut: true,
+      },
+    });
+
+    const events: Array<{
+      id: string;
+      occurredAt: Date;
+      type: 'STATUT' | 'OPERATION';
+      code: string;
+      title: string;
+    }> = statusRows.map((item) => ({
+      id: item.idHistoriqueStatut,
+      occurredAt: item.dateChangement,
+      type: 'STATUT',
+      code: item.nouveauStatut,
+      title: reportStatusLabels[item.nouveauStatut] ?? 'Statut du signalement mis à jour',
+    }));
+
+    if (report.idDossier) {
+      const operationRows = await this.prisma.$queryRaw<Array<{
+        id: string;
+        occurredAt: Date;
+        actionCode: string;
+      }>>`
+        SELECT id, occurred_at AS "occurredAt", action_code AS "actionCode"
+        FROM audit.evenement_metier
+        WHERE dossier_id = ${report.idDossier}::uuid
+          AND action_code IN (
+            'DOSSIER_CREE',
+            'AFFECTATION_CREEE',
+            'AFFECTATION_ACCEPTEE',
+            'AFFECTATION_REFUSEE',
+            'AFFECTATION_REAFFECTEE',
+            'INTERVENTION_DEMARREE',
+            'INTERVENTION_SOUMISE',
+            'VERIFICATION_CONFORME',
+            'VERIFICATION_REPRISE',
+            'DOSSIER_CLOTURE'
+          )
+        ORDER BY occurred_at ASC, id ASC
+      `;
+      for (const item of operationRows) {
+        const title = operationalTimelineLabels[item.actionCode];
+        if (!title) continue;
+        events.push({
+          id: item.id,
+          occurredAt: item.occurredAt,
+          type: 'OPERATION',
+          code: item.actionCode,
+          title,
+        });
+      }
+    }
+
+    events.sort((left, right) =>
+      left.occurredAt.getTime() - right.occurredAt.getTime() || left.id.localeCompare(right.id),
+    );
+    return { idSignalement, events };
   }
 
   async listMySupplements(idSignalement: string, authUserId: string) {

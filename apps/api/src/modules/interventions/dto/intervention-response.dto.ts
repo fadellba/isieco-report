@@ -1,5 +1,33 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+export class InterventionAssignmentCaseDto {
+  @ApiProperty()
+  referenceDossier!: string;
+
+  @ApiProperty()
+  statutDossier!: string;
+
+  @ApiProperty({ type: 'string', nullable: true })
+  latitude!: string | null;
+
+  @ApiProperty({ type: 'string', nullable: true })
+  longitude!: string | null;
+
+  @ApiProperty({ type: 'string', nullable: true })
+  precisionLocalisation!: string | null;
+
+  @ApiProperty({ type: 'string', nullable: true })
+  descriptionLocalisation!: string | null;
+}
+
+export class InterventionAssignmentWasteTypeDto {
+  @ApiProperty()
+  codeType!: string;
+
+  @ApiProperty()
+  libelle!: string;
+}
+
 export class InterventionAssignmentContentDto {
   @ApiProperty({ format: 'uuid' })
   idDossier!: string;
@@ -13,11 +41,11 @@ export class InterventionAssignmentContentDto {
   @ApiProperty({ enum: ['EN_ATTENTE', 'EN_COURS', 'TERMINE'] })
   etatPriseEnCharge!: string;
 
-  @ApiProperty()
-  referenceDossier!: string;
+  @ApiProperty({ type: InterventionAssignmentCaseDto })
+  dossier!: InterventionAssignmentCaseDto;
 
-  @ApiProperty()
-  statutDossier!: string;
+  @ApiProperty({ type: InterventionAssignmentWasteTypeDto })
+  typeDechet!: InterventionAssignmentWasteTypeDto;
 }
 
 export class InterventionAssignmentDto {
@@ -35,7 +63,6 @@ export class InterventionAssignmentDto {
 
   @ApiProperty({ type: InterventionAssignmentContentDto })
   contenuDossier!: InterventionAssignmentContentDto;
-
 }
 
 export class InterventionResponseDto {
@@ -80,7 +107,6 @@ export class InterventionResponseDto {
   @ApiProperty({ type: InterventionAssignmentDto })
   affectation!: InterventionAssignmentDto;
 }
-
 
 export class AgentTeamResponseDto {
   @ApiProperty({ format: 'uuid' })

@@ -42,6 +42,18 @@ export class AssignmentCaseDto {
 
   @ApiProperty()
   priorite!: string;
+
+  @ApiProperty({ type: 'string', nullable: true })
+  latitude!: string | null;
+
+  @ApiProperty({ type: 'string', nullable: true })
+  longitude!: string | null;
+
+  @ApiProperty({ type: 'string', nullable: true })
+  precisionLocalisation!: string | null;
+
+  @ApiProperty({ type: 'string', nullable: true })
+  descriptionLocalisation!: string | null;
 }
 
 export class AssignmentContentDto {

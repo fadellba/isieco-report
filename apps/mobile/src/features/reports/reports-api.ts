@@ -64,9 +64,22 @@ export interface SupplementList {
   demandes: Supplement[];
 }
 
+export interface ReportTimelineEvent {
+  id: string;
+  occurredAt: string;
+  type: 'STATUT' | 'OPERATION';
+  code: string;
+  title: string;
+}
+
+export interface ReportHistory {
+  idSignalement: string;
+  events: ReportTimelineEvent[];
+}
+
 export interface CreateReportPayload {
-  description: string;
-  contenus: CreateReportContentPayload[];
+  description?: string;
+  contenus?: CreateReportContentPayload[];
   dateConstat?: string;
   latitude?: number;
   longitude?: number;
@@ -86,6 +99,10 @@ export async function getMyReport(id: string): Promise<Report> {
   return api.request<Report>('/reports/' + encodeURIComponent(id));
 }
 
+export async function getMyReportHistory(id: string): Promise<ReportHistory> {
+  return api.request<ReportHistory>('/reports/' + encodeURIComponent(id) + '/history');
+}
+
 export async function listReportSupplements(id: string): Promise<SupplementList> {
   return api.request<SupplementList>('/reports/' + encodeURIComponent(id) + '/supplements');
 }
@@ -95,6 +112,32 @@ export async function submitReport(payload: CreateReportPayload, idempotencyKey:
     method: 'POST',
     headers: { 'Idempotency-Key': idempotencyKey },
     body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Creates a citizen report and its first private photo atomically.
+ * Do not set Content-Type: the platform must generate the multipart boundary.
+ */
+export async function submitReportWithPhoto(
+  payload: CreateReportPayload,
+  idempotencyKey: string,
+  photo: { uri: string; name: string; type: string },
+): Promise<Report> {
+  const body = new FormData();
+  body.append('file', photo as unknown as Blob);
+  if (payload.description?.trim()) body.append('description', payload.description.trim());
+  if (payload.dateConstat) body.append('dateConstat', payload.dateConstat);
+  if (payload.latitude !== undefined) body.append('latitude', String(payload.latitude));
+  if (payload.longitude !== undefined) body.append('longitude', String(payload.longitude));
+  if (payload.precisionLocalisation !== undefined) body.append('precisionLocalisation', String(payload.precisionLocalisation));
+  if (payload.descriptionLocalisation?.trim()) body.append('descriptionLocalisation', payload.descriptionLocalisation.trim());
+  if (payload.contenus?.length) body.append('contenus', JSON.stringify(payload.contenus));
+
+  return api.request<Report>('/reports/with-photo', {
+    method: 'POST',
+    headers: { 'Idempotency-Key': idempotencyKey },
+    body,
   });
 }
 

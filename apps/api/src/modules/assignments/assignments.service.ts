@@ -41,7 +41,17 @@ const assignmentDetailSelect = {
       idTypeDechet: true,
       etatContenuDossier: true,
       etatPriseEnCharge: true,
-      dossier: { select: { referenceDossier: true, statutDossier: true, priorite: true } },
+      dossier: {
+        select: {
+          referenceDossier: true,
+          statutDossier: true,
+          priorite: true,
+          latitude: true,
+          longitude: true,
+          precisionLocalisation: true,
+          descriptionLocalisation: true,
+        },
+      },
       typeDechet: { select: { idTypeDechet: true, codeType: true, libelle: true } },
     },
   },
@@ -74,6 +84,12 @@ export class AssignmentsService {
       competence: row.competence,
       contenuDossier: {
         ...row.contenuDossier,
+        dossier: {
+          ...row.contenuDossier.dossier,
+          latitude: row.contenuDossier.dossier.latitude?.toString() ?? null,
+          longitude: row.contenuDossier.dossier.longitude?.toString() ?? null,
+          precisionLocalisation: row.contenuDossier.dossier.precisionLocalisation?.toString() ?? null,
+        },
       },
     };
   }

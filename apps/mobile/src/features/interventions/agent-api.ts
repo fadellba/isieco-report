@@ -25,7 +25,14 @@ export interface TeamAssignment {
     idTypeDechet: string;
     etatContenuDossier: string;
     etatPriseEnCharge: string;
-    dossier: { referenceDossier: string; statutDossier: string };
+    dossier: {
+      referenceDossier: string;
+      statutDossier: string;
+      latitude: string | null;
+      longitude: string | null;
+      precisionLocalisation: string | null;
+      descriptionLocalisation: string | null;
+    };
     typeDechet: { codeType: string; libelle: string };
   };
 }
@@ -52,7 +59,14 @@ export interface TeamIntervention {
       idTypeDechet: string;
       etatContenuDossier: string;
       etatPriseEnCharge: string;
-      dossier: { referenceDossier: string; statutDossier: string };
+      dossier: {
+      referenceDossier: string;
+      statutDossier: string;
+      latitude: string | null;
+      longitude: string | null;
+      precisionLocalisation: string | null;
+      descriptionLocalisation: string | null;
+    };
       typeDechet: { codeType: string; libelle: string };
     };
   };

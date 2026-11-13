@@ -36,7 +36,8 @@ import { CurrentAuthUser } from '../../auth/current-auth-user.decorator.js';
 import { Roles } from '../../auth/roles.decorator.js';
 import { RolesGuard } from '../../auth/roles.guard.js';
 import { SupabaseAuthGuard } from '../../auth/supabase-auth.guard.js';
-import { CreateReportDto } from './dto/create-report.dto.js';
+import { CreateReportDto, CreateReportWithPhotoDto } from './dto/create-report.dto.js';
+import { ReportHistoryResponseDto } from './dto/report-history-response.dto.js';
 import { ListReportsQueryDto } from './dto/list-reports-query.dto.js';
 import { ReportsService } from './reports.service.js';
 import { ReportListResponseDto, ReportResponseDto } from './dto/report-response.dto.js';
@@ -51,6 +52,46 @@ import { ReportSupplementListResponseDto, SupplementAnswerDto } from './dto/repo
 @Controller('reports')
 export class ReportsController {
   constructor(private readonly reports: ReportsService) {}
+
+  @Post('with-photo')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_IMAGE_SIZE_BYTES, files: 1 } }))
+  @ApiOperation({
+    summary: 'Crée un signalement citoyen avec sa première photo',
+    description: 'La photo et le signalement sont enregistrés comme une seule opération métier. La description et les catégories sont facultatives. La clé idempotente inclut le contenu de la photo.',
+  })
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: true,
+    description: 'Clé opaque de 8 à 128 caractères conservée en cas de retry du même formulaire et de la même photo.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        description: { type: 'string', minLength: 10, maxLength: 5000 },
+        descriptionLocalisation: { type: 'string', maxLength: 1000 },
+        latitude: { type: 'number', minimum: -90, maximum: 90 },
+        longitude: { type: 'number', minimum: -180, maximum: 180 },
+        precisionLocalisation: { type: 'number', minimum: 0, maximum: 100000 },
+        dateConstat: { type: 'string', format: 'date-time' },
+        contenus: { type: 'string', description: 'Tableau JSON optionnel des catégories de déchets.' },
+      },
+      required: ['file'],
+    },
+  })
+  @ApiCreatedResponse({ type: ReportResponseDto })
+  @ApiBadRequestResponse({ description: 'Photo, localisation ou métadonnées invalides.' })
+  @ApiConflictResponse({ description: 'Clé idempotente réutilisée avec un autre contenu.' })
+  createWithPhoto(
+    @Body() dto: CreateReportWithPhotoDto,
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
+    @UploadedFile() file: unknown,
+    @CurrentAuthUser() user: User,
+  ) {
+    return this.reports.createReport(dto, user.id, idempotencyKey ?? '', file ?? null);
+  }
 
   @Post()
   @ApiOperation({
@@ -93,6 +134,18 @@ export class ReportsController {
   @ApiUnauthorizedResponse({ description: 'Jeton Supabase absent ou invalide.' })
   listMine(@Query() query: ListReportsQueryDto, @CurrentAuthUser() user: User) {
     return this.reports.listMine(user.id, query);
+  }
+
+  @Get(':id/history')
+  @ApiOperation({
+    summary: 'Consulte la chronologie communicable de son signalement',
+    description: 'Retourne les transitions de statut et les principales étapes opérationnelles du dossier associé. Les détails internes, les identités des agents et les métadonnées d’audit ne sont pas exposés.',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ type: ReportHistoryResponseDto })
+  @ApiNotFoundResponse({ description: 'Signalement introuvable.' })
+  getMyHistory(@Param('id', ParseUUIDPipe) id: string, @CurrentAuthUser() user: User) {
+    return this.reports.getMyHistory(id, user.id);
   }
 
   @Get(':id')

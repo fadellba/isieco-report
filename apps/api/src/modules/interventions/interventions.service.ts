@@ -46,7 +46,16 @@ const interventionDetailSelect = {
           idTypeDechet: true,
           etatContenuDossier: true,
           etatPriseEnCharge: true,
-          dossier: { select: { referenceDossier: true, statutDossier: true } },
+          dossier: {
+            select: {
+              referenceDossier: true,
+              statutDossier: true,
+              latitude: true,
+              longitude: true,
+              precisionLocalisation: true,
+              descriptionLocalisation: true,
+            },
+          },
           typeDechet: { select: { codeType: true, libelle: true } },
         },
       },
@@ -77,6 +86,7 @@ export class InterventionsService {
   }
 
   private shapeIntervention(row: Prisma.InterventionGetPayload<{ select: typeof interventionDetailSelect }>) {
+    const content = row.affectation.contenuDossier;
     return {
       ...row,
       photos: row.photos.map((photo) => ({ ...photo, etatPublication: 'PRIVEE' })),
@@ -86,6 +96,18 @@ export class InterventionsService {
             etatVerification: row.verification.resultatVerification === 'A_REPRENDRE' ? 'REPRISE' : 'VALIDEE',
           }
         : null,
+      affectation: {
+        ...row.affectation,
+        contenuDossier: {
+          ...content,
+          dossier: {
+            ...content.dossier,
+            latitude: content.dossier.latitude?.toString() ?? null,
+            longitude: content.dossier.longitude?.toString() ?? null,
+            precisionLocalisation: content.dossier.precisionLocalisation?.toString() ?? null,
+          },
+        },
+      },
     };
   }
 
