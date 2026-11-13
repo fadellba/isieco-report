@@ -64,6 +64,19 @@ export interface SupplementList {
   demandes: Supplement[];
 }
 
+export interface ReportTimelineEvent {
+  id: string;
+  occurredAt: string;
+  type: 'STATUT' | 'OPERATION';
+  code: string;
+  title: string;
+}
+
+export interface ReportHistory {
+  idSignalement: string;
+  events: ReportTimelineEvent[];
+}
+
 export interface CreateReportPayload {
   description: string;
   contenus: CreateReportContentPayload[];
@@ -84,6 +97,10 @@ export async function listMyReports(page = 1, pageSize = 20): Promise<ReportPage
 
 export async function getMyReport(id: string): Promise<Report> {
   return api.request<Report>('/reports/' + encodeURIComponent(id));
+}
+
+export async function getMyReportHistory(id: string): Promise<ReportHistory> {
+  return api.request<ReportHistory>('/reports/' + encodeURIComponent(id) + '/history');
 }
 
 export async function listReportSupplements(id: string): Promise<SupplementList> {

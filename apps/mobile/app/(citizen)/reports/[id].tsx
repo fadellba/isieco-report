@@ -4,6 +4,8 @@ import { ActivityIndicator, Image, ScrollView, Text, TextInput, TouchableOpacity
 import {
   answerSupplement,
   getMyReport,
+  getMyReportHistory,
+  type ReportHistory,
   listReportSupplements,
   getReportPhotoUrl,
   uploadReportPhoto,
@@ -20,6 +22,8 @@ export default function CitizenReportDetailScreen() {
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const [report, setReport] = useState<Report | null>(null);
   const [supplements, setSupplements] = useState<Supplement[]>([]);
+  const [history, setHistory] = useState<ReportHistory | null>(null);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [photoLinks, setPhotoLinks] = useState<Record<string, { url: string; expiresAt: number }>>({});
   const [photoBusy, setPhotoBusy] = useState(false);
@@ -39,6 +43,13 @@ export default function CitizenReportDetailScreen() {
       ]);
       setReport(reportData);
       setSupplements(supplementData.demandes);
+      try {
+        setHistory(await getMyReportHistory(id));
+        setHistoryError(null);
+      } catch {
+        setHistory(null);
+        setHistoryError('La chronologie détaillée est momentanément indisponible.');
+      }
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Impossible de charger ce signalement.');
     } finally {
@@ -185,6 +196,30 @@ export default function CitizenReportDetailScreen() {
                 {report.contenus.map((item) => <Text key={item.idTypeDechet} className="mt-2 text-sm text-slate-600">• {item.typeDechet.libelle}</Text>)}
               </View>
             ) : null}
+          </View>
+
+
+          <View className="mt-6 rounded-2xl border border-line-subtle bg-white p-5">
+            <Text className="text-base font-extrabold text-ink-900">Chronologie du traitement</Text>
+            <Text className="mt-1 text-xs leading-5 text-ink-500">Les étapes confirmées par la plateforme, dans l’ordre.</Text>
+            {historyError ? <Text className="mt-3 text-xs text-ink-500">{historyError}</Text> : null}
+            {!historyError && history?.events.length === 0 ? (
+              <Text className="mt-3 text-xs text-ink-500">Aucune étape supplémentaire enregistrée pour le moment.</Text>
+            ) : null}
+            <View className="mt-4">
+              {history?.events.map((event, index) => (
+                <View key={event.id} className="flex-row">
+                  <View className="mr-3 items-center">
+                    <View className={event.type === 'STATUT' ? 'mt-1 h-3 w-3 rounded-full bg-brand-forest' : 'mt-1 h-3 w-3 rounded-full border-2 border-brand-petrol bg-white'} />
+                    {index < (history?.events.length ?? 0) - 1 ? <View className="my-1 min-h-[28px] w-px flex-1 bg-line-strong" /> : null}
+                  </View>
+                  <View className="flex-1 pb-5">
+                    <Text className="text-sm font-bold text-ink-800">{event.title}</Text>
+                    <Text className="mt-1 text-[10px] text-ink-400">{dateLabel(event.occurredAt)}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
           </View>
 
           <View className="mt-6 rounded-2xl border border-eco-100 bg-white p-5">

@@ -27,10 +27,11 @@ L'authentification Supabase et le chargement du profil métier via l'API sont in
 ## Parcours citoyen — Phase 18 intégrée
 
 - `/(citizen)/reports` : liste paginée et suivi des seuls signalements du compte connecté ;
-- `/(citizen)/reports/new` : dépôt idempotent avec description obligatoire, date de constat facultative, description du lieu et coordonnées manuelles facultatives ;
+- `/(citizen)/reports/new` : signalement photo-first avec photo obligatoire, localisation ponctuelle ou manuelle, description et catégories facultatives ;
+- `/(citizen)/reports/[id]` : détail propriétaire, chronologie des statuts et jalons opérationnels, photos privées, catégories qualifiées et demandes de complément ;
 - `/(citizen)/reports/[id]` : détail propriétaire, catégories qualifiées, demandes de complément et réponses.
 
-La soumission réutilise `POST /api/v1/reports` et l'en-tête `Idempotency-Key`. La clé est conservée lors d'une nouvelle tentative avec un contenu inchangé et renouvelée lorsque le formulaire change. Les demandes et réponses réutilisent les endpoints Reports existants. Aucun endpoint de référentiel réservé au gestionnaire n'est appelé par le citoyen.
+La soumission utilise `POST /api/v1/reports/with-photo` et l'en-tête `Idempotency-Key`. Le signalement et sa première photo privée sont créés ensemble ; la clé est conservée lors d'une nouvelle tentative avec les mêmes métadonnées et la même photo, et renouvelée lorsque le formulaire change. La chronologie provient de `GET /api/v1/reports/:id/history`. Les demandes et réponses réutilisent les endpoints Reports existants. Aucun endpoint de référentiel réservé au gestionnaire n'est appelé par le citoyen.
 
 ## Parcours Agent terrain — Phase 19 intégrée
 

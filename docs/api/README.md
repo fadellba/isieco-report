@@ -65,16 +65,18 @@ Le modèle simplifié ne comporte plus de référentiels région/département/co
 
 | Méthode | Route | Accès |
 |---|---|---|
-| POST | `/reports` | `CITOYEN` ; dépôt idempotent avec l'en-tête `Idempotency-Key`. |
+| POST | `/reports` | `CITOYEN` ; dépôt JSON idempotent avec l'en-tête `Idempotency-Key`. |
+| POST | `/reports/with-photo` | `CITOYEN` ; dépôt photo-first multipart avec photo obligatoire et métadonnées facultatives. |
 | GET | `/reports/waste-types` | `CITOYEN` ; types de déchets actifs pour la déclaration. |
 | GET | `/reports` | `CITOYEN` ; liste paginée appartenant au compte connecté. |
 | GET | `/reports/:id` | `CITOYEN` propriétaire ; détail du signalement. |
+| GET | `/reports/:id/history` | `CITOYEN` propriétaire ; chronologie filtrée des statuts et jalons opérationnels. |
 | POST | `/reports/:id/photos` | `CITOYEN` propriétaire ; upload de photo privée. |
 | GET | `/reports/:id/photos/:photoId/url` | `CITOYEN` propriétaire ; URL signée temporaire. |
 | GET | `/reports/:id/supplements` | `CITOYEN` propriétaire ; demandes de complément. |
 | POST | `/reports/:id/supplements/:demandeId/responses` | `CITOYEN` propriétaire ; réponse unique à une demande ouverte. |
 
-Le dépôt valide les catégories et la cohérence de localisation côté API. Une même clé idempotente et un même corps retournent le dépôt initial ; la réutilisation avec un corps différent est un conflit.
+Le dépôt JSON exige au moins un élément de contexte (description, catégorie ou localisation). La variante `/reports/with-photo` exige une image privée et rend la description et les catégories facultatives ; la création du signalement et l'ajout de sa première photo sont atomiques côté base, avec compensation Storage en cas d'échec. Une même clé idempotente, un même corps et le même contenu image retournent le dépôt initial ; la réutilisation de la clé avec un contenu différent est un conflit. La chronologie citoyenne expose uniquement les transitions d'état et les principaux jalons opérationnels du dossier associé, sans identifiants d'agents, raisons internes ou métadonnées d'audit.
 
 ### Qualification — `qualification`
 
@@ -117,7 +119,7 @@ L'association courante est matérialisée par `signalement.id_dossier`. Aucun hi
 | POST | `/assignments/:idAffectation/response` | `AGENT_TERRAIN` membre actif de l'équipe ; accepte ou refuse. |
 | POST | `/assignments/:idAffectation/reassign` | `RESPONSABLE_AFFECTATION` ; réaffectation d'une mission éligible. |
 
-La création référence directement un `ContenuDossier`, une équipe et une `CompetenceEquipe`. Le service revalide les états et l'éligibilité dans une transaction ; le header `Idempotency-Key` est requis pour créer ou réaffecter.
+La création référence directement un `ContenuDossier`, une équipe et une `CompetenceEquipe`. Le service revalide les états et l'éligibilité dans une transaction ; le header `Idempotency-Key` est requis pour créer ou réaffecter. Les réponses `GET /assignments/team/:idEquipe` exposent aussi les coordonnées et le libellé de localisation du dossier pour la navigation de l'agent ; les valeurs peuvent être nulles.
 
 ### Interventions — `interventions`
 
@@ -131,7 +133,7 @@ Toutes les routes exigent `AGENT_TERRAIN` ; l'appartenance active, l'auteur et l
 | POST | `/interventions/:idIntervention/photos` | Ajoute une preuve photo avant soumission. |
 | POST | `/interventions/:idIntervention/submit` | Soumet le compte rendu et le résultat terrain. |
 
-Un résultat partiel ou impossible exige un motif d'exception. Seul l'agent ayant démarré l'intervention peut soumettre le compte rendu et joindre les preuves.
+Un résultat partiel ou impossible exige un motif d'exception. Seul l'agent ayant démarré l'intervention peut soumettre le compte rendu et joindre les preuves. Les réponses `GET /interventions/team/:idEquipe` incluent les coordonnées et le libellé de localisation du dossier lorsque disponibles.
 
 ### Vérification — `verification`
 

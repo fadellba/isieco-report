@@ -1,8 +1,7 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
-  ArrayMinSize,
   ArrayUnique,
   IsArray,
   IsDateString,
@@ -42,15 +41,19 @@ export class CreateReportContentDto {
 }
 
 export class CreateReportDto {
+  @ApiPropertyOptional({ minLength: 10, maxLength: 5000 })
+  @IsOptional()
   @IsString()
   @MinLength(10)
   @MaxLength(5000)
-  description!: string;
+  description?: string;
 
+  @ApiPropertyOptional({ type: String, format: 'date-time' })
   @IsOptional()
   @IsDateString()
   dateConstat?: string;
 
+  @ApiPropertyOptional({ minimum: -90, maximum: 90 })
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 6 })
@@ -58,6 +61,7 @@ export class CreateReportDto {
   @Max(90)
   latitude?: number;
 
+  @ApiPropertyOptional({ minimum: -180, maximum: 180 })
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 6 })
@@ -65,6 +69,7 @@ export class CreateReportDto {
   @Max(180)
   longitude?: number;
 
+  @ApiPropertyOptional({ minimum: 0, maximum: 100000 })
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
@@ -72,17 +77,29 @@ export class CreateReportDto {
   @Max(100000)
   precisionLocalisation?: number;
 
+  @ApiPropertyOptional({ maxLength: 1000 })
   @IsOptional()
   @IsString()
   @MaxLength(1000)
   descriptionLocalisation?: string;
 
-  @ApiProperty({ type: () => [CreateReportContentDto], minItems: 1, maxItems: 20 })
+  @ApiPropertyOptional({ type: () => [CreateReportContentDto], minItems: 0, maxItems: 20 })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value !== 'string') return value;
+    try {
+      return JSON.parse(value) as unknown;
+    } catch {
+      return value;
+    }
+  })
   @IsArray()
-  @ArrayMinSize(1)
   @ArrayMaxSize(20)
   @ArrayUnique((content: CreateReportContentDto) => content.idTypeDechet)
   @ValidateNested({ each: true })
   @Type(() => CreateReportContentDto)
-  contenus!: CreateReportContentDto[];
+  contenus?: CreateReportContentDto[];
 }
+
+/** Multipart metadata DTO for the first photo-led citizen report. */
+export class CreateReportWithPhotoDto extends CreateReportDto {}

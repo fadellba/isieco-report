@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useFocusEffect } from 'expo-router';
-import { ActivityIndicator, Image, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, Linking, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import {
   getAgentProfile,
   listMyTeams,
@@ -233,6 +233,22 @@ export default function AgentMissionsScreen() {
     }
   }
 
+
+  async function openAssignmentNavigation(assignment: TeamAssignment) {
+    const location = assignment.contenuDossier.dossier;
+    if (!location.latitude || !location.longitude) {
+      setError('Les coordonnées de ce dépôt ne sont pas encore disponibles.');
+      return;
+    }
+    const destination = encodeURIComponent(location.latitude + ',' + location.longitude);
+    const url = 'https://www.google.com/maps/dir/?api=1&destination=' + destination;
+    try {
+      await Linking.openURL(url);
+    } catch {
+      setError('Impossible d’ouvrir l’application de navigation sur cet appareil.');
+    }
+  }
+
   const selectedTeam = teams.find((team) => team.idEquipe === selectedTeamId) ?? null;
 
   return (
@@ -295,6 +311,20 @@ export default function AgentMissionsScreen() {
                         <Text className="text-base font-bold text-eco-950">{assignment.contenuDossier.dossier.referenceDossier}</Text>
                         <Text className="mt-1 text-sm text-slate-700">{assignment.contenuDossier.typeDechet.libelle}</Text>
                         <Text className="mt-1 text-xs text-slate-500">{assignment.decisionEquipe} · {assignment.etatAffectation}</Text>
+                        {assignment.contenuDossier.dossier.descriptionLocalisation ? (
+                          <Text className="mt-2 text-xs leading-5 text-slate-600">{assignment.contenuDossier.dossier.descriptionLocalisation}</Text>
+                        ) : null}
+                        <TouchableOpacity
+                          onPress={() => void openAssignmentNavigation(assignment)}
+                          disabled={!assignment.contenuDossier.dossier.latitude || !assignment.contenuDossier.dossier.longitude}
+                          className="mt-3 rounded-xl border border-eco-200 bg-eco-50 px-3 py-3 disabled:opacity-45"
+                        >
+                          <Text className="text-center text-xs font-bold text-eco-800">
+                            {assignment.contenuDossier.dossier.latitude && assignment.contenuDossier.dossier.longitude
+                              ? 'Ouvrir l’itinéraire GPS'
+                              : 'Coordonnées non renseignées'}
+                          </Text>
+                        </TouchableOpacity>
                         {assignment.decisionEquipe === 'EN_ATTENTE' ? (
                           <View className="mt-4 gap-2">
                             <TextInput

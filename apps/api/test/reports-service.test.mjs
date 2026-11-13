@@ -63,14 +63,14 @@ test('lists only active waste types for a citizen', async () => {
   assert.deepEqual(result, [{ idTypeDechet: typeId, codeType: 'PLASTIQUE', libelle: 'Plastique' }]);
 });
 
-test('rejects a report without at least one declared waste category', async () => {
+test('rejects an entirely empty report when no initial photo is provided', async () => {
   let writes = 0;
   const prisma = basePrisma();
   prisma.$transaction = async () => { writes += 1; };
   const service = new ReportsService(prisma, {});
 
   await assert.rejects(
-    service.createReport({ description: 'Un dépôt de déchets est visible près du marché.', contenus: [] }, authId, 'report-idem-0003'),
+    service.createReport({ contenus: [] }, authId, 'report-idem-0003'),
     BadRequestException,
   );
   assert.equal(writes, 0);
@@ -176,4 +176,86 @@ test('does not reveal a report owned by another citizen', async () => {
   prisma.signalement.findFirst = async () => null;
   const service = new ReportsService(prisma, {});
   await assert.rejects(service.getMine(reportId, authId), NotFoundException);
+});
+
+
+test('creates a photo-first report without description or waste categories in one transaction', async () => {
+  const calls = { report: null, photo: null, history: null, audit: [], uploaded: null, removed: null };
+  const prisma = basePrisma();
+  const tx = {
+    $executeRaw: async () => { return 1; },
+    signalement: {
+      create: async ({ data }) => {
+        calls.report = data;
+        return { idSignalement: data.idSignalement };
+      },
+    },
+    photoSignalement: {
+      create: async ({ data }) => { calls.photo = data; return data; },
+    },
+    historiqueStatutSignalement: {
+      create: async ({ data }) => { calls.history = data; return data; },
+    },
+  };
+  prisma.$transaction = async (operation, options) => {
+    assert.equal(options.isolationLevel, 'Serializable');
+    return operation(tx);
+  };
+  const now = new Date('2026-11-13T12:00:00.000Z');
+  const storage = {
+    upload: async (path) => { calls.uploaded = path; },
+    remove: async (path) => { calls.removed = path; },
+    getExpirationDate: () => new Date('2026-12-13T12:00:00.000Z'),
+  };
+  const service = new ReportsService(prisma, storage);
+  const file = {
+    buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    mimetype: 'image/png',
+    size: 8,
+  };
+
+  const result = await service.createReport({}, authId, 'report-photo-0001', file);
+
+  assert.equal(calls.report.description, null);
+  assert.equal(calls.report.statutSignalement, 'SOUMIS');
+  assert.deepEqual(calls.photo.idSignalement, calls.report.idSignalement);
+  assert.match(calls.uploaded, new RegExp(calls.report.idSignalement));
+  assert.equal(calls.history.nouveauStatut, 'SOUMIS');
+  assert.equal(result.idSignalement, reportId);
+  assert.equal(calls.removed, null);
+});
+
+test('returns a citizen-safe timeline with status and operational milestones', async () => {
+  const prisma = basePrisma();
+  prisma.signalement.findFirst = async () => ({ idSignalement: reportId, idDossier: '66666666-6666-4666-8666-666666666666' });
+  prisma.historiqueStatutSignalement = {
+    findMany: async () => [
+      { idHistoriqueStatut: 'status-1', dateChangement: new Date('2026-11-01T10:00:00Z'), nouveauStatut: 'SOUMIS' },
+      { idHistoriqueStatut: 'status-2', dateChangement: new Date('2026-11-01T11:00:00Z'), nouveauStatut: 'QUALIFIE' },
+    ],
+  };
+  prisma.$queryRaw = async () => [
+    { id: 'event-1', occurredAt: new Date('2026-11-02T09:00:00Z'), actionCode: 'AFFECTATION_CREEE' },
+    { id: 'event-2', occurredAt: new Date('2026-11-02T10:00:00Z'), actionCode: 'INTERVENTION_DEMARREE' },
+  ];
+  const service = new ReportsService(prisma, {});
+  const result = await service.getMyHistory(reportId, authId);
+
+  assert.equal(result.idSignalement, reportId);
+  assert.deepEqual(result.events.map((item) => item.type), ['STATUT', 'STATUT', 'OPERATION', 'OPERATION']);
+  assert.deepEqual(result.events.map((item) => item.title), [
+    'Signalement reçu',
+    'Signalement qualifié',
+    'Une équipe a été affectée',
+    'L’intervention a commencé',
+  ]);
+  assert.equal('actorId' in result.events[2], false);
+  assert.equal('metadata' in result.events[2], false);
+});
+
+test('does not expose a timeline for another citizen report', async () => {
+  const prisma = basePrisma();
+  prisma.signalement.findFirst = async () => null;
+  const service = new ReportsService(prisma, {});
+  await assert.rejects(service.getMyHistory(reportId, authId), NotFoundException);
 });
