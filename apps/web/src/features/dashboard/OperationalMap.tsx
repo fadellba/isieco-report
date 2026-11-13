@@ -15,10 +15,18 @@ interface MapFeature {
   wasteTypes: string[];
 }
 
+interface MapViewportBounds {
+  minLat: number;
+  maxLat: number;
+  minLon: number;
+  maxLon: number;
+}
+
 interface OperationalMapProps {
   features: MapFeature[];
   selectedFeatureId: string | null;
   onSelectFeature: (id: string) => void;
+  onViewportChange: (bounds: MapViewportBounds) => void;
 }
 
 interface Coordinate {
@@ -88,7 +96,7 @@ function featureCoordinate(feature: MapFeature): Coordinate | null {
   return { latitude, longitude };
 }
 
-export function OperationalMap({ features, selectedFeatureId, onSelectFeature }: OperationalMapProps) {
+export function OperationalMap({ features, selectedFeatureId, onSelectFeature, onViewportChange }: OperationalMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ pointerId: number; startX: number; startY: number; centerX: number; centerY: number } | null>(null);
   const [viewport, setViewport] = useState<Viewport>({ width: 960, height: 460 });
@@ -131,6 +139,29 @@ export function OperationalMap({ features, selectedFeatureId, onSelectFeature }:
   }, [features]);
 
   const centerPoint = useMemo(() => project(center, zoom), [center, zoom]);
+  const visibleBounds = useMemo<MapViewportBounds>(() => {
+    const southWest = unproject({
+      x: centerPoint.x - viewport.width / 2,
+      y: centerPoint.y + viewport.height / 2,
+    }, zoom);
+    const northEast = unproject({
+      x: centerPoint.x + viewport.width / 2,
+      y: centerPoint.y - viewport.height / 2,
+    }, zoom);
+    const normalizeLongitude = (longitude: number) =>
+      ((longitude + 180) % 360 + 360) % 360 - 180;
+    return {
+      minLat: clamp(southWest.latitude, -90, 90),
+      maxLat: clamp(northEast.latitude, -90, 90),
+      minLon: normalizeLongitude(southWest.longitude),
+      maxLon: normalizeLongitude(northEast.longitude),
+    };
+  }, [centerPoint, viewport, zoom]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => onViewportChange(visibleBounds), 350);
+    return () => window.clearTimeout(timer);
+  }, [onViewportChange, visibleBounds]);
   const mapOrigin = useMemo(() => ({
     x: centerPoint.x - viewport.width / 2,
     y: centerPoint.y - viewport.height / 2,
