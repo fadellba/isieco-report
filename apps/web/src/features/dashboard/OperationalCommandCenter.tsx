@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../app/auth-context';
 import { api } from '../../lib/api';
@@ -36,8 +36,17 @@ interface CommandCenterOverview {
     totalLocated: number;
     truncated: boolean;
     limit: number;
+    hasMore: boolean;
+    nextCursor: string | null;
   };
   generatedAt: string;
+}
+
+interface MapViewportBounds {
+  minLat: number;
+  maxLat: number;
+  minLon: number;
+  maxLon: number;
 }
 
 const numberFormat = new Intl.NumberFormat('fr-FR');
@@ -81,30 +90,45 @@ export function OperationalCommandCenter() {
   const { profile } = useAuth();
   const roles = new Set(profile?.roles.map((role) => role.code) ?? []);
   const [data, setData] = useState<CommandCenterOverview | null>(null);
+  const [viewportBounds, setViewportBounds] = useState<MapViewportBounds | null>(null);
+  const requestVersion = useRef(0);
   const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(null);
   const [kindFilter, setKindFilter] = useState<'TOUS' | 'DOSSIER' | 'SIGNALEMENT'>('TOUS');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async (silent = false) => {
+    const currentRequest = ++requestVersion.current;
     if (silent) setRefreshing(true);
     else setLoading(true);
     try {
-      const response = await api.request<CommandCenterOverview>('/command-center/overview?limit=200');
+      const params = new URLSearchParams({ limit: '200' });
+      if (viewportBounds) {
+        params.set('minLat', String(viewportBounds.minLat));
+        params.set('maxLat', String(viewportBounds.maxLat));
+        params.set('minLon', String(viewportBounds.minLon));
+        params.set('maxLon', String(viewportBounds.maxLon));
+      }
+      const response = await api.request<CommandCenterOverview>(`/command-center/overview?${params.toString()}`);
+      if (currentRequest !== requestVersion.current) return;
       setData(response);
       setError(null);
       setSelectedFeatureId((current) =>
         current && response.map.items.some((item) => item.id === current) ? current : null,
       );
     } catch (reason) {
+      if (currentRequest !== requestVersion.current) return;
       setError(reason instanceof Error ? reason.message : 'Impossible de charger le centre de commandement.');
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (currentRequest === requestVersion.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
-  }, []);
+  }, [viewportBounds]);
 
   useEffect(() => {
     void load();
@@ -113,6 +137,43 @@ export function OperationalCommandCenter() {
     }, 60_000);
     return () => window.clearInterval(timer);
   }, [load]);
+
+  const loadMore = useCallback(async () => {
+    const cursor = data?.map.nextCursor;
+    if (!cursor || loadingMore) return;
+    const currentRequest = ++requestVersion.current;
+    setLoadingMore(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams({ limit: '200', cursor });
+      if (viewportBounds) {
+        params.set('minLat', String(viewportBounds.minLat));
+        params.set('maxLat', String(viewportBounds.maxLat));
+        params.set('minLon', String(viewportBounds.minLon));
+        params.set('maxLon', String(viewportBounds.maxLon));
+      }
+      const response = await api.request<CommandCenterOverview>(`/command-center/overview?${params.toString()}`);
+      if (currentRequest !== requestVersion.current) return;
+      setData((current) => {
+        if (!current) return response;
+        const existing = new Set(current.map.items.map((item) => `${item.kind}:${item.id}`));
+        const appended = response.map.items.filter((item) => !existing.has(`${item.kind}:${item.id}`));
+        return {
+          ...response,
+          map: {
+            ...response.map,
+            items: [...current.map.items, ...appended],
+          },
+        };
+      });
+    } catch (reason) {
+      if (currentRequest !== requestVersion.current) return;
+      setError(reason instanceof Error ? reason.message : 'Impossible de charger la page cartographique suivante.');
+    } finally {
+      if (currentRequest === requestVersion.current) setLoadingMore(false);
+    }
+  }, [data, loadingMore, viewportBounds]);
+
 
   const filteredFeatures = useMemo(() => {
     const query = searchTerm.trim().toLocaleLowerCase('fr-FR');
@@ -244,6 +305,7 @@ export function OperationalCommandCenter() {
           features={filteredFeatures}
           selectedFeatureId={selectedFeatureId}
           onSelectFeature={setSelectedFeatureId}
+          onViewportChange={setViewportBounds}
         />
       ) : (
         <div className="command-center__map-loading">
@@ -251,14 +313,16 @@ export function OperationalCommandCenter() {
         </div>
       )}
 
-      {data?.map.truncated ? (
-        <p className="command-center__truncated">
-          Affichage limité aux {numberFormat.format(data.map.items.length)} derniers éléments géolocalisés retournés par l’API.
-        </p>
+      {data?.map.hasMore ? (
+        <div className="command-center__pagination">
+          <button type="button" onClick={() => void loadMore()} disabled={loadingMore || loading}>
+            {loadingMore ? 'Chargement…' : 'Charger les éléments suivants'}
+          </button>
+        </div>
       ) : null}
 
       <div className="command-center__footnote">
-        Actualisation automatique toutes les 60 secondes. Il ne s’agit pas d’un suivi GPS temps réel des équipes.
+        Les résultats sont limités à la zone visible. Actualisation périodique toutes les 60 secondes ; aucune position GPS d’agent n’est collectée.
       </div>
 
       {selectedFeature ? (
