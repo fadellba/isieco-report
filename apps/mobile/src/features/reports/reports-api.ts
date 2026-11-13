@@ -122,10 +122,10 @@ export async function submitReport(payload: CreateReportPayload, idempotencyKey:
 export async function submitReportWithPhoto(
   payload: CreateReportPayload,
   idempotencyKey: string,
-  photo: { uri: string; name: string; type: string },
+  photo?: { uri: string; name: string; type: string },
 ): Promise<Report> {
   const body = new FormData();
-  body.append('file', photo as unknown as Blob);
+  if (photo) body.append('file', photo as unknown as Blob);
   if (payload.description?.trim()) body.append('description', payload.description.trim());
   if (payload.dateConstat) body.append('dateConstat', payload.dateConstat);
   if (payload.latitude !== undefined) body.append('latitude', String(payload.latitude));
