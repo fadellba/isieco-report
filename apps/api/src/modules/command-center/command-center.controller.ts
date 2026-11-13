@@ -1,10 +1,13 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Header, Query, Sse, UseGuards } from '@nestjs/common';
+import type { MessageEvent } from '@nestjs/common';
+import type { Observable } from 'rxjs';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiForbiddenResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiProduces,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
@@ -15,6 +18,7 @@ import { SupabaseAuthGuard } from '../../auth/supabase-auth.guard.js';
 import type { User } from '@supabase/supabase-js';
 import { CommandCenterQueryDto } from './dto/command-center-query.dto.js';
 import { CommandCenterOverviewResponseDto } from './dto/command-center-response.dto.js';
+import { CommandCenterEventsService } from './command-center-events.service.js';
 import { CommandCenterService } from './command-center.service.js';
 
 @ApiTags('command-center')
@@ -30,7 +34,25 @@ import { CommandCenterService } from './command-center.service.js';
 )
 @Controller('command-center')
 export class CommandCenterController {
-  constructor(private readonly commandCenter: CommandCenterService) {}
+  constructor(
+    private readonly commandCenter: CommandCenterService,
+    private readonly commandCenterEvents: CommandCenterEventsService,
+  ) {}
+
+  @Sse('events')
+  @Header('Cache-Control', 'no-cache, no-transform')
+  @Header('X-Accel-Buffering', 'no')
+  @ApiOperation({
+    summary: 'Diffuse les invalidations de la carte du centre de commandement',
+    description: 'Flux réservé aux comptes actifs porteurs de l’un des rôles AGENT_QUALIFICATION, RESPONSABLE_TRAITEMENT, RESPONSABLE_AFFECTATION, VERIFICATEUR_CLOTURE, GESTIONNAIRE_REFERENTIEL ou ADMINISTRATEUR_COMPTES. Les messages ne contiennent aucune donnée métier : ils signalent uniquement qu’une nouvelle lecture de l’API est nécessaire. La connexion est renouvelée toutes les 60 secondes pour réévaluer l’authentification et les habilitations.',
+  })
+  @ApiProduces('text/event-stream')
+  @ApiOkResponse({ description: 'Flux SSE command_center_changed et heartbeats.' })
+  @ApiUnauthorizedResponse({ description: 'Jeton Supabase absent ou invalide.' })
+  @ApiForbiddenResponse({ description: 'Un rôle back-office autorisé est requis.' })
+  streamEvents(): Observable<MessageEvent> {
+    return this.commandCenterEvents.stream();
+  }
 
   @Get('overview')
   @ApiOperation({
