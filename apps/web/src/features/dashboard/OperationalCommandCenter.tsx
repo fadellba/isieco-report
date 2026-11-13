@@ -89,7 +89,7 @@ const metricCards = [
 type MetricKey = (typeof metricCards)[number]['key'];
 
 export function OperationalCommandCenter() {
-  const { profile } = useAuth();
+  const { profile, refreshProfile } = useAuth();
   const roles = new Set(profile?.roles.map((role) => role.code) ?? []);
   const [data, setData] = useState<CommandCenterOverview | null>(null);
   const [viewportBounds, setViewportBounds] = useState<MapViewportBounds | null>(null);
@@ -198,6 +198,14 @@ export function OperationalCommandCenter() {
             signal,
           });
           if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+              requestVersion.current += 1;
+              setData(null);
+              setSelectedFeatureId(null);
+              setError('Votre session ou vos habilitations ont changé. Vérification de vos accès…');
+              await refreshProfile();
+              return;
+            }
             throw new Error(`Le flux événementiel a répondu HTTP ${response.status}.`);
           }
           if (!response.body) throw new Error('Le flux événementiel ne fournit pas de corps lisible.');
@@ -242,7 +250,7 @@ export function OperationalCommandCenter() {
       controller.abort();
       if (refreshTimer !== undefined) window.clearTimeout(refreshTimer);
     };
-  }, []);
+  }, [refreshProfile]);
 
 
   const loadMore = useCallback(async () => {
