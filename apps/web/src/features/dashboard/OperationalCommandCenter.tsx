@@ -126,6 +126,7 @@ export function OperationalCommandCenter() {
       if (currentRequest === requestVersion.current) {
         setLoading(false);
         setRefreshing(false);
+        setLoadingMore(false);
       }
     }
   }, [viewportBounds]);

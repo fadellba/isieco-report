@@ -6,7 +6,7 @@ import type { CommandCenterQueryDto } from './dto/command-center-query.dto.js';
 const OPEN_REPORT_STATUSES = ['SOUMIS', 'EN_ATTENTE_COMPLEMENT', 'COMPLEMENT_REPONDU'] as const;
 
 type MapCursor = {
-  occurredAt: string;
+  occurredAt: string | null;
   kind: 'DOSSIER' | 'SIGNALEMENT';
   id: string;
 };
@@ -26,9 +26,13 @@ function decodeMapCursor(value?: string): MapCursor | null {
       (candidate.kind !== 'DOSSIER' && candidate.kind !== 'SIGNALEMENT') ||
       typeof candidate.id !== 'string' ||
       !UUID_PATTERN.test(candidate.id) ||
-      typeof candidate.occurredAt !== 'string'
+      (candidate.occurredAt !== null && typeof candidate.occurredAt !== 'string') ||
+      (candidate.kind === 'DOSSIER' && candidate.occurredAt === null)
     ) {
       throw new Error('invalid cursor fields');
+    }
+    if (candidate.occurredAt === null) {
+      return { occurredAt: null, kind: candidate.kind, id: candidate.id };
     }
     const date = new Date(candidate.occurredAt);
     if (!Number.isFinite(date.getTime()) || date.toISOString() !== candidate.occurredAt) {
@@ -50,7 +54,7 @@ function encodeMapCursor(feature: {
   id: string;
 }): string {
   const payload: MapCursor = {
-    occurredAt: feature.occurredAt?.toISOString() ?? new Date(0).toISOString(),
+    occurredAt: feature.occurredAt?.toISOString() ?? null,
     kind: feature.kind,
     id: feature.id,
   };
@@ -61,6 +65,8 @@ function compareMapFeatures(
   left: { occurredAt: Date | null; kind: 'DOSSIER' | 'SIGNALEMENT'; id: string },
   right: { occurredAt: Date | null; kind: 'DOSSIER' | 'SIGNALEMENT'; id: string },
 ): number {
+  if (left.occurredAt === null && right.occurredAt !== null) return 1;
+  if (right.occurredAt === null && left.occurredAt !== null) return -1;
   const leftTime = left.occurredAt?.getTime() ?? 0;
   const rightTime = right.occurredAt?.getTime() ?? 0;
   if (leftTime !== rightTime) return rightTime - leftTime;
@@ -89,7 +95,7 @@ export class CommandCenterService {
     const maxLat = query.maxLat!;
     const minLon = query.minLon!;
     const maxLon = query.maxLon!;
-    const cursorDate = cursor ? new Date(cursor.occurredAt) : new Date(0);
+    const cursorDate = cursor?.occurredAt ? new Date(cursor.occurredAt) : null;
     const activeReportWhere = {
       idDossier: null,
       statutSignalement: { in: [...OPEN_REPORT_STATUSES] },
@@ -133,7 +139,7 @@ export class CommandCenterService {
       : undefined;
 
     const cursorCaseWhere: Prisma.DossierTraitementWhereInput | undefined = cursor
-      ? cursor.kind === 'DOSSIER'
+      ? cursor.kind === 'DOSSIER' && cursorDate
         ? {
             OR: [
               { dateCreationDossier: { lt: cursorDate } },
@@ -145,37 +151,56 @@ export class CommandCenterService {
               },
             ],
           }
-        : { dateCreationDossier: { lt: cursorDate } }
+        : cursorDate
+          ? { dateCreationDossier: { lt: cursorDate } }
+          : { idDossier: { in: [] } }
       : undefined;
     const cursorReportWhere: Prisma.SignalementWhereInput | undefined = cursor
-      ? cursor.kind === 'DOSSIER'
-        ? { dateSoumission: { lte: cursorDate } }
-        : {
+      ? cursor.kind === 'DOSSIER' && cursorDate
+        ? {
             OR: [
-              { dateSoumission: { lt: cursorDate } },
-              {
-                AND: [
-                  { dateSoumission: { equals: cursorDate } },
-                  { idSignalement: { lt: cursor.id } },
-                ],
-              },
+              { dateSoumission: { lte: cursorDate } },
+              { dateSoumission: null },
             ],
           }
+        : cursor.kind === 'SIGNALEMENT' && cursorDate
+          ? {
+              OR: [
+                { dateSoumission: { lt: cursorDate } },
+                {
+                  AND: [
+                    { dateSoumission: { equals: cursorDate } },
+                    { idSignalement: { lt: cursor.id } },
+                  ],
+                },
+                { dateSoumission: null },
+              ],
+            }
+          : cursor.kind === 'SIGNALEMENT'
+            ? {
+                AND: [
+                  { dateSoumission: null },
+                  { idSignalement: { lt: cursor.id } },
+                ],
+              }
+            : { dateSoumission: null }
       : undefined;
 
-    const mapCaseFilters = [viewportCaseWhere, cursorCaseWhere].filter(
-      (filter): filter is Prisma.DossierTraitementWhereInput => filter !== undefined,
-    );
-    const mapReportFilters = [viewportReportWhere, cursorReportWhere].filter(
-      (filter): filter is Prisma.SignalementWhereInput => filter !== undefined,
-    );
     const mapCaseWhere: Prisma.DossierTraitementWhereInput = {
       ...locatedCaseWhere,
-      ...(mapCaseFilters.length ? { AND: mapCaseFilters } : {}),
+      ...(viewportCaseWhere ? { AND: [viewportCaseWhere] } : {}),
     };
     const mapReportWhere: Prisma.SignalementWhereInput = {
       ...locatedReportWhere,
-      ...(mapReportFilters.length ? { AND: mapReportFilters } : {}),
+      ...(viewportReportWhere ? { AND: [viewportReportWhere] } : {}),
+    };
+    const mapCasePageWhere: Prisma.DossierTraitementWhereInput = {
+      ...mapCaseWhere,
+      ...(cursorCaseWhere ? { AND: [...(mapCaseWhere.AND ?? []), cursorCaseWhere] } : {}),
+    };
+    const mapReportPageWhere: Prisma.SignalementWhereInput = {
+      ...mapReportWhere,
+      ...(cursorReportWhere ? { AND: [...(mapReportWhere.AND ?? []), cursorReportWhere] } : {}),
     };
 
     const missingCaseLocationWhere = {
@@ -228,7 +253,7 @@ export class CommandCenterService {
       this.prisma.dossierTraitement.count({ where: mapCaseWhere }),
       this.prisma.signalement.count({ where: mapReportWhere }),
       this.prisma.dossierTraitement.findMany({
-        where: mapCaseWhere,
+        where: mapCasePageWhere,
         orderBy: [{ dateCreationDossier: 'desc' }, { idDossier: 'desc' }],
         take: limit + 1,
         select: {
@@ -261,8 +286,8 @@ export class CommandCenterService {
         },
       }),
       this.prisma.signalement.findMany({
-        where: mapReportWhere,
-        orderBy: [{ dateSoumission: 'desc' }, { idSignalement: 'desc' }],
+        where: mapReportPageWhere,
+        orderBy: [{ dateSoumission: { sort: 'desc', nulls: 'last' } }, { idSignalement: 'desc' }],
         take: limit + 1,
         select: {
           idSignalement: true,

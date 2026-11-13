@@ -52,7 +52,7 @@ test('returns operational counts and only real, geolocated active entities', asy
       count: count('dossierTraitement'),
       findMany: async ({ where, take }) => {
         assert.equal(where.latitude.not, null);
-        assert.equal(take, 100);
+        assert.equal(take, 101);
         return [dossier];
       },
     },
@@ -103,9 +103,29 @@ test('filters map counts and features by a validated geographic viewport', async
     assert.equal(viewport.longitude.gte, -17.6);
     assert.equal(viewport.longitude.lte, -17.4);
   };
-
   const hasViewport = (where) =>
     (where.AND ?? [where]).some((filter) => filter.latitude?.gte !== undefined);
+  const dossier = {
+    idDossier: '11111111-1111-4111-8111-111111111111',
+    referenceDossier: 'DOS-VIEWPORT-1',
+    descriptionSynthese: null,
+    dateCreationDossier: new Date('2026-11-13T12:00:00.000Z'),
+    statutDossier: 'OUVERT',
+    priorite: 'NORMALE',
+    latitude: { toString: () => '14.7' },
+    longitude: { toString: () => '-17.4' },
+    descriptionLocalisation: null,
+    contenus: [],
+  };
+  const report = {
+    idSignalement: '22222222-2222-4222-8222-222222222222',
+    dateSoumission: new Date('2026-11-13T11:00:00.000Z'),
+    description: 'Signalement viewport',
+    localisation: null,
+    latitude: { toString: () => '14.7' },
+    longitude: { toString: () => '-17.4' },
+    statutSignalement: 'SOUMIS',
+  };
   const prisma = {
     signalement: {
       count: async ({ where }) => {
@@ -115,9 +135,10 @@ test('filters map counts and features by a validated geographic viewport', async
         }
         return 5;
       },
-      findMany: async ({ where }) => {
+      findMany: async ({ where, take }) => {
         assertViewport(where);
-        return [];
+        assert.equal(take, 2);
+        return [report];
       },
     },
     dossierTraitement: {
@@ -128,9 +149,10 @@ test('filters map counts and features by a validated geographic viewport', async
         }
         return 5;
       },
-      findMany: async ({ where }) => {
+      findMany: async ({ where, take }) => {
         assertViewport(where);
-        return [];
+        assert.equal(take, 2);
+        return [dossier];
       },
     },
     affectation: { count: async () => 1 },
@@ -138,7 +160,7 @@ test('filters map counts and features by a validated geographic viewport', async
   };
 
   const result = await new CommandCenterService(prisma).getOverview({
-    limit: 100,
+    limit: 1,
     minLat: 14.6,
     maxLat: 14.8,
     minLon: -17.6,
@@ -147,6 +169,8 @@ test('filters map counts and features by a validated geographic viewport', async
 
   assert.equal(result.map.totalLocated, 5);
   assert.equal(result.summary.locatedItems, 10);
+  assert.equal(result.map.items.length, 1);
+  assert.equal(result.map.hasMore, true);
   assert.equal(result.map.truncated, true);
 });
 
@@ -225,21 +249,32 @@ test('paginates the combined dossier and report stream with a stable keyset curs
     longitude: { toString: () => '-17.4' },
     statutSignalement: 'SOUMIS',
   };
-  let caseQuery;
-  let reportQuery;
+  const caseFindQueries = [];
+  const reportFindQueries = [];
+  const caseCountQueries = [];
+  const reportCountQueries = [];
   const prisma = {
     signalement: {
-      count: async () => 1,
+      count: async ({ where }) => {
+        reportCountQueries.push(where);
+        return 1;
+      },
       findMany: async (query) => {
-        reportQuery = query;
+        reportFindQueries.push(query);
         return [report];
       },
     },
     dossierTraitement: {
-      count: async () => 1,
+      count: async ({ where }) => {
+        caseCountQueries.push(where);
+        return 1;
+      },
       findMany: async (query) => {
-        caseQuery = query;
-        return [dossier];
+        caseFindQueries.push(query);
+        const cursorFilter = query.where.AND?.find((filter) =>
+          filter.OR?.some((part) => part.dateCreationDossier?.lt),
+        );
+        return cursorFilter ? [] : [dossier];
       },
     },
     affectation: { count: async () => 0 },
@@ -252,8 +287,8 @@ test('paginates the combined dossier and report stream with a stable keyset curs
   assert.equal(firstPage.map.hasMore, true);
   assert.equal(firstPage.map.truncated, true);
   assert.ok(firstPage.map.nextCursor);
-  assert.equal(caseQuery.take, 2);
-  assert.equal(reportQuery.take, 2);
+  assert.equal(caseFindQueries[0].take, 2);
+  assert.equal(reportFindQueries[0].take, 2);
 
   const secondPage = await new CommandCenterService(prisma).getOverview({
     limit: 1,
@@ -264,8 +299,12 @@ test('paginates the combined dossier and report stream with a stable keyset curs
   assert.equal(secondPage.map.items[0].kind, 'SIGNALEMENT');
   assert.equal(secondPage.map.hasMore, false);
   assert.equal(secondPage.map.nextCursor, null);
-  assert.ok(caseQuery.where.AND.some((filter) => filter.OR?.some((part) => part.dateCreationDossier?.lt)));
-  assert.ok(reportQuery.where.AND.some((filter) => filter.dateSoumission?.lte));
+  assert.ok(caseFindQueries[1].where.AND.some((filter) => filter.OR?.some((part) => part.dateCreationDossier?.lt)));
+  assert.ok(reportFindQueries[1].where.AND.some((filter) => filter.OR?.some((part) => part.dateSoumission?.lte)));
+  assert.equal(caseCountQueries.length, 2);
+  assert.equal(reportCountQueries.length, 2);
+  assert.ok(caseCountQueries.every((where) => !where.AND?.some((filter) => filter.OR?.some((part) => part.dateCreationDossier?.lt))));
+  assert.ok(reportCountQueries.every((where) => !where.AND?.some((filter) => filter.OR?.some((part) => part.dateSoumission?.lte))));
 });
 
 test('rejects malformed or non-canonical map cursors', async () => {
