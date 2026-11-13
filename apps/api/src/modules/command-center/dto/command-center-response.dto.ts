@@ -62,6 +62,12 @@ export class CommandCenterMapDto {
 
   @ApiProperty({ minimum: 1, maximum: 250 })
   limit!: number;
+
+  @ApiProperty()
+  hasMore!: boolean;
+
+  @ApiProperty({ type: 'string', nullable: true, description: 'Curseur opaque pour récupérer la page suivante.' })
+  nextCursor!: string | null;
 }
 
 export class CommandCenterOverviewResponseDto {
