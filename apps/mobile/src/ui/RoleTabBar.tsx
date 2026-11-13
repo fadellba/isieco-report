@@ -14,6 +14,9 @@ interface RoleTabBarProps {
   };
   navigation: {
     navigate: (name: string) => void;
+    emit: (event: { type: 'tabPress'; target: string; canPreventDefault: true }) => {
+      defaultPrevented: boolean;
+    };
   };
   items: RoleTabItem[];
   action?: {
@@ -27,6 +30,9 @@ export function RoleTabBar({ state, navigation, items, action }: RoleTabBarProps
   const insets = useSafeAreaInsets();
   const renderItem = (item: RoleTabItem) => {
     const routeIndex = state.routes.findIndex((route) => route.name === item.route);
+    const route = state.routes[routeIndex];
+    if (!route) return null;
+
     const selected = routeIndex === state.index;
 
     return (
@@ -35,7 +41,14 @@ export function RoleTabBar({ state, navigation, items, action }: RoleTabBarProps
         accessibilityRole="tab"
         accessibilityState={{ selected }}
         accessibilityLabel={item.label}
-        onPress={() => navigation.navigate(item.route)}
+        onPress={() => {
+          const event = navigation.emit({
+            type: 'tabPress',
+            target: route.key,
+            canPreventDefault: true,
+          });
+          if (!selected && !event.defaultPrevented) navigation.navigate(item.route);
+        }}
         className="min-w-0 flex-1 items-center justify-center px-1 py-2"
       >
         <Text className={selected ? 'text-xl font-semibold text-brand-forest' : 'text-xl text-ink-400'}>{item.glyph}</Text>
