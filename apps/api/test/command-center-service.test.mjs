@@ -320,16 +320,23 @@ test('rejects malformed or non-canonical map cursors', async () => {
 
 
 test('rejects a pagination cursor reused with a different viewport', async () => {
+  const report = (id, time) => ({
+    idSignalement: id,
+    dateSoumission: new Date(time),
+    description: 'Signalement',
+    localisation: null,
+    latitude: { toString: () => '14.7' },
+    longitude: { toString: () => '-17.4' },
+    statutSignalement: 'SOUMIS',
+  });
   const prisma = {
-    signalement: { count: async () => 1, findMany: async () => [{
-      idSignalement: '33333333-3333-4333-8333-333333333333',
-      dateSoumission: new Date('2026-11-13T10:00:00.000Z'),
-      description: 'Signalement',
-      localisation: null,
-      latitude: { toString: () => '14.7' },
-      longitude: { toString: () => '-17.4' },
-      statutSignalement: 'SOUMIS',
-    }] },
+    signalement: {
+      count: async () => 2,
+      findMany: async () => [
+        report('33333333-3333-4333-8333-333333333333', '2026-11-13T10:00:00.000Z'),
+        report('44444444-4444-4444-8444-444444444444', '2026-11-13T09:00:00.000Z'),
+      ],
+    },
     dossierTraitement: { count: async () => 0, findMany: async () => [] },
     affectation: { count: async () => 0 },
     intervention: { count: async () => 0 },
@@ -344,6 +351,18 @@ test('rejects a pagination cursor reused with a different viewport', async () =>
     maxLon: -17.4,
   });
 
-  assert.equal(firstPage.map.hasMore, false);
-  assert.equal(firstPage.map.nextCursor, null);
+  assert.equal(firstPage.map.items.length, 1);
+  assert.equal(firstPage.map.hasMore, true);
+  assert.ok(firstPage.map.nextCursor);
+  await assert.rejects(
+    service.getOverview({
+      limit: 1,
+      cursor: firstPage.map.nextCursor,
+      minLat: 14.5,
+      maxLat: 14.8,
+      minLon: -17.6,
+      maxLon: -17.4,
+    }),
+    /ne correspond pas au viewport courant/,
+  );
 });
