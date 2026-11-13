@@ -17,9 +17,10 @@ export function AppShell() {
   async function handleSignOut() {
     try {
       await signOut();
-    } finally {
-      navigate('/connexion', { replace: true });
+    } catch {
+      // Always return to the login screen; protected routes will revalidate the session.
     }
+    navigate('/connexion', { replace: true });
   }
 
   return (
