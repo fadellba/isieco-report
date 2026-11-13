@@ -8,7 +8,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <MobileAuthProvider>
-        <StatusBar style="dark" backgroundColor="#F7F8F5" />
+        <StatusBar style="dark" />
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#F7F8F5' } }} />
       </MobileAuthProvider>
     </SafeAreaProvider>
