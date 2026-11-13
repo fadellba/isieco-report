@@ -1,14 +1,34 @@
 # État des livrables
 
-État technique de référence et vérification opérationnelle mis à jour le **7 novembre 2026** après le déploiement staging et le test E2E du cycle Storage. La politique de périmètre sans abonnement payant est détaillée dans [Périmètre gratuit et reports liés aux coûts](../deployment/perimetre-offre-gratuite.md).
+Dernier snapshot opérationnel détaillé du **7 novembre 2026**. Un delta du dépôt `main` a été vérifié le **13 novembre 2026** sur le commit `47f846abd006cdff66a3bc4c396d84d408a64486`. Les constats récents ci-dessous priment sur le snapshot historique. La politique de périmètre sans abonnement payant est détaillée dans [Périmètre gratuit et reports liés aux coûts](../deployment/perimetre-offre-gratuite.md).
 
-## Résultat des phases exécutables
+## Delta vérifié sur main au 13 novembre 2026
+
+| Domaine | État au commit `47f846a` |
+|---|---|
+| CI main | **Réussie** sur le SHA courant : [run #43484030472](https://github.com/fadellba/isieco-report/actions/runs/43484030472). |
+| Migrations dans Git | **13 migrations** sont présentes dans `prisma/migrations`. |
+| Migrations staging | Le dernier état appliqué attesté reste 11 migrations au 7 novembre. Le run [Staging Forward Deploy #43484030393](https://github.com/fadellba/isieco-report/actions/runs/43484030393) confirme que les migrations `20261109100000_business_audit_event_order` et `20261109110000_backfill_business_audit_event_sequence_order` ne sont pas appliquées. Le workflow s'arrête avant le hook Render ; le déploiement et les E2E sur ce SHA ne sont donc pas réalisés. |
+| PR #86 | **Fusionnée** dans `main` le 13 novembre. Le signalement mobile peut être envoyé sans photo s'il contient au moins une information utile. |
+| Mode hors ligne Mobile | Absent ; backlog [#87](https://github.com/fadellba/isieco-report/issues/87). |
+| Carte native Mobile | Absente ; `apps/mobile/app/(agent)/map.tsx` est encore un placeholder. L'API d'affectation expose déjà les coordonnées utiles ; backlog [#88](https://github.com/fadellba/isieco-report/issues/88). |
+| Notifications Mobile | Aucune notification métier push ou locale identifiée dans le package Mobile ; backlog [#90](https://github.com/fadellba/isieco-report/issues/90). |
+| Cartographie Web | `GET /api/v1/command-center/overview` borne la réponse à 250 éléments, sans viewport ni pagination spatiale. Le rafraîchissement est périodique et non événementiel ; backlog [#89](https://github.com/fadellba/isieco-report/issues/89). |
+| GPS agents | Aucun suivi GPS continu ou télémétrie des agents à ajouter. La géolocalisation ponctuelle au premier plan du parcours citoyen est distincte. |
+| Tests physiques | Aucun test attesté sur appareils Android/iOS réels ; [#53](https://github.com/fadellba/isieco-report/issues/53) reste ouvert. La configuration Expo contient désormais un `projectId`, mais la présence des secrets EAS et des credentials n'est pas vérifiable par le connecteur. |
+| Sauvegarde / restauration | Aucune preuve d'une restauration indépendante depuis des sauvegardes PostgreSQL et Storage datées. Le workflow de répétition actuel copie la source staging active vers un PostgreSQL éphémère et un bucket temporaire ; il ne mesure pas le RPO d'un snapshot historique. [#54](https://github.com/fadellba/isieco-report/issues/54) et la porte de production [#51](https://github.com/fadellba/isieco-report/issues/51) restent ouvertes. |
+
+Le plan consolidé des lots 1 à 4, les dépendances et les critères de sortie sont dans [roadmap-lots-1-4.md](roadmap-lots-1-4.md).
+
+## Snapshot historique des validations staging du 7 novembre
+
+
 
 | Domaine | État vérifié |
 |---|---|
 | Architecture | Monorepo pnpm : API NestJS, Web React/Vite, Mobile Expo/React Native, packages partagés. L'architecture modulaire monolithique est conservée. |
 | Modèle métier | 18 modèles Prisma dans `public`. Le ledger métier est une table séparée dans le schéma PostgreSQL `audit`. |
-| Migrations staging | **11 migrations Prisma appliquées**, aucune migration en attente signalée par `prisma migrate status`. Les trois dernières sont `20261106140000_business_audit_referential_targets`, `20261106150000_foreign_key_indexes` et `20261106160000_prisma_schema_alignment`. Elles étendent le contrôle d'audit, ajoutent 15 index FK et alignent les noms d'objets PostgreSQL. Aucun contenu métier n'a été supprimé par ces trois migrations. |
+| Migrations staging au 7 novembre | **11 migrations Prisma appliquées** à cette date, aucune migration en attente signalée par `prisma migrate status` lors de ce contrôle. Les trois dernières sont `20261106140000_business_audit_referential_targets`, `20261106150000_foreign_key_indexes` et `20261106160000_prisma_schema_alignment`. Elles étendent le contrôle d'audit, ajoutent 15 index FK et alignent les noms d'objets PostgreSQL. Aucun contenu métier n'a été supprimé par ces trois migrations. |
 | Cohérence Prisma | L'artefact de diff SQL généré par la CI après alignement ne contenait que `-- This is an empty migration.` : le schéma Prisma et l'historique de migrations sont alignés. |
 | CI main | Le run [#42319641976](https://github.com/fadellba/isieco-report/actions/runs/42319641976) a réussi sur `d0a0deabd239e5adde8833a8488f5ff7a00442d6`. Il couvre migrations vierges et répétition historique, UML, génération Prisma, compilation API/OpenAPI, typecheck, tests et builds Web/API/Mobile. |
 | API staging Render | Le run [Staging Forward Migrate and Deploy #42319641856](https://github.com/fadellba/isieco-report/actions/runs/42319641856) est terminé avec succès. Render sert le commit exact `d0a0deabd239e5adde8833a8488f5ff7a00442d6` (`dep-dbn78bbrjlhs739mvl0g`, statut `live`). Readiness DB, liveness et Swagger ont réussi. |
