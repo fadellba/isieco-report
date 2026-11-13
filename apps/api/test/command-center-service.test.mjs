@@ -103,10 +103,13 @@ test('filters map counts and features by a validated geographic viewport', async
     assert.equal(viewport.longitude.gte, -17.6);
     assert.equal(viewport.longitude.lte, -17.4);
   };
+
+  const hasViewport = (where) =>
+    (where.AND ?? [where]).some((filter) => filter.latitude?.gte !== undefined);
   const prisma = {
     signalement: {
       count: async ({ where }) => {
-        if (where.latitude?.gte !== undefined) {
+        if (hasViewport(where)) {
           assertViewport(where);
           return 3;
         }
@@ -119,7 +122,7 @@ test('filters map counts and features by a validated geographic viewport', async
     },
     dossierTraitement: {
       count: async ({ where }) => {
-        if (where.latitude?.gte !== undefined) {
+        if (hasViewport(where)) {
           assertViewport(where);
           return 2;
         }
