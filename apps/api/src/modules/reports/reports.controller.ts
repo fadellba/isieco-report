@@ -89,7 +89,7 @@ export class ReportsController {
     @UploadedFile() file: unknown,
     @CurrentAuthUser() user: User,
   ) {
-    return this.reports.createReport(dto, user.id, idempotencyKey ?? '', file ?? null);
+    return this.reports.createReport(dto, user.id, idempotencyKey ?? '', file ?? undefined);
   }
 
   @Post()
@@ -195,7 +195,7 @@ export class ReportsController {
     @Param('photoId', ParseUUIDPipe) photoId: string,
     @CurrentAuthUser() user: User,
   ) {
-    return this.reports.createPhotoUrl(id, photoId, user.id);
+    return this.storage.createSignedUrl(photo.referencePhoto);
   }
 
   @Get(':id/supplements')
