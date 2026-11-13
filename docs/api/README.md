@@ -111,9 +111,9 @@ L'association courante est matérialisée par `signalement.id_dossier`. Aucun hi
 
 | Méthode | Route | Accès |
 |---|---|---|
-| GET | `/assignments/pending-contents` | `RESPONSABLE_AFFECTATION` ; contenus disponibles. |
+| GET | `/assignments/pending-contents` | `RESPONSABLE_AFFECTATION` ; contenus disponibles, filtrables par dossier (`idDossier`). |
 | GET | `/assignments/eligible-teams/:idTypeDechet` | `RESPONSABLE_AFFECTATION` ; équipes actives compétentes. |
-| GET | `/assignments` | `RESPONSABLE_AFFECTATION` ; historique paginé. |
+| GET | `/assignments` | `RESPONSABLE_AFFECTATION` ; historique paginé, filtrable par dossier (`idDossier`), équipe et états. |
 | POST | `/assignments` | `RESPONSABLE_AFFECTATION` ; nouvelle affectation idempotente. |
 | GET | `/assignments/team/:idEquipe` | `AGENT_TERRAIN` membre actif de l'équipe ; ses affectations. |
 | POST | `/assignments/:idAffectation/response` | `AGENT_TERRAIN` membre actif de l'équipe ; accepte ou refuse. |

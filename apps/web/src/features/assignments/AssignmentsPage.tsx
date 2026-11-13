@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../../lib/api';
 
 interface Team {
@@ -72,6 +73,8 @@ const buttonClass = 'rounded-lg bg-eco-700 px-4 py-2.5 text-xs font-bold text-wh
 const secondaryClass = 'rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50';
 
 export function AssignmentsPage() {
+  const [searchParams] = useSearchParams();
+  const dossierFilter = searchParams.get('idDossier')?.trim() ?? '';
   const [result, setResult] = useState<Page<Assignment> | null>(null);
   const [pendingContents, setPendingContents] = useState<PendingContent[]>([]);
   const [selectedContentKey, setSelectedContentKey] = useState('');
@@ -106,9 +109,11 @@ export function AssignmentsPage() {
       const params = new URLSearchParams({ page: String(page), pageSize: '20' });
       if (etatAffectation) params.set('etatAffectation', etatAffectation);
       if (decisionEquipe) params.set('decisionEquipe', decisionEquipe);
+      if (dossierFilter) params.set('idDossier', dossierFilter);
       const [assignments, contents] = await Promise.all([
         api.request<Page<Assignment>>('/assignments?' + params.toString()),
-        api.request<Page<PendingContent>>('/assignments/pending-contents?page=1&pageSize=100'),
+        api.request<Page<PendingContent>>('/assignments/pending-contents?page=1&pageSize=100' +
+          (dossierFilter ? '&idDossier=' + encodeURIComponent(dossierFilter) : '')),
       ]);
       setResult(assignments);
       setPendingContents(contents.items);
@@ -120,7 +125,7 @@ export function AssignmentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, etatAffectation, decisionEquipe]);
+  }, [page, etatAffectation, decisionEquipe, dossierFilter]);
 
   useEffect(() => {
     void loadAssignments();
@@ -245,10 +250,24 @@ export function AssignmentsPage() {
     <div className="space-y-6">
       <header>
         <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-eco-700">Pilotage opérationnel</p>
-        <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">Affectations</h1>
+        <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">
+          {dossierFilter ? 'Affectations du dossier' : 'Affectations'}
+        </h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Affectez chaque catégorie d’un dossier à une équipe compétente. L’API revalide l’éligibilité et protège les opérations contre les doublons et les décisions concurrentes.
+          {dossierFilter
+            ? 'Cette vue est limitée au dossier sélectionné : historique des missions et contenus encore disponibles pour affectation.'
+            : 'Affectez chaque catégorie d’un dossier à une équipe compétente. L’API revalide l’éligibilité et protège les opérations contre les doublons et les décisions concurrentes.'}
         </p>
+        {dossierFilter ? (
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <span className="rounded-full bg-eco-50 px-3 py-1 text-xs font-bold text-eco-800">
+              Filtre dossier actif
+            </span>
+            <Link to="/affectations" className="text-xs font-semibold text-eco-700 hover:underline">
+              Afficher toutes les affectations
+            </Link>
+          </div>
+        ) : null}
       </header>
 
       {notice ? <div role="status" className="rounded-xl border border-eco-200 bg-eco-50 px-4 py-3 text-sm text-eco-900">{notice}</div> : null}
