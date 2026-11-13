@@ -112,6 +112,78 @@ test('profile edits append an audit event in the same transaction without record
   assert.ok(!auditCall.values.includes('770000000'), 'Phone numbers must not be copied into audit metadata.');
 });
 
+test('confirmed email synchronization is audited atomically without recording the address', async () => {
+  let upsertArgs;
+  let auditCall;
+  const tx = {
+    $executeRaw: async (strings, ...values) => {
+      auditCall = { sql: strings.join('?'), values };
+      return 1;
+    },
+    role: { upsert: async () => ({ idRole: roleId, codeRole: 'CITOYEN' }) },
+    utilisateur: {
+      findUnique: async () => ({ idUtilisateur: userId, email: 'old@example.test' }),
+      upsert: async (args) => {
+        upsertArgs = args;
+        return { idUtilisateur: userId };
+      },
+    },
+  };
+  const prisma = {
+    $transaction: async (operation) => operation(tx),
+    utilisateur: {
+      findUnique: async () => profileRow({ email: 'new@example.test' }),
+    },
+  };
+  const service = new AccountsService(prisma);
+
+  await service.getOrCreateMyProfile({
+    id: authId,
+    email: 'new@example.test',
+    email_confirmed_at: '2026-11-01T09:00:00.000Z',
+    user_metadata: {},
+  });
+
+  assert.deepEqual(upsertArgs.update, { email: 'new@example.test' });
+  assert.ok(auditCall.sql.includes('INSERT INTO audit.evenement_metier'));
+  assert.ok(auditCall.values.includes('COMPTE_PROFIL_MODIFIE'));
+  assert.ok(!auditCall.values.includes('old@example.test'));
+  assert.ok(!auditCall.values.includes('new@example.test'));
+});
+
+test('does not suppress a unique conflict while synchronizing an existing account', async () => {
+  const duplicateEmail = Object.assign(new Error('Unique email constraint'), { code: 'P2002' });
+  let outsideLookupCalls = 0;
+  const tx = {
+    role: { upsert: async () => ({ idRole: roleId, codeRole: 'CITOYEN' }) },
+    utilisateur: {
+      findUnique: async () => ({ idUtilisateur: userId, email: 'old@example.test' }),
+      upsert: async () => { throw duplicateEmail; },
+    },
+  };
+  const prisma = {
+    $transaction: async (operation) => operation(tx),
+    utilisateur: {
+      findUnique: async () => {
+        outsideLookupCalls += 1;
+        return profileRow();
+      },
+    },
+  };
+  const service = new AccountsService(prisma);
+
+  await assert.rejects(
+    service.getOrCreateMyProfile({
+      id: authId,
+      email: 'taken@example.test',
+      email_confirmed_at: '2026-11-01T09:00:00.000Z',
+      user_metadata: {},
+    }),
+    (error) => error === duplicateEmail,
+  );
+  assert.equal(outsideLookupCalls, 0, 'An existing profile must not turn an email uniqueness conflict into success.');
+});
+
 test('revokeRole protects the last active account administrator', async () => {
   const adminRole = { idRole: roleId, codeRole: 'ADMINISTRATEUR_COMPTES' };
   const active = { idUtilisateur: userId, idRole: roleId, dateDebut: new Date('2026-01-01T00:00:00.000Z'), dateFin: null };
