@@ -12,6 +12,7 @@ export function ProfileScreen({ currentSpace }: ProfileScreenProps) {
   const router = useRouter();
   const { profile, signOut } = useMobileAuth();
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const hasCitizen = profile?.roles.some((role) => role.code === 'CITOYEN') ?? false;
   const hasAgent = profile?.roles.some((role) => role.code === 'AGENT_TERRAIN') ?? false;
   const canSwitch = currentSpace === 'citizen' ? hasAgent : hasCitizen;
@@ -19,9 +20,12 @@ export function ProfileScreen({ currentSpace }: ProfileScreenProps) {
 
   async function handleSignOut() {
     setBusy(true);
+    setError(null);
     try {
       await signOut();
       router.replace('/sign-in');
+    } catch {
+      setError('La déconnexion a échoué. Vérifiez votre connexion et réessayez.');
     } finally {
       setBusy(false);
     }
@@ -61,6 +65,8 @@ export function ProfileScreen({ currentSpace }: ProfileScreenProps) {
           </Text>
         </TouchableOpacity>
       ) : null}
+
+      {error ? <Text accessibilityRole="alert" className="mt-5 rounded-2xl bg-status-danger/5 p-4 text-sm text-status-danger">{error}</Text> : null}
 
       <View className="mt-auto pt-8">
         <TouchableOpacity disabled={busy} onPress={() => void handleSignOut()} className="rounded-2xl bg-ink-900 px-5 py-4 disabled:opacity-50">
