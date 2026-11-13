@@ -263,7 +263,7 @@ export class CommandCenterService {
       this.prisma.signalement.findMany({
         where: mapReportWhere,
         orderBy: [{ dateSoumission: 'desc' }, { idSignalement: 'desc' }],
-        take: limit,
+        take: limit + 1,
         select: {
           idSignalement: true,
           dateSoumission: true,

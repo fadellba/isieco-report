@@ -44,7 +44,7 @@ test('returns operational counts and only real, geolocated active entities', asy
       count: count('signalement'),
       findMany: async ({ where, take }) => {
         assert.equal(where.idDossier, null);
-        assert.equal(take, 100);
+        assert.equal(take, 101);
         return [report];
       },
     },
@@ -95,10 +95,13 @@ test('caps map retrieval and keeps the response within the requested item limit'
 
 test('filters map counts and features by a validated geographic viewport', async () => {
   const assertViewport = (where) => {
-    assert.equal(where.latitude.gte, 14.6);
-    assert.equal(where.latitude.lte, 14.8);
-    assert.equal(where.longitude.gte, -17.6);
-    assert.equal(where.longitude.lte, -17.4);
+    const filters = where.AND ?? [where];
+    const viewport = filters.find((filter) => filter.latitude?.gte !== undefined);
+    assert.ok(viewport, 'viewport filter must be part of the database predicate');
+    assert.equal(viewport.latitude.gte, 14.6);
+    assert.equal(viewport.latitude.lte, 14.8);
+    assert.equal(viewport.longitude.gte, -17.6);
+    assert.equal(viewport.longitude.lte, -17.4);
   };
   const prisma = {
     signalement: {
@@ -258,7 +261,7 @@ test('paginates the combined dossier and report stream with a stable keyset curs
   assert.equal(secondPage.map.items[0].kind, 'SIGNALEMENT');
   assert.equal(secondPage.map.hasMore, false);
   assert.equal(secondPage.map.nextCursor, null);
-  assert.ok(caseQuery.where.AND.some((filter) => filter.dateCreationDossier?.lt));
+  assert.ok(caseQuery.where.AND.some((filter) => filter.OR?.some((part) => part.dateCreationDossier?.lt)));
   assert.ok(reportQuery.where.AND.some((filter) => filter.dateSoumission?.lte));
 });
 
