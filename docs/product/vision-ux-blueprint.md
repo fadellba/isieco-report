@@ -314,9 +314,9 @@ Les opérations de référentiel et d'administration de comptes restent dans des
 
 ### État de la cartographie et de l'actualisation
 
-Le centre de commandement dispose de l'endpoint agrégé `GET /api/v1/command-center/overview`, qui renvoie les KPI et les objets cartographiques autorisés. Le service borne la réponse cartographique à 250 éléments. L'API ne filtre toutefois pas les données selon le viewport et ne fournit pas de pagination spatiale ; la limite actuelle ne remplace donc pas une requête limitée à la zone visible.
+Le centre de commandement dispose de l'endpoint agrégé `GET /api/v1/command-center/overview`, qui renvoie les KPI et les objets cartographiques autorisés. Depuis la PR #94, l'API accepte les quatre bornes du viewport, valide les plages et filtre les dossiers/signalements côté base avant pagination. La réponse fournit une pagination keyset avec ordre déterministe, curseur opaque lié au viewport, total du viewport indépendant du curseur et recalculé à chaque requête, `hasMore` et `nextCursor`. Chaque page reste plafonnée à 250 éléments ; l'interface charge la page suivante à la demande et recharge après 350 ms de stabilité du déplacement/zoom.
 
-Le frontend actualise les données par polling REST périodique (60 secondes). Aucun canal événementiel SSE/WebSocket n'est livré. Le temps réel événementiel est une évolution suivie dans l'issue [#89](https://github.com/fadellba/isieco-report/issues/89) : filtre viewport, pagination stable, événements métier, reconnexion et mécanisme de repli.
+Le frontend actualise encore les données par polling REST périodique (60 secondes). Aucun canal événementiel SSE/WebSocket n'est livré : les événements métier, la reconnexion/rattrapage et le fallback événementiel restent dans l'issue [#89](https://github.com/fadellba/isieco-report/issues/89). Les plans SQL sur dataset représentatif, la décision d'index spatial/PostGIS et le clustering restent également à mesurer. 
 
 **Règle de confidentialité : aucune télémétrie GPS des agents ne doit être collectée, stockée ou diffusée.** La carte Web porte sur les signalements et dossiers, jamais sur la position personnelle ou continue des équipes. La géolocalisation ponctuelle du citoyen lors d'un signalement est une fonctionnalité distincte, déclenchée à sa demande et limitée à l'avant-plan.
 
@@ -452,14 +452,14 @@ Cibles de conception :
 
 ## 7. État actuel du produit et écarts à traiter
 
-État vérifié à partir de `main` et de la PR #86 au 13 novembre 2026. Les changements de la PR sont explicitement signalés comme non fusionnés. Cette section décrit le dépôt ; elle ne remplace pas une recette visuelle sur appareils réels.
+État vérifié à partir de `main` au commit `dab3b2dc3aecc140709beae91cefa1525edec0be` le 13 novembre 2026, après fusion des PR #86 et #94. Cette section décrit le dépôt ; elle ne remplace pas une recette visuelle sur appareils réels.
 
 | Domaine | État actuel constaté | Écart / conséquence |
 |---|---|---|
 | Application mobile | Une application Expo Router avec espaces `(citizen)` et `(agent)`, garde de routes adaptée aux rôles et profils chargés depuis l'API | Le sélecteur d'espace multi-rôle et les transitions d'espace restent à vérifier en recette sur appareil |
-| Identité native | Marque ISIECO et splash Expo configurés dans la PR #86 | PR #86 non fusionnée ; validation visuelle iOS/Android sur appareils réels à faire |
-| Mobile citoyen | Liste/détail des signalements, ajout de photos, localisation ponctuelle, compléments et chronologie | Le parcours rapide photo facultative est dans la PR #86 (CI réussie, non fusionnée) ; le détail du signalement doit être testé en réseau instable |
-| Signalement API | Le service accepte déjà les métadonnées sans fichier si un élément utile est fourni ; DTO/OpenAPI et contrôleur ajustés dans la PR #86 | Fusionner la PR #86 puis valider les scénarios sans photo et sans catégorie sur staging |
+| Identité native | Marque ISIECO et splash Expo configurés et fusionnés via PR #86 | Validation visuelle iOS/Android sur appareils réels à faire |
+| Mobile citoyen | Liste/détail des signalements, ajout de photos, localisation ponctuelle, compléments et chronologie | Le parcours rapide photo facultative est fusionné via PR #86 ; le détail du signalement doit être testé en réseau instable et sur appareils réels |
+| Signalement API | Le service accepte les métadonnées sans fichier si un élément utile est fourni ; DTO/OpenAPI et contrôleur ajustés dans la PR #86 | Valider les scénarios sans photo et sans catégorie en staging lorsque la porte de migrations sera levée |
 | Photos citoyennes | Création du signalement et upload de photos privées, consultation à la demande via URL signée temporaire ; limite client de trois photos | Le dépôt photo et le cycle de vie Storage réel restent à valider sur staging |
 | Timeline citoyenne | `GET /reports/:id/history` vérifie le propriétaire et renvoie des événements de statut et des jalons opérationnels autorisés ; écran détail connecté | Recette métier des scénarios complets encore nécessaire |
 | Missions agent | Équipes, affectations, acceptation/refus motivés, démarrage, preuves photo privées et compte rendu soumis à vérification | Le parcours connecté existe ; ergonomie terrain et recette end-to-end restent à consolider |
@@ -468,8 +468,8 @@ Cibles de conception :
 | Carte native agent | Route `/(agent)/map` présente mais encore placeholder | Écran carte natif à réaliser après décision sur le fournisseur et les credentials |
 | Mode hors ligne | Pas de cache métier persistant, de brouillon durable ni de file de synchronisation | Chantier P2 à spécifier avec chiffrement local, idempotence et résolution de conflits |
 | Web back office | Shell et navigation par rôle, modules de qualification, dossiers, affectations, interventions, vérification, référentiels et comptes | Poursuivre la cohérence visuelle et la recette par rôle |
-| Centre de commandement Web | `GET /command-center/overview` renvoie les KPI et les dossiers/signalements géolocalisés ; carte, recherche, filtres par type, panneau de sélection et actions par rôle dans le dashboard | La liste cartographique est bornée (maximum 250) ; l'API n'expose pas de filtre viewport/pagination spatiale |
-| Actualisation / télémétrie | Le centre Web rafraîchit la vue REST toutes les 60 secondes ; aucune position live des équipes n'est collectée/affichée | Pas de temps réel événementiel ni de suivi GPS continu ; ne pas simuler ces données |
+| Centre de commandement Web | `GET /command-center/overview` renvoie KPI et entités géolocalisées ; PR #94 ajoute le filtre viewport, le curseur keyset, `hasMore`/`nextCursor`, le total par viewport et le bouton de page suivante | Recette visuelle et tests de performance sur volumes représentatifs restent à faire ; plafond serveur de 250 résultats/page |
+| Actualisation / télémétrie | Polling REST toutes les 60 secondes ; aucun flux SSE/WebSocket et aucune télémétrie GPS des agents | Ajouter une diffusion événementielle avec reconnexion/rattrapage et fallback si le besoin est confirmé ; ne jamais collecter ni afficher la position des agents |
 | Design system | Tokens de base, navigation et icônes SVG côté Web ; composants NativeWind et marque mobile | Le système partagé est une fondation, pas encore une bibliothèque complète de composants documentés et testés |
 
 ### 7.1 Contraintes métier à ne pas casser
@@ -491,15 +491,15 @@ Les exigences suivantes doivent être planifiées comme des travaux backend expl
 
 | Priorité | Évolution | État / prochaine action |
 |---|---|---|
-| P0 | Signalement citoyen sans photo, avec description et catégories facultatives | Implémenté dans la PR #86 ; CI réussie, PR non fusionnée. Vérifier le parcours sur staging après fusion. |
+| P0 | Signalement citoyen sans photo, avec description et catégories facultatives | Implémenté et fusionné via PR #86 ; vérifier le parcours sur staging après réconciliation des migrations. |
 | P0 | Timeline citoyenne limitée aux événements communicables et au propriétaire | Implémentée via `GET /reports/:id/history` ; terminer la recette métier de bout en bout. |
 | P0 | Coordonnées et repère du dossier exposés aux membres actifs de l'équipe agent | Implémentés dans le DTO d'affectation utilisé par le mobile ; tester les cas de localisation absente ou imprécise. |
 | P1 | Centre de commandement cartographique avec KPI et entités géolocalisées | Implémenté sur Web via `GET /command-center/overview`, carte et panneau contextuel ; améliorer la couverture/recette. |
-| P1 | Filtrage cartographique par viewport, pagination spatiale et agrégation/clustering | Non implémenté dans le contrat actuel ; l'API borne la réponse à 250 éléments. À traiter si le volume territorial le justifie. |
+| P1 | Filtrage cartographique par viewport et pagination spatiale | Implémentés et fusionnés via PR #94 : bounding box validée, curseur keyset lié au viewport, total du viewport indépendant du curseur, recalculé à chaque requête, et plafond de 250 éléments/page. Restent les tests de performance, l'analyse d'index/PostGIS et le clustering. |
 | P1 | Actualisation des opérations Web | Polling REST toutes les 60 secondes ; diffusion événementielle non implémentée. |
 | P2 | Carte native des missions agent | Écran placeholder ; choisir fournisseur, stratégie de clés et dépendances natives, puis tester sur appareils. |
 | P2 | Mode hors ligne agent | Non implémenté : cache limité, brouillons persistants, files de médias, reprise idempotente et résolution de conflits à concevoir. |
-| P2 | Télémétrie de position des équipes | Non implémentée et non activée. Toute évolution exige une justification, une information/autorisation, une durée de service, une rétention et des contrôles d'accès explicites. |
+| P2 | Télémétrie de position des équipes | Hors périmètre : ne pas collecter, stocker ni diffuser de GPS agent. La carte Web représente uniquement signalements et dossiers. |
 | P2 | Notifications push | À évaluer selon la criticité des affectations et la stratégie de notification. |
 
 Ne présenter comme livré que ce qui est fusionné, testé et vérifié dans l'environnement visé. Une CI réussie ne prouve ni un déploiement staging ni une recette sur appareil.
@@ -597,14 +597,14 @@ Les valeurs chiffrées ci-dessous sont des **cibles proposées pour les tests**,
 
 Ces points ne doivent pas être inventés par l'équipe de conception :
 
-1. **Photo facultative :** comportement intégré dans la PR #86 (non fusionnée à la date de cette révision).
+1. **Photo facultative :** comportement fusionné dans `main` via la PR #86 ; le formulaire refuse toujours un signalement entièrement vide.
 2. **Localisation facultative :** le GPS est demandé à la demande de l'utilisateur ; un repère textuel peut être saisi. Un signalement entièrement vide reste refusé. La saisie manuelle des coordonnées a été retirée de l'écran rapide.
-3. **Types de déchets facultatifs :** comportement intégré dans la PR #86 (non fusionnée).
+3. **Types de déchets facultatifs :** comportement fusionné dans `main` via la PR #86.
 4. **Visibilité citoyenne de la timeline :** le endpoint actuel expose les statuts et jalons opérationnels traduits, sans identité d'agent ni métadonnées d'audit ; toute extension de visibilité doit faire l'objet d'une décision métier.
 5. **Temps réel Web :** la version actuelle utilise une actualisation REST toutes les 60 secondes. La diffusion événementielle n'est pas un prérequis du périmètre livré.
 6. **Position des agents :** aucune télémétrie live n'est livrée. Ne pas l'ajouter sans décision de confidentialité, de consentement, de durée et de rétention.
 7. **Cartographie native agent :** écran encore placeholder ; fournisseur, coûts, clés natives et disponibilité hors ligne restent à décider.
-8. **Cartographie Web :** la vue actuelle utilise les entités géolocalisées du centre de commandement ; fournisseur, règles de géocodage et stratégie de montée en charge restent à valider.
+8. **Cartographie Web :** le filtre viewport et la pagination keyset sont livrés via PR #94. Restent la revue des plans SQL/index, le clustering et la diffusion événementielle avec reprise ; le polling 60 secondes demeure le mécanisme actuel.
 9. **Territoire, identité et langues :** valider territoire de lancement, codes visuels locaux, usage final du logo et besoin de localisation multilingue.
 
 ---
