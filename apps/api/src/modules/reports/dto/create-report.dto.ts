@@ -12,7 +12,6 @@ import {
   Max,
   MaxLength,
   Min,
-  MinLength,
   ValidateNested,
 } from 'class-validator';
 
@@ -41,10 +40,9 @@ export class CreateReportContentDto {
 }
 
 export class CreateReportDto {
-  @ApiPropertyOptional({ minLength: 10, maxLength: 5000 })
+  @ApiPropertyOptional({ maxLength: 5000 })
   @IsOptional()
   @IsString()
-  @MinLength(10)
   @MaxLength(5000)
   description?: string;
 

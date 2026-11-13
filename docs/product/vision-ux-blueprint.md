@@ -1,11 +1,11 @@
 # ISIECO — Product Vision & UX Blueprint
 
-> **Version :** 0.1  
-> **Statut :** cadrage produit initial, base de conception à valider  
-> **Date :** 12 novembre 2026  
+> **Version :** 0.2  
+> **Statut :** vision produit et état d'implémentation actualisés  
+> **Date :** 13 novembre 2026  
 > **Périmètre :** application mobile citoyen/agent et back office Web
 
-Ce document transforme les décisions de cadrage en référence commune pour la conception UX, l'identité visuelle, l'évolution des contrats API et la refonte des interfaces. Il distingue les fonctionnalités actuellement implémentées, les décisions validées et les évolutions proposées. Il ne constitue pas encore une maquette graphique ni une spécification technique exhaustive.
+Ce document transforme les décisions de cadrage en référence commune pour la conception UX, l'identité visuelle, l'évolution des contrats API et la refonte des interfaces. Il distingue les fonctionnalités implémentées sur `main`, les changements encore portés par des PR ouvertes, les décisions validées et les évolutions proposées. L'état du dépôt a été revu le 13 novembre 2026 ; cette revue documentaire ne remplace ni la recette fonctionnelle ni les tests sur appareils réels.
 
 ---
 
@@ -182,7 +182,7 @@ Principes :
 - prévoir un état de confirmation avec référence et prochain statut ;
 - préserver les données saisies lorsque l'envoi échoue.
 
-**Point bloquant identifié : le contrat actuel ne permet pas encore ce formulaire.** `CreateReportDto` exige une description d'au moins 10 caractères et au moins un type de déchet ; le service rejette également un signalement sans catégorie. La refonte devra faire évoluer ces contraintes pour rendre description et catégories facultatives. La base autorise déjà une description nulle et une relation sans contenu, mais les parcours de qualification devront être testés avec des signalements sans catégorie. Cette évolution est une modification API/métier, pas uniquement un changement d'interface.
+**État de mise en œuvre au 13 novembre 2026 :** la PR #86 rend la photo facultative dans le multipart, retire la contrainte minimale de description et conserve le contrôle métier qui interdit un signalement entièrement vide. La description, la catégorie et l'indication de lieu peuvent être omises ; le dépôt doit toujours contenir au moins un élément utile (photo, texte, catégorie ou localisation). La CI du commit `934dce0` est réussie, mais la PR #86 est encore ouverte et non fusionnée : ce contrat n'est donc pas encore présent sur `main`. Dans l'écran mobile de cette PR, la position GPS est proposée à la demande et les coordonnées ne sont plus saisies manuellement ; un repère textuel reste possible.
 
 ### Photo : séquence technique
 
@@ -200,7 +200,7 @@ L'écran détail doit présenter :
 
 La timeline ne doit afficher que des événements compréhensibles et communicables au citoyen. Les événements internes, motifs confidentiels ou informations personnelles d'agents ne doivent pas être exposés.
 
-**Écart actuel :** l'historique des changements de statut est stocké dans `HistoriqueStatutSignalement`, mais `GET /reports/:id` renvoie principalement le statut courant et le détail du signalement. Aucun endpoint de timeline citoyenne n'est documenté. Il faut prévoir un endpoint propriétaire, par exemple `GET /reports/:id/timeline`, qui projette les événements autorisés et vérifie la propriété du signalement. Ne pas détourner l'endpoint d'historique des dossiers, réservé au responsable de traitement.
+**État actuel :** la timeline citoyenne est déjà alimentée par `GET /reports/:id/history`. Le service vérifie que le signalement appartient au citoyen connecté et projette les transitions de statut ainsi que les principales étapes opérationnelles avec des libellés communicables. Les identités des agents et les métadonnées d'audit internes ne sont pas exposées. L'écran détail mobile consomme cette route. Il reste à valider la cohérence de la chronologie sur des scénarios métier complets, notamment les reprises et les dossiers comportant plusieurs contenus.
 
 ## 4.2 Parcours agent : recevoir, naviguer, intervenir
 
@@ -232,7 +232,7 @@ Le détail doit présenter :
 
 Un bouton primaire **Démarrer l'itinéraire** doit ouvrir l'application de navigation disponible sur le téléphone, avec les coordonnées du dossier. Une carte intégrée peut être proposée en second niveau.
 
-**Écart actuel :** les coordonnées existent sur le modèle du dossier, mais les DTO utilisés pour les affectations et interventions agent ne les exposent pas. Le client agent n'a donc pas aujourd'hui une source contractuelle suffisante pour construire l'itinéraire. Il faut enrichir le DTO de mission ou fournir un endpoint de détail de mission autorisé pour le membre actif de l'équipe. Les données du dossier ne doivent pas être ouvertes à l'agent via une route réservée à un autre rôle.
+**État actuel :** les réponses des affectations agent contiennent les coordonnées et la description du lieu du dossier, sous réserve des contrôles d'appartenance active à l'équipe côté API. L'écran des missions mobile utilise ces coordonnées pour ouvrir un itinéraire externe (Google Maps). Cette navigation ne constitue pas une carte intégrée ni une navigation hors ligne.
 
 ### Exécution d'une intervention
 
@@ -247,6 +247,8 @@ Le parcours cible :
 8. envoyer le compte rendu pour vérification.
 
 Le compte rendu peut proposer des suggestions ou des champs structurés, mais l'agent ne doit pas être forcé à remplir une longue fiche sur place. Les règles de preuve et de compte rendu restent conformes au contrat API et évoluent séparément si elles deviennent trop lourdes.
+
+**Écart résiduel côté navigation :** la route mobile `/(agent)/map` est encore un écran placeholder. La liste des missions et l'ouverture d'itinéraire fonctionnent, mais la carte native des missions n'est pas implémentée. Le fournisseur cartographique et ses clés/configurations natives restent à décider avant de choisir une bibliothèque et de produire une build à tester.
 
 ### Usage terrain et réseau
 
@@ -453,25 +455,25 @@ Cibles de conception :
 
 ## 7. État actuel du produit et écarts à traiter
 
-État vérifié à partir de la branche `main` au 12 novembre 2026. Cette section décrit le dépôt ; elle ne remplace pas une recette visuelle sur appareils réels.
+État vérifié à partir de `main` et de la PR #86 au 13 novembre 2026. Les changements de la PR sont explicitement signalés comme non fusionnés. Cette section décrit le dépôt ; elle ne remplace pas une recette visuelle sur appareils réels.
 
 | Domaine | État actuel constaté | Écart / conséquence |
 |---|---|---|
-| Mobile | Expo Router, application unique, groupes `(citizen)` et `(agent)` | Base conservée ; navigation et routage par espace à refondre |
-| Splash/onboarding | Aucun parcours de marque/onboarding dédié identifié dans les routes actuelles | À concevoir |
-| Mobile citoyen | Création et suivi des signalements, photos, localisation ponctuelle, compléments | Formulaire trop exigeant ; ordre et champs à revoir |
-| Signalement API | Description >= 10 caractères et au moins un type requis | Contrat à assouplir pour rendre ces champs facultatifs |
-| Upload photo | Endpoint privé post-création du signalement, jusqu'à trois photos via le client actuel | Capture d'abord possible côté UX ; upload serveur après obtention de l'identifiant |
-| Timeline citoyenne | Historique de statut stocké ; pas d'endpoint de timeline propriétaire documenté | Projection API dédiée à créer |
-| Missions agent | Consultation des équipes, affectations et interventions, acceptation/refus, démarrage, compte rendu, preuves | Accueil, détail et navigation à simplifier |
-| Géolocalisation mission | Coordonnées du dossier stockées ; non exposées dans les DTO de mission agent consultés | Enrichir le contrat agent pour l'itinéraire |
-| Navigation GPS | Pas de flux de navigation ni d'intégration cartographique identifié dans les parcours actuels | Deep link vers l'application de navigation à concevoir |
-| Mode hors ligne | Non implémenté | À traiter après le parcours connecté de référence |
-| Web | React/Vite, navigation par rôle, pages comptes/qualification/dossiers/affectations/référentiels/interventions/vérification | Architecture d'information et shell à refondre |
-| Dashboard Web | Vue de profil, rôles et liens vers les espaces | Ne constitue pas un centre de commandement opérationnel |
-| Carte Web | Pas de module ou endpoint cartographique agrégé identifié | Read model géospatial et UI cartographique à créer |
-| Temps réel | Pas de canal temps réel ni de télémétrie d'équipe documentés | À spécifier séparément |
-| Design system | Tailwind/NativeWind et styles locaux ; Inter déclarée côté Web | Tokens, composants, règles et branding communs à formaliser |
+| Application mobile | Une application Expo Router avec espaces `(citizen)` et `(agent)`, garde de routes adaptée aux rôles et profils chargés depuis l'API | Le sélecteur d'espace multi-rôle et les transitions d'espace restent à vérifier en recette sur appareil |
+| Identité native | Marque ISIECO et splash Expo configurés dans la PR #86 | PR #86 non fusionnée ; validation visuelle iOS/Android sur appareils réels à faire |
+| Mobile citoyen | Liste/détail des signalements, ajout de photos, localisation ponctuelle, compléments et chronologie | Le parcours rapide photo facultative est dans la PR #86 (CI réussie, non fusionnée) ; le détail du signalement doit être testé en réseau instable |
+| Signalement API | Le service accepte déjà les métadonnées sans fichier si un élément utile est fourni ; DTO/OpenAPI et contrôleur ajustés dans la PR #86 | Fusionner la PR #86 puis valider les scénarios sans photo et sans catégorie sur staging |
+| Photos citoyennes | Création du signalement et upload de photos privées, consultation à la demande via URL signée temporaire ; limite client de trois photos | Le dépôt photo et le cycle de vie Storage réel restent à valider sur staging |
+| Timeline citoyenne | `GET /reports/:id/history` vérifie le propriétaire et renvoie des événements de statut et des jalons opérationnels autorisés ; écran détail connecté | Recette métier des scénarios complets encore nécessaire |
+| Missions agent | Équipes, affectations, acceptation/refus motivés, démarrage, preuves photo privées et compte rendu soumis à vérification | Le parcours connecté existe ; ergonomie terrain et recette end-to-end restent à consolider |
+| Géolocalisation mission | Les coordonnées et repères sont inclus dans les données d'affectation agent ; contrôle d'appartenance à l'équipe côté API | Les données sont disponibles ; vérifier les cas sans coordonnées et les valeurs imprécises |
+| Navigation agent | Le bouton d'une affectation ouvre un itinéraire externe à partir des coordonnées | Pas de guidage intégré ou hors ligne |
+| Carte native agent | Route `/(agent)/map` présente mais encore placeholder | Écran carte natif à réaliser après décision sur le fournisseur et les credentials |
+| Mode hors ligne | Pas de cache métier persistant, de brouillon durable ni de file de synchronisation | Chantier P2 à spécifier avec chiffrement local, idempotence et résolution de conflits |
+| Web back office | Shell et navigation par rôle, modules de qualification, dossiers, affectations, interventions, vérification, référentiels et comptes | Poursuivre la cohérence visuelle et la recette par rôle |
+| Centre de commandement Web | `GET /command-center/overview` renvoie les KPI et les dossiers/signalements géolocalisés ; carte, recherche, filtres par type, panneau de sélection et actions par rôle dans le dashboard | La liste cartographique est bornée (maximum 250) ; l'API n'expose pas de filtre viewport/pagination spatiale |
+| Actualisation / télémétrie | Le centre Web rafraîchit la vue REST toutes les 60 secondes ; aucune position live des équipes n'est collectée/affichée | Pas de temps réel événementiel ni de suivi GPS continu ; ne pas simuler ces données |
+| Design system | Tokens de base, navigation et icônes SVG côté Web ; composants NativeWind et marque mobile | Le système partagé est une fondation, pas encore une bibliothèque complète de composants documentés et testés |
 
 ### 7.1 Contraintes métier à ne pas casser
 
@@ -490,19 +492,20 @@ La refonte UX ne doit pas supprimer ou contourner :
 
 Les exigences suivantes doivent être planifiées comme des travaux backend explicites.
 
-| Priorité | Évolution | Justification |
+| Priorité | Évolution | État / prochaine action |
 |---|---|---|
-| P0 | Autoriser description et catégories facultatives sur la création d'un signalement | Pré-requis au formulaire citoyen rapide |
-| P0 | Exposer une timeline citoyenne limitée aux événements communicables et au propriétaire | Pré-requis au suivi demandé |
-| P0 | Exposer les coordonnées et informations de lieu dans le détail de mission agent, avec contrôle d'appartenance | Pré-requis à l'itinéraire |
-| P1 | Définir un read model cartographique des signalements, dossiers, affectations et interventions | Pré-requis au centre de commandement |
-| P1 | Définir filtres, pagination/viewport, agrégation et règles d'accès du read model cartographique | Éviter de charger toute la base depuis le client |
-| P1 | Définir la stratégie de rafraîchissement de la carte (polling ou diffusion d'événements) | Actualisation opérationnelle cohérente |
-| P2 | Ajouter la télémétrie de position des équipes si elle est réellement nécessaire | Nécessite une décision de confidentialité, de consentement, de cadence et de rétention |
-| P2 | Concevoir la persistance locale, file de synchronisation et résolution de conflits | Pré-requis à un mode hors ligne robuste |
-| P2 | Évaluer les notifications push pour les affectations et changements de statut | Réduire le délai de réaction sans imposer une consultation constante |
+| P0 | Signalement citoyen sans photo, avec description et catégories facultatives | Implémenté dans la PR #86 ; CI réussie, PR non fusionnée. Vérifier le parcours sur staging après fusion. |
+| P0 | Timeline citoyenne limitée aux événements communicables et au propriétaire | Implémentée via `GET /reports/:id/history` ; terminer la recette métier de bout en bout. |
+| P0 | Coordonnées et repère du dossier exposés aux membres actifs de l'équipe agent | Implémentés dans le DTO d'affectation utilisé par le mobile ; tester les cas de localisation absente ou imprécise. |
+| P1 | Centre de commandement cartographique avec KPI et entités géolocalisées | Implémenté sur Web via `GET /command-center/overview`, carte et panneau contextuel ; améliorer la couverture/recette. |
+| P1 | Filtrage cartographique par viewport, pagination spatiale et agrégation/clustering | Non implémenté dans le contrat actuel ; l'API borne la réponse à 250 éléments. À traiter si le volume territorial le justifie. |
+| P1 | Actualisation des opérations Web | Polling REST toutes les 60 secondes ; diffusion événementielle non implémentée. |
+| P2 | Carte native des missions agent | Écran placeholder ; choisir fournisseur, stratégie de clés et dépendances natives, puis tester sur appareils. |
+| P2 | Mode hors ligne agent | Non implémenté : cache limité, brouillons persistants, files de médias, reprise idempotente et résolution de conflits à concevoir. |
+| P2 | Télémétrie de position des équipes | Non implémentée et non activée. Toute évolution exige une justification, une information/autorisation, une durée de service, une rétention et des contrôles d'accès explicites. |
+| P2 | Notifications push | À évaluer selon la criticité des affectations et la stratégie de notification. |
 
-Aucune de ces capacités ne doit être présentée comme existante avant implémentation et validation.
+Ne présenter comme livré que ce qui est fusionné, testé et vérifié dans l'environnement visé. Une CI réussie ne prouve ni un déploiement staging ni une recette sur appareil.
 
 ---
 
@@ -597,15 +600,15 @@ Les valeurs chiffrées ci-dessous sont des **cibles proposées pour les tests**,
 
 Ces points ne doivent pas être inventés par l'équipe de conception :
 
-1. **Photo obligatoire ou recommandée :** la photo est la première action du parcours, mais faut-il autoriser un signalement sans photo ?
-2. **Localisation obligatoire ou facultative :** la position GPS doit être proposée automatiquement, mais quelle règle appliquer si elle est indisponible ?
-3. **Types de déchets :** le citoyen peut ne rien sélectionner et laisser la qualification métier faire le travail ; confirmer que c'est la règle cible.
-4. **Visibilité citoyenne de la timeline :** quels événements opérationnels, noms d'équipe et détails sont communicables ?
-5. **Temps réel Web :** un rafraîchissement périodique suffit-il en première livraison, ou la diffusion live est-elle indispensable dès le MVP ?
-6. **Position des agents :** faut-il réellement afficher la position des agents ou seulement les sites et états de leurs missions ?
-7. **Cartographie :** choisir le fournisseur, les contraintes de coût, le géocodage, le style de carte et le comportement en zone de faible connectivité.
-8. **Territoire et identité :** valider le territoire de lancement, les codes visuels locaux, le nom de marque affiché et les usages du logo.
-9. **Langues :** confirmer si la première version doit être uniquement en français ou prévoir une localisation multilingue.
+1. **Photo facultative :** comportement intégré dans la PR #86 (non fusionnée à la date de cette révision).
+2. **Localisation facultative :** le GPS est demandé à la demande de l'utilisateur ; un repère textuel peut être saisi. Un signalement entièrement vide reste refusé. La saisie manuelle des coordonnées a été retirée de l'écran rapide.
+3. **Types de déchets facultatifs :** comportement intégré dans la PR #86 (non fusionnée).
+4. **Visibilité citoyenne de la timeline :** le endpoint actuel expose les statuts et jalons opérationnels traduits, sans identité d'agent ni métadonnées d'audit ; toute extension de visibilité doit faire l'objet d'une décision métier.
+5. **Temps réel Web :** la version actuelle utilise une actualisation REST toutes les 60 secondes. La diffusion événementielle n'est pas un prérequis du périmètre livré.
+6. **Position des agents :** aucune télémétrie live n'est livrée. Ne pas l'ajouter sans décision de confidentialité, de consentement, de durée et de rétention.
+7. **Cartographie native agent :** écran encore placeholder ; fournisseur, coûts, clés natives et disponibilité hors ligne restent à décider.
+8. **Cartographie Web :** la vue actuelle utilise les entités géolocalisées du centre de commandement ; fournisseur, règles de géocodage et stratégie de montée en charge restent à valider.
+9. **Territoire, identité et langues :** valider territoire de lancement, codes visuels locaux, usage final du logo et besoin de localisation multilingue.
 
 ---
 
@@ -625,8 +628,9 @@ Sauf décision spécifique, ce blueprint ne spécifie pas :
 
 Les constats de l'état actuel sont fondés notamment sur :
 - `apps/mobile/README.md` et les routes `apps/mobile/app/` ;
-- `apps/mobile/app/(citizen)/reports/new.tsx` et `apps/mobile/app/(agent)/missions/index.tsx` ;
-- `apps/web/src/app/navigation.ts`, `AppShell.tsx` et `features/dashboard/DashboardPage.tsx` ;
+- `apps/mobile/app/(citizen)/reports/new.tsx`, `apps/mobile/app/(citizen)/reports/[id].tsx` et `apps/mobile/app/(agent)/missions/index.tsx` ;
+- `apps/mobile/app/(agent)/map.tsx` pour l'état du placeholder cartographique ;
+- `apps/web/src/app/navigation.ts`, `AppShell.tsx`, `features/dashboard/DashboardPage.tsx` et `features/dashboard/OperationalCommandCenter.tsx` ;
 - `docs/api/README.md` et les contrôleurs/DTO NestJS des modules Reports, Assignments, Interventions, Cases et Verification ;
 - `docs/architecture/architecture-applicative.md` et `docs/architecture/securite-et-habilitations.md` ;
 - `prisma/schema.prisma`.

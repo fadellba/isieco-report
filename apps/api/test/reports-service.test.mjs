@@ -184,6 +184,38 @@ test('does not reveal a report owned by another citizen', async () => {
 });
 
 
+test('creates a citizen report without a photo when optional metadata is provided', async () => {
+  const calls = { report: null, history: null, audit: 0 };
+  const prisma = basePrisma();
+  const tx = {
+    $executeRaw: async () => { calls.audit += 1; return 1; },
+    signalement: {
+      create: async ({ data }) => {
+        calls.report = data;
+        return { idSignalement: data.idSignalement };
+      },
+    },
+    historiqueStatutSignalement: {
+      create: async ({ data }) => { calls.history = data; return data; },
+    },
+  };
+  prisma.$transaction = async (operation, options) => {
+    assert.equal(options.isolationLevel, 'Serializable');
+    return operation(tx);
+  };
+  const service = new ReportsService(prisma, {});
+
+  const result = await service.createReport({
+    description: 'Un dépôt est situé près de l’entrée du marché.',
+  }, authId, 'report-no-photo-0001');
+
+  assert.equal(calls.report.description, 'Un dépôt est situé près de l’entrée du marché.');
+  assert.equal(calls.report.statutSignalement, 'SOUMIS');
+  assert.equal(calls.history.nouveauStatut, 'SOUMIS');
+  assert.equal(calls.audit, 1);
+  assert.equal(result.idSignalement, reportId);
+});
+
 test('creates a photo-first report without description or waste categories in one transaction', async () => {
   const calls = { report: null, photo: null, history: null, audit: [], uploaded: null, removed: null };
   const prisma = basePrisma();
