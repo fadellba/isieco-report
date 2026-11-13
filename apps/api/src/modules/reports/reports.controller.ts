@@ -70,7 +70,7 @@ export class ReportsController {
       type: 'object',
       properties: {
         file: { type: 'string', format: 'binary' },
-        description: { type: 'string', minLength: 10, maxLength: 5000 },
+        description: { type: 'string', maxLength: 5000 },
         descriptionLocalisation: { type: 'string', maxLength: 1000 },
         latitude: { type: 'number', minimum: -90, maximum: 90 },
         longitude: { type: 'number', minimum: -180, maximum: 180 },
@@ -78,7 +78,6 @@ export class ReportsController {
         dateConstat: { type: 'string', format: 'date-time' },
         contenus: { type: 'string', description: 'Tableau JSON optionnel des catégories de déchets.' },
       },
-      required: ['file'],
     },
   })
   @ApiCreatedResponse({ type: ReportResponseDto })
@@ -105,7 +104,7 @@ export class ReportsController {
     description: 'Clé opaque de 8 à 128 caractères générée par le client et conservée en cas de retry.',
   })
   @ApiCreatedResponse({ type: ReportResponseDto, description: 'Signalement créé avec ses contenus et son historique initial de statut.' })
-  @ApiBadRequestResponse({ description: 'Données invalides, catégorie absente/inactive ou localisation incohérente.' })
+  @ApiBadRequestResponse({ description: 'Données invalides ou localisation incohérente. Un signalement doit contenir au moins une photo, une description, une catégorie ou une indication de localisation.' })
   @ApiConflictResponse({ description: 'Clé idempotente réutilisée avec un autre contenu ou conflit concurrent.' })
   @ApiUnauthorizedResponse({ description: 'Jeton Supabase absent ou invalide.' })
   @ApiForbiddenResponse({ description: 'Un compte citoyen actif est requis.' })
