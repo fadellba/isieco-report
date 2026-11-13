@@ -88,8 +88,8 @@ export default function NewCitizenReportScreen() {
 
   async function handleSubmit() {
     setError(null);
-    if (!photo) {
-      setError('Ajoutez une photo du dépôt pour envoyer le signalement.');
+    if (!photo && !description.trim() && selectedWasteTypeIds.length === 0 && !locationDescription.trim() && !latitude.trim()) {
+      setError('Ajoutez au moins une photo, une description, une catégorie ou une localisation.');
       return;
     }
 
@@ -127,7 +127,7 @@ export default function NewCitizenReportScreen() {
       }
 
       setBusy(true);
-      const result = await submitReportWithPhoto(payload, idempotencyRef.current.key, photo);
+      const result = await submitReportWithPhoto(payload, idempotencyRef.current.key, photo ?? undefined);
       idempotencyRef.current = null;
       router.replace({
         pathname: '/(citizen)/reports/[id]',
@@ -149,14 +149,14 @@ export default function NewCitizenReportScreen() {
       <Text className="text-xs font-extrabold uppercase tracking-[0.18em] text-brand-forest">Espace citoyen</Text>
       <Text className="mt-3 text-3xl font-extrabold text-ink-900">Signaler un dépôt</Text>
       <Text className="mt-2 text-sm leading-6 text-ink-500">
-        Une photo pour commencer. La localisation, la description et le type de déchets vous aident à préciser le signalement.
+        Commencez par une photo ou ajoutez les informations dont vous disposez. La localisation, la description et la catégorie restent facultatives.
       </Text>
 
       <View className="mt-6 gap-5">
         <View className="rounded-3xl border border-line-subtle bg-white p-4">
           <View className="flex-row items-center justify-between">
             <Text className="text-sm font-extrabold text-ink-900">1. Photo du dépôt</Text>
-            <Text className="text-[10px] font-bold uppercase text-status-danger">Requise</Text>
+            <Text className="text-[10px] font-bold uppercase text-ink-400">Facultative</Text>
           </View>
           {photo ? (
             <View className="mt-3">
@@ -185,17 +185,17 @@ export default function NewCitizenReportScreen() {
 
         <View className="rounded-3xl border border-line-subtle bg-white p-4">
           <Text className="text-sm font-extrabold text-ink-900">2. Localisation</Text>
-          <Text className="mt-1 text-xs leading-5 text-ink-500">Autorisez la localisation ponctuelle ou saisissez les coordonnées si vous les connaissez.</Text>
+          <Text className="mt-1 text-xs leading-5 text-ink-500">Autorisez la localisation ponctuelle ou indiquez un repère. Vous pouvez aussi envoyer sans GPS.</Text>
           <TouchableOpacity onPress={() => void useCurrentLocation()} disabled={gettingLocation || busy} className="mt-3 rounded-xl bg-brand-mist px-4 py-3 disabled:opacity-50">
             <Text className="text-center text-xs font-extrabold text-brand-forest">{gettingLocation ? 'Localisation…' : 'Utiliser ma position actuelle'}</Text>
           </TouchableOpacity>
           <View className="mt-3 flex-row gap-3">
             <View className="flex-1">
-              <Text className="text-xs font-bold text-ink-700">Latitude</Text>
+              <Text className="text-xs font-bold text-ink-700">Latitude (facultative)</Text>
               <TextInput value={latitude} onChangeText={setLatitude} keyboardType="decimal-pad" placeholder="14.7167" placeholderTextColor="#8A948C" className={inputClass} />
             </View>
             <View className="flex-1">
-              <Text className="text-xs font-bold text-ink-700">Longitude</Text>
+              <Text className="text-xs font-bold text-ink-700">Longitude (facultative)</Text>
               <TextInput value={longitude} onChangeText={setLongitude} keyboardType="decimal-pad" placeholder="-17.4677" placeholderTextColor="#8A948C" className={inputClass} />
             </View>
           </View>
@@ -251,7 +251,7 @@ export default function NewCitizenReportScreen() {
       {error ? <Text accessibilityRole="alert" className="mt-5 rounded-xl border border-status-danger/20 bg-status-danger/5 p-4 text-sm text-status-danger">{error}</Text> : null}
       <TouchableOpacity
         onPress={() => void handleSubmit()}
-        disabled={busy || mediaBusy || gettingLocation || !photo}
+        disabled={busy || mediaBusy || gettingLocation}
         className="mt-7 rounded-2xl bg-brand-forest px-5 py-4 disabled:opacity-50"
       >
         <Text className="text-center font-extrabold text-white">{busy ? 'Envoi du signalement…' : 'Envoyer le signalement'}</Text>
