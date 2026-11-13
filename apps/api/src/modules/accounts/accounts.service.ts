@@ -32,46 +32,97 @@ export class AccountsService {
       ? metadata.prenom.trim()
       : null;
 
-    const citizenRole = await this.prisma.role.upsert({
-      where: { codeRole: 'CITOYEN' },
-      update: {},
-      create: {
-        codeRole: 'CITOYEN',
-        libelleRole: 'Citoyen',
-        description: 'Dépose et suit ses signalements.',
-      },
-    });
-
-    await this.prisma.utilisateur.upsert({
-      where: { authUserId: authUser.id },
-      create: {
-        authUserId: authUser.id,
-        email,
-        nom,
-        prenom,
-        roles: {
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        const existing = await tx.utilisateur.findUnique({
+          where: { authUserId: authUser.id },
+          select: { idUtilisateur: true },
+        });
+        const citizenRole = await tx.role.upsert({
+          where: { codeRole: 'CITOYEN' },
+          update: {},
           create: {
-            role: { connect: { idRole: citizenRole.idRole } },
-            motif: 'Attribution automatique à la création du profil citoyen.',
+            codeRole: 'CITOYEN',
+            libelleRole: 'Citoyen',
+            description: 'Dépose et suit ses signalements.',
           },
-        },
-      },
-      update: { email },
-    });
+        });
+
+        const profile = await tx.utilisateur.upsert({
+          where: { authUserId: authUser.id },
+          create: {
+            authUserId: authUser.id,
+            email,
+            nom,
+            prenom,
+            roles: {
+              create: {
+                role: { connect: { idRole: citizenRole.idRole } },
+                motif: 'Attribution automatique à la création du profil citoyen.',
+              },
+            },
+          },
+          update: { email },
+          select: { idUtilisateur: true },
+        });
+
+        if (!existing) {
+          // Self-provisioning is a system-originated event; do not copy auth metadata or PII.
+          await recordBusinessEvent(tx, {
+            actorId: null,
+            actionCode: 'COMPTE_CREE',
+            entityType: 'UTILISATEUR',
+            entityId: profile.idUtilisateur,
+          });
+          await recordBusinessEvent(tx, {
+            actorId: null,
+            actionCode: 'ROLE_ATTRIBUE',
+            entityType: 'UTILISATEUR',
+            entityId: profile.idUtilisateur,
+            metadata: { result: 'CITOYEN' },
+          });
+        }
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    } catch (error) {
+      // A concurrent first sign-in may win the unique insert. Its committed account
+      // and audit events are authoritative; only suppress the conflict if it exists.
+      if (!isPrismaCode(error, 'P2002') && !isPrismaCode(error, 'P2034')) throw error;
+      const concurrentProfile = await this.prisma.utilisateur.findUnique({
+        where: { authUserId: authUser.id },
+        select: { idUtilisateur: true },
+      });
+      if (!concurrentProfile) throw error;
+    }
 
     return this.findProfile(authUser.id);
   }
 
   async updateMyProfile(authUser: User, dto: UpdateMyProfileDto) {
     const current = await this.getOrCreateMyProfile(authUser);
-    await this.prisma.utilisateur.update({
-      where: { idUtilisateur: current.utilisateurId },
-      data: {
-        ...(dto.nom !== undefined ? { nom: dto.nom.trim() } : {}),
-        ...(dto.prenom !== undefined ? { prenom: dto.prenom?.trim() || null } : {}),
-        ...(dto.telephone !== undefined ? { telephone: dto.telephone?.trim() || null } : {}),
-      },
-    });
+    const data = {
+      ...(dto.nom !== undefined && dto.nom.trim() !== current.nom ? { nom: dto.nom.trim() } : {}),
+      ...(dto.prenom !== undefined && (dto.prenom?.trim() || null) !== current.prenom
+        ? { prenom: dto.prenom?.trim() || null }
+        : {}),
+      ...(dto.telephone !== undefined && (dto.telephone?.trim() || null) !== current.telephone
+        ? { telephone: dto.telephone?.trim() || null }
+        : {}),
+    };
+
+    if (Object.keys(data).length > 0) {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.utilisateur.update({
+          where: { idUtilisateur: current.utilisateurId },
+          data,
+        });
+        await recordBusinessEvent(tx, {
+          actorId: current.utilisateurId,
+          actionCode: 'COMPTE_PROFIL_MODIFIE',
+          entityType: 'UTILISATEUR',
+          entityId: current.utilisateurId,
+        });
+      });
+    }
     return this.findProfile(authUser.id);
   }
 
