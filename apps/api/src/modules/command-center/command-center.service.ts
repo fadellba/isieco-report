@@ -18,22 +18,6 @@ export class CommandCenterService {
       throw new BadRequestException('La latitude minimale du viewport doit être inférieure ou égale à la latitude maximale.');
     }
 
-    const viewportWhere = hasViewport
-      ? {
-          latitude: { gte: query.minLat, lte: query.maxLat },
-          ...(query.minLon! <= query.maxLon!
-            ? { longitude: { gte: query.minLon, lte: query.maxLon } }
-            : {
-                OR: [
-                  { longitude: { gte: query.minLon } },
-                  { longitude: { lte: query.maxLon } },
-                ],
-              }),
-        }
-      : {};
-    const mapCaseWhere = { ...locatedCaseWhere, ...viewportWhere };
-    const mapReportWhere = { ...locatedReportWhere, ...viewportWhere };
-
     const limit = Math.min(250, Math.max(1, query.limit ?? 150));
     const activeReportWhere = {
       idDossier: null,
@@ -50,6 +34,22 @@ export class CommandCenterService {
       latitude: { not: null },
       longitude: { not: null },
     };
+    const viewportWhere = hasViewport
+      ? {
+          latitude: { gte: query.minLat, lte: query.maxLat },
+          ...(query.minLon! <= query.maxLon!
+            ? { longitude: { gte: query.minLon, lte: query.maxLon } }
+            : {
+                OR: [
+                  { longitude: { gte: query.minLon } },
+                  { longitude: { lte: query.maxLon } },
+                ],
+              }),
+        }
+      : {};
+    const mapCaseWhere = { ...locatedCaseWhere, ...viewportWhere };
+    const mapReportWhere = { ...locatedReportWhere, ...viewportWhere };
+
     const missingCaseLocationWhere = {
       ...openCaseWhere,
       OR: [{ latitude: null }, { longitude: null }],
