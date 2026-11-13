@@ -194,13 +194,19 @@ export class CommandCenterService {
       ...locatedReportWhere,
       ...(viewportReportWhere ? { AND: [viewportReportWhere] } : {}),
     };
+    const mapCasePageFilters = [viewportCaseWhere, cursorCaseWhere].filter(
+      (filter): filter is Prisma.DossierTraitementWhereInput => filter !== undefined,
+    );
+    const mapReportPageFilters = [viewportReportWhere, cursorReportWhere].filter(
+      (filter): filter is Prisma.SignalementWhereInput => filter !== undefined,
+    );
     const mapCasePageWhere: Prisma.DossierTraitementWhereInput = {
-      ...mapCaseWhere,
-      ...(cursorCaseWhere ? { AND: [...(mapCaseWhere.AND ?? []), cursorCaseWhere] } : {}),
+      ...locatedCaseWhere,
+      ...(mapCasePageFilters.length ? { AND: mapCasePageFilters } : {}),
     };
     const mapReportPageWhere: Prisma.SignalementWhereInput = {
-      ...mapReportWhere,
-      ...(cursorReportWhere ? { AND: [...(mapReportWhere.AND ?? []), cursorReportWhere] } : {}),
+      ...locatedReportWhere,
+      ...(mapReportPageFilters.length ? { AND: mapReportPageFilters } : {}),
     };
 
     const missingCaseLocationWhere = {
