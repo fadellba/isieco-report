@@ -660,3 +660,5 @@ Ces wireframes sont volontairement basse fidélité. Les fonds de carte et marqu
 Le centre de commandement Web a fait l'objet d'un contrôle visuel après composition. La génération de captures supplémentaires a ensuite été bloquée par la limite d'appels Figma du plan Starter ; les cinq vues mobiles sont donc livrées comme frames éditables, mais leur contrôle visuel détaillé reste à effectuer lors de la revue dans Figma.
 
 La prochaine revue doit valider les séquences, les libellés, les états vides/erreurs et les interactions. Elle devra ensuite conduire à des wireframes enrichis (navigation entre écrans, états alternatifs, responsive Web) avant la direction artistique et les maquettes haute fidélité.
+
+Le graphe de navigation attendu et les limites des parcours sont détaillés dans [Prototype interaction map](prototype-interactions.md). La carte sépare les connexions applicables aux six frames actuelles des écrans supplémentaires requis pour les scénarios complets d'intervention et de pilotage Web.
