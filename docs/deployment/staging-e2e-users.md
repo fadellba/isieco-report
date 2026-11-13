@@ -20,7 +20,7 @@ Ne pas placer ces valeurs dans le dépôt, dans un fichier `.env` commité ou da
 1. Ouvrir **GitHub → Actions → Staging E2E Test Users**.
 2. Lancer le workflow depuis la branche `main`.
 3. Choisir `CREATE` pour `seed_staging_test_users`.
-4. Vérifier le résumé du job : neuf comptes Auth, neuf profils métier et neuf rôles actifs distincts.
+4. Vérifier le résumé du job : neuf comptes Auth, neuf profils métier et neuf profils métier et huit rôles actifs représentés, dont deux citoyens.
 
 Le choix par défaut est `NO`. Le job ne s'exécute pas depuis une autre branche.
 
@@ -51,7 +51,7 @@ Après le provisioning des neuf comptes, configurer aussi `STAGING_SUPABASE_ANON
 3. Le workflow attend la CI du commit exact, vérifie la cible PostgreSQL staging, déploie ce commit sur le service Render staging, attend sa readiness et vérifie liveness/Swagger.
 4. Le workflow exécute ensuite `apps/api/scripts/run-staging-api-e2e.mjs`.
 
-La matrice teste les neuf identités contre une route de lecture réservée à chacun des neuf rôles : 72 combinaisons (200 pour le rôle attendu, 403 pour les sept autres ; les deux citoyens partagent le rôle autorisé), ainsi qu'un appel sans jeton par route (401). Le parcours métier crée un signalement citoyen, le qualifie, crée un dossier, affecte une équipe, démarre et soumet une intervention, puis valide la conformité et vérifie la clôture ainsi que le journal d'audit.
+La matrice teste les neuf identités contre une route de lecture réservée à chacun des neuf rôles : 72 combinaisons (200 pour le rôle attendu, 403 pour les sept autres ; les deux comptes citoyens testent la même habilitation), ainsi qu'un appel sans jeton par route (401). Le parcours métier crée un signalement citoyen, le qualifie, crée un dossier, affecte une équipe, démarre et soumet une intervention, puis valide la conformité et vérifie la clôture ainsi que le journal d'audit.
 
 Le runner ajoute l'agent terrain à une équipe staging compétente via l'API des référentiels si nécessaire. Il ne supprime aucune donnée : chaque exécution réussie laisse un dossier E2E clôturé et ses événements d'audit en staging. Les données sont identifiées comme fixtures E2E. Ce parcours n'appelle aucun déploiement de production.
 
