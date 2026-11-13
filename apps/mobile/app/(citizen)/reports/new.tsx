@@ -189,16 +189,6 @@ export default function NewCitizenReportScreen() {
           <TouchableOpacity onPress={() => void useCurrentLocation()} disabled={gettingLocation || busy} className="mt-3 rounded-xl bg-brand-mist px-4 py-3 disabled:opacity-50">
             <Text className="text-center text-xs font-extrabold text-brand-forest">{gettingLocation ? 'Localisation…' : 'Utiliser ma position actuelle'}</Text>
           </TouchableOpacity>
-          <View className="mt-3 flex-row gap-3">
-            <View className="flex-1">
-              <Text className="text-xs font-bold text-ink-700">Latitude (facultative)</Text>
-              <TextInput value={latitude} onChangeText={setLatitude} keyboardType="decimal-pad" placeholder="14.7167" placeholderTextColor="#8A948C" className={inputClass} />
-            </View>
-            <View className="flex-1">
-              <Text className="text-xs font-bold text-ink-700">Longitude (facultative)</Text>
-              <TextInput value={longitude} onChangeText={setLongitude} keyboardType="decimal-pad" placeholder="-17.4677" placeholderTextColor="#8A948C" className={inputClass} />
-            </View>
-          </View>
           <TextInput
             value={locationDescription}
             onChangeText={setLocationDescription}
