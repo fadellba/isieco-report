@@ -41,6 +41,8 @@ export default function OnboardingScreen() {
     }
   }
 
+  if (!current) return null;
+
   return (
     <View className="flex-1 justify-between bg-surface-base px-6 pb-10 pt-16">
       <View className="flex-row items-center justify-between">
