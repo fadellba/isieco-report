@@ -314,7 +314,7 @@ Les opérations de référentiel et d'administration de comptes restent dans des
 
 ### État de la cartographie et de l'actualisation
 
-Le centre de commandement dispose de l'endpoint agrégé `GET /api/v1/command-center/overview`, qui renvoie les KPI et les objets cartographiques autorisés. Depuis la PR #94, l'API accepte les quatre bornes du viewport, valide les plages et filtre les dossiers/signalements côté base avant pagination. La réponse fournit une pagination keyset avec ordre déterministe, curseur opaque lié au viewport, total stable pour la zone, `hasMore` et `nextCursor`. Chaque page reste plafonnée à 250 éléments ; l'interface charge la page suivante à la demande et recharge après 350 ms de stabilité du déplacement/zoom.
+Le centre de commandement dispose de l'endpoint agrégé `GET /api/v1/command-center/overview`, qui renvoie les KPI et les objets cartographiques autorisés. Depuis la PR #94, l'API accepte les quatre bornes du viewport, valide les plages et filtre les dossiers/signalements côté base avant pagination. La réponse fournit une pagination keyset avec ordre déterministe, curseur opaque lié au viewport, total du viewport indépendant du curseur et recalculé à chaque requête, `hasMore` et `nextCursor`. Chaque page reste plafonnée à 250 éléments ; l'interface charge la page suivante à la demande et recharge après 350 ms de stabilité du déplacement/zoom.
 
 Le frontend actualise encore les données par polling REST périodique (60 secondes). Aucun canal événementiel SSE/WebSocket n'est livré : les événements métier, la reconnexion/rattrapage et le fallback événementiel restent dans l'issue [#89](https://github.com/fadellba/isieco-report/issues/89). Les plans SQL sur dataset représentatif, la décision d'index spatial/PostGIS et le clustering restent également à mesurer. 
 
@@ -495,7 +495,7 @@ Les exigences suivantes doivent être planifiées comme des travaux backend expl
 | P0 | Timeline citoyenne limitée aux événements communicables et au propriétaire | Implémentée via `GET /reports/:id/history` ; terminer la recette métier de bout en bout. |
 | P0 | Coordonnées et repère du dossier exposés aux membres actifs de l'équipe agent | Implémentés dans le DTO d'affectation utilisé par le mobile ; tester les cas de localisation absente ou imprécise. |
 | P1 | Centre de commandement cartographique avec KPI et entités géolocalisées | Implémenté sur Web via `GET /command-center/overview`, carte et panneau contextuel ; améliorer la couverture/recette. |
-| P1 | Filtrage cartographique par viewport et pagination spatiale | Implémentés et fusionnés via PR #94 : bounding box validée, curseur keyset lié au viewport, total stable et plafond de 250 éléments/page. Restent les tests de performance, l'analyse d'index/PostGIS et le clustering. |
+| P1 | Filtrage cartographique par viewport et pagination spatiale | Implémentés et fusionnés via PR #94 : bounding box validée, curseur keyset lié au viewport, total du viewport indépendant du curseur, recalculé à chaque requête, et plafond de 250 éléments/page. Restent les tests de performance, l'analyse d'index/PostGIS et le clustering. |
 | P1 | Actualisation des opérations Web | Polling REST toutes les 60 secondes ; diffusion événementielle non implémentée. |
 | P2 | Carte native des missions agent | Écran placeholder ; choisir fournisseur, stratégie de clés et dépendances natives, puis tester sur appareils. |
 | P2 | Mode hors ligne agent | Non implémenté : cache limité, brouillons persistants, files de médias, reprise idempotente et résolution de conflits à concevoir. |

@@ -112,7 +112,7 @@ Après intégration des fonctionnalités, produire une build de test liée au SH
 - **Validation API :** bornes complètes et plages latitude/longitude vérifiées ; viewports traversant l'antiméridien pris en charge ; valeurs vides/non numériques et latitudes inversées rejetées en HTTP 400.
 - **Filtrage base :** dossiers et signalements sont filtrés au niveau Prisma avant récupération des pages.
 - **Pagination keyset :** curseur opaque et validé, lié au viewport initial ; tri déterministe date/type/identifiant ; deux flux (dossiers et signalements) récupèrent `limit + 1` pour calculer `hasMore`.
-- **Stabilité :** le total du viewport n'intègre pas le curseur et reste stable entre pages ; dates de soumission nulles traitées en fin de flux ; curseur rejeté s'il est réutilisé sur une autre zone.
+- **Stabilité :** le total du viewport est calculé sans le curseur ; il peut varier entre requêtes si des enregistrements changent pendant la pagination ; dates de soumission nulles traitées en fin de flux ; curseur rejeté s'il est réutilisé sur une autre zone.
 - **Interface :** bouton de chargement des pages suivantes ; protection contre les réponses HTTP obsolètes ; maximum serveur de 250 éléments par page.
 - **Confidentialité :** aucune permission, télémétrie, historique ou position GPS d'agent ajouté.
 
