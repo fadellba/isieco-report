@@ -14,7 +14,7 @@ const slides = [
   {
     eyebrow: 'Simple et utile',
     title: 'Une photo suffit pour commencer.',
-    body: 'Ajoutez une photo, vérifiez le lieu et envoyez votre signalement. La description et le type de déchets restent facultatifs.',
+    body: 'Ajoutez une photo, indiquez le lieu et transmettez les informations utiles pour aider les équipes à intervenir.',
     glyph: '＋',
   },
   {
