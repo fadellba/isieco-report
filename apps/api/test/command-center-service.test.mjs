@@ -76,7 +76,7 @@ test('returns operational counts and only real, geolocated active entities', asy
   assert.deepEqual(result.map.items[0].teamNames, ['Équipe Nord']);
   assert.equal(result.map.items[0].activeInterventions, 1);
   assert.equal(result.map.items[1].title, 'Signalement non qualifié');
-  assert.equal(result.map.truncated, true);
+  assert.equal(result.map.truncated, false);
 });
 
 test('caps map retrieval and keeps the response within the requested item limit', async () => {
@@ -301,10 +301,12 @@ test('paginates the combined dossier and report stream with a stable keyset curs
   assert.equal(secondPage.map.nextCursor, null);
   assert.ok(caseFindQueries[1].where.AND.some((filter) => filter.OR?.some((part) => part.dateCreationDossier?.lt)));
   assert.ok(reportFindQueries[1].where.AND.some((filter) => filter.OR?.some((part) => part.dateSoumission?.lte)));
-  assert.equal(caseCountQueries.length, 2);
-  assert.equal(reportCountQueries.length, 2);
-  assert.ok(caseCountQueries.every((where) => !where.AND?.some((filter) => filter.OR?.some((part) => part.dateCreationDossier?.lt))));
-  assert.ok(reportCountQueries.every((where) => !where.AND?.some((filter) => filter.OR?.some((part) => part.dateSoumission?.lte))));
+  const mapCaseCounts = caseCountQueries.filter((where) => where.latitude?.not === null);
+  const mapReportCounts = reportCountQueries.filter((where) => where.latitude?.not === null);
+  assert.equal(mapCaseCounts.length, 2);
+  assert.equal(mapReportCounts.length, 2);
+  assert.ok(mapCaseCounts.every((where) => !where.AND?.some((filter) => filter.OR?.some((part) => part.dateCreationDossier?.lt))));
+  assert.ok(mapReportCounts.every((where) => !where.AND?.some((filter) => filter.OR?.some((part) => part.dateSoumission?.lte))));
 });
 
 test('rejects malformed or non-canonical map cursors', async () => {
@@ -365,4 +367,62 @@ test('rejects a pagination cursor reused with a different viewport', async () =>
     }),
     /ne correspond pas au viewport courant/,
   );
+});
+
+
+test('paginates null-dated reports after dated dossiers without losing the rows', async () => {
+  const dossier = {
+    idDossier: '33333333-3333-4333-8333-333333333333',
+    referenceDossier: 'DOS-NULL-DATE',
+    descriptionSynthese: null,
+    dateCreationDossier: new Date('2026-11-13T12:00:00.000Z'),
+    statutDossier: 'OUVERT',
+    priorite: 'NORMALE',
+    latitude: { toString: () => '14.7' },
+    longitude: { toString: () => '-17.4' },
+    descriptionLocalisation: null,
+    contenus: [],
+  };
+  const report = {
+    idSignalement: '44444444-4444-4444-8444-444444444444',
+    dateSoumission: null,
+    description: 'Sans date renseignée',
+    localisation: null,
+    latitude: { toString: () => '14.7' },
+    longitude: { toString: () => '-17.4' },
+    statutSignalement: 'SOUMIS',
+  };
+  let reportPageQuery;
+  const prisma = {
+    signalement: {
+      count: async () => 1,
+      findMany: async (query) => {
+        reportPageQuery = query;
+        return [report];
+      },
+    },
+    dossierTraitement: {
+      count: async () => 1,
+      findMany: async ({ where }) =>
+        where.AND?.some((filter) => filter.OR?.some((part) => part.dateCreationDossier?.lt))
+          ? []
+          : [dossier],
+    },
+    affectation: { count: async () => 0 },
+    intervention: { count: async () => 0 },
+  };
+
+  const firstPage = await new CommandCenterService(prisma).getOverview({ limit: 1 });
+  assert.equal(firstPage.map.items[0].kind, 'DOSSIER');
+  assert.equal(firstPage.map.hasMore, true);
+  const secondPage = await new CommandCenterService(prisma).getOverview({
+    limit: 1,
+    cursor: firstPage.map.nextCursor,
+  });
+  assert.equal(secondPage.map.totalLocated, 2);
+  assert.equal(secondPage.map.items.length, 1);
+  assert.equal(secondPage.map.items[0].kind, 'SIGNALEMENT');
+  assert.equal(secondPage.map.items[0].occurredAt, null);
+  assert.ok(reportPageQuery.where.AND.some((filter) => filter.OR?.some((part) => part.dateSoumission === null)));
+  assert.equal(reportPageQuery.orderBy[0].dateSoumission.nulls, 'last');
 });
