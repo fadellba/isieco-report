@@ -85,6 +85,11 @@ export class CommandCenterService {
 
     const limit = Math.min(250, Math.max(1, query.limit ?? 150));
     const cursor = decodeMapCursor(query.cursor);
+    const minLat = query.minLat!;
+    const maxLat = query.maxLat!;
+    const minLon = query.minLon!;
+    const maxLon = query.maxLon!;
+    const cursorDate = cursor ? new Date(cursor.occurredAt) : new Date(0);
     const activeReportWhere = {
       idDossier: null,
       statutSignalement: { in: [...OPEN_REPORT_STATUSES] },
@@ -102,32 +107,31 @@ export class CommandCenterService {
     };
     const viewportCaseWhere: Prisma.DossierTraitementWhereInput | undefined = hasViewport
       ? {
-          latitude: { gte: query.minLat, lte: query.maxLat },
-          ...(query.minLon! <= query.maxLon!
-            ? { longitude: { gte: query.minLon, lte: query.maxLon } }
+          latitude: { gte: minLat, lte: maxLat },
+          ...(minLon <= maxLon
+            ? { longitude: { gte: minLon, lte: maxLon } }
             : {
                 OR: [
-                  { longitude: { gte: query.minLon } },
-                  { longitude: { lte: query.maxLon } },
+                  { longitude: { gte: minLon } },
+                  { longitude: { lte: maxLon } },
                 ],
               }),
         }
       : undefined;
     const viewportReportWhere: Prisma.SignalementWhereInput | undefined = hasViewport
       ? {
-          latitude: { gte: query.minLat, lte: query.maxLat },
-          ...(query.minLon! <= query.maxLon!
-            ? { longitude: { gte: query.minLon, lte: query.maxLon } }
+          latitude: { gte: minLat, lte: maxLat },
+          ...(minLon <= maxLon
+            ? { longitude: { gte: minLon, lte: maxLon } }
             : {
                 OR: [
-                  { longitude: { gte: query.minLon } },
-                  { longitude: { lte: query.maxLon } },
+                  { longitude: { gte: minLon } },
+                  { longitude: { lte: maxLon } },
                 ],
               }),
         }
       : undefined;
 
-    const cursorDate = cursor ? new Date(cursor.occurredAt) : undefined;
     const cursorCaseWhere: Prisma.DossierTraitementWhereInput | undefined = cursor
       ? cursor.kind === 'DOSSIER'
         ? {
