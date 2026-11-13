@@ -1,8 +1,113 @@
+import { Buffer } from 'node:buffer';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
 import type { CommandCenterQueryDto } from './dto/command-center-query.dto.js';
 
 const OPEN_REPORT_STATUSES = ['SOUMIS', 'EN_ATTENTE_COMPLEMENT', 'COMPLEMENT_REPONDU'] as const;
+
+type MapViewport = {
+  minLat: number;
+  maxLat: number;
+  minLon: number;
+  maxLon: number;
+};
+
+type SpatialCursor = {
+  version: 1;
+  occurredAt: string;
+  kind: 'DOSSIER' | 'SIGNALEMENT';
+  id: string;
+  viewport: MapViewport | null;
+};
+
+function parseSpatialCursor(value: string | undefined, viewport: MapViewport | null): SpatialCursor | null {
+  if (!value) return null;
+  if (value.length > 512 || !/^[A-Za-z0-9_-]+$/.test(value)) {
+    throw new BadRequestException('Le curseur cartographique est invalide.');
+  }
+
+  try {
+    const decoded = Buffer.from(value, 'base64url');
+    if (decoded.toString('base64url') !== value) {
+      throw new Error('Non canonical base64url cursor.');
+    }
+    const parsed = JSON.parse(decoded.toString('utf8')) as Partial<SpatialCursor>;
+    const occurredAt = typeof parsed.occurredAt === 'string' ? new Date(parsed.occurredAt) : null;
+    const validId = typeof parsed.id === 'string'
+      && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(parsed.id);
+    const sameViewport = viewport === null
+      ? parsed.viewport === null
+      : parsed.viewport !== null
+        && parsed.viewport?.minLat === viewport.minLat
+        && parsed.viewport?.maxLat === viewport.maxLat
+        && parsed.viewport?.minLon === viewport.minLon
+        && parsed.viewport?.maxLon === viewport.maxLon;
+
+    if (
+      parsed.version !== 1
+      || !occurredAt
+      || Number.isNaN(occurredAt.getTime())
+      || (parsed.kind !== 'DOSSIER' && parsed.kind !== 'SIGNALEMENT')
+      || !validId
+      || !sameViewport
+    ) {
+      throw new Error('Invalid cursor payload.');
+    }
+
+    return {
+      version: 1,
+      occurredAt: occurredAt.toISOString(),
+      kind: parsed.kind,
+      id: parsed.id,
+      viewport,
+    };
+  } catch {
+    throw new BadRequestException('Le curseur cartographique est invalide ou ne correspond pas au viewport courant.');
+  }
+}
+
+function encodeSpatialCursor(
+  feature: { occurredAt: Date | null; kind: 'DOSSIER' | 'SIGNALEMENT'; id: string },
+  viewport: MapViewport | null,
+): string {
+  if (!feature.occurredAt) {
+    throw new Error('A map feature must have an occurrence timestamp to create a cursor.');
+  }
+  const payload: SpatialCursor = {
+    version: 1,
+    occurredAt: feature.occurredAt.toISOString(),
+    kind: feature.kind,
+    id: feature.id,
+    viewport,
+  };
+  return Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
+}
+
+function buildDossierCursorWhere(cursor: SpatialCursor) {
+  const occurredAt = new Date(cursor.occurredAt);
+  if (cursor.kind === 'SIGNALEMENT') {
+    return { dateCreationDossier: { lt: occurredAt } };
+  }
+  return {
+    OR: [
+      { dateCreationDossier: { lt: occurredAt } },
+      { dateCreationDossier: occurredAt, idDossier: { lt: cursor.id } },
+    ],
+  };
+}
+
+function buildSignalementCursorWhere(cursor: SpatialCursor) {
+  const occurredAt = new Date(cursor.occurredAt);
+  if (cursor.kind === 'DOSSIER') {
+    return { dateSoumission: { lte: occurredAt } };
+  }
+  return {
+    OR: [
+      { dateSoumission: { lt: occurredAt } },
+      { dateSoumission: occurredAt, idSignalement: { lt: cursor.id } },
+    ],
+  };
+}
 
 @Injectable()
 export class CommandCenterService {
@@ -18,6 +123,15 @@ export class CommandCenterService {
       throw new BadRequestException('La latitude minimale du viewport doit être inférieure ou égale à la latitude maximale.');
     }
 
+    const viewport: MapViewport | null = hasViewport
+      ? {
+          minLat: query.minLat!,
+          maxLat: query.maxLat!,
+          minLon: query.minLon!,
+          maxLon: query.maxLon!,
+        }
+      : null;
+    const cursor = parseSpatialCursor(query.cursor, viewport);
     const limit = Math.min(250, Math.max(1, query.limit ?? 150));
     const activeReportWhere = {
       idDossier: null,
@@ -47,8 +161,14 @@ export class CommandCenterService {
               }),
         }
       : {};
-    const mapCaseWhere = { ...locatedCaseWhere, ...viewportWhere };
-    const mapReportWhere = { ...locatedReportWhere, ...viewportWhere };
+    const mapCaseBaseWhere = { ...locatedCaseWhere, ...viewportWhere };
+    const mapReportBaseWhere = { ...locatedReportWhere, ...viewportWhere };
+    const mapCaseWhere = cursor
+      ? { AND: [locatedCaseWhere, viewportWhere, buildDossierCursorWhere(cursor)] }
+      : mapCaseBaseWhere;
+    const mapReportWhere = cursor
+      ? { AND: [locatedReportWhere, viewportWhere, buildSignalementCursorWhere(cursor)] }
+      : mapReportBaseWhere;
 
     const missingCaseLocationWhere = {
       ...openCaseWhere,
@@ -102,7 +222,7 @@ export class CommandCenterService {
       this.prisma.dossierTraitement.findMany({
         where: mapCaseWhere,
         orderBy: [{ dateCreationDossier: 'desc' }, { idDossier: 'desc' }],
-        take: limit,
+        take: limit + 1,
         select: {
           idDossier: true,
           referenceDossier: true,
@@ -184,12 +304,27 @@ export class CommandCenterService {
       wasteTypes: [],
     }));
 
+    const [remainingCasesCount, remainingReportsCount] = cursor
+      ? await Promise.all([
+          this.prisma.dossierTraitement.count({ where: mapCaseWhere }),
+          this.prisma.signalement.count({ where: mapReportWhere }),
+        ])
+      : [mapLocatedCasesCount, mapLocatedReportsCount];
     const totalLocated = mapLocatedCasesCount + mapLocatedReportsCount;
-    const mapItems = [...caseFeatures, ...reportFeatures]
-      .sort((left, right) =>
-        (right.occurredAt?.getTime() ?? 0) - (left.occurredAt?.getTime() ?? 0),
-      )
-      .slice(0, limit);
+    const remainingCount = remainingCasesCount + remainingReportsCount;
+    const mapItems = [...caseFeatures, ...reportFeatures].sort((left, right) => {
+      const occurredAtDifference =
+        (right.occurredAt?.getTime() ?? 0) - (left.occurredAt?.getTime() ?? 0);
+      if (occurredAtDifference !== 0) return occurredAtDifference;
+      if (left.kind !== right.kind) return left.kind === 'DOSSIER' ? -1 : 1;
+      return right.id.localeCompare(left.id);
+    });
+    const pageItems = mapItems.slice(0, limit);
+    const hasMore = pageItems.length > 0 && remainingCount > pageItems.length;
+    const lastFeature = pageItems.at(-1);
+    const nextCursor = hasMore && lastFeature
+      ? encodeSpatialCursor(lastFeature, viewport)
+      : null;
 
     return {
       summary: {
@@ -204,9 +339,11 @@ export class CommandCenterService {
         withoutLocation: missingCasesCount + missingReportsCount,
       },
       map: {
-        items: mapItems,
+        items: pageItems,
         totalLocated,
-        truncated: totalLocated > mapItems.length,
+        truncated: hasMore,
+        hasMore,
+        nextCursor,
         limit,
       },
       generatedAt: new Date(),

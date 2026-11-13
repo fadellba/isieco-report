@@ -44,7 +44,7 @@ test('returns operational counts and only real, geolocated active entities', asy
       count: count('signalement'),
       findMany: async ({ where, take }) => {
         assert.equal(where.idDossier, null);
-        assert.equal(take, 100);
+        assert.equal(take, 101);
         return [report];
       },
     },

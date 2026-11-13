@@ -62,6 +62,12 @@ export class CommandCenterMapDto {
 
   @ApiProperty({ minimum: 1, maximum: 250 })
   limit!: number;
+
+  @ApiProperty({ type: Boolean })
+  hasMore!: boolean;
+
+  @ApiProperty({ type: 'string', nullable: true, maxLength: 512 })
+  nextCursor!: string | null;
 }
 
 export class CommandCenterOverviewResponseDto {

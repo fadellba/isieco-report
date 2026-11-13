@@ -35,6 +35,8 @@ interface CommandCenterOverview {
     items: CommandCenterFeature[];
     totalLocated: number;
     truncated: boolean;
+    hasMore: boolean;
+    nextCursor: string | null;
     limit: number;
   };
   generatedAt: string;
@@ -95,11 +97,13 @@ export function OperationalCommandCenter() {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async (silent = false) => {
+  const load = useCallback(async (silent = false, cursor?: string, append = false) => {
     const currentRequest = ++requestVersion.current;
-    if (silent) setRefreshing(true);
+    if (append) setLoadingMore(true);
+    else if (silent) setRefreshing(true);
     else setLoading(true);
     try {
       const params = new URLSearchParams({ limit: '200' });
@@ -109,20 +113,41 @@ export function OperationalCommandCenter() {
         params.set('minLon', String(viewportBounds.minLon));
         params.set('maxLon', String(viewportBounds.maxLon));
       }
+      if (cursor) params.set('cursor', cursor);
       const response = await api.request<CommandCenterOverview>(`/command-center/overview?${params.toString()}`);
       if (currentRequest !== requestVersion.current) return;
-      setData(response);
+      if (append) {
+        setData((current) => {
+          if (!current) return response;
+          const existing = new Set(current.map.items.map((item) => `${item.kind}:${item.id}`));
+          const additionalItems = response.map.items.filter(
+            (item) => !existing.has(`${item.kind}:${item.id}`),
+          );
+          return {
+            ...response,
+            map: {
+              ...response.map,
+              items: [...current.map.items, ...additionalItems],
+            },
+          };
+        });
+      } else {
+        setData(response);
+        setSelectedFeatureId((current) =>
+          current && response.map.items.some((item) => item.id === current) ? current : null,
+        );
+      }
       setError(null);
-      setSelectedFeatureId((current) =>
-        current && response.map.items.some((item) => item.id === current) ? current : null,
-      );
     } catch (reason) {
       if (currentRequest !== requestVersion.current) return;
       setError(reason instanceof Error ? reason.message : 'Impossible de charger le centre de commandement.');
     } finally {
       if (currentRequest === requestVersion.current) {
-        setLoading(false);
-        setRefreshing(false);
+        if (append) setLoadingMore(false);
+        else {
+          setLoading(false);
+          setRefreshing(false);
+        }
       }
     }
   }, [viewportBounds]);
@@ -273,10 +298,19 @@ export function OperationalCommandCenter() {
         </div>
       )}
 
-      {data?.map.truncated ? (
-        <p className="command-center__truncated">
-          Affichage limité aux {numberFormat.format(data.map.items.length)} éléments géolocalisés les plus récents de cette zone.
-        </p>
+      {data?.map.hasMore && data.map.nextCursor ? (
+        <div className="command-center__truncated">
+          <span>
+            {numberFormat.format(data.map.items.length)} entité(s) chargée(s) sur {numberFormat.format(data.map.totalLocated)} dans cette zone.
+          </span>
+          <button
+            type="button"
+            onClick={() => void load(true, data.map.nextCursor ?? undefined, true)}
+            disabled={loadingMore}
+          >
+            {loadingMore ? 'Chargement…' : 'Charger la suite'}
+          </button>
+        </div>
       ) : null}
 
       <div className="command-center__footnote">
