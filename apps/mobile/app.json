@@ -6,7 +6,6 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "icon": "./assets/icon.png",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash.png",
@@ -32,10 +31,6 @@
       ]
     ],
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#14532D"
-      },
       "package": "com.isieco.report",
       "permissions": [
         "android.permission.CAMERA",
