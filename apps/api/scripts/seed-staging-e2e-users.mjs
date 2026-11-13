@@ -11,6 +11,7 @@ const PAGE_SIZE = 1000;
 
 const accounts = [
   { slug: 'citoyen', email: 'e2e.citoyen@staging.isieco.test', label: 'Citoyen', role: 'CITOYEN' },
+  { slug: 'citoyen-secondaire', email: 'e2e.citoyen-secondaire@staging.isieco.test', label: 'Citoyen secondaire', role: 'CITOYEN', passwordKey: 'CITOYEN_SECONDARY' },
   { slug: 'agent-qualification', email: 'e2e.agent-qualification@staging.isieco.test', label: 'Agent qualification', role: 'AGENT_QUALIFICATION' },
   { slug: 'responsable-traitement', email: 'e2e.responsable-traitement@staging.isieco.test', label: 'Responsable traitement', role: 'RESPONSABLE_TRAITEMENT' },
   { slug: 'responsable-affectation', email: 'e2e.responsable-affectation@staging.isieco.test', label: 'Responsable affectation', role: 'RESPONSABLE_AFFECTATION' },
@@ -85,9 +86,13 @@ function assertStagingTargets() {
   }
 }
 
-function passwordForRole(role, seed) {
+function accountKey(account) {
+  return account.passwordKey ?? account.role;
+}
+
+function passwordForAccount(account, seed) {
   return createHmac('sha256', seed)
-    .update(`isieco-staging-e2e:${role}`)
+    .update(`isieco-staging-e2e:${accountKey(account)}`)
     .digest('base64url') + 'A1!';
 }
 
@@ -208,7 +213,7 @@ async function main() {
       const user = await ensureAuthUser(
         admin,
         account,
-        passwordForRole(account.role, passwordSeed),
+        passwordForAccount(account, passwordSeed),
         usersByEmail,
       );
       provisioned.push({ account, authUserId: user.id });
@@ -308,7 +313,7 @@ async function main() {
       for (const account of accounts) {
         console.log(`- ${account.role}: ${account.email}`);
       }
-      console.log('Passwords were not printed. They are derived per role from STAGING_E2E_PASSWORD_SEED.');
+      console.log('Passwords were not printed. They are derived per account key from STAGING_E2E_PASSWORD_SEED.');
     } catch (error) {
       await profileDb.query('ROLLBACK');
       throw error;
