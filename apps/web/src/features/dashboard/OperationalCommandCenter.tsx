@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../app/auth-context';
 import { api } from '../../lib/api';
@@ -38,6 +38,13 @@ interface CommandCenterOverview {
     limit: number;
   };
   generatedAt: string;
+}
+
+interface MapViewportBounds {
+  minLat: number;
+  maxLat: number;
+  minLon: number;
+  maxLon: number;
 }
 
 const numberFormat = new Intl.NumberFormat('fr-FR');
@@ -81,6 +88,8 @@ export function OperationalCommandCenter() {
   const { profile } = useAuth();
   const roles = new Set(profile?.roles.map((role) => role.code) ?? []);
   const [data, setData] = useState<CommandCenterOverview | null>(null);
+  const [viewportBounds, setViewportBounds] = useState<MapViewportBounds | null>(null);
+  const requestVersion = useRef(0);
   const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(null);
   const [kindFilter, setKindFilter] = useState<'TOUS' | 'DOSSIER' | 'SIGNALEMENT'>('TOUS');
   const [searchTerm, setSearchTerm] = useState('');
@@ -89,22 +98,34 @@ export function OperationalCommandCenter() {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async (silent = false) => {
+    const currentRequest = ++requestVersion.current;
     if (silent) setRefreshing(true);
     else setLoading(true);
     try {
-      const response = await api.request<CommandCenterOverview>('/command-center/overview?limit=200');
+      const params = new URLSearchParams({ limit: '200' });
+      if (viewportBounds) {
+        params.set('minLat', String(viewportBounds.minLat));
+        params.set('maxLat', String(viewportBounds.maxLat));
+        params.set('minLon', String(viewportBounds.minLon));
+        params.set('maxLon', String(viewportBounds.maxLon));
+      }
+      const response = await api.request<CommandCenterOverview>(`/command-center/overview?${params.toString()}`);
+      if (currentRequest !== requestVersion.current) return;
       setData(response);
       setError(null);
       setSelectedFeatureId((current) =>
         current && response.map.items.some((item) => item.id === current) ? current : null,
       );
     } catch (reason) {
+      if (currentRequest !== requestVersion.current) return;
       setError(reason instanceof Error ? reason.message : 'Impossible de charger le centre de commandement.');
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (currentRequest === requestVersion.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
-  }, []);
+  }, [viewportBounds]);
 
   useEffect(() => {
     void load();
@@ -244,6 +265,7 @@ export function OperationalCommandCenter() {
           features={filteredFeatures}
           selectedFeatureId={selectedFeatureId}
           onSelectFeature={setSelectedFeatureId}
+          onViewportChange={setViewportBounds}
         />
       ) : (
         <div className="command-center__map-loading">
@@ -253,12 +275,12 @@ export function OperationalCommandCenter() {
 
       {data?.map.truncated ? (
         <p className="command-center__truncated">
-          Affichage limité aux {numberFormat.format(data.map.items.length)} derniers éléments géolocalisés retournés par l’API.
+          Affichage limité aux {numberFormat.format(data.map.items.length)} éléments géolocalisés les plus récents de cette zone.
         </p>
       ) : null}
 
       <div className="command-center__footnote">
-        Actualisation automatique toutes les 60 secondes. Il ne s’agit pas d’un suivi GPS temps réel des équipes.
+        Les résultats sont limités à la zone visible. Actualisation périodique toutes les 60 secondes ; aucune position GPS d’agent n’est collectée.
       </div>
 
       {selectedFeature ? (

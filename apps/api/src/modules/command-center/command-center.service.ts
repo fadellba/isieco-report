@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
 import type { CommandCenterQueryDto } from './dto/command-center-query.dto.js';
 
@@ -9,6 +9,31 @@ export class CommandCenterService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getOverview(query: CommandCenterQueryDto) {
+    const bounds = [query.minLat, query.maxLat, query.minLon, query.maxLon];
+    const hasViewport = bounds.some((value) => value !== undefined);
+    if (hasViewport && bounds.some((value) => value === undefined)) {
+      throw new BadRequestException('Les quatre bornes du viewport (minLat, maxLat, minLon, maxLon) sont requises ensemble.');
+    }
+    if (hasViewport && query.minLat! > query.maxLat!) {
+      throw new BadRequestException('La latitude minimale du viewport doit être inférieure ou égale à la latitude maximale.');
+    }
+
+    const viewportWhere = hasViewport
+      ? {
+          latitude: { gte: query.minLat, lte: query.maxLat },
+          ...(query.minLon! <= query.maxLon!
+            ? { longitude: { gte: query.minLon, lte: query.maxLon } }
+            : {
+                OR: [
+                  { longitude: { gte: query.minLon } },
+                  { longitude: { lte: query.maxLon } },
+                ],
+              }),
+        }
+      : {};
+    const mapCaseWhere = { ...locatedCaseWhere, ...viewportWhere };
+    const mapReportWhere = { ...locatedReportWhere, ...viewportWhere };
+
     const limit = Math.min(250, Math.max(1, query.limit ?? 150));
     const activeReportWhere = {
       idDossier: null,
@@ -46,6 +71,8 @@ export class CommandCenterService {
       locatedReportsCount,
       missingCasesCount,
       missingReportsCount,
+      mapLocatedCasesCount,
+      mapLocatedReportsCount,
       cases,
       reports,
     ] = await Promise.all([
@@ -70,8 +97,10 @@ export class CommandCenterService {
       this.prisma.signalement.count({ where: locatedReportWhere }),
       this.prisma.dossierTraitement.count({ where: missingCaseLocationWhere }),
       this.prisma.signalement.count({ where: missingReportLocationWhere }),
+      this.prisma.dossierTraitement.count({ where: mapCaseWhere }),
+      this.prisma.signalement.count({ where: mapReportWhere }),
       this.prisma.dossierTraitement.findMany({
-        where: locatedCaseWhere,
+        where: mapCaseWhere,
         orderBy: [{ dateCreationDossier: 'desc' }, { idDossier: 'desc' }],
         take: limit,
         select: {
@@ -104,7 +133,7 @@ export class CommandCenterService {
         },
       }),
       this.prisma.signalement.findMany({
-        where: locatedReportWhere,
+        where: mapReportWhere,
         orderBy: [{ dateSoumission: 'desc' }, { idSignalement: 'desc' }],
         take: limit,
         select: {
@@ -155,7 +184,7 @@ export class CommandCenterService {
       wasteTypes: [],
     }));
 
-    const totalLocated = locatedCasesCount + locatedReportsCount;
+    const totalLocated = mapLocatedCasesCount + mapLocatedReportsCount;
     const mapItems = [...caseFeatures, ...reportFeatures]
       .sort((left, right) =>
         (right.occurredAt?.getTime() ?? 0) - (left.occurredAt?.getTime() ?? 0),
@@ -171,7 +200,7 @@ export class CommandCenterService {
         activeAssignments,
         activeInterventions,
         pendingVerifications,
-        locatedItems: totalLocated,
+        locatedItems: locatedCasesCount + locatedReportsCount,
         withoutLocation: missingCasesCount + missingReportsCount,
       },
       map: {

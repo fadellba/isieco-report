@@ -88,3 +88,74 @@ test('caps map retrieval and keeps the response within the requested item limit'
   assert.equal(result.map.items.length, 0);
   assert.equal(result.map.truncated, false);
 });
+
+
+test('filters map counts and features by a validated geographic viewport', async () => {
+  const assertViewport = (where) => {
+    assert.equal(where.latitude.gte, 14.6);
+    assert.equal(where.latitude.lte, 14.8);
+    assert.equal(where.longitude.gte, -17.6);
+    assert.equal(where.longitude.lte, -17.4);
+  };
+  const prisma = {
+    signalement: {
+      count: async ({ where }) => {
+        if (where.latitude?.gte !== undefined) {
+          assertViewport(where);
+          return 3;
+        }
+        return 1;
+      },
+      findMany: async ({ where }) => {
+        assertViewport(where);
+        return [];
+      },
+    },
+    dossierTraitement: {
+      count: async ({ where }) => {
+        if (where.latitude?.gte !== undefined) {
+          assertViewport(where);
+          return 2;
+        }
+        return 1;
+      },
+      findMany: async ({ where }) => {
+        assertViewport(where);
+        return [];
+      },
+    },
+    affectation: { count: async () => 1 },
+    intervention: { count: async () => 1 },
+  };
+
+  const result = await new CommandCenterService(prisma).getOverview({
+    limit: 100,
+    minLat: 14.6,
+    maxLat: 14.8,
+    minLon: -17.6,
+    maxLon: -17.4,
+  });
+
+  assert.equal(result.map.totalLocated, 5);
+  assert.equal(result.summary.locatedItems, 2);
+  assert.equal(result.map.truncated, true);
+});
+
+test('rejects partial or inverted geographic viewports', async () => {
+  const prisma = {
+    signalement: { count: async () => 0, findMany: async () => [] },
+    dossierTraitement: { count: async () => 0, findMany: async () => [] },
+    affectation: { count: async () => 0 },
+    intervention: { count: async () => 0 },
+  };
+  const service = new CommandCenterService(prisma);
+
+  await assert.rejects(
+    service.getOverview({ minLat: 14 }),
+    /quatre bornes du viewport/,
+  );
+  await assert.rejects(
+    service.getOverview({ minLat: 15, maxLat: 14, minLon: -18, maxLon: -17 }),
+    /latitude minimale/,
+  );
+});
