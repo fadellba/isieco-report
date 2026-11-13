@@ -1,18 +1,19 @@
 name: Staging Database and Storage Restore Drill
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/staging-restore-drill.yml"
-      - "scripts/staging-storage-restore-drill.mjs"
   workflow_dispatch:
     inputs:
       run_restore_drill:
-        description: "Select RUN to back up and restore staging app data and private objects into isolated targets."
+        description: "Select RUN to copy staging application data into isolated restore targets."
         required: true
         type: choice
         options: [NO, RUN]
+        default: NO
+      confirm_staging_data_copy:
+        description: "Confirm that staging business data and private media will be copied temporarily to this isolated GitHub runner."
+        required: true
+        type: choice
+        options: [NO, YES]
         default: NO
 
 permissions:
@@ -25,7 +26,7 @@ concurrency:
 jobs:
   restore:
     name: Back up and restore staging data in isolated targets
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event.inputs.run_restore_drill == 'RUN')
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && github.event.inputs.run_restore_drill == 'RUN' && github.event.inputs.confirm_staging_data_copy == 'YES'
     runs-on: ubuntu-latest
     environment: staging
     timeout-minutes: 35
@@ -150,6 +151,11 @@ jobs:
       - name: Build shared workspace packages
         run: pnpm build:packages
 
+      - name: Start recovery drill timer
+        id: restore_timer
+        shell: bash
+        run: echo "started_epoch=$(date +%s)" >> "$GITHUB_OUTPUT"
+
       - name: Prepare table count verification
         shell: bash
         run: |
@@ -223,6 +229,7 @@ jobs:
           echo "Application database backup created and checksummed."
 
       - name: Restore database into isolated local PostgreSQL
+        id: restore_database
         shell: bash
         run: |
           set -euo pipefail
@@ -264,9 +271,37 @@ jobs:
           echo "DATABASE_RESTORE_DRILL=SUCCESS schemas=public,audit table_row_counts=match"
 
       - name: Back up and restore private Storage objects
+        id: restore_storage
         run: node scripts/staging-storage-restore-drill.mjs
 
       - name: Clean up temporary local backup
         if: always()
         shell: bash
         run: rm -rf "$RUNNER_TEMP/isieco-restore-drill" "$RUNNER_TEMP/isieco-storage-restore-$GITHUB_RUN_ID" "$RUNNER_TEMP/supabase-ca.pem"
+
+      - name: Record recovery drill evidence
+        if: always()
+        shell: bash
+        env:
+          DATABASE_RESTORE_OUTCOME: ${{ steps.restore_database.outcome }}
+          STORAGE_RESTORE_OUTCOME: ${{ steps.restore_storage.outcome }}
+          RESTORE_STARTED_EPOCH: ${{ steps.restore_timer.outputs.started_epoch }}
+        run: |
+          set -euo pipefail
+          now="$(date +%s)"
+          if [[ -n "$RESTORE_STARTED_EPOCH" ]]; then
+            elapsed="$((now - RESTORE_STARTED_EPOCH))"
+          else
+            elapsed="not started"
+          fi
+          {
+            echo "## Staging recovery drill"
+            echo "- Commit: `$GITHUB_SHA`"
+            echo "- Database restore: `$DATABASE_RESTORE_OUTCOME`"
+            echo "- Storage restore: `$STORAGE_RESTORE_OUTCOME`"
+            echo "- Observed elapsed time (RTO proxy): `$elapsed seconds`"
+            echo "- RPO: not measured by this live-source drill; managed backup timestamp and retention must be documented separately."
+            echo "- Scope: staging only; database restored to ephemeral local PostgreSQL; Storage restored to a temporary private bucket and removed."
+            echo "- No backup files or media objects are uploaded as workflow artifacts."
+          } >> "$GITHUB_STEP_SUMMARY"
+
