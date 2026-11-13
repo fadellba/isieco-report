@@ -10,7 +10,6 @@ export class CommandCenterQueryDto {
   @Min(1)
   @Max(250)
   limit = 150;
-  
   @ApiPropertyOptional({ type: Number, minimum: -90, maximum: 90 })
   @IsOptional()
   @Transform(({ value }) => {
@@ -26,7 +25,12 @@ export class CommandCenterQueryDto {
 
   @ApiPropertyOptional({ type: Number, minimum: -90, maximum: 90 })
   @IsOptional()
-  @Type(() => Number)
+  @Transform(({ value }) => {
+    if (value === undefined || value === null) return value;
+    if (typeof value !== 'string') return value;
+    const normalized = value.trim();
+    return normalized.length === 0 ? Number.NaN : Number(normalized);
+  })
   @IsNumber()
   @Min(-90)
   @Max(90)
@@ -47,7 +51,12 @@ export class CommandCenterQueryDto {
 
   @ApiPropertyOptional({ type: Number, minimum: -180, maximum: 180 })
   @IsOptional()
-  @Type(() => Number)
+  @Transform(({ value }) => {
+    if (value === undefined || value === null) return value;
+    if (typeof value !== 'string') return value;
+    const normalized = value.trim();
+    return normalized.length === 0 ? Number.NaN : Number(normalized);
+  })
   @IsNumber()
   @Min(-180)
   @Max(180)
