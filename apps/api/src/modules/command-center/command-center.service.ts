@@ -9,6 +9,7 @@ type MapCursor = {
   occurredAt: string | null;
   kind: 'DOSSIER' | 'SIGNALEMENT';
   id: string;
+  viewport: [number, number, number, number] | null;
 };
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -27,12 +28,21 @@ function decodeMapCursor(value?: string): MapCursor | null {
       typeof candidate.id !== 'string' ||
       !UUID_PATTERN.test(candidate.id) ||
       (candidate.occurredAt !== null && typeof candidate.occurredAt !== 'string') ||
-      (candidate.kind === 'DOSSIER' && candidate.occurredAt === null)
+      (candidate.kind === 'DOSSIER' && candidate.occurredAt === null) ||
+      (candidate.viewport !== null &&
+        (!Array.isArray(candidate.viewport) ||
+          candidate.viewport.length !== 4 ||
+          candidate.viewport.some((value) => typeof value !== 'number' || !Number.isFinite(value))))
     ) {
       throw new Error('invalid cursor fields');
     }
     if (candidate.occurredAt === null) {
-      return { occurredAt: null, kind: candidate.kind, id: candidate.id };
+      return {
+        occurredAt: null,
+        kind: candidate.kind,
+        id: candidate.id,
+        viewport: candidate.viewport as [number, number, number, number] | null,
+      };
     }
     const date = new Date(candidate.occurredAt);
     if (!Number.isFinite(date.getTime()) || date.toISOString() !== candidate.occurredAt) {
@@ -42,21 +52,26 @@ function decodeMapCursor(value?: string): MapCursor | null {
       occurredAt: date.toISOString(),
       kind: candidate.kind,
       id: candidate.id,
+      viewport: candidate.viewport as [number, number, number, number] | null,
     };
   } catch {
     throw new BadRequestException('Le curseur cartographique est invalide. Rechargez la carte pour recommencer.');
   }
 }
 
-function encodeMapCursor(feature: {
-  occurredAt: Date | null;
-  kind: 'DOSSIER' | 'SIGNALEMENT';
-  id: string;
-}): string {
+function encodeMapCursor(
+  feature: {
+    occurredAt: Date | null;
+    kind: 'DOSSIER' | 'SIGNALEMENT';
+    id: string;
+  },
+  viewport: [number, number, number, number] | null,
+): string {
   const payload: MapCursor = {
     occurredAt: feature.occurredAt?.toISOString() ?? null,
     kind: feature.kind,
     id: feature.id,
+    viewport,
   };
   return Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
 }
@@ -91,6 +106,12 @@ export class CommandCenterService {
 
     const limit = Math.min(250, Math.max(1, query.limit ?? 150));
     const cursor = decodeMapCursor(query.cursor);
+    const viewportSignature: [number, number, number, number] | null = hasViewport
+      ? [query.minLat!, query.maxLat!, query.minLon!, query.maxLon!]
+      : null;
+    if (cursor && JSON.stringify(cursor.viewport) !== JSON.stringify(viewportSignature)) {
+      throw new BadRequestException('Le curseur cartographique ne correspond pas au viewport courant. Rechargez la carte.');
+    }
     const minLat = query.minLat!;
     const maxLat = query.maxLat!;
     const minLon = query.minLon!;
@@ -350,7 +371,7 @@ export class CommandCenterService {
     const hasMore = orderedItems.length > limit;
     const mapItems = orderedItems.slice(0, limit);
     const lastItem = mapItems[mapItems.length - 1];
-    const nextCursor = hasMore && lastItem ? encodeMapCursor(lastItem) : null;
+    const nextCursor = hasMore && lastItem ? encodeMapCursor(lastItem, viewportSignature) : null;
 
     return {
       summary: {

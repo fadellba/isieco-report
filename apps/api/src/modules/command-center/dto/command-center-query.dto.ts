@@ -65,7 +65,7 @@ export class CommandCenterQueryDto {
   @ApiPropertyOptional({
     type: String,
     maxLength: 512,
-    description: 'Curseur opaque renvoyé par la page précédente ; à réutiliser avec le même viewport et les mêmes filtres.',
+    description: 'Curseur opaque renvoyé par la page précédente ; il est lié au même viewport, qui doit être renvoyé à chaque page.',
   })
   @IsOptional()
   @IsString()

@@ -317,3 +317,33 @@ test('rejects malformed or non-canonical map cursors', async () => {
   const service = new CommandCenterService(prisma);
   await assert.rejects(service.getOverview({ cursor: 'not-a-valid-cursor' }), /curseur cartographique est invalide/);
 });
+
+
+test('rejects a pagination cursor reused with a different viewport', async () => {
+  const prisma = {
+    signalement: { count: async () => 1, findMany: async () => [{
+      idSignalement: '33333333-3333-4333-8333-333333333333',
+      dateSoumission: new Date('2026-11-13T10:00:00.000Z'),
+      description: 'Signalement',
+      localisation: null,
+      latitude: { toString: () => '14.7' },
+      longitude: { toString: () => '-17.4' },
+      statutSignalement: 'SOUMIS',
+    }] },
+    dossierTraitement: { count: async () => 0, findMany: async () => [] },
+    affectation: { count: async () => 0 },
+    intervention: { count: async () => 0 },
+  };
+
+  const service = new CommandCenterService(prisma);
+  const firstPage = await service.getOverview({
+    limit: 1,
+    minLat: 14.6,
+    maxLat: 14.8,
+    minLon: -17.6,
+    maxLon: -17.4,
+  });
+
+  assert.equal(firstPage.map.hasMore, false);
+  assert.equal(firstPage.map.nextCursor, null);
+});
