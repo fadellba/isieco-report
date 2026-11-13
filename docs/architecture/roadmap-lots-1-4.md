@@ -10,7 +10,7 @@ Ce document regroupe les travaux prioritaires en quatre lots cohérents. Il dist
 
 | Lot | Périmètre | Statut constaté | Suivi GitHub |
 |---|---|---|---|
-| 1 | Documentation et état réel du dépôt | Réconciliation de base fusionnée via PR #91 ; présente mise à jour synchronise la documentation avec PR #94 et le déploiement du commit de fusion | Ce document, [état des livrables](etat-des-livrables.md) |
+| 1 | Documentation et état réel du dépôt | Réconciliation de base fusionnée via PR #91 ; présente mise à jour synchronise la documentation avec PR #94 et les preuves CI/staging/production du commit de fusion | Ce document, [état des livrables](etat-des-livrables.md) |
 | 2 | Sauvegardes, restauration et préparation à la production | Non clôturé : restauration indépendante PostgreSQL + Storage non démontrée ; staging en retard de deux migrations | [#54](https://github.com/fadellba/isieco-report/issues/54), [#51](https://github.com/fadellba/isieco-report/issues/51) |
 | 3 | Mobile hors ligne, carte native et notifications | Trois capacités absentes du code ; aucun test matériel attesté | [#87](https://github.com/fadellba/isieco-report/issues/87), [#88](https://github.com/fadellba/isieco-report/issues/88), [#90](https://github.com/fadellba/isieco-report/issues/90), recette [#53](https://github.com/fadellba/isieco-report/issues/53) |
 | 4 | Cartographie et actualisation du centre Web | Viewport + pagination keyset livrés via PR #94 ; actualisation événementielle et validation de performance restent ouvertes | [#89](https://github.com/fadellba/isieco-report/issues/89) |
