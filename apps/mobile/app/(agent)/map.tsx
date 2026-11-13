@@ -12,7 +12,7 @@ export default function AgentMapScreen() {
         <Text className="text-5xl text-brand-forest">⌖</Text>
         <Text className="mt-4 text-center text-base font-bold text-ink-900">La carte opérationnelle arrive</Text>
         <Text className="mt-2 text-center text-sm leading-6 text-ink-500">
-          Les coordonnées des dépôts doivent d’abord être exposées dans le contrat des missions agent. Vos affectations restent accessibles dans la liste.
+          Les coordonnées de vos affectations sont déjà disponibles côté API. La carte native n’est pas encore intégrée ; consultez vos missions dans la liste en attendant son activation.
         </Text>
       </View>
       <Link href="/(agent)/missions" asChild>
