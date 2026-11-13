@@ -10,7 +10,7 @@ export class CommandCenterQueryDto {
   @Min(1)
   @Max(250)
   limit = 150;
-  @ApiPropertyOptional({ type: Number, minimum: -90, maximum: 90 })
+  @ApiPropertyOptional({ type: Number, minimum: -90, maximum: 90, description: 'Borne du viewport. Si une borne est fournie, les quatre bornes (minLat, maxLat, minLon, maxLon) doivent être renseignées.' })
   @IsOptional()
   @Transform(({ value }) => {
     if (value === undefined || value === null) return value;
@@ -36,7 +36,7 @@ export class CommandCenterQueryDto {
   @Max(90)
   maxLat?: number;
 
-  @ApiPropertyOptional({ type: Number, minimum: -180, maximum: 180 })
+  @ApiPropertyOptional({ type: Number, minimum: -180, maximum: 180, description: 'Borne du viewport. Si une borne est fournie, les quatre bornes (minLat, maxLat, minLon, maxLon) doivent être renseignées.' })
   @IsOptional()
   @Transform(({ value }) => {
     if (value === undefined || value === null) return value;
