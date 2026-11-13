@@ -632,3 +632,31 @@ Les constats de l'état actuel sont fondés notamment sur :
 - `prisma/schema.prisma`.
 
 Le contrat OpenAPI généré depuis les contrôleurs et DTO reste la source de vérité des endpoints. Toute divergence découverte lors de l'implémentation doit être corrigée dans le contrat et les tests, pas masquée dans le frontend.
+
+---
+
+## Annexe A — Wireframes basse fidélité
+
+Le premier jeu de wireframes est disponible dans [ISIECO — UX Wireframes (Low Fidelity)](https://www.figma.com/design/3nnUEI6AEwHeUOYJEZQrkf).
+
+Le fichier contient six écrans éditables, regroupés par plateforme :
+
+### Mobile — page « 01 · Mobile »
+
+1. **Citoyen — Accueil :** action de signalement mise en avant, aperçu de l'activité et navigation inférieure.
+2. **Citoyen — Nouveau signalement :** photo en premier, localisation, description facultative, types de déchets facultatifs et action d'envoi.
+3. **Citoyen — Suivi du signalement :** emplacement, statut et timeline de traitement.
+4. **Agent — Mes missions :** compteurs de missions, filtres et cartes de mission.
+5. **Agent — Détail et itinéraire :** destination, ouverture de l'itinéraire, consignes et acceptation.
+
+### Web — page « 02 · Centre de commandement Web »
+
+6. **Centre de commandement :** navigation métier, indicateurs opérationnels, grande zone cartographique, filtres, flux d'activité et panneau contextuel du point sélectionné.
+
+Ces wireframes sont volontairement basse fidélité. Les fonds de carte et marqueurs sont des placeholders éditables, pas une intégration cartographique ni des données réelles. Les métriques et événements sont des exemples de conception. Les composants de navigation et de boutons proviennent de bibliothèques Figma réutilisables.
+
+### Limites de validation
+
+Le centre de commandement Web a fait l'objet d'un contrôle visuel après composition. La génération de captures supplémentaires a ensuite été bloquée par la limite d'appels Figma du plan Starter ; les cinq vues mobiles sont donc livrées comme frames éditables, mais leur contrôle visuel détaillé reste à effectuer lors de la revue dans Figma.
+
+La prochaine revue doit valider les séquences, les libellés, les états vides/erreurs et les interactions. Elle devra ensuite conduire à des wireframes enrichis (navigation entre écrans, états alternatifs, responsive Web) avant la direction artistique et les maquettes haute fidélité.
