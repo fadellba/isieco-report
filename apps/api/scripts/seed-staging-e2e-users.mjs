@@ -11,6 +11,7 @@ const PAGE_SIZE = 1000;
 
 const accounts = [
   { slug: 'citoyen', email: 'e2e.citoyen@staging.isieco.test', label: 'Citoyen', role: 'CITOYEN' },
+  { slug: 'citoyen-secondaire', email: 'e2e.citoyen-secondaire@staging.isieco.test', label: 'Citoyen secondaire', role: 'CITOYEN', passwordKey: 'CITOYEN_SECONDARY' },
   { slug: 'agent-qualification', email: 'e2e.agent-qualification@staging.isieco.test', label: 'Agent qualification', role: 'AGENT_QUALIFICATION' },
   { slug: 'responsable-traitement', email: 'e2e.responsable-traitement@staging.isieco.test', label: 'Responsable traitement', role: 'RESPONSABLE_TRAITEMENT' },
   { slug: 'responsable-affectation', email: 'e2e.responsable-affectation@staging.isieco.test', label: 'Responsable affectation', role: 'RESPONSABLE_AFFECTATION' },
@@ -208,7 +209,7 @@ async function main() {
       const user = await ensureAuthUser(
         admin,
         account,
-        passwordForRole(account.role, passwordSeed),
+        passwordForAccount(account, passwordSeed),
         usersByEmail,
       );
       provisioned.push({ account, authUserId: user.id });
