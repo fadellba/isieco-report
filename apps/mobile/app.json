@@ -1,26 +1,30 @@
 {
   "expo": {
-    "name": "ISI-Eco Report",
+    "name": "ISIECO",
     "slug": "isieco-report",
     "scheme": "isiecoreport",
     "version": "0.1.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#14532D",
+      "resizeMode": "contain"
+    },
     "plugins": [
       "expo-router",
       [
         "expo-image-picker",
         {
-          "photosPermission": "Autorisez ISI-Eco Report à joindre des photos à vos signalements et interventions.",
-          "cameraPermission": "Autorisez ISI-Eco Report à prendre des photos de preuves.",
+          "photosPermission": "Autorisez ISIECO à joindre des photos à vos signalements et interventions.",
+          "cameraPermission": "Autorisez ISIECO à prendre des photos de preuves.",
           "microphonePermission": false
         }
       ],
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Autorisez ISI-Eco Report à associer votre position à un signalement lorsque vous le demandez."
+          "locationWhenInUsePermission": "Autorisez ISIECO à associer votre position à un signalement lorsque vous le demandez."
         }
       ]
     ],
