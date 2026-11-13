@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
-import { IsInt, IsNumber, IsOptional, Max, Min } from 'class-validator';
+import { IsInt, IsNumber, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
 
 export class CommandCenterQueryDto {
   @ApiPropertyOptional({ minimum: 1, maximum: 250, default: 150 })
@@ -61,4 +61,15 @@ export class CommandCenterQueryDto {
   @Min(-180)
   @Max(180)
   maxLon?: number;
+
+  @ApiPropertyOptional({
+    type: String,
+    maxLength: 512,
+    description: 'Curseur opaque renvoyé par la page précédente ; à réutiliser avec le même viewport et les mêmes filtres.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(512)
+  @Matches(/^[A-Za-z0-9_-]+$/)
+  cursor?: string;
 }

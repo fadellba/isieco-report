@@ -36,6 +36,8 @@ interface CommandCenterOverview {
     totalLocated: number;
     truncated: boolean;
     limit: number;
+    hasMore: boolean;
+    nextCursor: string | null;
   };
   generatedAt: string;
 }
@@ -95,6 +97,7 @@ export function OperationalCommandCenter() {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async (silent = false) => {
@@ -134,6 +137,43 @@ export function OperationalCommandCenter() {
     }, 60_000);
     return () => window.clearInterval(timer);
   }, [load]);
+
+  const loadMore = useCallback(async () => {
+    const cursor = data?.map.nextCursor;
+    if (!cursor || loadingMore) return;
+    const currentRequest = ++requestVersion.current;
+    setLoadingMore(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams({ limit: '200', cursor });
+      if (viewportBounds) {
+        params.set('minLat', String(viewportBounds.minLat));
+        params.set('maxLat', String(viewportBounds.maxLat));
+        params.set('minLon', String(viewportBounds.minLon));
+        params.set('maxLon', String(viewportBounds.maxLon));
+      }
+      const response = await api.request<CommandCenterOverview>(`/command-center/overview?${params.toString()}`);
+      if (currentRequest !== requestVersion.current) return;
+      setData((current) => {
+        if (!current) return response;
+        const existing = new Set(current.map.items.map((item) => `${item.kind}:${item.id}`));
+        const appended = response.map.items.filter((item) => !existing.has(`${item.kind}:${item.id}`));
+        return {
+          ...response,
+          map: {
+            ...response.map,
+            items: [...current.map.items, ...appended],
+          },
+        };
+      });
+    } catch (reason) {
+      if (currentRequest !== requestVersion.current) return;
+      setError(reason instanceof Error ? reason.message : 'Impossible de charger la page cartographique suivante.');
+    } finally {
+      if (currentRequest === requestVersion.current) setLoadingMore(false);
+    }
+  }, [data, loadingMore, viewportBounds]);
+
 
   const filteredFeatures = useMemo(() => {
     const query = searchTerm.trim().toLocaleLowerCase('fr-FR');
@@ -273,10 +313,12 @@ export function OperationalCommandCenter() {
         </div>
       )}
 
-      {data?.map.truncated ? (
-        <p className="command-center__truncated">
-          Affichage limité aux {numberFormat.format(data.map.items.length)} éléments géolocalisés les plus récents de cette zone.
-        </p>
+      {data?.map.hasMore ? (
+        <div className="command-center__pagination">
+          <button type="button" onClick={() => void loadMore()} disabled={loadingMore || loading}>
+            {loadingMore ? 'Chargement…' : 'Charger les éléments suivants'}
+          </button>
+        </div>
       ) : null}
 
       <div className="command-center__footnote">

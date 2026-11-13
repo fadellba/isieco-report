@@ -193,3 +193,82 @@ test('parses valid viewport coordinates without accepting empty strings', async 
   assert.equal(query.minLon, -17.6);
   assert.equal(query.maxLon, -17.4);
 });
+
+
+test('paginates the combined dossier and report stream with a stable keyset cursor', async () => {
+  const dossierId = '11111111-1111-4111-8111-111111111111';
+  const reportId = '22222222-2222-4222-8222-222222222222';
+  const dossier = {
+    idDossier: dossierId,
+    referenceDossier: 'DOS-CURSOR-1',
+    descriptionSynthese: null,
+    dateCreationDossier: new Date('2026-11-13T12:00:00.000Z'),
+    statutDossier: 'OUVERT',
+    priorite: 'NORMALE',
+    latitude: { toString: () => '14.7' },
+    longitude: { toString: () => '-17.4' },
+    descriptionLocalisation: null,
+    contenus: [],
+  };
+  const report = {
+    idSignalement: reportId,
+    dateSoumission: new Date('2026-11-13T12:00:00.000Z'),
+    description: 'Signalement',
+    localisation: null,
+    latitude: { toString: () => '14.7' },
+    longitude: { toString: () => '-17.4' },
+    statutSignalement: 'SOUMIS',
+  };
+  let caseQuery;
+  let reportQuery;
+  const prisma = {
+    signalement: {
+      count: async () => 1,
+      findMany: async (query) => {
+        reportQuery = query;
+        return [report];
+      },
+    },
+    dossierTraitement: {
+      count: async () => 1,
+      findMany: async (query) => {
+        caseQuery = query;
+        return [dossier];
+      },
+    },
+    affectation: { count: async () => 0 },
+    intervention: { count: async () => 0 },
+  };
+
+  const firstPage = await new CommandCenterService(prisma).getOverview({ limit: 1 });
+  assert.equal(firstPage.map.items.length, 1);
+  assert.equal(firstPage.map.items[0].kind, 'DOSSIER');
+  assert.equal(firstPage.map.hasMore, true);
+  assert.equal(firstPage.map.truncated, true);
+  assert.ok(firstPage.map.nextCursor);
+  assert.equal(caseQuery.take, 2);
+  assert.equal(reportQuery.take, 2);
+
+  const secondPage = await new CommandCenterService(prisma).getOverview({
+    limit: 1,
+    cursor: firstPage.map.nextCursor,
+  });
+  assert.equal(secondPage.map.totalLocated, 2);
+  assert.equal(secondPage.map.items.length, 1);
+  assert.equal(secondPage.map.items[0].kind, 'SIGNALEMENT');
+  assert.equal(secondPage.map.hasMore, false);
+  assert.equal(secondPage.map.nextCursor, null);
+  assert.ok(caseQuery.where.AND.some((filter) => filter.dateCreationDossier?.lt));
+  assert.ok(reportQuery.where.AND.some((filter) => filter.dateSoumission?.lte));
+});
+
+test('rejects malformed or non-canonical map cursors', async () => {
+  const prisma = {
+    signalement: { count: async () => 0, findMany: async () => [] },
+    dossierTraitement: { count: async () => 0, findMany: async () => [] },
+    affectation: { count: async () => 0 },
+    intervention: { count: async () => 0 },
+  };
+  const service = new CommandCenterService(prisma);
+  await assert.rejects(service.getOverview({ cursor: 'not-a-valid-cursor' }), /curseur cartographique est invalide/);
+});

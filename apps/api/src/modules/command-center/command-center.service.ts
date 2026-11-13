@@ -1,8 +1,73 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import type { CommandCenterQueryDto } from './dto/command-center-query.dto.js';
 
 const OPEN_REPORT_STATUSES = ['SOUMIS', 'EN_ATTENTE_COMPLEMENT', 'COMPLEMENT_REPONDU'] as const;
+
+type MapCursor = {
+  occurredAt: string;
+  kind: 'DOSSIER' | 'SIGNALEMENT';
+  id: string;
+};
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function decodeMapCursor(value?: string): MapCursor | null {
+  if (value === undefined) return null;
+  try {
+    if (!/^[A-Za-z0-9_-]{1,512}$/.test(value)) throw new Error('invalid encoding');
+    const decoded = Buffer.from(value, 'base64url').toString('utf8');
+    if (Buffer.from(decoded, 'utf8').toString('base64url') !== value) throw new Error('non-canonical encoding');
+    const payload: unknown = JSON.parse(decoded);
+    if (typeof payload !== 'object' || payload === null) throw new Error('invalid payload');
+    const candidate = payload as Record<string, unknown>;
+    if (
+      (candidate.kind !== 'DOSSIER' && candidate.kind !== 'SIGNALEMENT') ||
+      typeof candidate.id !== 'string' ||
+      !UUID_PATTERN.test(candidate.id) ||
+      typeof candidate.occurredAt !== 'string'
+    ) {
+      throw new Error('invalid cursor fields');
+    }
+    const date = new Date(candidate.occurredAt);
+    if (!Number.isFinite(date.getTime()) || date.toISOString() !== candidate.occurredAt) {
+      throw new Error('invalid cursor timestamp');
+    }
+    return {
+      occurredAt: date.toISOString(),
+      kind: candidate.kind,
+      id: candidate.id,
+    };
+  } catch {
+    throw new BadRequestException('Le curseur cartographique est invalide. Rechargez la carte pour recommencer.');
+  }
+}
+
+function encodeMapCursor(feature: {
+  occurredAt: Date | null;
+  kind: 'DOSSIER' | 'SIGNALEMENT';
+  id: string;
+}): string {
+  const payload: MapCursor = {
+    occurredAt: feature.occurredAt?.toISOString() ?? new Date(0).toISOString(),
+    kind: feature.kind,
+    id: feature.id,
+  };
+  return Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
+}
+
+function compareMapFeatures(
+  left: { occurredAt: Date | null; kind: 'DOSSIER' | 'SIGNALEMENT'; id: string },
+  right: { occurredAt: Date | null; kind: 'DOSSIER' | 'SIGNALEMENT'; id: string },
+): number {
+  const leftTime = left.occurredAt?.getTime() ?? 0;
+  const rightTime = right.occurredAt?.getTime() ?? 0;
+  if (leftTime !== rightTime) return rightTime - leftTime;
+  if (left.kind !== right.kind) return left.kind === 'DOSSIER' ? -1 : 1;
+  if (left.id === right.id) return 0;
+  return left.id < right.id ? 1 : -1;
+}
 
 @Injectable()
 export class CommandCenterService {
@@ -19,6 +84,7 @@ export class CommandCenterService {
     }
 
     const limit = Math.min(250, Math.max(1, query.limit ?? 150));
+    const cursor = decodeMapCursor(query.cursor);
     const activeReportWhere = {
       idDossier: null,
       statutSignalement: { in: [...OPEN_REPORT_STATUSES] },
@@ -34,7 +100,7 @@ export class CommandCenterService {
       latitude: { not: null },
       longitude: { not: null },
     };
-    const viewportWhere = hasViewport
+    const viewportCaseWhere: Prisma.DossierTraitementWhereInput | undefined = hasViewport
       ? {
           latitude: { gte: query.minLat, lte: query.maxLat },
           ...(query.minLon! <= query.maxLon!
@@ -46,9 +112,67 @@ export class CommandCenterService {
                 ],
               }),
         }
-      : {};
-    const mapCaseWhere = { ...locatedCaseWhere, ...viewportWhere };
-    const mapReportWhere = { ...locatedReportWhere, ...viewportWhere };
+      : undefined;
+    const viewportReportWhere: Prisma.SignalementWhereInput | undefined = hasViewport
+      ? {
+          latitude: { gte: query.minLat, lte: query.maxLat },
+          ...(query.minLon! <= query.maxLon!
+            ? { longitude: { gte: query.minLon, lte: query.maxLon } }
+            : {
+                OR: [
+                  { longitude: { gte: query.minLon } },
+                  { longitude: { lte: query.maxLon } },
+                ],
+              }),
+        }
+      : undefined;
+
+    const cursorDate = cursor ? new Date(cursor.occurredAt) : undefined;
+    const cursorCaseWhere: Prisma.DossierTraitementWhereInput | undefined = cursor
+      ? cursor.kind === 'DOSSIER'
+        ? {
+            OR: [
+              { dateCreationDossier: { lt: cursorDate } },
+              {
+                AND: [
+                  { dateCreationDossier: { equals: cursorDate } },
+                  { idDossier: { lt: cursor.id } },
+                ],
+              },
+            ],
+          }
+        : { dateCreationDossier: { lt: cursorDate } }
+      : undefined;
+    const cursorReportWhere: Prisma.SignalementWhereInput | undefined = cursor
+      ? cursor.kind === 'DOSSIER'
+        ? { dateSoumission: { lte: cursorDate } }
+        : {
+            OR: [
+              { dateSoumission: { lt: cursorDate } },
+              {
+                AND: [
+                  { dateSoumission: { equals: cursorDate } },
+                  { idSignalement: { lt: cursor.id } },
+                ],
+              },
+            ],
+          }
+      : undefined;
+
+    const mapCaseFilters = [viewportCaseWhere, cursorCaseWhere].filter(
+      (filter): filter is Prisma.DossierTraitementWhereInput => filter !== undefined,
+    );
+    const mapReportFilters = [viewportReportWhere, cursorReportWhere].filter(
+      (filter): filter is Prisma.SignalementWhereInput => filter !== undefined,
+    );
+    const mapCaseWhere: Prisma.DossierTraitementWhereInput = {
+      ...locatedCaseWhere,
+      ...(mapCaseFilters.length ? { AND: mapCaseFilters } : {}),
+    };
+    const mapReportWhere: Prisma.SignalementWhereInput = {
+      ...locatedReportWhere,
+      ...(mapReportFilters.length ? { AND: mapReportFilters } : {}),
+    };
 
     const missingCaseLocationWhere = {
       ...openCaseWhere,
@@ -102,7 +226,7 @@ export class CommandCenterService {
       this.prisma.dossierTraitement.findMany({
         where: mapCaseWhere,
         orderBy: [{ dateCreationDossier: 'desc' }, { idDossier: 'desc' }],
-        take: limit,
+        take: limit + 1,
         select: {
           idDossier: true,
           referenceDossier: true,
@@ -185,11 +309,13 @@ export class CommandCenterService {
     }));
 
     const totalLocated = mapLocatedCasesCount + mapLocatedReportsCount;
-    const mapItems = [...caseFeatures, ...reportFeatures]
-      .sort((left, right) =>
-        (right.occurredAt?.getTime() ?? 0) - (left.occurredAt?.getTime() ?? 0),
-      )
-      .slice(0, limit);
+    const orderedItems = [...caseFeatures, ...reportFeatures]
+      .sort(compareMapFeatures)
+      .slice(0, limit + 1);
+    const hasMore = orderedItems.length > limit;
+    const mapItems = orderedItems.slice(0, limit);
+    const lastItem = mapItems[mapItems.length - 1];
+    const nextCursor = hasMore && lastItem ? encodeMapCursor(lastItem) : null;
 
     return {
       summary: {
@@ -206,8 +332,10 @@ export class CommandCenterService {
       map: {
         items: mapItems,
         totalLocated,
-        truncated: totalLocated > mapItems.length,
+        truncated: hasMore,
         limit,
+        hasMore,
+        nextCursor,
       },
       generatedAt: new Date(),
     };
