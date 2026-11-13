@@ -327,60 +327,84 @@ test('business audit ledger is private and append-only', { skip: !databaseUrl },
 });
 
 
-test('business audit ledger preserves insertion order for events sharing a transaction timestamp', { skip: !databaseUrl }, async () => {
+test('business audit preserves same-transaction event order when copied to a dossier', { skip: !databaseUrl }, async () => {
   const pool = new Pool({ connectionString: databaseUrl, max: 1 });
   const client = await pool.connect();
   const reportId = randomUUID();
-  const firstEventId = randomUUID();
-  const secondEventId = randomUUID();
-  let transactionOpen = false;
+  const dossierId = randomUUID();
 
   try {
     await client.query('BEGIN');
-    transactionOpen = true;
-
-    const first = await client.query(
+    const sameTimestamp = new Date('2026-11-05T12:00:00.000Z');
+    await client.query(
       `INSERT INTO audit.evenement_metier
-        (id, action_code, entity_type, entity_id, metadata)
-       VALUES ($1, 'SIGNALEMENT_SOUMIS', 'SIGNALEMENT', $2, '{}'::jsonb)
-       RETURNING occurred_at, event_order`,
-      [firstEventId, reportId],
-    );
-    const second = await client.query(
-      `INSERT INTO audit.evenement_metier
-        (id, action_code, entity_type, entity_id, metadata)
-       VALUES ($1, 'SIGNALEMENT_QUALIFIE', 'SIGNALEMENT', $2, '{}'::jsonb)
-       RETURNING occurred_at, event_order`,
-      [secondEventId, reportId],
+        (occurred_at, action_code, entity_type, entity_id, metadata)
+       VALUES
+        ($1, 'SIGNALEMENT_SOUMIS', 'SIGNALEMENT', $2, '{}'::jsonb),
+        ($1, 'SIGNALEMENT_QUALIFIE', 'SIGNALEMENT', $2, '{}'::jsonb)`,
+      [sameTimestamp, reportId],
     );
 
-    assert.equal(
-      first.rows[0].occurred_at.toISOString(),
-      second.rows[0].occurred_at.toISOString(),
-      'CURRENT_TIMESTAMP must be identical for writes in the same transaction.',
-    );
-    assert.ok(
-      BigInt(second.rows[0].event_order) > BigInt(first.rows[0].event_order),
-      'The later audit insert must receive a larger event_order.',
-    );
-
-    const ordered = await client.query(
-      `SELECT id
+    const sourceEvents = await client.query(
+      `SELECT action_code, event_order
          FROM audit.evenement_metier
-        WHERE id = ANY($1::uuid[])
+        WHERE entity_type = 'SIGNALEMENT'
+          AND entity_id = $1
+          AND dossier_id IS NULL
         ORDER BY occurred_at ASC, event_order ASC`,
-      [[firstEventId, secondEventId]],
+      [reportId],
     );
     assert.deepEqual(
-      ordered.rows.map((row) => row.id),
-      [firstEventId, secondEventId],
-      'The timeline sort must preserve causal insert order when timestamps tie.',
+      sourceEvents.rows.map((row) => row.action_code),
+      ['SIGNALEMENT_SOUMIS', 'SIGNALEMENT_QUALIFIE'],
+    );
+    assert.ok(
+      BigInt(sourceEvents.rows[0].event_order) < BigInt(sourceEvents.rows[1].event_order),
+      'The sequence must preserve insertion order for source events sharing a transaction timestamp.',
     );
 
+    await client.query(
+      `INSERT INTO audit.evenement_metier (
+         occurred_at, actor_id, action_code, entity_type, entity_id,
+         dossier_id, reason, correlation_id, source_event_id, metadata
+       )
+       SELECT
+         source.occurred_at, source.actor_id, source.action_code, source.entity_type,
+         source.entity_id, $2, source.reason, source.correlation_id, source.id, source.metadata
+       FROM audit.evenement_metier AS source
+       WHERE source.entity_type = 'SIGNALEMENT'
+         AND source.entity_id = $1
+         AND source.dossier_id IS NULL
+       ORDER BY source.occurred_at ASC, source.event_order ASC
+       ON CONFLICT (source_event_id, dossier_id)
+         WHERE source_event_id IS NOT NULL
+       DO NOTHING`,
+      [reportId, dossierId],
+    );
+
+    const copiedEvents = await client.query(
+      `SELECT action_code, event_order
+         FROM audit.evenement_metier
+        WHERE dossier_id = $1
+          AND entity_type = 'SIGNALEMENT'
+          AND entity_id = $2
+          AND source_event_id IS NOT NULL
+        ORDER BY occurred_at ASC, event_order ASC`,
+      [dossierId, reportId],
+    );
+    assert.deepEqual(
+      copiedEvents.rows.map((row) => row.action_code),
+      ['SIGNALEMENT_SOUMIS', 'SIGNALEMENT_QUALIFIE'],
+    );
+    assert.ok(
+      BigInt(copiedEvents.rows[0].event_order) < BigInt(copiedEvents.rows[1].event_order),
+      'Copied history must retain the source event order.',
+    );
     await client.query('ROLLBACK');
-    transactionOpen = false;
+  } catch (error) {
+    try { await client.query('ROLLBACK'); } catch {}
+    throw error;
   } finally {
-    if (transactionOpen) await client.query('ROLLBACK');
     client.release();
     await pool.end();
   }
