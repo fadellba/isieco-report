@@ -47,13 +47,13 @@ export default function CitizenHomeScreen() {
         Agissons ensemble pour un cadre de vie plus propre.
       </Text>
       <Text className="mt-3 text-sm leading-6 text-ink-500">
-        Signalez un dépôt ou suivez les actions engagées près de chez vous.
+        Signalez un dépôt et suivez le traitement de vos déclarations.
       </Text>
 
       <View className="mt-7 overflow-hidden rounded-[28px] bg-brand-forest p-6">
         <Text className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/75">Un problème à signaler ?</Text>
-        <Text className="mt-3 text-2xl font-extrabold leading-8 text-white">Une photo. Un lieu. C’est signalé.</Text>
-        <Text className="mt-2 text-sm leading-5 text-white/75">Aidez les équipes à repérer les dépôts et à intervenir.</Text>
+        <Text className="mt-3 text-2xl font-extrabold leading-8 text-white">Un dépôt à signaler ? Documentez-le ici.</Text>
+        <Text className="mt-2 text-sm leading-5 text-white/75">Prenez une photo, indiquez le lieu et renseignez les informations demandées pour transmettre votre signalement.</Text>
         <Link href="/(citizen)/reports/new" asChild>
           <TouchableOpacity className="mt-6 flex-row items-center justify-center rounded-2xl bg-white px-4 py-4">
             <Text className="mr-2 text-xl font-bold text-brand-forest">＋</Text>
