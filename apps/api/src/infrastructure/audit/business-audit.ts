@@ -1,6 +1,8 @@
 import { Prisma } from '../../generated/prisma/client.js';
 
 export type BusinessAuditAction =
+  | 'COMPTE_CREE'
+  | 'COMPTE_PROFIL_MODIFIE'
   | 'STATUT_SIGNALEMENT_TRANSITION'
   | 'DOSSIER_CREE'
   | 'DOSSIER_PRIORITE_MODIFIEE'

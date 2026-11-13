@@ -31,15 +31,26 @@ test('refuses to provision a profile before email confirmation', async () => {
   );
 });
 
-test('public profile provisioning creates only the citizen role', async () => {
-  const calls = { role: null, profile: null };
+test('public profile provisioning records account creation and the automatic citizen role atomically', async () => {
+  const calls = { role: null, profile: null, audit: [], isolation: null };
   const role = { idRole: roleId, codeRole: 'CITOYEN', libelleRole: 'Citoyen' };
-  const prisma = {
+  const tx = {
+    $executeRaw: async (strings, ...values) => {
+      calls.audit.push({ sql: strings.join('?'), values });
+      return 1;
+    },
     role: { upsert: async (args) => { calls.role = args; return role; } },
     utilisateur: {
-      upsert: async (args) => { calls.profile = args; },
-      findUnique: async () => profileRow(),
+      findUnique: async () => null,
+      upsert: async (args) => { calls.profile = args; return { idUtilisateur: userId }; },
     },
+  };
+  const prisma = {
+    $transaction: async (operation, options) => {
+      calls.isolation = options.isolationLevel;
+      return operation(tx);
+    },
+    utilisateur: { findUnique: async () => profileRow() },
   };
   const service = new AccountsService(prisma);
   const result = await service.getOrCreateMyProfile({
@@ -55,6 +66,122 @@ test('public profile provisioning creates only the citizen role', async () => {
   assert.equal(result.roles.length, 1);
   assert.equal(result.roles[0].code, 'CITOYEN');
   assert.equal(result.referenceAvatar, null);
+  assert.equal(calls.isolation, 'Serializable');
+  assert.equal(calls.audit.length, 2);
+  assert.ok(calls.audit[0].sql.includes('INSERT INTO audit.evenement_metier'));
+  assert.ok(calls.audit[1].sql.includes('INSERT INTO audit.evenement_metier'));
+  assert.ok(calls.audit[0].values.includes('COMPTE_CREE'));
+  assert.ok(calls.audit[1].values.includes('ROLE_ATTRIBUE'));
+  assert.ok(calls.audit[1].values.includes(JSON.stringify({ result: 'CITOYEN' })));
+});
+
+test('profile edits append an audit event in the same transaction without recording PII', async () => {
+  let updateArgs;
+  let auditCall;
+  let transactionCalls = 0;
+  const tx = {
+    utilisateur: {
+      update: async (args) => { updateArgs = args; return profileRow({ telephone: '770000000' }); },
+    },
+    $executeRaw: async (strings, ...values) => {
+      auditCall = { sql: strings.join('?'), values };
+      return 1;
+    },
+  };
+  const prisma = {
+    $transaction: async (operation) => {
+      transactionCalls += 1;
+      return operation(tx);
+    },
+    utilisateur: {
+      findUnique: async () => profileRow({ telephone: '770000000' }),
+    },
+  };
+  const service = new AccountsService(prisma);
+  service.getOrCreateMyProfile = async () => profileRow();
+
+  await service.updateMyProfile(
+    { id: authId },
+    { telephone: '770000000' },
+  );
+
+  assert.equal(transactionCalls, 1);
+  assert.deepEqual(updateArgs.data, { telephone: '770000000' });
+  assert.ok(auditCall.sql.includes('INSERT INTO audit.evenement_metier'));
+  assert.ok(auditCall.values.includes('COMPTE_PROFIL_MODIFIE'));
+  assert.ok(!auditCall.values.includes('770000000'), 'Phone numbers must not be copied into audit metadata.');
+});
+
+test('confirmed email synchronization is audited atomically without recording the address', async () => {
+  let upsertArgs;
+  let auditCall;
+  const tx = {
+    $executeRaw: async (strings, ...values) => {
+      auditCall = { sql: strings.join('?'), values };
+      return 1;
+    },
+    role: { upsert: async () => ({ idRole: roleId, codeRole: 'CITOYEN' }) },
+    utilisateur: {
+      findUnique: async () => ({ idUtilisateur: userId, email: 'old@example.test' }),
+      upsert: async (args) => {
+        upsertArgs = args;
+        return { idUtilisateur: userId };
+      },
+    },
+  };
+  const prisma = {
+    $transaction: async (operation) => operation(tx),
+    utilisateur: {
+      findUnique: async () => profileRow({ email: 'new@example.test' }),
+    },
+  };
+  const service = new AccountsService(prisma);
+
+  await service.getOrCreateMyProfile({
+    id: authId,
+    email: 'new@example.test',
+    email_confirmed_at: '2026-11-01T09:00:00.000Z',
+    user_metadata: {},
+  });
+
+  assert.deepEqual(upsertArgs.update, { email: 'new@example.test' });
+  assert.ok(auditCall.sql.includes('INSERT INTO audit.evenement_metier'));
+  assert.ok(auditCall.values.includes('COMPTE_PROFIL_MODIFIE'));
+  assert.ok(!auditCall.values.includes('old@example.test'));
+  assert.ok(!auditCall.values.includes('new@example.test'));
+});
+
+test('does not suppress a unique conflict while synchronizing an existing account', async () => {
+  const duplicateEmail = Object.assign(new Error('Unique email constraint'), { code: 'P2002' });
+  let outsideLookupCalls = 0;
+  const tx = {
+    role: { upsert: async () => ({ idRole: roleId, codeRole: 'CITOYEN' }) },
+    utilisateur: {
+      findUnique: async () => ({ idUtilisateur: userId, email: 'old@example.test' }),
+      upsert: async () => { throw duplicateEmail; },
+    },
+  };
+  const prisma = {
+    $transaction: async (operation) => operation(tx),
+    utilisateur: {
+      findUnique: async () => {
+        outsideLookupCalls += 1;
+        return profileRow();
+      },
+    },
+  };
+  const service = new AccountsService(prisma);
+
+  await assert.rejects(
+    service.getOrCreateMyProfile({
+      id: authId,
+      email: 'taken@example.test',
+      email_confirmed_at: '2026-11-01T09:00:00.000Z',
+      user_metadata: {},
+    }),
+    (error) => error === duplicateEmail,
+  );
+  assert.equal(outsideLookupCalls, 0, 'An existing profile must not turn an email uniqueness conflict into success.');
 });
 
 test('revokeRole protects the last active account administrator', async () => {
