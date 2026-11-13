@@ -8,6 +8,7 @@ Cette documentation distingue le modèle conceptuel du PFE, le schéma réelleme
 |---|---|
 | [Vision produit & UX](product/vision-ux-blueprint.md) | Vision ISIECO, personas, parcours Web/Mobile, design system, écarts API et feuille de route UX. |
 | [Architecture](architecture/README.md) | Architecture applicative, décisions, sécurité et état des livrables. |
+| [Feuille de route lots 1 à 4](architecture/roadmap-lots-1-4.md) | Documentation, reprise, fonctionnalités Mobile et cartographie du centre Web. |
 | [Déploiement](deployment/README.md) | GitHub Actions, Vercel, Render, Supabase et distribution mobile. |
 | [Technologies](technologies/README.md) | Stack, versions épinglées et compatibilités. |
 | [Merise](merise/README.md) | Modèle simplifié et traduction Prisma/PostgreSQL. |
@@ -22,16 +23,17 @@ Le diagramme de classes simplifié du PFE définit le périmètre conceptuel. pr
 
 En cas de divergence, ne pas recopier une ancienne référence MLD v2.13 sans la confronter au modèle courant.
 
-## État au 5 novembre 2026
+## État du dépôt au 13 novembre 2026
 
-- Le schéma Prisma courant compte 18 modèles correspondant aux classes métier retenues pour le PFE.
-- La PR #33 a intégré la simplification dans main. La CI #184 a validé les migrations sur une base vierge, les tests, OpenAPI, TypeScript et les builds Web/API/Mobile.
-- La CI de suivi ajoute une répétition depuis les six migrations historiques sur PostgreSQL jetable avec données synthétiques, y compris les cas de qualification sans contenu déclaré préalable et de vérification sans intervention correspondante.
-- Le générateur UML est aligné sur 18 classes et produit quatre vues de domaine, une vue d'ensemble et un SVG relationnel.
-- Le projet Supabase isieco-report-staging contient toujours les six migrations historiques et un jeu de données très limité : 3 utilisateurs, 8 rôles, 1 signalement, 1 photo et 6 événements. Il ne contient aucun dossier, équipe, affectation, intervention ou vérification.
-- Le staging utilise l'offre Free : aucune sauvegarde quotidienne gérée n'est fournie. Une exportation logique manuelle et une restauration vérifiée dans un environnement isolé sont obligatoires avant la migration destructive.
-- Aucun déploiement de production ni smoke test post-déploiement n'est confirmé. Les workflows Vercel/Render conservent leurs gardes d'activation.
-- La recette fonctionnelle sur staging, la recette Android/iOS réels et la génération d'un APK signé restent à effectuer.
+- Le commit courant de `main` est `47f846abd006cdff66a3bc4c396d84d408a64486` ; la PR #86 est fusionnée.
+- Le dépôt contient 13 migrations Prisma. Le dernier état staging vérifié le 7 novembre en comptait 11 ; les deux migrations du 9 novembre restent en attente. Le workflow staging [#43484030393](https://github.com/fadellba/isieco-report/actions/runs/43484030393) s'est arrêté sur cette divergence avant le déclenchement de Render.
+- La CI du commit courant est verte ([run #43484030472](https://github.com/fadellba/isieco-report/actions/runs/43484030472)). Cela ne vaut pas validation du déploiement staging.
+- Le mode hors ligne et la carte native agent ne sont pas implémentés ([#87](https://github.com/fadellba/isieco-report/issues/87), [#88](https://github.com/fadellba/isieco-report/issues/88)). Les notifications métier restent à créer ([#90](https://github.com/fadellba/isieco-report/issues/90)).
+- Le centre Web dispose d'une réponse cartographique bornée, mais n'a ni filtre viewport, ni pagination spatiale, ni actualisation événementielle ([#89](https://github.com/fadellba/isieco-report/issues/89)).
+- Aucun test Android/iOS sur appareil physique n'est attesté ([#53](https://github.com/fadellba/isieco-report/issues/53)).
+- La répétition de restauration disponible ne prouve pas une restauration indépendante depuis des sauvegardes PostgreSQL et Storage datées ([#54](https://github.com/fadellba/isieco-report/issues/54)).
+
+La feuille de route exécutable, les dépendances et les critères de sortie sont détaillés dans [architecture/roadmap-lots-1-4.md](architecture/roadmap-lots-1-4.md). Le registre des validations distingue les preuves obtenues, les fonctionnalités manquantes et les contrôles à réaliser.
 
 ## Règle de validation
 

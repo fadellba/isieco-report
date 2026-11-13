@@ -182,7 +182,7 @@ Principes :
 - prévoir un état de confirmation avec référence et prochain statut ;
 - préserver les données saisies lorsque l'envoi échoue.
 
-**État de mise en œuvre au 13 novembre 2026 :** la PR #86 rend la photo facultative dans le multipart, retire la contrainte minimale de description et conserve le contrôle métier qui interdit un signalement entièrement vide. La description, la catégorie et l'indication de lieu peuvent être omises ; le dépôt doit toujours contenir au moins un élément utile (photo, texte, catégorie ou localisation). La CI du commit `934dce0` est réussie, mais la PR #86 est encore ouverte et non fusionnée : ce contrat n'est donc pas encore présent sur `main`. Dans l'écran mobile de cette PR, la position GPS est proposée à la demande et les coordonnées ne sont plus saisies manuellement ; un repère textuel reste possible.
+**État de mise en œuvre au 13 novembre 2026 :** la PR #86 est fusionnée dans `main` par le commit `47f846a`. Le formulaire autorise un signalement sans photo dès lors qu'au moins un autre élément utile est fourni (description, catégorie ou indication de localisation). Chaque élément reste facultatif séparément, mais le contrôle métier refuse un formulaire entièrement vide. La localisation GPS du citoyen est demandée ponctuellement à l'avant-plan et reste facultative ; cette fonction ne constitue pas une télémétrie d'agent.
 
 ### Photo : séquence technique
 
@@ -287,7 +287,7 @@ Structure fonctionnelle recommandée :
 | Dossiers | Marqueurs/cluster avec priorité et statut | Coordonnées du dossier, priorité, état |
 | Affectations | Indicateurs sur le site avec état de la mission | Affectation, contenu de dossier et localisation |
 | Interventions | État de l'intervention associé au site | Intervention, résultat et coordonnées du dossier |
-| Équipes | Position courante uniquement si le suivi de position est mis en place et autorisé | Télémétrie de position distincte, horodatage et consentement |
+| Équipes | Aucune position d'agent affichée | Aucun flux ou historique GPS d'agent ; hors périmètre produit |
 
 Les clusters, légendes, couleurs et icônes doivent être cohérents et compréhensibles. Une légende permanente et des filtres évitent de transformer la carte en nuage de marqueurs illisible.
 
@@ -312,16 +312,13 @@ Les opérations doivent respecter le cycle métier. Exemples :
 
 Les opérations de référentiel et d'administration de comptes restent dans des vues dédiées, reliées au centre de commandement.
 
-### Ce que signifie « temps réel »
+### État de la cartographie et de l'actualisation
 
-Il faut distinguer trois niveaux :
-1. **Actualisation manuelle :** état au dernier chargement.
-2. **Actualisation quasi temps réel :** rafraîchissement périodique des couches et des compteurs.
-3. **Temps réel :** diffusion d'événements et, le cas échéant, de positions récentes des agents.
+Le centre de commandement dispose de l'endpoint agrégé `GET /api/v1/command-center/overview`, qui renvoie les KPI et les objets cartographiques autorisés. Le service borne la réponse cartographique à 250 éléments. L'API ne filtre toutefois pas les données selon le viewport et ne fournit pas de pagination spatiale ; la limite actuelle ne remplace donc pas une requête limitée à la zone visible.
 
-Le dépôt actuel documente des endpoints REST et des vues de traitement, mais pas d'API cartographique agrégée, de canal temps réel ou de télémétrie des positions des agents. La première version de la carte peut fonctionner à partir des données métier et d'un rafraîchissement contrôlé. Le temps réel et le suivi de position sont des évolutions backend distinctes.
+Le frontend actualise les données par polling REST périodique (60 secondes). Aucun canal événementiel SSE/WebSocket n'est livré. Le temps réel événementiel est une évolution suivie dans l'issue [#89](https://github.com/fadellba/isieco-report/issues/89) : filtre viewport, pagination stable, événements métier, reconnexion et mécanisme de repli.
 
-**Règle de confidentialité :** ne pas afficher ni collecter une position continue d'un agent par défaut. Toute géolocalisation opérationnelle doit être justifiée, annoncée, limitée au temps de mission ou de service défini, protégée par les permissions appropriées et assortie d'une politique de rétention. Toujours afficher l'heure de la dernière position reçue. Une position ancienne ne doit jamais être présentée comme temps réel.
+**Règle de confidentialité : aucune télémétrie GPS des agents ne doit être collectée, stockée ou diffusée.** La carte Web porte sur les signalements et dossiers, jamais sur la position personnelle ou continue des équipes. La géolocalisation ponctuelle du citoyen lors d'un signalement est une fonctionnalité distincte, déclenchée à sa demande et limitée à l'avant-plan.
 
 ---
 
