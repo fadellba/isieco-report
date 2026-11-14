@@ -90,11 +90,16 @@ export class ReferentialsService {
   }
 
   async listTeams() {
+    const now = new Date();
     const teams = await this.prisma.equipe.findMany({
       orderBy: [{ nomEquipe: 'asc' }, { idEquipe: 'asc' }],
       include: {
         appartenances: {
-          where: { dateFin: null },
+          where: {
+            dateDebut: { lte: now },
+            OR: [{ dateFin: null }, { dateFin: { gt: now } }],
+            utilisateur: { etatCompte: 'ACTIF' },
+          },
           orderBy: { dateDebut: 'asc' },
           include: {
             utilisateur: {
