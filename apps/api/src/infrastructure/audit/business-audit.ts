@@ -64,8 +64,10 @@ export interface BusinessAuditEvent {
 }
 
 const ALLOWED_METADATA_KEYS = new Set([
-  'previousStatus', 'nextStatus', 'priority', 'reportId', 'teamId',
-  'decision', 'result', 'assignmentId', 'interventionId',
+  'previousStatus', 'nextStatus', 'priority', 'previousPriority', 'nextPriority',
+  'previousLatitude', 'previousLongitude', 'previousPrecision', 'previousLocationLabel',
+  'nextLatitude', 'nextLongitude', 'nextPrecision', 'nextLocationLabel',
+  'reportId', 'teamId', 'decision', 'result', 'assignmentId', 'interventionId',
 ]);
 
 function safeMetadata(input: BusinessAuditMetadata | undefined): Record<string, AuditMetadataValue> {
@@ -82,7 +84,8 @@ function safeMetadata(input: BusinessAuditMetadata | undefined): Record<string, 
     ) {
       throw new TypeError(`Unsupported business audit metadata value for key: ${key}`);
     }
-    if (typeof value === 'string' && value.length > 128) {
+    const maxStringLength = key === 'previousLocationLabel' || key === 'nextLocationLabel' ? 1000 : 128;
+    if (typeof value === 'string' && value.length > maxStringLength) {
       throw new TypeError(`Business audit metadata value is too long for key: ${key}`);
     }
     if (typeof value === 'number' && !Number.isFinite(value)) {
