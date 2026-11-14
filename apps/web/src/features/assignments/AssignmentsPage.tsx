@@ -299,7 +299,6 @@ export function AssignmentsPage() {
           <strong>{result ? result.total : '—'}</strong>
           <span>Affectation(s)<br />dans la sélection</span>
         </div>
-      </header>
         {dossierFilter ? (
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <span className="rounded-full bg-surface-base px-3 py-1 text-xs font-bold text-ink-800">
