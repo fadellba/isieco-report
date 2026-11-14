@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
-import { StatusBadge, type StatusTone } from '../../components/StatusBadge';
+import { FeedbackBanner, StatusBadge, type StatusTone } from '../../components/StatusBadge';
 
 interface CaseContent {
   idTypeDechet: string;
@@ -117,7 +117,7 @@ export function CasesPage() {
         <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">Dossiers de traitement</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Constituez des dossiers à partir de signalements qualifiés non encore rattachés et suivez leur prise en charge.</p>
       </header>
-      {error ? <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div> : null}
+      {error ? <FeedbackBanner tone="error">{error}</FeedbackBanner> : null}
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
