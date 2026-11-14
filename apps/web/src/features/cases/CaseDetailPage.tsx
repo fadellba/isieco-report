@@ -67,9 +67,6 @@ function personName(report: Pick<Signalement, 'utilisateur'> | AvailableReport) 
     : report.utilisateur.nom;
 }
 
-const inputClass = 'case-detail-field';
-const buttonClass = 'workflow-button workflow-button--primary';
-
 export function CaseDetailPage() {
   const { idDossier } = useParams();
   const [item, setItem] = useState<CaseDetail | null>(null);
