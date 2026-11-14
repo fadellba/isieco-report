@@ -19,18 +19,17 @@ L'inventaire ci-dessous sert de registre de couverture. Une ligne n'est considé
 
 | Route | Écran | Couverture attendue |
 |---|---|---|
-| `/` | Tableau de bord | Résumé des habilitations, raccourcis par rôle, centre opérationnel |
-| `/administration/comptes` | Comptes | Liste, recherche, détail/édition, confirmations et états |
-| `/qualification` | File de qualification | Filtres, priorités, pagination, vide/chargement/erreur |
-| `/qualification/:idSignalement` | Détail qualification | Contexte, médias, décision, complément, validation |
-| `/dossiers` | Liste des dossiers | Recherche, filtres, priorités, états et accès au détail |
-| `/dossiers/:idDossier` | Détail dossier | Informations, historique, affectation, progression opérationnelle |
-| `/affectations` | Création guidée contenu → équipe éligible, compteurs de décision, recherche locale et réaffectation simplifiée | Vérifier habilitations, filtres, motifs, pagination et erreurs |
-| `/interventions` | Synthèse d’équipe, compteurs de prochaine action, recherche locale et statuts ; auteur clairement identifié pour les preuves et comptes rendus | Vérifier rôles, transitions, dépôt de preuves et vérification indépendante sur navigateur |
-| `/affectations` | Affectations | Équipes, charge, choix, confirmation et erreurs |
-| `/verification` | Vérification indépendante | File, examen des preuves, validation ou reprise motivée |
-| `/interventions` | Interventions | Missions, statuts, résultats et consultation des comptes rendus |
-| `/referentiels` | Référentiels | Équipes, types de déchets, formulaires et confirmations |
+| `/` | Tableau de bord | Résumé des habilitations, centre opérationnel conditionnel, accès aux modules autorisés |
+| `/administration/comptes` | Comptes et habilitations | Annuaire paginé, recherche locale, filtres, attribution et révocation confirmée des rôles |
+| `/qualification` | File de qualification | Synthèse, recherche locale, filtres, pagination, vide/chargement/erreur |
+| `/qualification/:idSignalement` | Détail qualification | Contexte, médias, historique, décision et champs progressifs |
+| `/dossiers` | Liste des dossiers | Création guidée depuis un signalement, recherche locale, filtres et suivi |
+| `/dossiers/:idDossier` | Détail dossier | Contenus, signalements associés, localisation, priorité et réglages avancés |
+| `/affectations` | Affectations | Étapes contenu → équipe éligible, aperçu, recherche locale, réaffectation |
+| `/interventions` | Interventions | Synthèse d’équipe, prochaines actions, recherche locale et compte rendu réservé à l’auteur |
+| `/verification` | Vérification indépendante | File filtrable, examen des preuves privées, décision conforme ou reprise motivée |
+| `/referentiels` | Référentiels | Catalogue des déchets, équipes, membres, compétences et historiques de clôture |
+| `/acces-refuse` | Accès refusé | Explication des habilitations, retour cohérent dans l’espace applicatif |
 
 ## Mobile — démarrage et authentification
 
@@ -68,10 +67,16 @@ L'inventaire ci-dessous sert de registre de couverture. Une ligne n'est considé
 
 | Route | Première reprise UI | Validation restante |
 |---|---|---|
+| `/` | Tableau de bord par rôle et centre opérationnel, accès limités aux habilitations | Recette visuelle, responsive et contrôles d’accès par profil |
+| `/administration/comptes` | Annuaire, recherche sur la page, filtres, rôles déjà attribués exclus et révocation confirmée | Tester les profils, API d’autorisation, états inactifs et navigation clavier |
 | `/qualification` | File de travail avec synthèse, recherche locale, statuts et actions explicites | Recette responsive, clavier et tests de parcours |
 | `/qualification/:idSignalement` | Contexte, pièces jointes, historique et décision progressive séparés | Vérifier les états métier réels et les formulaires sur navigateur |
 | `/dossiers` | Création guidée avec aperçu source, recherche locale, filtres et cartes | Vérifier les cas vides, pagination et responsive |
 | `/dossiers/:idDossier` | Contenus, rattachements, localisation et priorité hiérarchisés ; réglages avancés repliés | Tester les modifications, confirmations, erreurs et état clôturé |
+| `/affectations` | Création guidée, aperçu du contenu, équipes éligibles, recherche locale et réaffectation | Recette des refus, des erreurs API, de la pagination et du responsive |
+| `/interventions` | Synthèse d’équipe, compteurs de prochaine action, recherche locale et statuts sémantiques | Tester chaque transition et les restrictions de dépôt de preuve/compte rendu |
+| `/verification` | File avec recherche locale, filtre par résultat, accès aux preuves privées et décisions séparées | Tester liens signés expirés, reprise, clôture et séparation des tâches |
+| `/referentiels` | Catalogue et équipes restructurés, membres/compétences, historiques et confirmations | Tester création, désactivation, clôture, erreurs API et accessibilité clavier |
 
 Ces reprises sont des premières passes de conception et de structure, pas une validation finale. La route est considérée couverte seulement après recette de tous ses états et de ses actions.
 
