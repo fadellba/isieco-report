@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import type { CommandCenterQueryDto } from './dto/command-center-query.dto.js';
+import { pendingVerificationWhere } from '../verification/pending-verification.query.js';
 
 const OPEN_REPORT_STATUSES = ['SOUMIS', 'EN_ATTENTE_COMPLEMENT', 'COMPLEMENT_REPONDU'] as const;
 
@@ -271,7 +272,7 @@ export class CommandCenterService {
       }),
       this.prisma.intervention.count({ where: { statutIntervention: 'EN_COURS' } }),
       this.prisma.intervention.count({
-        where: { statutIntervention: 'SOUMISE', verification: null },
+        where: pendingVerificationWhere(),
       }),
       this.prisma.dossierTraitement.count({ where: locatedCaseWhere }),
       this.prisma.signalement.count({ where: locatedReportWhere }),
