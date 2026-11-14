@@ -291,7 +291,7 @@ export default function AgentMissionDetailScreen() {
           <Text className="text-base font-extrabold text-ink-900">Répondre à l’affectation</Text>
           <Text className="mt-1 text-xs leading-5 text-ink-500">L’acceptation engage votre équipe à prendre en charge cette mission. Un refus doit être motivé.</Text>
           <Text className="mt-4 text-xs font-bold text-ink-700">Motif de refus · obligatoire en cas de refus</Text>
-          <TextInput value={refusalReason} onChangeText={setRefusalReason} minLength={5} maxLength={2000} multiline placeholder="Expliquez pourquoi l’équipe ne peut pas prendre cette mission…" placeholderTextColor="#8A968D" className={inputClass + ' min-h-[88px]'} textAlignVertical="top" />
+          <TextInput value={refusalReason} onChangeText={setRefusalReason} maxLength={2000} multiline placeholder="Expliquez pourquoi l’équipe ne peut pas prendre cette mission…" placeholderTextColor="#8A968D" className={inputClass + ' min-h-[88px]'} textAlignVertical="top" />
           <Text className="mt-3 text-xs font-bold text-ink-700">Observation · facultative</Text>
           <TextInput value={observation} onChangeText={setObservation} maxLength={2000} placeholder="Ajouter une précision à l’équipe de coordination" placeholderTextColor="#8A968D" className={inputClass} />
           <View className="mt-4 flex-row gap-2">
