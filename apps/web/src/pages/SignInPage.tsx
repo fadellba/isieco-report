@@ -108,6 +108,7 @@ export function SignInPage() {
                   </button>
                 </div>
               </label>
+              <Link className="auth-form__link auth-form__link--align-end" to="/mot-de-passe-oublie">Mot de passe oublié ?</Link>
 
               {error ? <p className="auth-form__error" role="alert">{error}</p> : null}
 
