@@ -85,6 +85,9 @@ export default function SignInScreen() {
           textContentType="password"
           value={password}
         />
+        <View className="mt-3 items-end">
+          <Link className="text-[10px] font-extrabold text-brand-forest" href="/forgot-password">Mot de passe oublié ?</Link>
+        </View>
       </View>
 
       {error ? (
