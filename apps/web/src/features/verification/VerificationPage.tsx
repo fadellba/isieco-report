@@ -56,6 +56,12 @@ interface PhotoLink {
   expiresAt: number;
 }
 
+type VerificationFilter = 'ALL' | 'TERMINEE' | 'EXCEPTION';
+
+function normalizeSearch(value: string): string {
+  return value.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLocaleLowerCase('fr-FR').trim();
+}
+
 interface DecisionResult {
   verification: {
     idVerification: string;
@@ -110,6 +116,8 @@ export function VerificationPage() {
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState<VerificationFilter>('ALL');
 
   const loadQueue = useCallback(async () => {
     setLoading(true);
@@ -131,7 +139,28 @@ export function VerificationPage() {
   }, [loadQueue]);
 
   const totalPages = result ? Math.max(1, Math.ceil(result.total / result.pageSize)) : 1;
-  const orderedItems = useMemo(() => result?.items ?? [], [result]);
+  const pageItems = useMemo(() => result?.items ?? [], [result]);
+  const orderedItems = useMemo(() => {
+    const query = normalizeSearch(search);
+    return pageItems.filter((item) => {
+      const matchesSearch = !query || normalizeSearch([
+        item.affectation.contenuDossier.referenceDossier,
+        item.intervention.compteRendu,
+        item.intervention.motifException ?? '',
+        item.intervention.resultatIntervention,
+        item.intervention.renseignePar,
+        item.affectation.idAffectation,
+      ].join(' ')).includes(query);
+      const matchesFilter =
+        filter === 'ALL' ||
+        (filter === 'TERMINEE' && item.intervention.resultatIntervention === 'TERMINEE') ||
+        (filter === 'EXCEPTION' && item.intervention.resultatIntervention !== 'TERMINEE');
+      return matchesSearch && matchesFilter;
+    });
+  }, [filter, pageItems, search]);
+
+  const completedCount = pageItems.filter((item) => item.intervention.resultatIntervention === 'TERMINEE').length;
+  const exceptionCount = pageItems.length - completedCount;
 
   async function openDetails(item: VerificationItem) {
     const id = item.affectation.idAffectation;
@@ -232,31 +261,76 @@ export function VerificationPage() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-brand-forest">Contrôle indépendant</p>
-        <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-ink-900">Vérification des interventions</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-500">
-          Examinez le compte rendu et les preuves de la dernière intervention. Votre décision valide la résolution ou demande une reprise ; elle ne peut pas porter sur votre propre intervention.
-        </p>
+      <header className="overflow-hidden rounded-3xl border border-line-subtle bg-white">
+        <div className="grid gap-5 p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end lg:p-8">
+          <div>
+            <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-brand-forest">Opérations · Contrôle indépendant</p>
+            <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-ink-900 sm:text-4xl">Vérification des interventions</h1>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-ink-500">
+              Examinez le compte rendu et les preuves de la dernière intervention. Validez la résolution ou demandez une reprise motivée. Une intervention ne peut jamais être vérifiée par son propre auteur.
+            </p>
+          </div>
+          <button type="button" onClick={() => void loadQueue()} disabled={loading} className={secondaryClass}>
+            {loading ? 'Actualisation…' : 'Actualiser la file'}
+          </button>
+        </div>
+        <div className="grid grid-cols-2 border-t border-line-subtle bg-surface-base sm:grid-cols-3">
+          <div className="border-b border-r border-line-subtle p-4 sm:border-b-0">
+            <p className="text-xs font-semibold text-ink-500">En attente au total</p>
+            <p className="mt-1 text-2xl font-extrabold text-ink-900">{result ? result.total : '—'}</p>
+          </div>
+          <div className="border-b border-line-subtle p-4 sm:border-b-0 sm:border-r">
+            <p className="text-xs font-semibold text-ink-500">Résultats terminés · page</p>
+            <p className="mt-1 text-2xl font-extrabold text-ink-900">{result ? completedCount : '—'}</p>
+          </div>
+          <div className="col-span-2 p-4 sm:col-span-1">
+            <p className="text-xs font-semibold text-ink-500">Résultats partiels ou impossibles · page</p>
+            <p className="mt-1 text-2xl font-extrabold text-ink-900">{result ? exceptionCount : '—'}</p>
+          </div>
+        </div>
       </header>
 
       {notice ? <FeedbackBanner tone="success">{notice}</FeedbackBanner> : null}
       {error ? <FeedbackBanner tone="error">{error}</FeedbackBanner> : null}
 
       <section className="verification-queue overflow-hidden rounded-2xl border border-line-strong bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-subtle px-5 py-4">
-          <div>
-            <h2 className="font-bold text-ink-900">Comptes rendus à vérifier</h2>
-            <p className="mt-1 text-xs text-ink-500">{result ? result.total + ' vérification(s) en attente' : 'Chargement…'}</p>
+        <div className="border-b border-line-subtle p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-extrabold text-ink-900">Comptes rendus à examiner</h2>
+              <p className="mt-1 text-xs text-ink-500">La recherche et le filtre portent uniquement sur les résultats de la page chargée.</p>
+            </div>
+            <span className="rounded-full bg-surface-base px-3 py-1.5 text-xs font-bold text-ink-600">{orderedItems.length} résultat(s)</span>
           </div>
-          <button type="button" onClick={() => void loadQueue()} disabled={loading} className={secondaryClass}>
-            {loading ? 'Actualisation…' : 'Actualiser'}
-          </button>
+          <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-bold text-ink-600">Rechercher dans les comptes rendus</span>
+              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Référence, compte rendu, motif ou identifiant…" className="w-full rounded-xl border border-line-strong bg-white px-3.5 py-3 text-sm text-ink-800 outline-none transition placeholder:text-ink-400 focus:border-brand-forest focus:ring-2 focus:ring-brand-mist" />
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-bold text-ink-600">Filtrer le résultat terrain</span>
+              <select value={filter} onChange={(event) => setFilter(event.target.value as VerificationFilter)} className="w-full rounded-xl border border-line-strong bg-white px-3.5 py-3 text-sm text-ink-800 outline-none focus:border-brand-forest focus:ring-2 focus:ring-brand-mist">
+                <option value="ALL">Tous les résultats</option>
+                <option value="TERMINEE">Terminées</option>
+                <option value="EXCEPTION">Partielles ou impossibles</option>
+              </select>
+            </label>
+          </div>
         </div>
 
         {loading && !result ? <p className="p-5 text-sm text-ink-500">Chargement de la file…</p> : null}
         {!loading && result?.items.length === 0 ? (
-          <p className="p-5 text-sm text-ink-500">Aucun compte rendu ne nécessite actuellement de vérification.</p>
+          <div className="p-10 text-center">
+            <p className="font-bold text-ink-800">Aucun compte rendu en attente</p>
+            <p className="mt-1 text-sm text-ink-500">La file est à jour. Les nouvelles interventions soumises apparaîtront ici.</p>
+          </div>
+        ) : null}
+        {!loading && pageItems.length > 0 && orderedItems.length === 0 ? (
+          <div className="p-8 text-center">
+            <p className="font-bold text-ink-800">Aucun résultat correspondant</p>
+            <p className="mt-1 text-sm text-ink-500">Modifiez la recherche ou le filtre appliqué à cette page.</p>
+            <button type="button" onClick={() => { setSearch(''); setFilter('ALL'); }} className="mt-3 text-sm font-bold text-brand-forest underline">Effacer les filtres</button>
+          </div>
         ) : null}
 
         <div className="divide-y divide-slate-100">
@@ -413,7 +487,7 @@ export function VerificationPage() {
         </div>
 
         <div className="flex items-center justify-between border-t border-line-subtle px-5 py-4">
-          <p className="text-xs text-ink-500">Page {page} sur {totalPages}</p>
+          <p className="text-xs text-ink-500">Page {page} sur {totalPages} · {result?.total ?? 0} élément(s) en attente au total</p>
           <div className="flex gap-2">
             <button type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={page <= 1 || loading} className={secondaryClass}>Précédent</button>
             <button type="button" onClick={() => setPage((value) => Math.min(totalPages, value + 1))} disabled={page >= totalPages || loading} className={secondaryClass}>Suivant</button>
