@@ -89,58 +89,58 @@ export function AccountsPage() {
   return (
     <div className="space-y-6">
       <header>
-        <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-eco-700">Administration</p>
-        <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">Comptes et habilitations</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+        <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-brand-forest">Administration</p>
+        <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-ink-900">Comptes et habilitations</h1>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-500">
           Consultez les comptes et gérez leurs rôles. Les autorisations sont contrôlées par l'API ; l'inscription publique ne peut attribuer que le rôle citoyen.
         </p>
       </header>
 
       {error ? <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div> : null}
-      {notice ? <div role="status" className="rounded-xl border border-eco-200 bg-eco-50 px-4 py-3 text-sm text-eco-900">{notice}</div> : null}
+      {notice ? <div role="status" className="rounded-xl border border-line-strong bg-surface-base px-4 py-3 text-sm text-ink-900">{notice}</div> : null}
 
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+      <section className="overflow-hidden rounded-2xl border border-line-strong bg-white">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-subtle px-5 py-4">
           <div>
-            <h2 className="font-bold text-slate-900">Comptes enregistrés</h2>
-            <p className="mt-1 text-xs text-slate-500">{data ? `${data.total} compte(s)` : 'Chargement du total…'}</p>
+            <h2 className="font-bold text-ink-900">Comptes enregistrés</h2>
+            <p className="mt-1 text-xs text-ink-500">{data ? `${data.total} compte(s)` : 'Chargement du total…'}</p>
           </div>
-          <button type="button" onClick={() => void loadAccounts()} disabled={loading} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+          <button type="button" onClick={() => void loadAccounts()} disabled={loading} className="rounded-lg border border-line-strong px-3 py-2 text-xs font-bold text-ink-500 hover:bg-surface-base disabled:opacity-50">
             Actualiser
           </button>
         </div>
 
-        {loading && !data ? <p className="p-6 text-sm text-slate-500">Chargement des comptes…</p> : null}
-        {!loading && data?.items.length === 0 ? <p className="p-6 text-sm text-slate-500">Aucun compte sur cette page.</p> : null}
+        {loading && !data ? <p className="p-6 text-sm text-ink-500">Chargement des comptes…</p> : null}
+        {!loading && data?.items.length === 0 ? <p className="p-6 text-sm text-ink-500">Aucun compte sur cette page.</p> : null}
 
         <div className="divide-y divide-slate-100">
           {data?.items.map((account) => (
             <article key={account.utilisateurId} className="grid gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.9fr)]">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="font-bold text-slate-900">{account.prenom ? `${account.prenom} ${account.nom}` : account.nom}</h3>
-                  <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${account.etatCompte === 'ACTIF' ? 'bg-eco-50 text-eco-800' : 'bg-amber-50 text-amber-800'}`}>{account.etatCompte}</span>
+                  <h3 className="font-bold text-ink-900">{account.prenom ? `${account.prenom} ${account.nom}` : account.nom}</h3>
+                  <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${account.etatCompte === 'ACTIF' ? 'bg-surface-base text-ink-800' : 'bg-amber-50 text-amber-800'}`}>{account.etatCompte}</span>
                 </div>
-                <p className="mt-1 break-all text-sm text-slate-500">{account.email}</p>
-                <p className="mt-3 text-xs font-bold uppercase tracking-wide text-slate-400">Rôles actifs</p>
+                <p className="mt-1 break-all text-sm text-ink-500">{account.email}</p>
+                <p className="mt-3 text-xs font-bold uppercase tracking-wide text-ink-400">Rôles actifs</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {account.roles.length ? account.roles.map((role) => (
-                    <span key={role.code} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 py-1 pl-3 pr-1.5 text-xs font-semibold text-slate-700">
+                    <span key={role.code} className="inline-flex items-center gap-2 rounded-full border border-line-strong bg-surface-base py-1 pl-3 pr-1.5 text-xs font-semibold text-ink-700">
                       {role.libelle}
                       <button
                         type="button"
                         onClick={() => void revokeRole(account, role.code)}
                         disabled={savingAccount === account.utilisateurId || account.etatCompte !== 'ACTIF'}
                         aria-label={`Révoquer ${role.libelle} pour ${account.email}`}
-                        className="grid h-5 w-5 place-items-center rounded-full text-slate-400 hover:bg-red-100 hover:text-red-700 disabled:opacity-40"
+                        className="grid h-5 w-5 place-items-center rounded-full text-ink-400 hover:bg-red-100 hover:text-red-700 disabled:opacity-40"
                       >×</button>
                     </span>
-                  )) : <span className="text-xs text-slate-400">Aucun rôle actif</span>}
+                  )) : <span className="text-xs text-ink-400">Aucun rôle actif</span>}
                 </div>
               </div>
 
-              <form onSubmit={(event) => void assignRole(event, account)} className="rounded-xl bg-slate-50 p-4">
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Attribuer un rôle</p>
+              <form onSubmit={(event) => void assignRole(event, account)} className="rounded-xl bg-surface-base p-4">
+                <p className="text-xs font-bold uppercase tracking-wide text-ink-500">Attribuer un rôle</p>
                 <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
                   <select
                     value={selectedRoles[account.utilisateurId] ?? DEFAULT_ROLE}
@@ -149,12 +149,12 @@ export function AccountsPage() {
                       [account.utilisateurId]: event.target.value as FunctionalRole,
                     }))}
                     disabled={account.etatCompte !== 'ACTIF'}
-                    className="min-w-0 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800"
+                    className="min-w-0 rounded-lg border border-line-strong bg-white px-3 py-2.5 text-sm text-ink-800"
                     aria-label={`Rôle à attribuer à ${account.email}`}
                   >
                     {FUNCTIONAL_ROLE_CODES.map((role) => <option key={role} value={role}>{role}</option>)}
                   </select>
-                  <button type="submit" disabled={savingAccount === account.utilisateurId || account.etatCompte !== 'ACTIF'} className="rounded-lg bg-eco-700 px-4 py-2.5 text-xs font-bold text-white hover:bg-eco-600 disabled:cursor-not-allowed disabled:opacity-50">
+                  <button type="submit" disabled={savingAccount === account.utilisateurId || account.etatCompte !== 'ACTIF'} className="rounded-lg bg-brand-forest px-4 py-2.5 text-xs font-bold text-white hover:bg-eco-600 disabled:cursor-not-allowed disabled:opacity-50">
                     {savingAccount === account.utilisateurId ? 'En cours…' : 'Attribuer'}
                   </button>
                 </div>
@@ -163,18 +163,18 @@ export function AccountsPage() {
                   onChange={(event) => setMotifs((current) => ({ ...current, [account.utilisateurId]: event.target.value }))}
                   maxLength={500}
                   placeholder="Motif (facultatif)"
-                  className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs"
+                  className="mt-2 w-full rounded-lg border border-line-strong bg-white px-3 py-2 text-xs"
                 />
               </form>
             </article>
           ))}
         </div>
 
-        <div className="flex items-center justify-between border-t border-slate-100 px-5 py-4">
-          <p className="text-xs text-slate-500">Page {page} sur {totalPages}</p>
+        <div className="flex items-center justify-between border-t border-line-subtle px-5 py-4">
+          <p className="text-xs text-ink-500">Page {page} sur {totalPages}</p>
           <div className="flex gap-2">
-            <button type="button" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page <= 1 || loading} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 disabled:opacity-40">Précédent</button>
-            <button type="button" onClick={() => setPage((current) => Math.min(totalPages, current + 1))} disabled={page >= totalPages || loading} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 disabled:opacity-40">Suivant</button>
+            <button type="button" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page <= 1 || loading} className="rounded-lg border border-line-strong px-3 py-2 text-xs font-bold text-ink-500 disabled:opacity-40">Précédent</button>
+            <button type="button" onClick={() => setPage((current) => Math.min(totalPages, current + 1))} disabled={page >= totalPages || loading} className="rounded-lg border border-line-strong px-3 py-2 text-xs font-bold text-ink-500 disabled:opacity-40">Suivant</button>
           </div>
         </div>
       </section>
