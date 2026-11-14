@@ -2,7 +2,17 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useFocusEffect } from 'expo-router';
 import { ActivityIndicator, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { dateLabel, reportStatusLabel } from '../../../src/features/reports/report-format';
+import { StatusBadge, type StatusTone } from '../../../src/ui/StatusBadge';
+import { FeedbackBanner } from '../../../src/ui/FeedbackBanner';
 import { listMyReports, type ReportPage } from '../../../src/features/reports/reports-api';
+
+function reportTone(status: string): StatusTone {
+  if (status === 'REJETE') return 'danger';
+  if (status === 'EN_ATTENTE_COMPLEMENT') return 'warning';
+  if (status === 'QUALIFIE') return 'success';
+  if (status === 'COMPLEMENT_REPONDU') return 'info';
+  return 'brand';
+}
 
 export default function CitizenReportsScreen() {
   const [result, setResult] = useState<ReportPage | null>(null);
@@ -37,7 +47,7 @@ export default function CitizenReportsScreen() {
       contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 48, paddingBottom: 40 }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(1, true)} />}
     >
-      <Text className="text-xs font-extrabold uppercase tracking-[0.18em] text-eco-700">Espace citoyen</Text>
+      <Text className="text-xs font-extrabold uppercase tracking-[0.18em] text-brand-petrol">ESPACE CITOYEN · SUIVI</Text>
       <Text className="mt-3 text-3xl font-extrabold text-eco-950">Mes signalements</Text>
       <Text className="mt-2 text-sm leading-6 text-slate-600">
         Consultez vos signalements et leur état de traitement. Seuls les signalements de votre compte sont retournés par l’API.
@@ -49,7 +59,7 @@ export default function CitizenReportsScreen() {
         </TouchableOpacity>
       </Link>
 
-      {error ? <Text className="mt-5 rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</Text> : null}
+      {error ? <View className="mt-5"><FeedbackBanner tone="error" message={error} /></View> : null}
       {loading && !result ? <View className="mt-10 items-center"><ActivityIndicator color="#166534" /><Text className="mt-3 text-sm text-slate-500">Chargement…</Text></View> : null}
       {!loading && result?.items.length === 0 ? (
         <View className="mt-6 rounded-2xl border border-eco-100 bg-white p-5">
@@ -66,9 +76,7 @@ export default function CitizenReportsScreen() {
                 <Text className="flex-1 text-base font-bold text-eco-950" numberOfLines={1}>
                   Signalement #{item.idSignalement.slice(0, 8).toUpperCase()}
                 </Text>
-                <View className="rounded-full bg-eco-50 px-3 py-1">
-                  <Text className="text-[10px] font-bold text-eco-800">{reportStatusLabel(item.statutSignalement)}</Text>
-                </View>
+                <StatusBadge label={reportStatusLabel(item.statutSignalement)} tone={reportTone(item.statutSignalement)} />
               </View>
               <Text className="mt-3 text-sm leading-6 text-slate-700" numberOfLines={3}>{item.description || 'Aucune description.'}</Text>
               <Text className="mt-3 text-xs text-slate-500">Soumis le {dateLabel(item.dateSoumission)}</Text>
