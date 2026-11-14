@@ -1,9 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, Text } from 'react-native';
 import { useMobileAuth } from '../src/features/auth/mobile-auth-context';
 import { LoadingScreen } from '../src/ui/LoadingScreen';
+import { AuthScreenFrame } from '../src/ui/AuthScreenFrame';
 
 const ONBOARDING_KEY = 'isieco.onboarding.v2.complete';
 
@@ -38,13 +39,20 @@ export default function IndexScreen() {
 
   if (error && !profile) {
     return (
-      <View className="flex-1 justify-center bg-surface-base px-6">
-        <Text className="text-2xl font-extrabold text-ink-900">Connexion indisponible</Text>
-        <Text className="mt-3 text-sm leading-6 text-ink-500">{error}</Text>
-        <TouchableOpacity onPress={() => void refreshProfile()} className="mt-6 rounded-2xl bg-brand-forest px-5 py-4">
-          <Text className="text-center text-sm font-bold text-white">Réessayer</Text>
-        </TouchableOpacity>
-      </View>
+      <AuthScreenFrame
+        eyebrow="Vérification de session"
+        title="Connexion indisponible."
+        description="Votre session ne peut pas être vérifiée pour le moment. Vos données ne sont pas supprimées. Réessayez lorsque le service sera accessible."
+      >
+        <Text className="text-xs leading-5 text-ink-500">{error}</Text>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => void refreshProfile()}
+          className="mt-5 min-h-[50px] items-center justify-center rounded-xl bg-brand-forest px-5 py-4"
+        >
+          <Text className="text-xs font-extrabold text-white">Réessayer</Text>
+        </Pressable>
+      </AuthScreenFrame>
     );
   }
 
