@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
+import { StatusBadge, type StatusTone } from '../../components/StatusBadge';
 
 interface CaseContent {
   idTypeDechet: string;
@@ -29,6 +30,20 @@ interface Page<T> { items: T[]; page: number; pageSize: number; total: number }
 function formatDate(value: string) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? '—' : new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium' }).format(date);
+}
+
+function caseStatusTone(status: string): StatusTone {
+  if (status === 'CLOTURE') return 'success';
+  if (status === 'EN_COURS') return 'info';
+  if (status === 'EN_ATTENTE') return 'warning';
+  return 'neutral';
+}
+
+function priorityTone(priority: string): StatusTone {
+  if (priority === 'CRITIQUE') return 'danger';
+  if (priority === 'HAUTE') return 'warning';
+  if (priority === 'BASSE') return 'neutral';
+  return 'info';
 }
 
 export function CasesPage() {
@@ -133,8 +148,8 @@ export function CasesPage() {
         </div>
         {loading && !data ? <p className="p-6 text-sm text-slate-500">Chargement des dossiers…</p> : null}
         {!loading && data?.items.length === 0 ? <p className="p-6 text-sm text-slate-500">Aucun dossier pour ce filtre.</p> : null}
-        <div className="divide-y divide-slate-100">{data?.items.map((item) => <Link key={item.idDossier} to={`/dossiers/${item.idDossier}`} className="block p-5 transition hover:bg-slate-50">
-          <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-bold text-slate-900">{item.referenceDossier}</h3><p className="mt-1 text-xs text-slate-500">Créé le {formatDate(item.dateCreationDossier)}</p></div><div className="flex gap-2"><span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-700">{item.statutDossier}</span><span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-800">{item.priorite}</span></div></div>
+        <div className="divide-y divide-slate-100">{data?.items.map((item) => <Link key={item.idDossier} to={`/dossiers/${item.idDossier}`} className="workflow-list-item block p-5 transition hover:bg-slate-50">
+          <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-extrabold text-ink-900">{item.referenceDossier}</h3><p className="mt-1 text-xs text-slate-500">Créé le {formatDate(item.dateCreationDossier)}</p></div><div className="flex flex-wrap gap-2"><StatusBadge label={item.statutDossier.replaceAll('_', ' ').toLowerCase()} tone={caseStatusTone(item.statutDossier)} /><StatusBadge label={'Priorité ' + item.priorite.toLowerCase()} tone={priorityTone(item.priorite)} /></div></div>
           <p className="mt-3 text-sm text-slate-600">{item.descriptionSynthese}</p>
           <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500"><span>{item.nombreSignalements} signalement(s)</span><span>·</span><span>{item.contenus.length} catégorie(s)</span>{item.contenus.map((content) => <span key={content.idTypeDechet} className="rounded-full border border-slate-200 px-2 py-1">{content.typeDechet.libelle}</span>)}</div>
         </Link>)}</div>
