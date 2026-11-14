@@ -45,7 +45,7 @@ Un lecteur peut identifier le commit étudié, les migrations présentes et appl
 - L'issue [#54](https://github.com/fadellba/isieco-report/issues/54) reste ouverte.
 - Le workflow de répétition `staging-restore-drill.yml` copie la source staging active vers un PostgreSQL éphémère et un bucket privé temporaire. C'est un test de transfert/intégrité utile, mais il ne restaure pas une sauvegarde historique indépendante et ne mesure pas le RPO d'un point de sauvegarde.
 - Les sauvegardes gérées Supabase et PITR dépendent d'une offre payante selon le cadrage courant. Aucune montée de plan ou dépense n'est autorisée implicitement par cette feuille de route.
-- Le workflow staging du commit de fusion [#43513727249](https://github.com/fadellba/isieco-report/actions/runs/43513727249) s'est arrêté avant Render parce que deux migrations présentes dans Git ne sont pas appliquées au staging.
+- Le workflow staging de la PR #96 [#43516567399](https://github.com/fadellba/isieco-report/actions/runs/43516567399) s'est arrêté avant Render : 14 migrations sont versionnées dans Git, 11 sont appliquées en staging et trois restent en attente, dont la migration du trigger SSE.
 
 ### Travaux
 1. Inventorier les sources de sauvegarde PostgreSQL et Storage réellement disponibles, leur fréquence, leur date, leur rétention et les responsabilités.
