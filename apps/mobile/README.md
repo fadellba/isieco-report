@@ -45,7 +45,7 @@ La PR #24 a intégré `/(agent)/missions` :
 - motif obligatoire si le résultat est `PARTIELLE` ou `IMPOSSIBLE` ;
 - démarrage d'une reprise uniquement après une décision de vérification `REPRISE`.
 
-L'onglet `/(agent)/map` propose une vue géolocalisée des affectations des équipes actives : filtre d'équipe et d'état, accès à la fiche mission, ouverture d'un itinéraire et liste séparée des affectations sans coordonnées. Il s'agit d'une vue liste géolocalisée, pas encore d'une carte native interactive ; l'interface l'indique explicitement et ne fabrique aucune coordonnée.
+L'onglet `/(agent)/map` affiche une carte interactive des affectations des équipes actives avec filtres d'équipe et d'état, marqueurs sur les seules coordonnées réelles, sélection d'une mission, accès à sa fiche et ouverture d'un itinéraire. Les affectations sans coordonnées restent dans une liste séparée et ne reçoivent aucune position fictive.
 
 Le formulaire de compte rendu n'est affiché que pour l'agent auteur de l'intervention. L'API recontrôle l'appartenance, l'auteur et les états métier à chaque opération.
 
@@ -81,3 +81,9 @@ Les conditions et les tâches différées en raison d'un coût sont centralisée
 ## Limites restantes
 
 Les notifications, le mode hors connexion et l'affichage des preuves d'intervention après upload restent à réaliser. La recette sur appareils Android/iOS réels est à effectuer avec le [protocole de recette](../../docs/mobile/recette-appareils.md), sur un environnement de test et avec des comptes fictifs. Le bucket Supabase distant, la rétention des médias et la planification Cron doivent être configurés indépendamment du client Mobile.
+
+### Configuration des services natifs
+
+Pour afficher les tuiles Google Maps dans un build Android autonome, définir `GOOGLE_MAPS_API_KEY` dans l'environnement de build (EAS). Aucune clé ne doit être commitée dans ce dépôt. iOS utilise le fournisseur cartographique natif par défaut.
+
+Pour tester la récupération de compte, autoriser dans Supabase Auth les URLs de redirection Web de l'application vers `/reinitialiser-mot-de-passe` ainsi que le schéma mobile `isiecoreport://**`. Vérifier le parcours sur des comptes de test, y compris un lien expiré.
