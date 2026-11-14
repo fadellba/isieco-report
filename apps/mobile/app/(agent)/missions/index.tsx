@@ -3,7 +3,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import {
   getAgentProfile, listMyTeams, listTeamAssignments, listTeamInterventions,
-  type AgentTeam, type MobileAgentProfile, type TeamAssignment, type TeamIntervention,
+  type AgentTeam, type TeamAssignment, type TeamIntervention,
 } from '../../../src/features/interventions/agent-api';
 import { dateLabel } from '../../../src/features/reports/report-format';
 import { StatusBadge, type StatusTone } from '../../../src/ui/StatusBadge';
@@ -65,7 +65,6 @@ function nextAction(assignment: TeamAssignment, latest: TeamIntervention | undef
 
 export default function AgentMissionsScreen() {
   const router = useRouter();
-  const [profile, setProfile] = useState<MobileAgentProfile | null>(null);
   const [teams, setTeams] = useState<AgentTeam[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState('');
   const [assignments, setAssignments] = useState<TeamAssignment[]>([]);
@@ -82,7 +81,6 @@ export default function AgentMissionsScreen() {
     try {
       const [agent, myTeams] = await Promise.all([getAgentProfile(), listMyTeams()]);
       if (!agent.roles.some((role) => role.code === 'AGENT_TERRAIN')) throw new Error('Le rôle AGENT_TERRAIN est requis pour accéder à cet espace.');
-      setProfile(agent);
       setTeams(myTeams);
       setSelectedTeamId((current) => myTeams.some((team) => team.idEquipe === current) ? current : myTeams[0]?.idEquipe ?? '');
     } catch (reason) {
