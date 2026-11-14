@@ -46,7 +46,7 @@ export default function AgentHomeScreen() {
     <ScrollView
       className="flex-1 bg-surface-base"
       contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 56, paddingBottom: 32 }}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} tintColor="#14532D" />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} tintColor="#174C3D" />}
     >
       <View className="flex-row items-center justify-between">
         <BrandMark />
@@ -55,9 +55,9 @@ export default function AgentHomeScreen() {
         </View>
       </View>
       <Text className="mt-9 text-sm font-medium text-ink-500">Bonjour{profile?.prenom ? ` ${profile.prenom}` : ''},</Text>
-      <Text className="mt-1 text-[30px] font-extrabold leading-9 tracking-tight text-ink-900">Votre terrain, vos missions.</Text>
+      <Text className="mt-1 text-[30px] font-extrabold leading-9 tracking-tight text-ink-900">Vos missions, du terrain au compte rendu.</Text>
       <Text className="mt-3 text-sm leading-6 text-ink-500">
-        Retrouvez les affectations de vos équipes et les interventions à faire avancer.
+        Consultez les affectations de vos équipes, documentez les interventions et transmettez vos comptes rendus à la vérification.
       </Text>
 
       {error ? (
@@ -80,6 +80,26 @@ export default function AgentHomeScreen() {
             <Text className="mt-1 text-[10px] font-semibold text-ink-500">{item.label}</Text>
           </View>
         ))}
+      </View>
+
+      <View className="mt-5 rounded-2xl border border-line-subtle bg-white p-4">
+        <Text className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-brand-petrol">Cycle d’une mission</Text>
+        <View className="mt-3 flex-row items-center justify-between">
+          {[
+            { number: '01', label: 'Affectation' },
+            { number: '02', label: 'Acceptation' },
+            { number: '03', label: 'Intervention' },
+            { number: '04', label: 'Compte rendu' },
+          ].map((item, index) => (
+            <View key={item.number} className="min-w-0 flex-1 items-center px-0.5">
+              <View className={index === 0 ? 'h-7 w-7 items-center justify-center rounded-full bg-brand-forest' : 'h-7 w-7 items-center justify-center rounded-full bg-brand-mist'}>
+                <Text className={index === 0 ? 'text-[9px] font-extrabold text-white' : 'text-[9px] font-extrabold text-brand-forest'}>{item.number}</Text>
+              </View>
+              <Text className="mt-2 text-center text-[9px] font-bold text-ink-500">{item.label}</Text>
+            </View>
+          ))}
+        </View>
+        <Text className="mt-3 text-[10px] leading-4 text-ink-400">La vérification de la clôture est réalisée séparément par le rôle habilité.</Text>
       </View>
 
       <View className="mt-8 flex-row items-end justify-between">
