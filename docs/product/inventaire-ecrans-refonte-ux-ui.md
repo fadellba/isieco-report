@@ -4,13 +4,15 @@
 
 La refonte UX/UI couvre l'application entière, du premier écran de lancement à la dernière action du parcours, sur Web et Mobile. Aucun écran existant ne doit être écarté parce qu'il est secondaire, rarement utilisé ou réservé à un rôle spécifique.
 
-L'inventaire ci-dessous sert de registre de couverture. Une ligne n'est considérée comme terminée qu'après refonte visuelle, vérification des états et validation des interactions sans régression métier. Les écrans qui n'existent pas encore (ex. récupération de mot de passe) sont identifiés comme fonctionnalité à cadrer, et non présentés comme déjà disponibles.
+L'inventaire ci-dessous sert de registre de couverture. Une ligne n'est considérée comme terminée qu'après refonte visuelle, vérification des états et validation des interactions sans régression métier. Les nouveaux parcours ajoutés pendant cette tranche sont répertoriés ci-dessous ; leur activation en production dépend encore des redirections autorisées dans Supabase.
 
 ## Web — authentification et accès public
 
 | Route | Écran | Couverture attendue |
 |---|---|---|
 | `/connexion` | Connexion | Identité, formulaire, erreurs, chargement, responsive, navigation clavier |
+| `/mot-de-passe-oublie` | Demande de réinitialisation | Message non révélateur de l’existence du compte, état d’envoi, lien e-mail | 
+| `/reinitialiser-mot-de-passe` | Définition du nouveau mot de passe | Validation du lien, expiration, confirmation, fermeture de session |
 | `/telecharger` | Téléchargement mobile | Version disponible/indisponible, vérification de l'APK, retour |
 | `/acces-refuse` | Accès refusé | Explication de l'habilitation, retour cohérent |
 | `*` | Route Web inconnue | Page 404 explicite, retour à l'accueil, lien vérifié |
@@ -38,6 +40,8 @@ L'inventaire ci-dessous sert de registre de couverture. Une ligne n'est considé
 | `/` | Routage initial | Chargement, erreur de session, orientation selon rôles |
 | `/onboarding` | Introduction | Progression, illustration, passage, sortie |
 | `/sign-in` | Connexion | Champs accessibles, visibilité des erreurs, chargement |
+| `/forgot-password` | Demande de réinitialisation | Message neutre, clavier, retour e-mail et navigation |
+| `/reset-password` | Définition du nouveau mot de passe | Deep link, échange de code/tokens, expiration et validation |
 | `/sign-up` | Création de compte citoyen | Validation, confirmation e-mail, erreurs |
 | `/choose-space` | Choix d'espace | Présentation des rôles et navigation |
 | `/no-mobile-access` | Accès mobile indisponible | Explication, renouvellement des accès, déconnexion |
@@ -60,7 +64,7 @@ L'inventaire ci-dessous sert de registre de couverture. Une ligne n'est considé
 | `/(agent)/home` | Accueil agent | Priorités, synthèse, accès missions |
 | `/(agent)/missions` | File des missions | Équipe, filtres, compteurs, prochaine action |
 | `/(agent)/missions/[id]` | Fiche mission | Affectation, intervention, preuves, compte rendu, vérification |
-| `/(agent)/map` | Vue géolocalisée | Filtres, coordonnées réelles, itinéraires, missions non localisées |
+| `/(agent)/map` | Carte interactive | Marqueurs sur coordonnées réelles, sélection, détails, filtres, itinéraires et missions non localisées |
 | `/(agent)/profile` | Profil agent | Identité, habilitations, équipe, déconnexion |
 
 ## État d'avancement des premières reprises structurelles
@@ -115,6 +119,6 @@ Composants à normaliser et réutiliser :
 
 ## Écrans ou fonctionnalités absents à ne pas confondre avec une refonte
 
-- **Réinitialisation du mot de passe** : aucune route Web ou Mobile dédiée n'existe dans le routeur actuel. Ce parcours (demande d'e-mail, lien profond, définition d'un nouveau mot de passe et états expirés) doit être cadré avec la configuration des redirections Supabase avant d'être ajouté. Il ne doit pas être maquillé en lien non fonctionnel.
+- **Réinitialisation du mot de passe** : les routes Web et Mobile existent désormais. La recette réelle dépend encore de l’ajout des URL de retour Web et du schéma `isiecoreport://**` dans les redirections autorisées de Supabase Auth, puis de tests avec un compte de test.
 - **`apps/web/src/pages/AdminHomePage.tsx`** : composant historique présent dans le code mais non référencé par le routeur actuel. Il ne constitue pas une route active ; son sort sera décidé pendant le nettoyage final pour éviter de conserver deux parcours d'accueil concurrents.
 - **Recette visuelle réelle** : la validation TypeScript et les builds ne remplacent pas la vérification des routes dans un navigateur et sur appareils Android/iOS.
