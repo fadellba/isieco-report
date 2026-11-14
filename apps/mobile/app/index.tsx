@@ -5,7 +5,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { useMobileAuth } from '../src/features/auth/mobile-auth-context';
 import { LoadingScreen } from '../src/ui/LoadingScreen';
 
-const ONBOARDING_KEY = 'isieco.onboarding.v1.complete';
+const ONBOARDING_KEY = 'isieco.onboarding.v2.complete';
 
 export default function IndexScreen() {
   const router = useRouter();
