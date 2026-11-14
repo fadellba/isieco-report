@@ -125,8 +125,9 @@ export default function AgentMissionsScreen() {
     })
     .sort((a, b) => {
       const rank: Record<string, number> = { TO_ACCEPT: 0, RESTART: 1, IN_PROGRESS: 2, TO_START: 3, TO_VERIFY: 4, RESOLVED: 5, REFUSED: 6 };
-      return rank[missionFilter(a, latestByAssignment.get(a.idAffectation))]
-        - rank[missionFilter(b, latestByAssignment.get(b.idAffectation))];
+      const rankA = rank[missionFilter(a, latestByAssignment.get(a.idAffectation))] ?? 99;
+      const rankB = rank[missionFilter(b, latestByAssignment.get(b.idAffectation))] ?? 99;
+      return rankA - rankB;
     }), [assignments, filter, latestByAssignment]);
 
   const selectedTeam = teams.find((team) => team.idEquipe === selectedTeamId) ?? null;
