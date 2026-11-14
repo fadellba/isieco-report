@@ -68,10 +68,10 @@ function newIdempotencyKey(): string {
   return crypto.randomUUID();
 }
 
-const inputClass = 'mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-eco-500 focus:ring-2 focus:ring-eco-100';
-const labelClass = 'block text-xs font-semibold text-slate-600';
-const buttonClass = 'rounded-lg bg-eco-700 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-eco-600 disabled:cursor-not-allowed disabled:opacity-50';
-const secondaryClass = 'rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50';
+const inputClass = 'mt-1 w-full rounded-lg border border-line-strong bg-white px-3 py-2 text-sm text-ink-800 outline-none transition focus:border-eco-500 focus:ring-2 focus:ring-eco-100';
+const labelClass = 'block text-xs font-semibold text-ink-500';
+const buttonClass = 'rounded-lg bg-brand-forest px-4 py-2.5 text-xs font-bold text-white transition hover:bg-eco-600 disabled:cursor-not-allowed disabled:opacity-50';
+const secondaryClass = 'rounded-lg border border-line-strong bg-white px-3 py-2 text-xs font-semibold text-ink-500 transition hover:bg-surface-base disabled:cursor-not-allowed disabled:opacity-50';
 
 function assignmentStateTone(status: string): StatusTone {
   if (status === 'TERMINEE') return 'success';
@@ -268,21 +268,21 @@ export function AssignmentsPage() {
   return (
     <div className="space-y-6">
       <header>
-        <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-eco-700">Pilotage opérationnel</p>
-        <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">
+        <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-brand-forest">Pilotage opérationnel</p>
+        <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-ink-900">
           {dossierFilter ? 'Affectations du dossier' : 'Affectations'}
         </h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-500">
           {dossierFilter
             ? 'Cette vue est limitée au dossier sélectionné : historique des missions et contenus encore disponibles pour affectation.'
             : 'Affectez chaque catégorie d’un dossier à une équipe compétente. L’API revalide l’éligibilité et protège les opérations contre les doublons et les décisions concurrentes.'}
         </p>
         {dossierFilter ? (
           <div className="mt-3 flex flex-wrap items-center gap-3">
-            <span className="rounded-full bg-eco-50 px-3 py-1 text-xs font-bold text-eco-800">
+            <span className="rounded-full bg-surface-base px-3 py-1 text-xs font-bold text-ink-800">
               Filtre dossier actif
             </span>
-            <Link to="/affectations" className="text-xs font-semibold text-eco-700 hover:underline">
+            <Link to="/affectations" className="text-xs font-semibold text-brand-forest hover:underline">
               Afficher toutes les affectations
             </Link>
           </div>
@@ -292,13 +292,13 @@ export function AssignmentsPage() {
       {notice ? <FeedbackBanner tone="success">{notice}</FeedbackBanner> : null}
       {error ? <FeedbackBanner tone="error">{error}</FeedbackBanner> : null}
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5">
+      <section className="rounded-2xl border border-line-strong bg-white p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="font-bold text-slate-900">Nouvelle affectation</h2>
-            <p className="mt-1 text-xs leading-5 text-slate-500">Seuls les contenus actifs en attente, non déjà affectés et rattachés à un dossier ouvert sont proposés.</p>
+            <h2 className="font-bold text-ink-900">Nouvelle affectation</h2>
+            <p className="mt-1 text-xs leading-5 text-ink-500">Seuls les contenus actifs en attente, non déjà affectés et rattachés à un dossier ouvert sont proposés.</p>
           </div>
-          <span className="rounded-full bg-eco-50 px-3 py-1 text-xs font-bold text-eco-800">{pendingContents.length} contenu(s) disponible(s)</span>
+          <span className="rounded-full bg-surface-base px-3 py-1 text-xs font-bold text-ink-800">{pendingContents.length} contenu(s) disponible(s)</span>
         </div>
         <div className="mt-4 grid gap-3 lg:grid-cols-2">
           <label className={labelClass}>Contenu du dossier
@@ -332,28 +332,28 @@ export function AssignmentsPage() {
           ? <p className="mt-3 text-xs text-amber-700">Aucune équipe active ne possède de compétence active pour ce type de déchet. La capacité et le calendrier des équipes ne sont pas encore modélisés.</p>
           : null}
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-[11px] text-slate-400">Une clé idempotente est conservée pour éviter les doublons lors d’une nouvelle tentative.</p>
+          <p className="text-[11px] text-ink-400">Une clé idempotente est conservée pour éviter les doublons lors d’une nouvelle tentative.</p>
           <button type="button" onClick={() => void createAssignment()} disabled={!selectedContent || !selectedTeamId || busyKey === 'create'} className={buttonClass}>
             {busyKey === 'create' ? 'Enregistrement…' : 'Créer l’affectation'}
           </button>
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
-          <div><h2 className="font-bold text-slate-900">Historique des affectations</h2><p className="mt-1 text-xs text-slate-500">{result ? result.total + ' affectation(s)' : 'Chargement…'}</p></div>
+      <section className="overflow-hidden rounded-2xl border border-line-strong bg-white">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-subtle px-5 py-4">
+          <div><h2 className="font-bold text-ink-900">Historique des affectations</h2><p className="mt-1 text-xs text-ink-500">{result ? result.total + ' affectation(s)' : 'Chargement…'}</p></div>
           <div className="flex flex-wrap gap-2">
-            <select value={etatAffectation} onChange={(event) => { setPage(1); setEtatAffectation(event.target.value); }} aria-label="Filtrer par état de l’affectation" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+            <select value={etatAffectation} onChange={(event) => { setPage(1); setEtatAffectation(event.target.value); }} aria-label="Filtrer par état de l’affectation" className="rounded-lg border border-line-strong bg-white px-3 py-2 text-xs text-ink-500">
               <option value="">Tous les états</option><option value="ACTIVE">Active</option><option value="TERMINEE">Terminée</option><option value="ANNULEE">Annulée</option>
             </select>
-            <select value={decisionEquipe} onChange={(event) => { setPage(1); setDecisionEquipe(event.target.value); }} aria-label="Filtrer par décision de l’équipe" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+            <select value={decisionEquipe} onChange={(event) => { setPage(1); setDecisionEquipe(event.target.value); }} aria-label="Filtrer par décision de l’équipe" className="rounded-lg border border-line-strong bg-white px-3 py-2 text-xs text-ink-500">
               <option value="">Toutes les décisions</option><option value="EN_ATTENTE">En attente</option><option value="ACCEPTEE">Acceptée</option><option value="REFUSEE">Refusée</option>
             </select>
             <button type="button" onClick={() => void loadAssignments()} disabled={loading} className={secondaryClass}>Actualiser</button>
           </div>
         </div>
-        {loading && !result ? <p className="p-6 text-sm text-slate-500">Chargement…</p> : null}
-        {!loading && result?.items.length === 0 ? <p className="p-6 text-sm text-slate-500">Aucune affectation pour ces filtres.</p> : null}
+        {loading && !result ? <p className="p-6 text-sm text-ink-500">Chargement…</p> : null}
+        {!loading && result?.items.length === 0 ? <p className="p-6 text-sm text-ink-500">Aucune affectation pour ces filtres.</p> : null}
         <div className="divide-y divide-slate-100">
           {result?.items.map((item) => {
             const canReassign = item.decisionEquipe === 'REFUSEE' || (item.dateFinAffectation === null && item.decisionEquipe === 'EN_ATTENTE');
@@ -362,9 +362,9 @@ export function AssignmentsPage() {
               <article key={item.idAffectation} className="workflow-list-item space-y-3 p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <h3 className="font-bold text-slate-900">{item.contenuDossier.dossier.referenceDossier} · {item.contenuDossier.typeDechet.libelle}</h3>
-                    <p className="mt-1 text-xs text-slate-500">{item.equipe.nomEquipe} · affectée le {dateLabel(item.dateHeureAffectation)}</p>
-                    <p className="mt-1 text-xs text-slate-500">{item.motif || 'Aucun motif initial.'}</p>
+                    <h3 className="font-bold text-ink-900">{item.contenuDossier.dossier.referenceDossier} · {item.contenuDossier.typeDechet.libelle}</h3>
+                    <p className="mt-1 text-xs text-ink-500">{item.equipe.nomEquipe} · affectée le {dateLabel(item.dateHeureAffectation)}</p>
+                    <p className="mt-1 text-xs text-ink-500">{item.motif || 'Aucun motif initial.'}</p>
                     {item.decisionEquipe === 'REFUSEE' && item.motifRefusEquipe ? <p className="mt-1 text-xs text-red-700">Refus : {item.motifRefusEquipe}</p> : null}
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -378,7 +378,7 @@ export function AssignmentsPage() {
                       {reassignOpen[item.idAffectation] ? 'Masquer la réaffectation' : 'Réaffecter à une autre équipe'}
                     </button>
                     {reassignOpen[item.idAffectation] ? (
-                      <div className="mt-3 grid gap-3 rounded-xl bg-slate-50 p-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
+                      <div className="mt-3 grid gap-3 rounded-xl bg-surface-base p-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
                         <label className={labelClass}>Nouvelle équipe
                           <select value={reassignTeam[item.idAffectation] ?? ''} onChange={(event) => setReassignTeam((current) => ({ ...current, [item.idAffectation]: event.target.value }))} className={inputClass}>
                             <option value="">Sélectionner</option>
@@ -397,8 +397,8 @@ export function AssignmentsPage() {
             );
           })}
         </div>
-        <div className="flex items-center justify-between border-t border-slate-100 px-5 py-4">
-          <p className="text-xs text-slate-500">Page {page} sur {totalPages}</p>
+        <div className="flex items-center justify-between border-t border-line-subtle px-5 py-4">
+          <p className="text-xs text-ink-500">Page {page} sur {totalPages}</p>
           <div className="flex gap-2">
             <button type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={page <= 1 || loading} className={secondaryClass}>Précédent</button>
             <button type="button" onClick={() => setPage((value) => Math.min(totalPages, value + 1))} disabled={page >= totalPages || loading} className={secondaryClass}>Suivant</button>
