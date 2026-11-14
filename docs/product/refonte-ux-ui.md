@@ -189,13 +189,24 @@ La branche `feat/isieco-ux-ui-foundation` porte une première livraison progress
 
 ### Points explicitement non terminés
 
-- Le fichier graphique natif `apps/mobile/assets/splash.png` n'a pas encore été redessiné. Seuls sa configuration et les couleurs d'environnement ont été harmonisés. Le visuel final doit être conçu pour les ratios Android/iOS puis testé sur appareils réels.
+- Le symbole natif ISIECO a été redessiné pour les formats d’application ; le contrôle sur lanceurs Android/iOS et sur écran de démarrage physique reste requis.
 - Le logo mobile embarqué et les déclinaisons d'icônes d'application doivent encore être validés comme un ensemble de marque complet.
 - Les modules Web de comptes, référentiels et vérification ont maintenant reçu une première reprise structurelle et fonctionnelle. Comme les autres écrans, ils restent à passer en recette visuelle sur navigateur, avec vérification clavier, tailles d'écran et états d'erreur.
 - La fiche de mission est maintenant séparée de la file de travail. Une prochaine itération pourra encore approfondir le découpage visuel interne entre exécution, preuves et compte rendu, sans modifier le cycle métier.
-- La carte native interactive mobile n’est pas encore intégrée : l’onglet Carte fournit pour l’instant une vue géolocalisée exploitable avec ouverture d’itinéraire, et indique explicitement cette limite.
+- Carte native interactive Mobile : intégration `react-native-maps`, sélection des missions par marqueur, vue du dossier sélectionné, accès à la fiche et à l’itinéraire ; les points non géolocalisés restent hors carte.
 - La carte Web utilise maintenant un regroupement visuel des marqueurs proches ; les règles avancées de densité à l’échelle territoriale et la représentation des secteurs restent à concevoir.
 - Les états hors connexion et les brouillons locaux restent hors de cette livraison.
 - La recette visuelle et l'accessibilité doivent encore être vérifiées sur navigateur, formats mobiles courants et appareils Android/iOS réels. Les vérifications de type et de build ne remplacent pas cette recette.
 
 Cette livraison couvre maintenant une première reprise des routes applicatives Web et Mobile recensées, avec une attention renforcée aux parcours d'administration et de contrôle. Elle ne doit toutefois pas être déclarée définitivement terminée avant la recette visuelle réelle, la validation d'accessibilité, le redessin des assets natifs et le traitement des fonctionnalités identifiées comme absentes.
+
+
+## Tranche complémentaire — récupération de compte et carte native
+
+- Web : routes `/mot-de-passe-oublie` et `/reinitialiser-mot-de-passe`, en conservant Supabase Auth et une réponse d'envoi qui ne révèle pas si l'adresse est enregistrée.
+- Mobile : routes `/forgot-password` et `/reset-password`, avec traitement des retours de lien profond (PKCE, token hash et session à jetons).
+- Mot de passe : confirmation obligatoire, minimum client de 12 caractères, fermeture de la session de récupération après mise à jour.
+- Configuration Supabase à faire avant recette : autoriser l'URL Web exacte `https://<domaine-web>/reinitialiser-mot-de-passe` et le schéma mobile `isiecoreport://**` dans Auth > URL Configuration > Redirect URLs.
+- Carte Mobile agent : les coordonnées réelles alimentent les marqueurs ; aucune position fictive n'est ajoutée. Les missions dépourvues de coordonnées restent accessibles dans leur section dédiée.
+- Configuration Android : fournir `GOOGLE_MAPS_API_KEY` dans l'environnement EAS/build. La clé n'est pas stockée dans le dépôt.
+- Assets : icône carrée opaque 1024×1024 et visuel transparent 1024×1024 prévu pour l'icône adaptative et le splash. La recette d'affichage doit être faite sur les builds natifs Android/iOS.
