@@ -154,6 +154,8 @@ La branche `feat/isieco-ux-ui-foundation` porte une première livraison progress
 - Navigation imbriquée liste → détail, avec conservation du contexte d'équipe et retour à la file.
 - Files Web de qualification, affectation et vérification : états sémantiques, messages cohérents et libellés de filtres compréhensibles.
 - Liste Web des dossiers : statuts et priorités présentés avec une signification visuelle stable.
+- Carte opérationnelle Web : regroupement des marqueurs proches, zoom progressif sur les groupes et sélection d’un élément individuel lorsque plusieurs dossiers partagent le même emplacement.
+- Onglet Carte mobile agent : affectations réelles regroupées par équipe, filtrage par état, accès au détail et ouverture de l’itinéraire ; les missions sans coordonnées sont isolées au lieu de recevoir une position fictive.
 
 ### Points explicitement non terminés
 
@@ -161,7 +163,8 @@ La branche `feat/isieco-ux-ui-foundation` porte une première livraison progress
 - Le logo mobile embarqué et les déclinaisons d'icônes d'application doivent encore être validés comme un ensemble de marque complet.
 - Les écrans de détail/qualification, création et réaffectation Web nécessitent encore un passage UI complet.
 - La fiche de mission est maintenant séparée de la file de travail. Une prochaine itération pourra encore approfondir le découpage visuel interne entre exécution, preuves et compte rendu, sans modifier le cycle métier.
-- Le composant de carte Web reste à approfondir : regroupement de marqueurs, légende métier, filtres, densité et représentation des secteurs.
+- La carte native interactive mobile n’est pas encore intégrée : l’onglet Carte fournit pour l’instant une vue géolocalisée exploitable avec ouverture d’itinéraire, et indique explicitement cette limite.
+- La carte Web utilise maintenant un regroupement visuel des marqueurs proches ; les règles avancées de densité à l’échelle territoriale et la représentation des secteurs restent à concevoir.
 - Les états hors connexion et les brouillons locaux restent hors de cette livraison.
 - L'accessibilité et le rendu doivent encore être vérifiés sur navigateur, formats mobiles courants et appareils Android/iOS réels.
 
