@@ -13,6 +13,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
   return {
     ...config,
+    name: config.name ?? 'ISIECO Report',
+    slug: config.slug ?? 'isieco-report',
     plugins,
   };
 };
