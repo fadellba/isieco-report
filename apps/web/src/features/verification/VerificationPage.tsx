@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../app/auth-context';
 import { api } from '../../lib/api';
+import { FeedbackBanner, StatusBadge, type StatusTone } from '../../components/StatusBadge';
 
 interface VerificationPhoto {
   idPhotoIntervention: string;
@@ -82,6 +83,18 @@ const inputClass = 'mt-1 w-full rounded-lg border border-slate-200 bg-white px-3
 const buttonClass = 'rounded-lg bg-eco-700 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-eco-600 disabled:cursor-not-allowed disabled:opacity-50';
 const secondaryClass = 'rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50';
 const dangerClass = 'rounded-lg border border-amber-200 bg-white px-4 py-2.5 text-xs font-bold text-amber-800 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50';
+
+function interventionResultLabel(result: VerificationItem['intervention']['resultatIntervention']): string {
+  if (result === 'TERMINEE') return 'Terminée';
+  if (result === 'PARTIELLE') return 'Partielle';
+  return 'Impossible';
+}
+
+function interventionResultTone(result: VerificationItem['intervention']['resultatIntervention']): StatusTone {
+  if (result === 'TERMINEE') return 'success';
+  if (result === 'PARTIELLE') return 'warning';
+  return 'danger';
+}
 
 export function VerificationPage() {
   const { profile } = useAuth();
@@ -227,10 +240,10 @@ export function VerificationPage() {
         </p>
       </header>
 
-      {notice ? <div role="status" className="rounded-xl border border-eco-200 bg-eco-50 px-4 py-3 text-sm text-eco-900">{notice}</div> : null}
-      {error ? <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div> : null}
+      {notice ? <FeedbackBanner tone="success">{notice}</FeedbackBanner> : null}
+      {error ? <FeedbackBanner tone="error">{error}</FeedbackBanner> : null}
 
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <section className="verification-queue overflow-hidden rounded-2xl border border-slate-200 bg-white">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
           <div>
             <h2 className="font-bold text-slate-900">Comptes rendus à vérifier</h2>
@@ -255,7 +268,7 @@ export function VerificationPage() {
             const canValidate = item.intervention.resultatIntervention === 'TERMINEE' && !ownIntervention;
 
             return (
-              <article key={id} className="space-y-4 p-5">
+              <article key={id} className="verification-queue-item space-y-4 p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <h3 className="font-bold text-slate-900">
@@ -272,12 +285,14 @@ export function VerificationPage() {
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-700">
-                      {item.intervention.resultatIntervention}
-                    </span>
-                    <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-800">
-                      {item.affectation.contenuDossier.etatPriseEnCharge}
-                    </span>
+                    <StatusBadge
+                      label={interventionResultLabel(item.intervention.resultatIntervention)}
+                      tone={interventionResultTone(item.intervention.resultatIntervention)}
+                    />
+                    <StatusBadge
+                      label={item.affectation.contenuDossier.etatPriseEnCharge.replaceAll('_', ' ').toLowerCase()}
+                      tone="neutral"
+                    />
                   </div>
                 </div>
 
@@ -285,7 +300,7 @@ export function VerificationPage() {
                   <p className="text-xs text-slate-500">
                     {item.intervention.photos.length} preuve(s) photo · état du dossier : {item.affectation.contenuDossier.statutDossier}
                   </p>
-                  <button type="button" onClick={() => void openDetails(queueItem)} className={secondaryClass}>
+                  <button type="button" aria-expanded={isOpen} onClick={() => void openDetails(queueItem)} className={secondaryClass}>
                     {isOpen ? 'Masquer le détail' : 'Examiner les preuves et décider'}
                   </button>
                 </div>
