@@ -165,17 +165,28 @@ La branche `feat/isieco-ux-ui-foundation` porte une première livraison progress
 - Files Web de qualification, affectation et vérification : états sémantiques, messages cohérents et libellés de filtres compréhensibles.
 - Liste Web des dossiers : statuts et priorités présentés avec une signification visuelle stable.
 - Carte opérationnelle Web : regroupement des marqueurs proches, zoom progressif sur les groupes et sélection d’un élément individuel lorsque plusieurs dossiers partagent le même emplacement.
+- Connexion Web repensée avec identité produit, champs accessibles, visibilité contrôlée du mot de passe et retours d'erreur explicites.
+- Cadre d'authentification mobile partagé entre connexion, création de compte, choix d'espace et accès indisponible.
+- Connexion et création de compte citoyen Mobile harmonisées, avec validation de saisie, visibilité du mot de passe et messages de confirmation.
+- États de vérification de session Web/Mobile alignés sur le système visuel.
+- Écrans Web et Mobile d'URL inconnue explicites au lieu d'une redirection silencieuse.
+- Page publique de téléchargement mobile et page d'accès refusé Web repensées.
+- Profil mobile commun citoyen/agent structuré autour de l'identité, des habilitations, du changement d'espace et de la déconnexion.
+- Liste et détail Mobile des signalements migrés vers les tokens communs pour poursuivre la cohérence du parcours citoyen.
+- Centre de navigation Web : contexte du module dans l'en-tête et déconnexion disponible également sur les petits écrans.
+- Pages Web de comptes, qualification, dossiers, affectation, interventions, référentiels et vérification migrées vers les tokens de marque partagés ; champs et tableaux harmonisés.
+- Inventaire complet des routes Web/Mobile, avec écrans de repli et composants transverses, maintenu dans `docs/product/inventaire-ecrans-refonte-ux-ui.md`.
 - Onglet Carte mobile agent : affectations réelles regroupées par équipe, filtrage par état, accès au détail et ouverture de l’itinéraire ; les missions sans coordonnées sont isolées au lieu de recevoir une position fictive.
 
 ### Points explicitement non terminés
 
 - Le fichier graphique natif `apps/mobile/assets/splash.png` n'a pas encore été redessiné. Seuls sa configuration et les couleurs d'environnement ont été harmonisés. Le visuel final doit être conçu pour les ratios Android/iOS puis testé sur appareils réels.
 - Le logo mobile embarqué et les déclinaisons d'icônes d'application doivent encore être validés comme un ensemble de marque complet.
-- Les écrans de détail/qualification, création et réaffectation Web nécessitent encore un passage UI complet.
+- La refonte écran par écran des modules Web de qualification, dossiers, affectations, interventions, comptes et référentiels reste à poursuivre malgré l'harmonisation initiale des tokens, formulaires et tableaux.
 - La fiche de mission est maintenant séparée de la file de travail. Une prochaine itération pourra encore approfondir le découpage visuel interne entre exécution, preuves et compte rendu, sans modifier le cycle métier.
 - La carte native interactive mobile n’est pas encore intégrée : l’onglet Carte fournit pour l’instant une vue géolocalisée exploitable avec ouverture d’itinéraire, et indique explicitement cette limite.
 - La carte Web utilise maintenant un regroupement visuel des marqueurs proches ; les règles avancées de densité à l’échelle territoriale et la représentation des secteurs restent à concevoir.
 - Les états hors connexion et les brouillons locaux restent hors de cette livraison.
-- L'accessibilité et le rendu doivent encore être vérifiés sur navigateur, formats mobiles courants et appareils Android/iOS réels.
+- La recette visuelle et l'accessibilité doivent encore être vérifiées sur navigateur, formats mobiles courants et appareils Android/iOS réels. Les vérifications de type et de build ne remplacent pas cette recette.
 
 Cette livraison établit une direction de conception et améliore quelques parcours critiques. Elle ne remplace pas une recette UX complète écran par écran.
