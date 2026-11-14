@@ -52,6 +52,10 @@ function isPrismaCode(error: unknown, code: string): boolean {
   return typeof error === 'object' && error !== null && 'code' in error && error.code === code;
 }
 
+function auditDecimal(value: { toString(): string } | number | null | undefined): string | null {
+  return value == null ? null : value.toString();
+}
+
 @Injectable()
 export class CasesService {
   constructor(private readonly prisma: PrismaService) {}
@@ -276,25 +280,33 @@ export class CasesService {
 
   async updatePriority(idDossier: string, dto: UpdateCasePriorityDto, authUserId: string) {
     const actorId = await this.actorId(authUserId);
-    await this.prisma.$transaction(async (tx) => {
-      const updated = await tx.dossierTraitement.updateMany({
-        where: { idDossier, statutDossier: { not: 'CLOTURE' } },
-        data: { priorite: dto.priorite },
-      });
-      if (updated.count !== 1) {
-        const exists = await tx.dossierTraitement.findUnique({ where: { idDossier }, select: { idDossier: true } });
-        if (!exists) throw new NotFoundException('Dossier introuvable.');
-        throw new ConflictException('La priorité d’un dossier clôturé ne peut pas être modifiée.');
-      }
-      await recordBusinessEvent(tx, {
-        actorId,
-        actionCode: 'DOSSIER_PRIORITE_MODIFIEE',
-        entityType: 'DOSSIER',
-        entityId: idDossier,
-        dossierId: idDossier,
-        metadata: { priority: dto.priorite },
-      });
-    });
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        const current = await tx.dossierTraitement.findUnique({
+          where: { idDossier },
+          select: { priorite: true, statutDossier: true },
+        });
+        if (!current) throw new NotFoundException('Dossier introuvable.');
+        if (current.statutDossier === 'CLOTURE') {
+          throw new ConflictException('La priorité d’un dossier clôturé ne peut pas être modifiée.');
+        }
+        const updated = await tx.dossierTraitement.updateMany({
+          where: { idDossier, statutDossier: { not: 'CLOTURE' } },
+          data: { priorite: dto.priorite },
+        });
+        if (updated.count !== 1) throw new ConflictException('Le dossier a été modifié simultanément.');
+        await recordBusinessEvent(tx, {
+          actorId,
+          actionCode: 'DOSSIER_PRIORITE_MODIFIEE',
+          entityType: 'DOSSIER',
+          entityId: idDossier,
+          dossierId: idDossier,
+          metadata: { previousPriority: current.priorite, nextPriority: dto.priorite },
+        });
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    } catch (error) {
+      this.handleWriteConflict(error, 'La priorité du dossier a été modifiée simultanément.');
+    }
     return this.getCase(idDossier);
   }
 
@@ -306,29 +318,69 @@ export class CasesService {
     if (dto.precisionLocalisation != null && dto.latitude == null) {
       throw new BadRequestException('La précision exige des coordonnées.');
     }
-    await this.prisma.$transaction(async (tx) => {
-      const updated = await tx.dossierTraitement.updateMany({
-        where: { idDossier, statutDossier: { not: 'CLOTURE' } },
-        data: {
-          ...(dto.latitude !== undefined ? { latitude: dto.latitude } : {}),
-          ...(dto.longitude !== undefined ? { longitude: dto.longitude } : {}),
-          ...(dto.precisionLocalisation !== undefined ? { precisionLocalisation: dto.precisionLocalisation } : {}),
-          ...(dto.descriptionLocalisation !== undefined ? { descriptionLocalisation: dto.descriptionLocalisation?.trim() || null } : {}),
-        },
-      });
-      if (updated.count !== 1) {
-        const exists = await tx.dossierTraitement.findUnique({ where: { idDossier }, select: { idDossier: true } });
-        if (!exists) throw new NotFoundException('Dossier introuvable.');
-        throw new ConflictException('La localisation d’un dossier clôturé ne peut pas être modifiée.');
-      }
-      await recordBusinessEvent(tx, {
-        actorId,
-        actionCode: 'DOSSIER_LOCALISATION_MODIFIEE',
-        entityType: 'DOSSIER',
-        entityId: idDossier,
-        dossierId: idDossier,
-      });
-    });
+
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        const current = await tx.dossierTraitement.findUnique({
+          where: { idDossier },
+          select: {
+            statutDossier: true,
+            latitude: true,
+            longitude: true,
+            precisionLocalisation: true,
+            descriptionLocalisation: true,
+          },
+        });
+        if (!current) throw new NotFoundException('Dossier introuvable.');
+        if (current.statutDossier === 'CLOTURE') {
+          throw new ConflictException('La localisation d’un dossier clôturé ne peut pas être modifiée.');
+        }
+
+        const nextLatitude = dto.latitude !== undefined ? dto.latitude : current.latitude;
+        const nextLongitude = dto.longitude !== undefined ? dto.longitude : current.longitude;
+        const nextPrecision = dto.latitude === null
+          ? null
+          : dto.precisionLocalisation !== undefined
+            ? dto.precisionLocalisation
+            : current.precisionLocalisation;
+        const nextLocationLabel = dto.descriptionLocalisation !== undefined
+          ? dto.descriptionLocalisation?.trim() || null
+          : current.descriptionLocalisation;
+
+        const updated = await tx.dossierTraitement.updateMany({
+          where: { idDossier, statutDossier: { not: 'CLOTURE' } },
+          data: {
+            ...(dto.latitude !== undefined ? { latitude: dto.latitude } : {}),
+            ...(dto.longitude !== undefined ? { longitude: dto.longitude } : {}),
+            ...(dto.precisionLocalisation !== undefined || dto.latitude === null
+              ? { precisionLocalisation: nextPrecision }
+              : {}),
+            ...(dto.descriptionLocalisation !== undefined ? { descriptionLocalisation: nextLocationLabel } : {}),
+          },
+        });
+        if (updated.count !== 1) throw new ConflictException('Le dossier a été modifié simultanément.');
+
+        await recordBusinessEvent(tx, {
+          actorId,
+          actionCode: 'DOSSIER_LOCALISATION_MODIFIEE',
+          entityType: 'DOSSIER',
+          entityId: idDossier,
+          dossierId: idDossier,
+          metadata: {
+            previousLatitude: auditDecimal(current.latitude),
+            previousLongitude: auditDecimal(current.longitude),
+            previousPrecision: auditDecimal(current.precisionLocalisation),
+            previousLocationLabel: current.descriptionLocalisation,
+            nextLatitude: auditDecimal(nextLatitude),
+            nextLongitude: auditDecimal(nextLongitude),
+            nextPrecision: auditDecimal(nextPrecision),
+            nextLocationLabel,
+          },
+        });
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    } catch (error) {
+      this.handleWriteConflict(error, 'La localisation du dossier a été modifiée simultanément.');
+    }
     return this.getCase(idDossier);
   }
 
