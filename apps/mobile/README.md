@@ -45,6 +45,8 @@ La PR #24 a intégré `/(agent)/missions` :
 - motif obligatoire si le résultat est `PARTIELLE` ou `IMPOSSIBLE` ;
 - démarrage d'une reprise uniquement après une décision de vérification `REPRISE`.
 
+L'onglet `/(agent)/map` propose une vue géolocalisée des affectations des équipes actives : filtre d'équipe et d'état, accès à la fiche mission, ouverture d'un itinéraire et liste séparée des affectations sans coordonnées. Il s'agit d'une vue liste géolocalisée, pas encore d'une carte native interactive ; l'interface l'indique explicitement et ne fabrique aucune coordonnée.
+
 Le formulaire de compte rendu n'est affiché que pour l'agent auteur de l'intervention. L'API recontrôle l'appartenance, l'auteur et les états métier à chaque opération.
 
 Le parcours est intégré dans `main`. Les endpoints réutilisés revérifient côté API le compte actif, l'appartenance, l'auteur et les états métier.
