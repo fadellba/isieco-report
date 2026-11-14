@@ -2,6 +2,7 @@ import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from './auth-context';
 import { navigationItems, type NavigationGroup } from './navigation';
 import { AppIcon } from '../components/AppIcon';
+import { BrandMark } from '../components/BrandMark';
 
 const groups: NavigationGroup[] = ['Opérations', 'Administration'];
 
@@ -27,11 +28,7 @@ export function AppShell() {
     <div className="app-shell">
       <aside className="app-sidebar">
         <Link to="/" className="app-brand" aria-label="ISIECO, accueil du back office">
-          <span className="app-brand__mark">IE</span>
-          <span className="app-brand__copy">
-            <strong>ISIECO</strong>
-            <small>PROPRETÉ URBAINE</small>
-          </span>
+          <BrandMark />
         </Link>
 
         <div className="app-sidebar__context">
@@ -44,7 +41,7 @@ export function AppShell() {
           <NavLink
             to="/"
             end
-            className={({ isActive }) => `app-nav-link ${isActive ? 'is-active' : ''}`}
+            className={({ isActive }) => \`app-nav-link \${isActive ? 'is-active' : ''}\`}
           >
             <span className="app-nav-link__icon"><AppIcon name="overview" /></span>
             <span>Vue d’ensemble</span>
@@ -60,7 +57,7 @@ export function AppShell() {
                   <NavLink
                     key={item.to}
                     to={item.to}
-                    className={({ isActive }) => `app-nav-link ${isActive ? 'is-active' : ''}`}
+                    className={({ isActive }) => \`app-nav-link \${isActive ? 'is-active' : ''}\`}
                     title={item.description}
                   >
                     <span className="app-nav-link__icon"><AppIcon name={item.icon} /></span>
@@ -76,7 +73,7 @@ export function AppShell() {
           <div className="app-user-card">
             <span className="app-user-avatar">{initials}</span>
             <span className="app-user-card__identity">
-              <strong>{profile?.prenom ? `${profile.prenom} ${profile.nom}` : profile?.nom}</strong>
+              <strong>{profile?.prenom ? \`\${profile.prenom} \${profile.nom}\` : profile?.nom}</strong>
               <small>{profile?.email}</small>
             </span>
           </div>
@@ -100,12 +97,12 @@ export function AppShell() {
         </header>
 
         <nav className="app-mobile-nav" aria-label="Navigation des espaces">
-          <NavLink to="/" end className={({ isActive }) => `app-mobile-nav__link ${isActive ? 'is-active' : ''}`}>
+          <NavLink to="/" end className={({ isActive }) => \`app-mobile-nav__link \${isActive ? 'is-active' : ''}\`}>
             <AppIcon name="overview" size={16} />
             <span>Vue d’ensemble</span>
           </NavLink>
           {links.map((item) => (
-            <NavLink key={item.to} to={item.to} className={({ isActive }) => `app-mobile-nav__link ${isActive ? 'is-active' : ''}`}>
+            <NavLink key={item.to} to={item.to} className={({ isActive }) => \`app-mobile-nav__link \${isActive ? 'is-active' : ''}\`}>
               <AppIcon name={item.icon} size={16} />
               <span>{item.label}</span>
             </NavLink>
