@@ -17,13 +17,89 @@ import {
 } from '../../../src/features/interventions/agent-api';
 import { dateLabel } from '../../../src/features/reports/report-format';
 import { captureMobilePhoto, pickMobilePhotos, type PreparedMobilePhoto } from '../../../src/features/media/mobile-media';
+import { StatusBadge, type StatusTone } from '../../../src/ui/StatusBadge';
+import { FeedbackBanner, type FeedbackTone } from '../../../src/ui/FeedbackBanner';
 
-const inputClass = 'mt-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900';
-const buttonClass = 'rounded-xl bg-eco-700 px-4 py-3 disabled:opacity-50';
-const secondaryClass = 'rounded-xl border border-slate-200 bg-white px-4 py-3 disabled:opacity-50';
+const inputClass = 'mt-2 rounded-xl border border-line-strong bg-white px-4 py-3 text-sm text-ink-900';
+const buttonClass = 'rounded-xl bg-brand-forest px-4 py-3 disabled:opacity-50';
+const secondaryClass = 'rounded-xl border border-line-subtle bg-white px-4 py-3 disabled:opacity-50';
 
 function errorMessage(reason: unknown): string {
   return reason instanceof Error ? reason.message : 'Une erreur inattendue est survenue.';
+}
+
+function decisionLabel(decision: string): string {
+  const labels: Record<string, string> = {
+    EN_ATTENTE: 'À accepter',
+    ACCEPTEE: 'Acceptée',
+    REFUSEE: 'Refusée',
+  };
+  return labels[decision] ?? decision.replaceAll('_', ' ').toLowerCase();
+}
+
+function decisionTone(decision: string): StatusTone {
+  if (decision === 'ACCEPTEE') return 'success';
+  if (decision === 'REFUSEE') return 'danger';
+  if (decision === 'EN_ATTENTE') return 'warning';
+  return 'neutral';
+}
+
+function interventionStatus(latest: TeamIntervention | undefined): { label: string; tone: StatusTone } {
+  if (!latest) return { label: 'Prête à démarrer', tone: 'info' };
+  if (latest.statutIntervention === 'EN_COURS') return { label: 'Intervention en cours', tone: 'brand' };
+  if (latest.verification?.etatVerification === 'REPRISE') return { label: 'Reprise demandée', tone: 'warning' };
+  if (latest.verification?.etatVerification === 'VALIDEE') return { label: 'Vérification validée', tone: 'success' };
+  return { label: 'À vérifier', tone: 'info' };
+}
+
+function missionNextStep(
+  assignment: TeamAssignment,
+  latest: TeamIntervention | undefined,
+  isAuthor: boolean,
+): { title: string; message: string; tone: FeedbackTone } | null {
+  if (assignment.decisionEquipe === 'EN_ATTENTE') {
+    return {
+      title: 'Décision attendue',
+      message: 'Acceptez ou refusez cette affectation. Un refus doit être accompagné d’un motif d’au moins 5 caractères.',
+      tone: 'warning',
+    };
+  }
+  if (assignment.decisionEquipe === 'REFUSEE') return null;
+  if (!latest) {
+    return {
+      title: 'Mission prête',
+      message: 'L’affectation est acceptée. Vous pouvez démarrer l’intervention lorsque votre équipe est prête.',
+      tone: 'info',
+    };
+  }
+  if (latest.statutIntervention === 'EN_COURS') {
+    return {
+      title: isAuthor ? 'Compte rendu à transmettre' : 'Intervention en cours',
+      message: isAuthor
+        ? 'Ajoutez des preuves si elles sont utiles, puis transmettez un compte rendu d’au moins 20 caractères. Un motif est requis pour un résultat partiel ou impossible.'
+        : 'Cette intervention a été démarrée par un autre membre de l’équipe. Seul son auteur peut transmettre le compte rendu.',
+      tone: 'info',
+    };
+  }
+  if (latest.verification?.etatVerification === 'REPRISE') {
+    return {
+      title: 'Reprise demandée',
+      message: 'Le vérificateur a demandé une nouvelle intervention. Vous pouvez démarrer la reprise depuis cette affectation.',
+      tone: 'warning',
+    };
+  }
+  if (latest.verification?.etatVerification === 'VALIDEE') {
+    return {
+      title: 'Vérification validée',
+      message: 'Le compte rendu a été validé par un vérificateur indépendant.',
+      tone: 'success',
+    };
+  }
+  return {
+    title: 'Vérification indépendante en attente',
+    message: 'Le compte rendu a été transmis. La résolution doit être examinée par un vérificateur distinct de son auteur.',
+    tone: 'info',
+  };
 }
 
 export default function AgentMissionsScreen() {
@@ -261,8 +337,8 @@ export default function AgentMissionsScreen() {
       <Text className="mt-3 text-3xl font-extrabold text-eco-950">Mes missions</Text>
       <Text className="mt-2 text-sm leading-6 text-slate-600">Les équipes affichées proviennent de vos appartenances actives. L’API contrôle de nouveau les droits à chaque opération.</Text>
 
-      {error ? <Text className="mt-4 rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</Text> : null}
-      {notice ? <Text className="mt-4 rounded-xl bg-eco-100 p-4 text-sm text-eco-900">{notice}</Text> : null}
+      {error ? <View className="mt-4"><FeedbackBanner tone="error" message={error} /></View> : null}
+      {notice ? <View className="mt-4"><FeedbackBanner tone="success" message={notice} /></View> : null}
 
       {loadingTeams ? <View className="mt-8 items-center"><ActivityIndicator color="#166534" /><Text className="mt-3 text-sm text-slate-500">Chargement des équipes…</Text></View> : (
         <>
@@ -307,10 +383,27 @@ export default function AgentMissionsScreen() {
                     );
                     const isAuthor = latest?.renseignePar === profile?.utilisateurId;
                     return (
-                      <View key={assignment.idAffectation} className="rounded-2xl border border-eco-100 bg-white p-5">
-                        <Text className="text-base font-bold text-eco-950">{assignment.contenuDossier.dossier.referenceDossier}</Text>
-                        <Text className="mt-1 text-sm text-slate-700">{assignment.contenuDossier.typeDechet.libelle}</Text>
-                        <Text className="mt-1 text-xs text-slate-500">{assignment.decisionEquipe} · {assignment.etatAffectation}</Text>
+                      <View key={assignment.idAffectation} className="rounded-3xl border border-line-subtle bg-white p-5">
+                        <View className="flex-row flex-wrap items-start justify-between gap-3">
+                          <View className="min-w-0 flex-1">
+                            <Text className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-brand-petrol">DOSSIER</Text>
+                            <Text className="mt-1 text-base font-extrabold text-ink-900">{assignment.contenuDossier.dossier.referenceDossier}</Text>
+                            <Text className="mt-1 text-xs font-medium text-ink-500">{assignment.contenuDossier.typeDechet.libelle}</Text>
+                          </View>
+                          <View className="items-end gap-2">
+                            <StatusBadge label={decisionLabel(assignment.decisionEquipe)} tone={decisionTone(assignment.decisionEquipe)} />
+                            <StatusBadge {...interventionStatus(latest)} />
+                          </View>
+                        </View>
+                        {missionNextStep(assignment, latest, isAuthor) ? (
+                          <View className="mt-4">
+                            <FeedbackBanner
+                              tone={missionNextStep(assignment, latest, isAuthor)!.tone}
+                              title={missionNextStep(assignment, latest, isAuthor)!.title}
+                              message={missionNextStep(assignment, latest, isAuthor)!.message}
+                            />
+                          </View>
+                        ) : null}
                         {assignment.contenuDossier.dossier.descriptionLocalisation ? (
                           <Text className="mt-2 text-xs leading-5 text-slate-600">{assignment.contenuDossier.dossier.descriptionLocalisation}</Text>
                         ) : null}
@@ -353,11 +446,22 @@ export default function AgentMissionsScreen() {
 
                         {latest ? (
                           <View className="mt-4 rounded-xl bg-slate-50 p-4">
-                            <Text className="text-sm font-bold text-slate-800">Dernière intervention</Text>
-                            <Text className="mt-1 text-xs text-slate-500">Démarrée le {dateLabel(latest.dateHeureDebut)}</Text>
+                            <View className="flex-row items-center justify-between gap-3">
+                              <Text className="text-sm font-extrabold text-ink-900">Dernière intervention</Text>
+                              <Text className="text-[10px] font-semibold text-ink-400">{dateLabel(latest.dateHeureDebut)}</Text>
+                            </View>
                             {latest.statutIntervention === 'SOUMISE' ? (
                               <View className="mt-2">
-                                <Text className="text-xs font-semibold text-slate-700">{latest.resultatIntervention} · {verification?.etatVerification === 'REPRISE' ? 'Reprise demandée' : verification?.etatVerification === 'VALIDEE' ? 'Validée' : 'En attente de vérification'}</Text>
+                                <View className="flex-row flex-wrap items-center gap-2">
+                                  <StatusBadge
+                                    label={latest.resultatIntervention === 'TERMINEE' ? 'Résultat : terminée' : latest.resultatIntervention === 'PARTIELLE' ? 'Résultat : partielle' : 'Résultat : impossible'}
+                                    tone={latest.resultatIntervention === 'TERMINEE' ? 'success' : latest.resultatIntervention === 'PARTIELLE' ? 'warning' : 'danger'}
+                                  />
+                                  <StatusBadge
+                                    label={verification?.etatVerification === 'REPRISE' ? 'Reprise demandée' : verification?.etatVerification === 'VALIDEE' ? 'Vérifiée' : 'En attente de vérification'}
+                                    tone={verification?.etatVerification === 'REPRISE' ? 'warning' : verification?.etatVerification === 'VALIDEE' ? 'success' : 'info'}
+                                  />
+                                </View>
                                 {latest.compteRendu ? <Text className="mt-2 text-sm leading-6 text-slate-700">{latest.compteRendu}</Text> : null}
                               </View>
                             ) : null}
