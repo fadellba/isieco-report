@@ -217,8 +217,7 @@ export function OperationalMap({ features, selectedFeatureId, onSelectFeature, o
       return [{ feature, left, top }];
     });
 
-    // Regroup points that would otherwise overlap. The viewport is capped at 200
-    // features, so the simple distance pass remains inexpensive and predictable.
+    // Regroup nearby points at render time so dense locations remain selectable.
     const parents = points.map((_, index) => index);
     const findRoot = (value: number): number => {
       let root = value;
