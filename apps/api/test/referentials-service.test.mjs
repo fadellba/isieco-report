@@ -117,3 +117,25 @@ test('adds an active account to a team without delegation or availability record
   assert.equal(prisma.auditEvents[0].values[1], 'APPARTENANCE_EQUIPE_AJOUTEE');
   assert.equal(prisma.auditEvents[0].values[2], 'APPARTENANCE');
 });
+
+
+test('lists only current memberships of active accounts in team referentials', async () => {
+  let args;
+  const prisma = basePrisma();
+  prisma.equipe = {
+    findMany: async (input) => {
+      args = input;
+      return [];
+    },
+  };
+
+  await new ReferentialsService(prisma).listTeams();
+
+  const where = args.include.appartenances.where;
+  assert.ok(where.dateDebut.lte instanceof Date);
+  assert.deepEqual(where.OR, [
+    { dateFin: null },
+    { dateFin: { gt: where.dateDebut.lte } },
+  ]);
+  assert.deepEqual(where.utilisateur, { etatCompte: 'ACTIF' });
+});
