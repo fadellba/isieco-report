@@ -44,8 +44,10 @@ function decisionTone(decision: string): StatusTone {
   return 'neutral';
 }
 
-function interventionStatus(latest: TeamIntervention | undefined): { label: string; tone: StatusTone } {
-  if (!latest) return { label: 'Prête à démarrer', tone: 'info' };
+function interventionStatus(assignment: TeamAssignment, latest: TeamIntervention | undefined): { label: string; tone: StatusTone } {
+  if (assignment.decisionEquipe === 'EN_ATTENTE') return { label: 'Décision à prendre', tone: 'warning' };
+  if (assignment.decisionEquipe === 'REFUSEE') return { label: 'Affectation refusée', tone: 'danger' };
+  if (!latest) return { label: 'À démarrer', tone: 'info' };
   if (latest.statutIntervention === 'EN_COURS') return { label: 'Intervention en cours', tone: 'brand' };
   if (latest.verification?.etatVerification === 'REPRISE') return { label: 'Reprise demandée', tone: 'warning' };
   if (latest.verification?.etatVerification === 'VALIDEE') return { label: 'Vérification validée', tone: 'success' };
@@ -392,7 +394,7 @@ export default function AgentMissionsScreen() {
                           </View>
                           <View className="items-end gap-2">
                             <StatusBadge label={decisionLabel(assignment.decisionEquipe)} tone={decisionTone(assignment.decisionEquipe)} />
-                            <StatusBadge {...interventionStatus(latest)} />
+                            <StatusBadge {...interventionStatus(assignment, latest)} />
                           </View>
                         </View>
                         {missionNextStep(assignment, latest, isAuthor) ? (
