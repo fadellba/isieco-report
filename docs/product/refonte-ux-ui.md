@@ -175,6 +175,10 @@ La branche `feat/isieco-ux-ui-foundation` porte une première livraison progress
 - Liste et détail Mobile des signalements migrés vers les tokens communs pour poursuivre la cohérence du parcours citoyen.
 - Centre de navigation Web : contexte du module dans l'en-tête et déconnexion disponible également sur les petits écrans.
 - Pages Web de comptes, qualification, dossiers, affectation, interventions, référentiels et vérification migrées vers les tokens de marque partagés ; champs et tableaux harmonisés.
+- File de qualification Web repensée comme espace de travail : synthèse de file, recherche sur la page, statuts lisibles et accès direct à l’examen.
+- Détail qualification Web : contexte, localisation, photos et historique regroupés à gauche ; choix de décision et champs progressifs dans un panneau dédié.
+- Liste des dossiers Web : création clarifiée avec aperçu du signalement source, recherche sur la page, filtre d’état et cartes de suivi.
+- Détail dossier Web : contenus, signalements associés, localisation et priorité hiérarchisés ; paramètres avancés repliés tant qu’ils ne sont pas nécessaires.
 - Inventaire complet des routes Web/Mobile, avec écrans de repli et composants transverses, maintenu dans `docs/product/inventaire-ecrans-refonte-ux-ui.md`.
 - Onglet Carte mobile agent : affectations réelles regroupées par équipe, filtrage par état, accès au détail et ouverture de l’itinéraire ; les missions sans coordonnées sont isolées au lieu de recevoir une position fictive.
 
@@ -182,7 +186,7 @@ La branche `feat/isieco-ux-ui-foundation` porte une première livraison progress
 
 - Le fichier graphique natif `apps/mobile/assets/splash.png` n'a pas encore été redessiné. Seuls sa configuration et les couleurs d'environnement ont été harmonisés. Le visuel final doit être conçu pour les ratios Android/iOS puis testé sur appareils réels.
 - Le logo mobile embarqué et les déclinaisons d'icônes d'application doivent encore être validés comme un ensemble de marque complet.
-- La refonte écran par écran des modules Web de qualification, dossiers, affectations, interventions, comptes et référentiels reste à poursuivre malgré l'harmonisation initiale des tokens, formulaires et tableaux.
+- La refonte écran par écran des modules Web d'affectation, interventions, comptes et référentiels reste à poursuivre malgré l'harmonisation initiale des tokens, formulaires et tableaux. Les écrans de qualification et de dossiers disposent maintenant d'une première reprise structurelle, à compléter par la recette et les itérations visuelles.
 - La fiche de mission est maintenant séparée de la file de travail. Une prochaine itération pourra encore approfondir le découpage visuel interne entre exécution, preuves et compte rendu, sans modifier le cycle métier.
 - La carte native interactive mobile n’est pas encore intégrée : l’onglet Carte fournit pour l’instant une vue géolocalisée exploitable avec ouverture d’itinéraire, et indique explicitement cette limite.
 - La carte Web utilise maintenant un regroupement visuel des marqueurs proches ; les règles avancées de densité à l’échelle territoriale et la représentation des secteurs restent à concevoir.
