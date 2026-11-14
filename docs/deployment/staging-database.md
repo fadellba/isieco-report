@@ -4,6 +4,20 @@
 
 Le projet Supabase de staging est `isieco-report-staging` (`mlhbdautaxufubaybzyt`), région `eu-west-1`. Le 6 novembre 2026, le workflow [#42136250612](https://github.com/fadellba/isieco-report/actions/runs/42136250612) a d'abord appliqué la septième migration `20261105000000_simplified_domain_model` après les six migrations historiques. Les migrations additives suivantes ont ensuite porté l'historique staging à 11 migrations Prisma : création du ledger `audit.evenement_metier`, extension des cibles d'audit, index FK et alignement Prisma. Le registre des livrables du 7 novembre rapporte `prisma migrate status` à jour. Le modèle comprend 18 tables métier dans public, le ledger dans audit et la table de métadonnées `_prisma_migrations`. Le jeu de données de staging reste déclaré jetable.
 
+### État des migrations vérifié le 14 novembre 2026
+
+Le dépôt contient **14 migrations**. Le staging enregistre encore 11 migrations ; les trois migrations suivantes sont présentes dans Git mais restent à appliquer :
+
+- `20261109100000_business_audit_event_order`
+- `20261109110000_backfill_business_audit_event_sequence_order`
+- `20261113215000_command_center_event_notifications`
+
+Le workflow [Staging Forward Deploy #43516567399](https://github.com/fadellba/isieco-report/actions/runs/43516567399) s'est arrêté à `prisma migrate status`, avant Render, readiness et E2E. Aucun déploiement staging sur cette révision et aucune activation du trigger SSE ne doivent être déduits de ce run. L'application des migrations reste une action manuelle via **Staging Database Migrate** sur `main), avec les sélections explicites `APPLY` et `YES`. Ne pas contourner cette porte.
+
+Avant l'application, produire et vérifier une sauvegarde PostgreSQL datée et une sauvegarde distincte des objets Storage, puis restaurer chacune dans une cible isolée. Le workflow de répétition actuel copie la source staging active et mesure un proxy de RTO ; il ne prouve pas la restauration d'un snapshot historique et ne mesure pas le RPO. Cette distinction doit rester explicite dans la décision d'exploitation.
+
+Après validation de la sauvegarde indépendante et approbation de l'opération, exécuter le workflow de migration, confirmer `prisma migrate status` à jour, contrôler RLS/privilèges/triggers, puis relancer le déploiement staging sur la révision exacte et exécuter les smoke tests et E2E. Aucune étape ne doit cibler la production.
+
 Le bucket privé `isieco-private-media` existe déjà, avec limite 10 MiB et types autorisés JPEG, PNG et WebP. Cette configuration Storage est distincte des migrations de la base métier.
 
 ## Pourquoi passer par Prisma Migrate
