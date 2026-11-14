@@ -1,572 +1,210 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useFocusEffect } from 'expo-router';
-import { ActivityIndicator, Image, Linking, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import {
-  getAgentProfile,
-  listMyTeams,
-  listTeamAssignments,
-  listTeamInterventions,
-  respondToAssignment,
-  startIntervention,
-  submitIntervention,
-  uploadInterventionPhoto,
-  type AgentTeam,
-  type MobileAgentProfile,
-  type TeamAssignment,
-  type TeamIntervention,
+  getAgentProfile, listMyTeams, listTeamAssignments, listTeamInterventions,
+  type AgentTeam, type MobileAgentProfile, type TeamAssignment, type TeamIntervention,
 } from '../../../src/features/interventions/agent-api';
 import { dateLabel } from '../../../src/features/reports/report-format';
-import { captureMobilePhoto, pickMobilePhotos, type PreparedMobilePhoto } from '../../../src/features/media/mobile-media';
 import { StatusBadge, type StatusTone } from '../../../src/ui/StatusBadge';
-import { FeedbackBanner, type FeedbackTone } from '../../../src/ui/FeedbackBanner';
+import { FeedbackBanner } from '../../../src/ui/FeedbackBanner';
 
-const inputClass = 'mt-2 rounded-xl border border-line-strong bg-white px-4 py-3 text-sm text-ink-900';
-const buttonClass = 'rounded-xl bg-brand-forest px-4 py-3 disabled:opacity-50';
-const secondaryClass = 'rounded-xl border border-line-subtle bg-white px-4 py-3 disabled:opacity-50';
+type FilterKey = 'ALL' | 'TO_ACCEPT' | 'TO_START' | 'IN_PROGRESS' | 'TO_VERIFY' | 'RESTART' | 'RESOLVED';
+const filters: Array<{ key: FilterKey; label: string }> = [
+  { key: 'ALL', label: 'Toutes' }, { key: 'TO_ACCEPT', label: 'À accepter' },
+  { key: 'TO_START', label: 'À démarrer' }, { key: 'IN_PROGRESS', label: 'En cours' },
+  { key: 'TO_VERIFY', label: 'À vérifier' }, { key: 'RESTART', label: 'Reprises' },
+  { key: 'RESOLVED', label: 'Validées' },
+];
 
-function errorMessage(reason: unknown): string {
-  return reason instanceof Error ? reason.message : 'Une erreur inattendue est survenue.';
+function latestInterventions(items: TeamIntervention[]): Map<string, TeamIntervention> {
+  const latest = new Map<string, TeamIntervention>();
+  for (const item of items) {
+    const current = latest.get(item.idAffectation);
+    if (!current || new Date(item.dateHeureDebut ?? 0).getTime() > new Date(current.dateHeureDebut ?? 0).getTime()) {
+      latest.set(item.idAffectation, item);
+    }
+  }
+  return latest;
 }
 
-function decisionLabel(decision: string): string {
+function missionFilter(assignment: TeamAssignment, latest: TeamIntervention | undefined): FilterKey | 'REFUSED' {
+  if (assignment.decisionEquipe === 'EN_ATTENTE') return 'TO_ACCEPT';
+  if (assignment.decisionEquipe === 'REFUSEE') return 'REFUSED';
+  if (!latest) return 'TO_START';
+  if (latest.statutIntervention === 'EN_COURS') return 'IN_PROGRESS';
+  if (latest.verification?.etatVerification === 'REPRISE') return 'RESTART';
+  if (latest.verification?.etatVerification === 'VALIDEE') return 'RESOLVED';
+  return 'TO_VERIFY';
+}
+
+function missionStatus(assignment: TeamAssignment, latest: TeamIntervention | undefined): { label: string; tone: StatusTone } {
+  const state = missionFilter(assignment, latest);
   const labels: Record<string, string> = {
-    EN_ATTENTE: 'À accepter',
-    ACCEPTEE: 'Acceptée',
-    REFUSEE: 'Refusée',
+    TO_ACCEPT: 'À accepter', REFUSED: 'Refusée', TO_START: 'À démarrer',
+    IN_PROGRESS: 'Intervention en cours', TO_VERIFY: 'À vérifier',
+    RESTART: 'Reprise demandée', RESOLVED: 'Vérification validée',
   };
-  return labels[decision] ?? decision.replaceAll('_', ' ').toLowerCase();
-}
-
-function decisionTone(decision: string): StatusTone {
-  if (decision === 'ACCEPTEE') return 'success';
-  if (decision === 'REFUSEE') return 'danger';
-  if (decision === 'EN_ATTENTE') return 'warning';
-  return 'neutral';
-}
-
-function interventionStatus(assignment: TeamAssignment, latest: TeamIntervention | undefined): { label: string; tone: StatusTone } {
-  if (assignment.decisionEquipe === 'EN_ATTENTE') return { label: 'Décision à prendre', tone: 'warning' };
-  if (assignment.decisionEquipe === 'REFUSEE') return { label: 'Affectation refusée', tone: 'danger' };
-  if (!latest) return { label: 'À démarrer', tone: 'info' };
-  if (latest.statutIntervention === 'EN_COURS') return { label: 'Intervention en cours', tone: 'brand' };
-  if (latest.verification?.etatVerification === 'REPRISE') return { label: 'Reprise demandée', tone: 'warning' };
-  if (latest.verification?.etatVerification === 'VALIDEE') return { label: 'Vérification validée', tone: 'success' };
-  return { label: 'À vérifier', tone: 'info' };
-}
-
-function missionNextStep(
-  assignment: TeamAssignment,
-  latest: TeamIntervention | undefined,
-  isAuthor: boolean,
-): { title: string; message: string; tone: FeedbackTone } | null {
-  if (assignment.decisionEquipe === 'EN_ATTENTE') {
-    return {
-      title: 'Décision attendue',
-      message: 'Acceptez ou refusez cette affectation. Un refus doit être accompagné d’un motif d’au moins 5 caractères.',
-      tone: 'warning',
-    };
-  }
-  if (assignment.decisionEquipe === 'REFUSEE') return null;
-  if (!latest) {
-    return {
-      title: 'Mission prête',
-      message: 'L’affectation est acceptée. Vous pouvez démarrer l’intervention lorsque votre équipe est prête.',
-      tone: 'info',
-    };
-  }
-  if (latest.statutIntervention === 'EN_COURS') {
-    return {
-      title: isAuthor ? 'Compte rendu à transmettre' : 'Intervention en cours',
-      message: isAuthor
-        ? 'Ajoutez des preuves si elles sont utiles, puis transmettez un compte rendu d’au moins 20 caractères. Un motif est requis pour un résultat partiel ou impossible.'
-        : 'Cette intervention a été démarrée par un autre membre de l’équipe. Seul son auteur peut transmettre le compte rendu.',
-      tone: 'info',
-    };
-  }
-  if (latest.verification?.etatVerification === 'REPRISE') {
-    return {
-      title: 'Reprise demandée',
-      message: 'Le vérificateur a demandé une nouvelle intervention. Vous pouvez démarrer la reprise depuis cette affectation.',
-      tone: 'warning',
-    };
-  }
-  if (latest.verification?.etatVerification === 'VALIDEE') {
-    return {
-      title: 'Vérification validée',
-      message: 'Le compte rendu a été validé par un vérificateur indépendant.',
-      tone: 'success',
-    };
-  }
-  return {
-    title: 'Vérification indépendante en attente',
-    message: 'Le compte rendu a été transmis. La résolution doit être examinée par un vérificateur distinct de son auteur.',
-    tone: 'info',
+  const tones: Record<string, StatusTone> = {
+    TO_ACCEPT: 'warning', REFUSED: 'danger', TO_START: 'info',
+    IN_PROGRESS: 'brand', TO_VERIFY: 'info', RESTART: 'warning', RESOLVED: 'success',
   };
+  return { label: labels[state], tone: tones[state] };
+}
+
+function nextAction(assignment: TeamAssignment, latest: TeamIntervention | undefined): string {
+  const state = missionFilter(assignment, latest);
+  const labels: Record<string, string> = {
+    TO_ACCEPT: 'Répondre à cette affectation', REFUSED: 'Aucune action attendue',
+    TO_START: 'Démarrer l’intervention', IN_PROGRESS: 'Consulter l’intervention en cours',
+    TO_VERIFY: 'Consulter le compte rendu transmis', RESTART: 'Démarrer la reprise demandée',
+    RESOLVED: 'Consulter la résolution validée',
+  };
+  return labels[state];
 }
 
 export default function AgentMissionsScreen() {
+  const router = useRouter();
   const [profile, setProfile] = useState<MobileAgentProfile | null>(null);
   const [teams, setTeams] = useState<AgentTeam[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState('');
   const [assignments, setAssignments] = useState<TeamAssignment[]>([]);
   const [interventions, setInterventions] = useState<TeamIntervention[]>([]);
-  const [refusalReasons, setRefusalReasons] = useState<Record<string, string>>({});
-  const [observations, setObservations] = useState<Record<string, string>>({});
-  const [reports, setReports] = useState<Record<string, string>>({});
-  const [results, setResults] = useState<Record<string, 'TERMINEE' | 'PARTIELLE' | 'IMPOSSIBLE'>>({});
-  const [exceptions, setExceptions] = useState<Record<string, string>>({});
-  const [proofs, setProofs] = useState<Record<string, PreparedMobilePhoto>>({});
-  const [proofContexts, setProofContexts] = useState<Record<string, string>>({});
-  const [proofDescriptions, setProofDescriptions] = useState<Record<string, string>>({});
+  const [filter, setFilter] = useState<FilterKey>('ALL');
   const [loadingTeams, setLoadingTeams] = useState(true);
   const [loadingMissions, setLoadingMissions] = useState(false);
-  const [busyKey, setBusyKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
 
-  const latestByAssignment = useMemo(() => {
-    const map = new Map<string, TeamIntervention>();
-    for (const intervention of interventions) {
-      const id = intervention.idAffectation;
-      const current = map.get(id);
-      if (!current || new Date(intervention.dateHeureDebut ?? 0).getTime() > new Date(current.dateHeureDebut ?? 0).getTime()) {
-        map.set(id, intervention);
-      }
-    }
-    return map;
-  }, [interventions]);
+  const latestByAssignment = useMemo(() => latestInterventions(interventions), [interventions]);
 
   const loadTeams = useCallback(async () => {
-    setLoadingTeams(true);
-    setError(null);
+    setLoadingTeams(true); setError(null);
     try {
       const [agent, myTeams] = await Promise.all([getAgentProfile(), listMyTeams()]);
-      if (!agent.roles.some((role) => role.code === 'AGENT_TERRAIN')) {
-        throw new Error('Le rôle AGENT_TERRAIN est requis pour accéder à cet espace.');
-      }
+      if (!agent.roles.some((role) => role.code === 'AGENT_TERRAIN')) throw new Error('Le rôle AGENT_TERRAIN est requis pour accéder à cet espace.');
       setProfile(agent);
       setTeams(myTeams);
       setSelectedTeamId((current) => myTeams.some((team) => team.idEquipe === current) ? current : myTeams[0]?.idEquipe ?? '');
     } catch (reason) {
-      setError(errorMessage(reason));
-    } finally {
-      setLoadingTeams(false);
-    }
+      setError(reason instanceof Error ? reason.message : 'Impossible de charger votre espace agent.');
+    } finally { setLoadingTeams(false); }
   }, []);
 
   const loadMissions = useCallback(async () => {
-    if (!selectedTeamId) {
-      setAssignments([]);
-      setInterventions([]);
-      return;
-    }
-    setLoadingMissions(true);
-    setError(null);
+    if (!selectedTeamId) { setAssignments([]); setInterventions([]); setLoadingMissions(false); return; }
+    setLoadingMissions(true); setError(null);
     try {
       const [teamAssignments, teamInterventions] = await Promise.all([
-        listTeamAssignments(selectedTeamId),
-        listTeamInterventions(selectedTeamId),
+        listTeamAssignments(selectedTeamId), listTeamInterventions(selectedTeamId),
       ]);
-      setAssignments(teamAssignments);
-      setInterventions(teamInterventions);
+      setAssignments(teamAssignments); setInterventions(teamInterventions);
     } catch (reason) {
-      setError(errorMessage(reason));
-    } finally {
-      setLoadingMissions(false);
-    }
+      setError(reason instanceof Error ? reason.message : 'Impossible de charger les missions.');
+    } finally { setLoadingMissions(false); }
   }, [selectedTeamId]);
 
   useFocusEffect(useCallback(() => { void loadTeams(); }, [loadTeams]));
   useEffect(() => { void loadMissions(); }, [loadMissions]);
 
-  async function refresh(message?: string) {
-    if (message) setNotice(message);
-    await loadMissions();
-  }
+  const counts = useMemo(() => {
+    const result: Record<FilterKey, number> = {
+      ALL: 0, TO_ACCEPT: 0, TO_START: 0, IN_PROGRESS: 0, TO_VERIFY: 0, RESTART: 0, RESOLVED: 0,
+    };
+    for (const assignment of assignments) {
+      const state = missionFilter(assignment, latestByAssignment.get(assignment.idAffectation));
+      if (state !== 'REFUSED') { result.ALL += 1; result[state] += 1; }
+    }
+    return result;
+  }, [assignments, latestByAssignment]);
 
-  async function respond(assignment: TeamAssignment, decision: 'ACCEPTEE' | 'REFUSEE') {
-    const reason = refusalReasons[assignment.idAffectation]?.trim() ?? '';
-    if (decision === 'REFUSEE' && reason.length < 5) {
-      setError('Un motif d’au moins 5 caractères est obligatoire pour refuser une mission.');
-      return;
-    }
-    setBusyKey(assignment.idAffectation);
-    setError(null);
-    setNotice(null);
-    try {
-      await respondToAssignment(
-        assignment.idAffectation,
-        decision,
-        decision === 'REFUSEE' ? reason : undefined,
-        observations[assignment.idAffectation]?.trim() || undefined,
-      );
-      await refresh(decision === 'ACCEPTEE' ? 'Mission acceptée.' : 'Mission refusée avec motif.');
-    } catch (reason) {
-      const message = errorMessage(reason);
-      await loadMissions();
-      setError(message);
-    } finally {
-      setBusyKey(null);
-    }
-  }
-
-  async function start(assignment: TeamAssignment) {
-    setBusyKey(assignment.idAffectation);
-    setError(null);
-    setNotice(null);
-    try {
-      await startIntervention(assignment.idAffectation);
-      await refresh('Intervention démarrée. Vous pouvez renseigner le compte rendu depuis cette page.');
-    } catch (reason) {
-      const message = errorMessage(reason);
-      await loadMissions();
-      setError(message);
-    } finally {
-      setBusyKey(null);
-    }
-  }
-
-  async function chooseProof(interventionId: string, source: 'gallery' | 'camera') {
-    setBusyKey('proof-pick-' + interventionId);
-    setError(null);
-    try {
-      const photo = source === 'camera'
-        ? await captureMobilePhoto()
-        : (await pickMobilePhotos(1))[0] ?? null;
-      if (photo) setProofs((current) => ({ ...current, [interventionId]: photo }));
-    } catch (reason) {
-      setError(errorMessage(reason));
-    } finally {
-      setBusyKey(null);
-    }
-  }
-
-  async function uploadProof(intervention: TeamIntervention) {
-    const id = intervention.idIntervention;
-    const photo = proofs[id];
-    const context = proofContexts[id]?.trim() ?? '';
-    const description = proofDescriptions[id]?.trim() ?? '';
-    if (!photo) {
-      setError('Choisissez une photo ou prenez une photo avant de l’envoyer.');
-      return;
-    }
-    if (context.length < 3 || context.length > 100) {
-      setError('Le contexte de la preuve doit contenir entre 3 et 100 caractères.');
-      return;
-    }
-
-    setBusyKey('proof-upload-' + id);
-    setError(null);
-    setNotice(null);
-    try {
-      await uploadInterventionPhoto(id, photo, context, description || undefined);
-      setProofs((current) => {
-        const next = { ...current };
-        delete next[id];
-        return next;
-      });
-      setProofContexts((current) => ({ ...current, [id]: '' }));
-      setProofDescriptions((current) => ({ ...current, [id]: '' }));
-      await refresh('Preuve photo ajoutée à l’intervention.');
-    } catch (reason) {
-      const message = errorMessage(reason);
-      await loadMissions();
-      setError(message);
-    } finally {
-      setBusyKey(null);
-    }
-  }
-
-  async function submit(intervention: TeamIntervention) {
-    const id = intervention.idIntervention;
-    const compteRendu = reports[id]?.trim() ?? '';
-    const result = results[id] ?? 'TERMINEE';
-    const motifException = exceptions[id]?.trim() ?? '';
-    if (compteRendu.length < 20) {
-      setError('Le compte rendu doit contenir au moins 20 caractères.');
-      return;
-    }
-    if (result !== 'TERMINEE' && motifException.length < 5) {
-      setError('Un motif d’exception d’au moins 5 caractères est obligatoire.');
-      return;
-    }
-    setBusyKey(id);
-    setError(null);
-    setNotice(null);
-    try {
-      await submitIntervention(id, {
-        resultatIntervention: result,
-        compteRendu,
-        ...(motifException ? { motifException } : {}),
-      });
-      setReports((current) => ({ ...current, [id]: '' }));
-      setExceptions((current) => ({ ...current, [id]: '' }));
-      await refresh('Compte rendu soumis pour vérification indépendante.');
-    } catch (reason) {
-      const message = errorMessage(reason);
-      await loadMissions();
-      setError(message);
-    } finally {
-      setBusyKey(null);
-    }
-  }
-
-
-  async function openAssignmentNavigation(assignment: TeamAssignment) {
-    const location = assignment.contenuDossier.dossier;
-    if (!location.latitude || !location.longitude) {
-      setError('Les coordonnées de ce dépôt ne sont pas encore disponibles.');
-      return;
-    }
-    const destination = encodeURIComponent(location.latitude + ',' + location.longitude);
-    const url = 'https://www.google.com/maps/dir/?api=1&destination=' + destination;
-    try {
-      await Linking.openURL(url);
-    } catch {
-      setError('Impossible d’ouvrir l’application de navigation sur cet appareil.');
-    }
-  }
+  const filtered = useMemo(() => assignments
+    .filter((assignment) => {
+      const state = missionFilter(assignment, latestByAssignment.get(assignment.idAffectation));
+      return filter === 'ALL' ? state !== 'REFUSED' : state === filter;
+    })
+    .sort((a, b) => {
+      const rank: Record<string, number> = { TO_ACCEPT: 0, RESTART: 1, IN_PROGRESS: 2, TO_START: 3, TO_VERIFY: 4, RESOLVED: 5, REFUSED: 6 };
+      return rank[missionFilter(a, latestByAssignment.get(a.idAffectation))]
+        - rank[missionFilter(b, latestByAssignment.get(b.idAffectation))];
+    }), [assignments, filter, latestByAssignment]);
 
   const selectedTeam = teams.find((team) => team.idEquipe === selectedTeamId) ?? null;
 
+  function openMission(assignment: TeamAssignment) {
+    router.push({ pathname: '/(agent)/missions/[id]', params: { id: assignment.idAffectation, teamId: assignment.idEquipe } });
+  }
+
+  if (loadingTeams) {
+    return <View className="flex-1 items-center justify-center bg-surface-base px-8"><ActivityIndicator color="#174C3D" size="large" /><Text className="mt-4 text-sm font-semibold text-ink-500">Chargement de votre espace agent…</Text></View>;
+  }
+
   return (
-    <ScrollView
-      className="flex-1 bg-eco-50"
-      contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 48, paddingBottom: 40 }}
-      refreshControl={<RefreshControl refreshing={loadingMissions} onRefresh={() => void loadMissions()} />}
-    >
-      <Text className="text-xs font-extrabold uppercase tracking-[0.18em] text-eco-700">Espace agent terrain</Text>
-      <Text className="mt-3 text-3xl font-extrabold text-eco-950">Mes missions</Text>
-      <Text className="mt-2 text-sm leading-6 text-slate-600">Les équipes affichées proviennent de vos appartenances actives. L’API contrôle de nouveau les droits à chaque opération.</Text>
+    <ScrollView className="flex-1 bg-surface-base" contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 28, paddingBottom: 36 }} refreshControl={<RefreshControl refreshing={loadingMissions} onRefresh={() => void loadMissions()} tintColor="#174C3D" />}>
+      <View className="overflow-hidden rounded-3xl bg-brand-forest px-5 py-5">
+        <Text className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-brand-lime">ESPACE AGENT · TERRAIN</Text>
+        <Text className="mt-2 text-2xl font-extrabold text-white">Vos missions</Text>
+        <Text className="mt-2 text-sm leading-6 text-white/75">Retrouvez les affectations de votre équipe et suivez chaque intervention jusqu’à sa vérification.</Text>
+        <View className="mt-5 flex-row gap-3">
+          <View className="flex-1 rounded-2xl bg-white/10 px-3 py-3"><Text className="text-2xl font-extrabold text-white">{counts.TO_ACCEPT}</Text><Text className="mt-1 text-[10px] font-bold text-white/70">À accepter</Text></View>
+          <View className="flex-1 rounded-2xl bg-white/10 px-3 py-3"><Text className="text-2xl font-extrabold text-white">{counts.IN_PROGRESS + counts.RESTART + counts.TO_START}</Text><Text className="mt-1 text-[10px] font-bold text-white/70">À exécuter</Text></View>
+          <View className="flex-1 rounded-2xl bg-white/10 px-3 py-3"><Text className="text-2xl font-extrabold text-white">{counts.TO_VERIFY}</Text><Text className="mt-1 text-[10px] font-bold text-white/70">À vérifier</Text></View>
+        </View>
+      </View>
 
-      {error ? <View className="mt-4"><FeedbackBanner tone="error" message={error} /></View> : null}
-      {notice ? <View className="mt-4"><FeedbackBanner tone="success" message={notice} /></View> : null}
+      {error ? <View className="mt-4"><FeedbackBanner tone="error" message={error} /><Pressable onPress={() => void (teams.length ? loadMissions() : loadTeams())} className="mt-3 self-start rounded-xl border border-line-strong bg-white px-4 py-2.5"><Text className="text-xs font-extrabold text-brand-forest">Réessayer</Text></Pressable></View> : null}
 
-      {loadingTeams ? <View className="mt-8 items-center"><ActivityIndicator color="#166534" /><Text className="mt-3 text-sm text-slate-500">Chargement des équipes…</Text></View> : (
+      {teams.length === 0 ? (
+        <View className="mt-5 rounded-2xl border border-line-subtle bg-white p-5"><Text className="text-base font-extrabold text-ink-900">Aucune équipe active</Text><Text className="mt-2 text-sm leading-6 text-ink-500">Contactez le gestionnaire des référentiels pour vérifier vos appartenances à une équipe.</Text></View>
+      ) : (
         <>
-          {teams.length === 0 ? (
-            <View className="mt-6 rounded-2xl border border-eco-100 bg-white p-5">
-              <Text className="text-sm font-bold text-slate-800">Aucune équipe active</Text>
-              <Text className="mt-2 text-sm leading-6 text-slate-600">Contactez le gestionnaire des référentiels pour vérifier vos appartenances.</Text>
+          <View className="mt-6">
+            <Text className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-brand-petrol">VOTRE ÉQUIPE</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 10 }}>
+              {teams.map((team) => {
+                const selected = selectedTeamId === team.idEquipe;
+                return <Pressable key={team.idEquipe} accessibilityRole="button" accessibilityState={{ selected }} onPress={() => setSelectedTeamId(team.idEquipe)} className={selected ? 'rounded-full bg-brand-forest px-4 py-3' : 'rounded-full border border-line-strong bg-white px-4 py-3'}><Text className={selected ? 'text-xs font-extrabold text-white' : 'text-xs font-bold text-ink-700'}>{team.nomEquipe}</Text></Pressable>;
+              })}
+            </ScrollView>
+            {selectedTeam ? <Text className="text-xs text-ink-400">{selectedTeam.fonction} · membre depuis {dateLabel(selectedTeam.dateDebut)}</Text> : null}
+          </View>
+
+          <View className="mt-6">
+            <View className="flex-row items-center justify-between"><Text className="text-lg font-extrabold text-ink-900">File des missions</Text><Text className="text-xs font-semibold text-ink-400">{filtered.length} résultat(s)</Text></View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7, paddingVertical: 12 }}>
+              {filters.map((item) => {
+                const active = filter === item.key;
+                return <Pressable key={item.key} accessibilityRole="button" accessibilityState={{ selected: active }} onPress={() => setFilter(item.key)} className={active ? 'rounded-full bg-brand-forest px-3 py-2.5' : 'rounded-full border border-line-subtle bg-white px-3 py-2.5'}><Text className={active ? 'text-[10px] font-extrabold text-white' : 'text-[10px] font-bold text-ink-600'}>{item.label} · {counts[item.key]}</Text></Pressable>;
+              })}
+            </ScrollView>
+
+            {loadingMissions && !assignments.length ? <View className="items-center rounded-2xl border border-line-subtle bg-white py-10"><ActivityIndicator color="#174C3D" /><Text className="mt-3 text-xs font-semibold text-ink-500">Chargement des affectations…</Text></View> : null}
+            {!loadingMissions && filtered.length === 0 ? (
+              <View className="rounded-2xl border border-line-subtle bg-white px-5 py-7">
+                <Text className="text-sm font-extrabold text-ink-900">{filter === 'ALL' ? 'Aucune mission à afficher' : 'Aucune mission dans cette file'}</Text>
+                <Text className="mt-2 text-sm leading-6 text-ink-500">{filter === 'TO_ACCEPT' ? 'Les nouvelles affectations proposées par votre service apparaîtront ici.' : filter === 'TO_VERIFY' ? 'Les comptes rendus transmis apparaîtront ici pendant leur vérification indépendante.' : 'Les missions correspondant à ce filtre apparaîtront ici dès qu’elles seront disponibles.'}</Text>
+              </View>
+            ) : null}
+
+            <View className="mt-2 gap-3">
+              {filtered.map((assignment) => {
+                const latest = latestByAssignment.get(assignment.idAffectation);
+                const status = missionStatus(assignment, latest);
+                return (
+                  <Pressable key={assignment.idAffectation} onPress={() => openMission(assignment)} accessibilityRole="button" accessibilityLabel={assignment.contenuDossier.dossier.referenceDossier + ' · ' + status.label + '. ' + nextAction(assignment, latest)} className="rounded-3xl border border-line-subtle bg-white p-4">
+                    <View className="flex-row items-start justify-between gap-3">
+                      <View className="min-w-0 flex-1"><Text className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-brand-petrol">DOSSIER</Text><Text className="mt-1 text-base font-extrabold text-ink-900">{assignment.contenuDossier.dossier.referenceDossier}</Text><Text className="mt-1 text-xs font-medium text-ink-500">{assignment.contenuDossier.typeDechet.libelle}</Text></View>
+                      <StatusBadge label={status.label} tone={status.tone} />
+                    </View>
+                    {assignment.contenuDossier.dossier.descriptionLocalisation ? <Text className="mt-3 text-xs leading-5 text-ink-500" numberOfLines={2}>{assignment.contenuDossier.dossier.descriptionLocalisation}</Text> : null}
+                    <View className="mt-4 flex-row items-center justify-between border-t border-line-subtle pt-3"><Text className="text-[10px] font-bold text-brand-forest">{nextAction(assignment, latest)}</Text><Text className="text-xl font-light text-brand-petrol">›</Text></View>
+                  </Pressable>
+                );
+              })}
             </View>
-          ) : (
-            <>
-              <View className="mt-6">
-                <Text className="text-xs font-bold text-slate-700">Équipe</Text>
-                <View className="mt-2 flex-row flex-wrap gap-2">
-                  {teams.map((team) => (
-                    <TouchableOpacity
-                      key={team.idEquipe}
-                      onPress={() => setSelectedTeamId(team.idEquipe)}
-                      className={selectedTeamId === team.idEquipe ? 'rounded-full bg-eco-700 px-4 py-3' : 'rounded-full border border-eco-200 bg-white px-4 py-3'}
-                    >
-                      <Text className={selectedTeamId === team.idEquipe ? 'text-xs font-bold text-white' : 'text-xs font-semibold text-slate-700'}>
-                        {team.nomEquipe}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-                {selectedTeam ? <Text className="mt-2 text-xs text-slate-500">{selectedTeam.fonction} · membre depuis {dateLabel(selectedTeam.dateDebut)}</Text> : null}
-              </View>
-
-              <View className="mt-7">
-                <Text className="text-lg font-extrabold text-eco-950">Affectations de l’équipe</Text>
-                {!loadingMissions && assignments.length === 0 ? <Text className="mt-3 text-sm text-slate-500">Aucune affectation active.</Text> : null}
-                <View className="mt-3 gap-4">
-                  {assignments.map((assignment) => {
-                    const latest = latestByAssignment.get(assignment.idAffectation);
-                    const verification = latest?.verification;
-                    const selectedProof = latest ? proofs[latest.idIntervention] : undefined;
-                    const canStart = assignment.decisionEquipe === 'ACCEPTEE' && (
-                      !latest ||
-                      (latest.statutIntervention === 'SOUMISE' &&
-                        verification?.etatVerification === 'REPRISE' &&
-                        new Date(verification.dateVerification).getTime() >= new Date(latest.dateSoumissionCompteRendu ?? 0).getTime())
-                    );
-                    const isAuthor = latest?.renseignePar === profile?.utilisateurId;
-                    return (
-                      <View key={assignment.idAffectation} className="rounded-3xl border border-line-subtle bg-white p-5">
-                        <View className="flex-row flex-wrap items-start justify-between gap-3">
-                          <View className="min-w-0 flex-1">
-                            <Text className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-brand-petrol">DOSSIER</Text>
-                            <Text className="mt-1 text-base font-extrabold text-ink-900">{assignment.contenuDossier.dossier.referenceDossier}</Text>
-                            <Text className="mt-1 text-xs font-medium text-ink-500">{assignment.contenuDossier.typeDechet.libelle}</Text>
-                          </View>
-                          <View className="items-end gap-2">
-                            <StatusBadge label={decisionLabel(assignment.decisionEquipe)} tone={decisionTone(assignment.decisionEquipe)} />
-                            <StatusBadge {...interventionStatus(assignment, latest)} />
-                          </View>
-                        </View>
-                        {missionNextStep(assignment, latest, isAuthor) ? (
-                          <View className="mt-4">
-                            <FeedbackBanner
-                              tone={missionNextStep(assignment, latest, isAuthor)!.tone}
-                              title={missionNextStep(assignment, latest, isAuthor)!.title}
-                              message={missionNextStep(assignment, latest, isAuthor)!.message}
-                            />
-                          </View>
-                        ) : null}
-                        {assignment.contenuDossier.dossier.descriptionLocalisation ? (
-                          <Text className="mt-2 text-xs leading-5 text-slate-600">{assignment.contenuDossier.dossier.descriptionLocalisation}</Text>
-                        ) : null}
-                        <TouchableOpacity
-                          onPress={() => void openAssignmentNavigation(assignment)}
-                          disabled={!assignment.contenuDossier.dossier.latitude || !assignment.contenuDossier.dossier.longitude}
-                          className="mt-3 rounded-xl border border-eco-200 bg-eco-50 px-3 py-3 disabled:opacity-45"
-                        >
-                          <Text className="text-center text-xs font-bold text-eco-800">
-                            {assignment.contenuDossier.dossier.latitude && assignment.contenuDossier.dossier.longitude
-                              ? 'Ouvrir l’itinéraire GPS'
-                              : 'Coordonnées non renseignées'}
-                          </Text>
-                        </TouchableOpacity>
-                        {assignment.decisionEquipe === 'EN_ATTENTE' ? (
-                          <View className="mt-4 gap-2">
-                            <TextInput
-                              value={refusalReasons[assignment.idAffectation] ?? ''}
-                              onChangeText={(value) => setRefusalReasons((current) => ({ ...current, [assignment.idAffectation]: value }))}
-                              placeholder="Motif obligatoire si refus (5 caractères minimum)"
-                              multiline
-                              className={inputClass}
-                            />
-                            <TextInput
-                              value={observations[assignment.idAffectation] ?? ''}
-                              onChangeText={(value) => setObservations((current) => ({ ...current, [assignment.idAffectation]: value }))}
-                              placeholder="Observation (facultative)"
-                              className={inputClass}
-                            />
-                            <View className="flex-row gap-2">
-                              <TouchableOpacity onPress={() => void respond(assignment, 'REFUSEE')} disabled={busyKey === assignment.idAffectation} className={secondaryClass + ' flex-1'}>
-                                <Text className="text-center text-xs font-bold text-slate-700">Refuser</Text>
-                              </TouchableOpacity>
-                              <TouchableOpacity onPress={() => void respond(assignment, 'ACCEPTEE')} disabled={busyKey === assignment.idAffectation} className={buttonClass + ' flex-1'}>
-                                <Text className="text-center text-xs font-bold text-white">Accepter</Text>
-                              </TouchableOpacity>
-                            </View>
-                          </View>
-                        ) : null}
-
-                        {latest ? (
-                          <View className="mt-4 rounded-xl bg-slate-50 p-4">
-                            <View className="flex-row items-center justify-between gap-3">
-                              <Text className="text-sm font-extrabold text-ink-900">Dernière intervention</Text>
-                              <Text className="text-[10px] font-semibold text-ink-400">{dateLabel(latest.dateHeureDebut)}</Text>
-                            </View>
-                            {latest.statutIntervention === 'SOUMISE' ? (
-                              <View className="mt-2">
-                                <View className="flex-row flex-wrap items-center gap-2">
-                                  <StatusBadge
-                                    label={latest.resultatIntervention === 'TERMINEE' ? 'Résultat : terminée' : latest.resultatIntervention === 'PARTIELLE' ? 'Résultat : partielle' : 'Résultat : impossible'}
-                                    tone={latest.resultatIntervention === 'TERMINEE' ? 'success' : latest.resultatIntervention === 'PARTIELLE' ? 'warning' : 'danger'}
-                                  />
-                                  <StatusBadge
-                                    label={verification?.etatVerification === 'REPRISE' ? 'Reprise demandée' : verification?.etatVerification === 'VALIDEE' ? 'Vérifiée' : 'En attente de vérification'}
-                                    tone={verification?.etatVerification === 'REPRISE' ? 'warning' : verification?.etatVerification === 'VALIDEE' ? 'success' : 'info'}
-                                  />
-                                </View>
-                                {latest.compteRendu ? <Text className="mt-2 text-sm leading-6 text-slate-700">{latest.compteRendu}</Text> : null}
-                              </View>
-                            ) : null}
-                            {latest.statutIntervention === 'EN_COURS' && isAuthor ? (
-                              <View className="mt-3 gap-3">
-                                <Text className="text-xs text-slate-600">Cette intervention est démarrée par votre compte. Vous pouvez joindre des preuves puis soumettre son compte rendu.</Text>
-                                <View className="rounded-xl border border-eco-100 bg-white p-4">
-                                  <Text className="text-xs font-bold text-slate-700">Preuve photo (facultatif)</Text>
-                                  <View className="mt-3 flex-row gap-2">
-                                    <TouchableOpacity
-                                      onPress={() => void chooseProof(latest.idIntervention, 'gallery')}
-                                      disabled={busyKey === 'proof-pick-' + latest.idIntervention || busyKey === 'proof-upload-' + latest.idIntervention}
-                                      className={secondaryClass + ' flex-1'}
-                                    >
-                                      <Text className="text-center text-xs font-bold text-slate-700">Galerie</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                      onPress={() => void chooseProof(latest.idIntervention, 'camera')}
-                                      disabled={busyKey === 'proof-pick-' + latest.idIntervention || busyKey === 'proof-upload-' + latest.idIntervention}
-                                      className={buttonClass + ' flex-1'}
-                                    >
-                                      <Text className="text-center text-xs font-bold text-white">Appareil photo</Text>
-                                    </TouchableOpacity>
-                                  </View>
-                                  {selectedProof ? (
-                                    <Image source={{ uri: selectedProof.uri }} resizeMode="cover" style={{ width: '100%', height: 170, borderRadius: 10, marginTop: 12 }} />
-                                  ) : null}
-                                  <TextInput
-                                    value={proofContexts[latest.idIntervention] ?? ''}
-                                    onChangeText={(value) => setProofContexts((current) => ({ ...current, [latest.idIntervention]: value }))}
-                                    maxLength={100}
-                                    placeholder="Contexte obligatoire : avant collecte, après intervention…"
-                                    className={inputClass + ' mt-3'}
-                                  />
-                                  <TextInput
-                                    value={proofDescriptions[latest.idIntervention] ?? ''}
-                                    onChangeText={(value) => setProofDescriptions((current) => ({ ...current, [latest.idIntervention]: value }))}
-                                    maxLength={500}
-                                    placeholder="Description (facultative)"
-                                    className={inputClass}
-                                  />
-                                  <TouchableOpacity
-                                    onPress={() => void uploadProof(latest)}
-                                    disabled={!proofs[latest.idIntervention] || busyKey === 'proof-upload-' + latest.idIntervention}
-                                    className={buttonClass + ' mt-3'}
-                                  >
-                                    <Text className="text-center text-xs font-bold text-white">
-                                      {busyKey === 'proof-upload-' + latest.idIntervention ? 'Envoi de la preuve…' : 'Envoyer la preuve privée'}
-                                    </Text>
-                                  </TouchableOpacity>
-                                  <Text className="mt-2 text-[10px] leading-4 text-slate-400">JPEG, PNG ou WebP après conversion JPEG · 10 Mo maximum côté serveur. Seul l’auteur de l’intervention peut joindre cette preuve.</Text>
-                                </View>
-                                <TextInput
-                                  value={reports[latest.idIntervention] ?? ''}
-                                  onChangeText={(value) => setReports((current) => ({ ...current, [latest.idIntervention]: value }))}
-                                  multiline
-                                  textAlignVertical="top"
-                                  maxLength={10000}
-                                  placeholder="Compte rendu détaillé (20 caractères minimum)"
-                                  className={inputClass + ' min-h-[120px]'}
-                                />
-                                <Text className="text-xs font-bold text-slate-700">Résultat terrain</Text>
-                                <View className="flex-row flex-wrap gap-2">
-                                  {(['TERMINEE', 'PARTIELLE', 'IMPOSSIBLE'] as const).map((value) => (
-                                    <TouchableOpacity key={value} onPress={() => setResults((current) => ({ ...current, [latest.idIntervention]: value }))} className={(results[latest.idIntervention] ?? 'TERMINEE') === value ? 'rounded-full bg-eco-700 px-3 py-2' : 'rounded-full border border-slate-200 bg-white px-3 py-2'}>
-                                      <Text className={(results[latest.idIntervention] ?? 'TERMINEE') === value ? 'text-[10px] font-bold text-white' : 'text-[10px] font-semibold text-slate-700'}>{value}</Text>
-                                    </TouchableOpacity>
-                                  ))}
-                                </View>
-                                {(results[latest.idIntervention] ?? 'TERMINEE') !== 'TERMINEE' ? (
-                                  <TextInput
-                                    value={exceptions[latest.idIntervention] ?? ''}
-                                    onChangeText={(value) => setExceptions((current) => ({ ...current, [latest.idIntervention]: value }))}
-                                    multiline
-                                    placeholder="Motif d’exception obligatoire (5 caractères minimum)"
-                                    className={inputClass}
-                                  />
-                                ) : null}
-                                <TouchableOpacity onPress={() => void submit(latest)} disabled={busyKey === latest.idIntervention} className={buttonClass}>
-                                  <Text className="text-center text-xs font-bold text-white">{busyKey === latest.idIntervention ? 'Soumission…' : 'Soumettre le compte rendu'}</Text>
-                                </TouchableOpacity>
-                              </View>
-                            ) : latest.statutIntervention === 'EN_COURS' ? (
-                              <Text className="mt-2 text-xs text-slate-500">Cette intervention a été démarrée par un autre membre de l’équipe. Seul son auteur peut soumettre le compte rendu.</Text>
-                            ) : null}
-                          </View>
-                        ) : null}
-
-                        {canStart ? (
-                          <TouchableOpacity onPress={() => void start(assignment)} disabled={busyKey === assignment.idAffectation} className={buttonClass + ' mt-4'}>
-                            <Text className="text-center text-xs font-bold text-white">{busyKey === assignment.idAffectation ? 'Démarrage…' : latest ? 'Démarrer la reprise' : 'Démarrer l’intervention'}</Text>
-                          </TouchableOpacity>
-                        ) : null}
-                      </View>
-                    );
-                  })}
-                </View>
-              </View>
-            </>
-          )}
+          </View>
         </>
       )}
-      <Link href="/" className="mt-8 text-center text-sm font-semibold text-eco-700">Retour à l’accueil</Link>
+      <Text className="mt-7 text-center text-[10px] font-semibold tracking-[0.12em] text-ink-400">AFFECTATION · INTERVENTION · VÉRIFICATION</Text>
     </ScrollView>
   );
 }
