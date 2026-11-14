@@ -49,7 +49,7 @@ function missionStatus(assignment: TeamAssignment, latest: TeamIntervention | un
     TO_ACCEPT: 'warning', REFUSED: 'danger', TO_START: 'info',
     IN_PROGRESS: 'brand', TO_VERIFY: 'info', RESTART: 'warning', RESOLVED: 'success',
   };
-  return { label: labels[state], tone: tones[state] };
+  return { label: labels[state] ?? 'État inconnu', tone: tones[state] ?? 'neutral' };
 }
 
 function nextAction(assignment: TeamAssignment, latest: TeamIntervention | undefined): string {
@@ -60,7 +60,7 @@ function nextAction(assignment: TeamAssignment, latest: TeamIntervention | undef
     TO_VERIFY: 'Consulter le compte rendu transmis', RESTART: 'Démarrer la reprise demandée',
     RESOLVED: 'Consulter la résolution validée',
   };
-  return labels[state];
+  return labels[state] ?? 'Consulter la mission';
 }
 
 export default function AgentMissionsScreen() {
@@ -110,7 +110,7 @@ export default function AgentMissionsScreen() {
     };
     for (const assignment of assignments) {
       const state = missionFilter(assignment, latestByAssignment.get(assignment.idAffectation));
-      if (state !== 'REFUSED') { result.ALL += 1; result[state] += 1; }
+      if (state !== 'REFUSED') { result.ALL += 1; result[state] = (result[state] ?? 0) + 1; }
     }
     return result;
   }, [assignments, latestByAssignment]);
