@@ -153,7 +153,7 @@ export function QualificationQueuePage() {
           </div>
         ) : null}
 
-        {!loading && result?.items.length && filteredItems.length === 0 ? (
+        {!loading && (result?.items.length ?? 0) > 0 && filteredItems.length === 0 ? (
           <div className="qualification-queue-empty">
             <span aria-hidden="true">⌕</span>
             <strong>Aucun résultat pour cette recherche</strong>
