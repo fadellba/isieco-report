@@ -134,3 +134,33 @@ Cette première tranche installe le cadrage de refonte, harmonise les premiers t
 5. Qualité : tests responsive, accessibilité, performances, tests de parcours automatisés et recette sur appareils Android/iOS réels.
 
 La refonte sera considérée comme cohérente lorsque les mêmes statuts et mots métier sont utilisés partout, que chaque rôle voit ses prochaines actions sans ambiguïté, que les erreurs proposent une récupération et que les interfaces Web et Mobile partagent la même identité sans forcer les mêmes interactions.
+
+
+## État de la première livraison UX/UI
+
+La branche `feat/isieco-ux-ui-foundation` porte une première livraison progressive.
+
+### Éléments implémentés
+
+- Tokens de marque harmonisés entre la feuille CSS Web et la configuration NativeWind Mobile.
+- Composants Web et Mobile pour les badges de statut et retours succès/erreur/avertissement/information.
+- Navigation Mobile avec icônes de ligne cohérentes au lieu des glyphes Unicode.
+- Introduction mobile versionnée, avec visuels dédiés au territoire, au parcours citoyen et au cycle de mission.
+- Écran de préparation après lancement et couleurs de splash natif alignés à la marque.
+- Formulaire citoyen rendu plus explicite sur les informations utiles, le caractère facultatif de la photo et l'ordre des repères affichés.
+- Détail du signalement : prochaine étape expliquée à partir du statut métier et action de reprise disponible si le chargement échoue.
+- Liste des missions agent : statuts d'affectation et d'intervention séparés, prochaine action attendue, distinction entre mission à accepter, à démarrer, en cours, à vérifier et reprise.
+- Files Web de qualification, affectation et vérification : états sémantiques, messages cohérents et libellés de filtres compréhensibles.
+- Liste Web des dossiers : statuts et priorités présentés avec une signification visuelle stable.
+
+### Points explicitement non terminés
+
+- Le fichier graphique natif `apps/mobile/assets/splash.png` n'a pas encore été redessiné. Seuls sa configuration et les couleurs d'environnement ont été harmonisés. Le visuel final doit être conçu pour les ratios Android/iOS puis testé sur appareils réels.
+- Le logo mobile embarqué et les déclinaisons d'icônes d'application doivent encore être validés comme un ensemble de marque complet.
+- Les écrans de détail/qualification, création et réaffectation Web nécessitent encore un passage UI complet.
+- Le grand écran de mission agent reste à découper en vues « détail », « exécution » et « compte rendu » ; la présente tranche clarifie les statuts et le guidage, mais ne réalise pas ce découpage.
+- Le composant de carte Web reste à approfondir : regroupement de marqueurs, légende métier, filtres, densité et représentation des secteurs.
+- Les états hors connexion et les brouillons locaux restent hors de cette livraison.
+- L'accessibilité et le rendu doivent encore être vérifiés sur navigateur, formats mobiles courants et appareils Android/iOS réels.
+
+Cette livraison établit une direction de conception et améliore quelques parcours critiques. Elle ne remplace pas une recette UX complète écran par écran.
