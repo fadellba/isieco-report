@@ -13,6 +13,7 @@ L'inventaire ci-dessous sert de registre de couverture. Une ligne n'est considé
 | `/connexion` | Connexion | Identité, formulaire, erreurs, chargement, responsive, navigation clavier |
 | `/telecharger` | Téléchargement mobile | Version disponible/indisponible, vérification de l'APK, retour |
 | `/acces-refuse` | Accès refusé | Explication de l'habilitation, retour cohérent |
+| `*` | Route Web inconnue | Page 404 explicite, retour à l'accueil, lien vérifié |
 
 ## Web — espace authentifié
 
@@ -39,6 +40,7 @@ L'inventaire ci-dessous sert de registre de couverture. Une ligne n'est considé
 | `/sign-up` | Création de compte citoyen | Validation, confirmation e-mail, erreurs |
 | `/choose-space` | Choix d'espace | Présentation des rôles et navigation |
 | `/no-mobile-access` | Accès mobile indisponible | Explication, renouvellement des accès, déconnexion |
+| `+not-found` | Route Mobile inconnue | Écran 404 explicite, retour à l'accueil |
 
 ## Mobile — citoyen
 
@@ -91,3 +93,10 @@ Composants à normaliser et réutiliser :
 - Les autorisations et règles serveur ne sont jamais affaiblies pour faciliter l'interface.
 - Chaque écran est vérifié sur les formats adaptés à sa plateforme.
 - Les tests de build et de type complètent la recette visuelle ; ils ne la remplacent pas.
+
+
+## Écrans ou fonctionnalités absents à ne pas confondre avec une refonte
+
+- **Réinitialisation du mot de passe** : aucune route Web ou Mobile dédiée n'existe dans le routeur actuel. Ce parcours (demande d'e-mail, lien profond, définition d'un nouveau mot de passe et états expirés) doit être cadré avec la configuration des redirections Supabase avant d'être ajouté. Il ne doit pas être maquillé en lien non fonctionnel.
+- **`apps/web/src/pages/AdminHomePage.tsx`** : composant historique présent dans le code mais non référencé par le routeur actuel. Il ne constitue pas une route active ; son sort sera décidé pendant le nettoyage final pour éviter de conserver deux parcours d'accueil concurrents.
+- **Recette visuelle réelle** : la validation TypeScript et les builds ne remplacent pas la vérification des routes dans un navigateur et sur appareils Android/iOS.
