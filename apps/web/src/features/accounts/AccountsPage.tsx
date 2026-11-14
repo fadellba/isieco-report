@@ -32,8 +32,8 @@ function normalize(value: string): string {
 }
 
 function roleTone(role: FunctionalRole): 'brand' | 'info' | 'success' | 'warning' | 'danger' | 'neutral' {
-  if (role === 'ADMIN' || role === 'SUPER_ADMIN') return 'danger';
-  if (role === 'CITOYEN') return 'info';
+  if (role === 'ADMINISTRATEUR_COMPTES') return 'danger';
+  if (role === 'CITOYEN' || role === 'VERIFICATEUR_CLOTURE') return 'info';
   if (role === 'AGENT_TERRAIN') return 'success';
   return 'brand';
 }
