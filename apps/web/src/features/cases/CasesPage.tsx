@@ -144,7 +144,13 @@ export function CasesPage() {
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
           <div><h2 className="font-bold text-slate-900">Dossiers existants</h2><p className="mt-1 text-xs text-slate-500">{data ? `${data.total} dossier(s)` : 'Chargement…'}</p></div>
-          <select value={status} onChange={(event) => { setPage(1); setStatus(event.target.value); }} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600"><option value="">Tous les états</option>{['OUVERT', 'EN_COURS', 'EN_ATTENTE', 'CLOTURE'].map((value) => <option key={value}>{value}</option>)}</select>
+          <select aria-label="Filtrer les dossiers par état" value={status} onChange={(event) => { setPage(1); setStatus(event.target.value); }} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+            <option value="">Tous les états</option>
+            <option value="OUVERT">Ouvert</option>
+            <option value="EN_COURS">En cours</option>
+            <option value="EN_ATTENTE">En attente</option>
+            <option value="CLOTURE">Clôturé</option>
+          </select>
         </div>
         {loading && !data ? <p className="p-6 text-sm text-slate-500">Chargement des dossiers…</p> : null}
         {!loading && data?.items.length === 0 ? <p className="p-6 text-sm text-slate-500">Aucun dossier pour ce filtre.</p> : null}
