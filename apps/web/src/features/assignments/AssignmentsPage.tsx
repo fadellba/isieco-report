@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../../lib/api';
+import { FeedbackBanner, StatusBadge, type StatusTone } from '../../components/StatusBadge';
 
 interface Team {
   idEquipe: string;
@@ -71,6 +72,24 @@ const inputClass = 'mt-1 w-full rounded-lg border border-slate-200 bg-white px-3
 const labelClass = 'block text-xs font-semibold text-slate-600';
 const buttonClass = 'rounded-lg bg-eco-700 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-eco-600 disabled:cursor-not-allowed disabled:opacity-50';
 const secondaryClass = 'rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50';
+
+function assignmentStateTone(status: string): StatusTone {
+  if (status === 'TERMINEE') return 'success';
+  if (status === 'ANNULEE') return 'danger';
+  if (status === 'ACTIVE') return 'info';
+  return 'neutral';
+}
+
+function teamDecisionTone(decision: string): StatusTone {
+  if (decision === 'ACCEPTEE') return 'success';
+  if (decision === 'REFUSEE') return 'danger';
+  if (decision === 'EN_ATTENTE') return 'warning';
+  return 'neutral';
+}
+
+function stateLabel(value: string): string {
+  return value.replaceAll('_', ' ').toLowerCase();
+}
 
 export function AssignmentsPage() {
   const [searchParams] = useSearchParams();
@@ -270,8 +289,8 @@ export function AssignmentsPage() {
         ) : null}
       </header>
 
-      {notice ? <div role="status" className="rounded-xl border border-eco-200 bg-eco-50 px-4 py-3 text-sm text-eco-900">{notice}</div> : null}
-      {error ? <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div> : null}
+      {notice ? <FeedbackBanner tone="success">{notice}</FeedbackBanner> : null}
+      {error ? <FeedbackBanner tone="error">{error}</FeedbackBanner> : null}
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -340,7 +359,7 @@ export function AssignmentsPage() {
             const canReassign = item.decisionEquipe === 'REFUSEE' || (item.dateFinAffectation === null && item.decisionEquipe === 'EN_ATTENTE');
             const teams = eligibleByType[item.idTypeDechet] ?? [];
             return (
-              <article key={item.idAffectation} className="space-y-3 p-5">
+              <article key={item.idAffectation} className="workflow-list-item space-y-3 p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <h3 className="font-bold text-slate-900">{item.contenuDossier.dossier.referenceDossier} · {item.contenuDossier.typeDechet.libelle}</h3>
@@ -349,8 +368,8 @@ export function AssignmentsPage() {
                     {item.decisionEquipe === 'REFUSEE' && item.motifRefusEquipe ? <p className="mt-1 text-xs text-red-700">Refus : {item.motifRefusEquipe}</p> : null}
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-700">{item.etatAffectation}</span>
-                    <span className={item.decisionEquipe === 'REFUSEE' ? 'rounded-full bg-red-50 px-2.5 py-1 text-[10px] font-bold text-red-800' : 'rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-800'}>{item.decisionEquipe}</span>
+                    <StatusBadge label={'Affectation ' + stateLabel(item.etatAffectation)} tone={assignmentStateTone(item.etatAffectation)} />
+                    <StatusBadge label={'Équipe ' + stateLabel(item.decisionEquipe)} tone={teamDecisionTone(item.decisionEquipe)} />
                   </div>
                 </div>
                 {canReassign ? (
