@@ -59,7 +59,14 @@ export default function CitizenReportsScreen() {
         </TouchableOpacity>
       </Link>
 
-      {error ? <View className="mt-5"><FeedbackBanner tone="error" message={error} /></View> : null}
+      {error ? (
+        <View className="mt-5">
+          <FeedbackBanner tone="error" message={error} />
+          <TouchableOpacity onPress={() => void load(1, true)} className="mt-3 self-start rounded-xl border border-line-strong bg-white px-4 py-2.5">
+            <Text className="text-xs font-extrabold text-brand-forest">Réessayer</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
       {loading && !result ? <View className="mt-10 items-center"><ActivityIndicator color="#166534" /><Text className="mt-3 text-sm text-slate-500">Chargement…</Text></View> : null}
       {!loading && result?.items.length === 0 ? (
         <View className="mt-6 rounded-2xl border border-eco-100 bg-white p-5">
