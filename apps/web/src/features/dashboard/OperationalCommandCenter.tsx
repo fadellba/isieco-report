@@ -377,6 +377,7 @@ export function OperationalCommandCenter() {
         <div className="command-center__legend">
           <span><i className="is-case" /> Dossier</span>
           <span><i className="is-report" /> Signalement</span>
+          <span><i className="is-cluster" /> Groupe de points</span>
         </div>
       </div>
 
