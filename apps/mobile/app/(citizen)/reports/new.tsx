@@ -169,7 +169,7 @@ export default function NewCitizenReportScreen() {
             </View>
           ))}
         </View>
-        <Text className="mt-3 text-[10px] leading-4 text-ink-500">Vous pouvez compléter les informations dans l’ordre qui vous convient.</Text>
+        <Text className="mt-3 text-[10px] leading-4 text-ink-500">La photo est facultative. Ajoutez au moins une information utile pour que le service puisse examiner votre signalement.</Text>
       </View>
 
       <View className="mt-5 gap-4">
