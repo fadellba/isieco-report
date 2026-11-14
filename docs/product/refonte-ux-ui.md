@@ -185,7 +185,7 @@ La branche `feat/isieco-ux-ui-foundation` porte une première livraison progress
 - Référentiels restructurés : catalogue de déchets, recherche, filtres actifs/inactifs, création progressive, équipes avec membres et compétences, historique des appartenances et confirmations des opérations de clôture/désactivation.
 - File de vérification indépendante enrichie : recherche et filtre locaux sur la page courante, compteurs par résultat terrain, examen des preuves privées, liens temporaires et décisions distinctes de validation ou de reprise.
 - Inventaire complet des routes Web/Mobile, avec écrans de repli et composants transverses, maintenu dans `docs/product/inventaire-ecrans-refonte-ux-ui.md`.
-- Onglet Carte mobile agent : carte interactive `react-native-maps`, marqueurs sur coordonnées réelles, sélection d’une mission, accès au détail et itinéraire ; les missions sans coordonnées restent dans une liste séparée.
+- Onglet Carte mobile agent : filtres d’équipe et d’état, sélection d’une mission, accès au détail et ouverture de l’emplacement sur OpenStreetMap dans le navigateur ; aucune clé cartographique n’est requise et les missions sans coordonnées restent dans une liste séparée.
 
 ### Points explicitement non terminés
 
@@ -193,20 +193,20 @@ La branche `feat/isieco-ux-ui-foundation` porte une première livraison progress
 - Le logo mobile embarqué et les déclinaisons d'icônes d'application doivent encore être validés comme un ensemble de marque complet.
 - Les modules Web de comptes, référentiels et vérification ont maintenant reçu une première reprise structurelle et fonctionnelle. Comme les autres écrans, ils restent à passer en recette visuelle sur navigateur, avec vérification clavier, tailles d'écran et états d'erreur.
 - La fiche de mission est maintenant séparée de la file de travail. Une prochaine itération pourra encore approfondir le découpage visuel interne entre exécution, preuves et compte rendu, sans modifier le cycle métier.
-- La carte native est intégrée au code, mais la recette Android autonome attend une clé `GOOGLE_MAPS_API_KEY` configurée dans l’environnement de build ; les builds natifs Android/iOS doivent être testés sur appareil.
+- La carte Mobile ouvre les emplacements sur OpenStreetMap via le navigateur système. Le SDK Google Maps et sa clé API ne sont plus nécessaires ; les parcours restent à tester sur appareils Android/iOS réels.
 - La carte Web utilise maintenant un regroupement visuel des marqueurs proches ; les règles avancées de densité à l’échelle territoriale et la représentation des secteurs restent à concevoir.
 - Les états hors connexion et les brouillons locaux restent hors de cette livraison.
 - La recette visuelle et l'accessibilité doivent encore être vérifiées sur navigateur, formats mobiles courants et appareils Android/iOS réels. Les vérifications de type et de build ne remplacent pas cette recette.
 
-Cette livraison couvre maintenant une première reprise des routes applicatives Web et Mobile recensées, avec une attention renforcée aux parcours d'administration et de contrôle. Elle ne doit toutefois pas être déclarée définitivement terminée avant la recette visuelle réelle, la validation d'accessibilité, le redessin des assets natifs et le traitement des fonctionnalités identifiées comme absentes.
+Cette livraison couvre maintenant une première reprise des routes applicatives Web et Mobile recensées, avec une attention renforcée aux parcours d'administration et de contrôle. Elle ne doit toutefois pas être déclarée définitivement terminée avant la recette visuelle réelle, la validation d'accessibilité, le recette des assets natifs sur les appareils et le traitement des fonctionnalités identifiées comme absentes.
 
 
-## Tranche complémentaire — récupération de compte et carte native
+## Tranche complémentaire — récupération de compte et cartographie mobile
 
 - Web : routes `/mot-de-passe-oublie` et `/reinitialiser-mot-de-passe`, en conservant Supabase Auth et une réponse d'envoi qui ne révèle pas si l'adresse est enregistrée.
 - Mobile : routes `/forgot-password` et `/reset-password`, avec traitement des retours de lien profond (PKCE, token hash et session à jetons).
 - Mot de passe : confirmation obligatoire, minimum client de 12 caractères, fermeture de la session de récupération après mise à jour.
 - Configuration Supabase à faire avant recette : autoriser l'URL Web exacte `https://<domaine-web>/reinitialiser-mot-de-passe` et le schéma mobile `isiecoreport://**` dans Auth > URL Configuration > Redirect URLs.
-- Carte Mobile agent : les coordonnées réelles alimentent les marqueurs ; aucune position fictive n'est ajoutée. Les missions dépourvues de coordonnées restent accessibles dans leur section dédiée.
-- Configuration Android : fournir `GOOGLE_MAPS_API_KEY` dans l'environnement EAS/build. La clé n'est pas stockée dans le dépôt.
-- Assets : archive générée séparément avec `icon.png`, `adaptive-icon.png` et `splash.png` en 1024×1024. Les PNG doivent encore être copiés dans `apps/mobile/assets/` et committés, puis contrôlés sur les builds natifs.
+- Carte Mobile agent : les coordonnées réelles ouvrent l’emplacement correspondant sur OpenStreetMap ; aucune position fictive n’est ajoutée. Les missions dépourvues de coordonnées restent accessibles dans leur section dédiée.
+- Cartographie Mobile : OpenStreetMap est ouvert via le navigateur système. Aucune clé API ou variable EAS n’est à configurer.
+- Assets natifs : `icon.png`, `adaptive-icon.png`, `splash.png` et `brand-mark.png` ont été générés et validés. Les PNG préparés sont fournis en archive, mais les fichiers binaires du dépôt restent à remplacer via l’interface GitHub.

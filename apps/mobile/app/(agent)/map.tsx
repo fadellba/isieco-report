@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import MapView, { Marker, type Region } from 'react-native-maps';
 import { ActivityIndicator, Alert, Linking, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import {
   getAgentProfile, listMyTeams, listTeamAssignments, listTeamInterventions,
@@ -40,42 +39,6 @@ function missionState(assignment: TeamAssignment, latest: TeamIntervention | und
   if (latest.verification?.etatVerification === 'REPRISE') return 'RESTART';
   if (latest.verification?.etatVerification === 'VALIDEE') return 'RESOLVED';
   return 'TO_VERIFY';
-}
-
-function mapRegionFor(items: TeamAssignment[]): Region | null {
-  const points = items
-    .map(coordinatesFor)
-    .filter((point): point is { latitude: number; longitude: number } => point !== null);
-  if (points.length === 0) return null;
-
-  const latitudes = points.map((point) => point.latitude);
-  const longitudes = points.map((point) => point.longitude);
-  const latitudeRange = Math.max(...latitudes) - Math.min(...latitudes);
-  const longitudeRange = Math.max(...longitudes) - Math.min(...longitudes);
-
-  return {
-    latitude: (Math.min(...latitudes) + Math.max(...latitudes)) / 2,
-    longitude: (Math.min(...longitudes) + Math.max(...longitudes)) / 2,
-    latitudeDelta: Math.min(3, Math.max(0.015, latitudeRange * 1.6 + 0.01)),
-    longitudeDelta: Math.min(3, Math.max(0.015, longitudeRange * 1.6 + 0.01)),
-  };
-}
-
-function markerColor(state: MissionState): string {
-  switch (state) {
-    case 'TO_ACCEPT':
-    case 'RESTART':
-      return '#B97827';
-    case 'TO_START':
-    case 'TO_VERIFY':
-      return '#28748A';
-    case 'IN_PROGRESS':
-      return '#2F7773';
-    case 'RESOLVED':
-      return '#23764F';
-    case 'REFUSED':
-      return '#B64E43';
-  }
 }
 
 function missionPresentation(state: MissionState): { label: string; tone: StatusTone; action: string } {
@@ -182,7 +145,6 @@ export default function AgentMapScreen() {
 
   const located = useMemo(() => filtered.filter((assignment) => coordinatesFor(assignment) !== null), [filtered]);
   const withoutCoordinates = useMemo(() => filtered.filter((assignment) => coordinatesFor(assignment) === null), [filtered]);
-  const mapRegion = useMemo(() => mapRegionFor(located), [located]);
   const selectedAssignment = useMemo(
     () => located.find((assignment) => assignment.idAffectation === selectedMissionId) ?? located[0] ?? null,
     [located, selectedMissionId],
@@ -208,15 +170,15 @@ export default function AgentMapScreen() {
     });
   }
 
-  async function openDirections(assignment: TeamAssignment) {
+  async function openOpenStreetMap(assignment: TeamAssignment) {
     const coordinate = coordinatesFor(assignment);
     if (!coordinate) return;
-    const url = 'https://www.google.com/maps/dir/?api=1&destination='
-      + encodeURIComponent(coordinate.latitude + ',' + coordinate.longitude);
+    const { latitude, longitude } = coordinate;
+    const url = `https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=17/${latitude}/${longitude}`;
     try {
       await Linking.openURL(url);
     } catch {
-      Alert.alert('Itinéraire indisponible', 'Aucune application ne peut ouvrir cet itinéraire sur cet appareil.');
+      Alert.alert('Carte indisponible', 'Impossible d’ouvrir OpenStreetMap sur cet appareil.');
     }
   }
 
@@ -230,7 +192,7 @@ export default function AgentMapScreen() {
         <Text className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-brand-lime">ESPACE AGENT · TERRAIN</Text>
         <Text className="mt-2 text-2xl font-extrabold text-white">Carte des missions</Text>
         <Text className="mt-2 text-sm leading-6 text-white/75">
-          Retrouvez les interventions géolocalisées de vos équipes et ouvrez un itinéraire vers chaque site.
+          Retrouvez les interventions géolocalisées de vos équipes et ouvrez chaque emplacement sur OpenStreetMap, sans clé API.
         </Text>
         <View className="mt-5 flex-row gap-3">
           <View className="flex-1 rounded-2xl bg-white/10 px-3 py-3">
@@ -328,7 +290,7 @@ export default function AgentMapScreen() {
             </ScrollView>
           </View>
 
-          {located.length === 0 || !mapRegion ? (
+          {located.length === 0 ? (
             <View className="rounded-2xl border border-line-subtle bg-white px-5 py-7">
               <Text className="text-sm font-extrabold text-ink-900">Aucun site géolocalisé dans cette vue</Text>
               <Text className="mt-2 text-sm leading-6 text-ink-500">
@@ -337,38 +299,31 @@ export default function AgentMapScreen() {
             </View>
           ) : (
             <>
-              <View className="overflow-hidden rounded-3xl border border-line-subtle bg-white">
-                <MapView
-                  key={selectedTeamId + ':' + filter + ':' + located.length}
-                  style={{ width: '100%', height: 340 }}
-                  initialRegion={mapRegion}
-                  mapType="standard"
-                  showsCompass
-                  showsScale
-                  toolbarEnabled
-                  rotateEnabled
-                  pitchEnabled={false}
-                  moveOnMarkerPress={false}
-                >
-                  {located.map((assignment) => {
-                    const coordinate = coordinatesFor(assignment);
-                    if (!coordinate) return null;
-                    const state = missionState(assignment, latestByAssignment.get(assignment.idAffectation));
+                            <View className="overflow-hidden rounded-3xl border border-line-subtle bg-white">
+                <View className="bg-brand-mist px-5 py-6">
+                  <Text className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-brand-petrol">CARTOGRAPHIE LIBRE</Text>
+                  <Text className="mt-2 text-xl font-extrabold text-ink-900">OpenStreetMap</Text>
+                  <Text className="mt-2 text-sm leading-6 text-ink-600">
+                    Aucun compte, aucune clé API et aucun SDK cartographique payant. L’emplacement s’ouvre dans le navigateur de l’appareil.
+                  </Text>
+                  {selectedAssignment ? (() => {
+                    const coordinate = coordinatesFor(selectedAssignment);
                     return (
-                      <Marker
-                        key={assignment.idAffectation}
-                        coordinate={coordinate}
-                        title={assignment.contenuDossier.dossier.referenceDossier}
-                        description={assignment.contenuDossier.typeDechet.libelle}
-                        pinColor={markerColor(state)}
-                        onPress={() => setSelectedMissionId(assignment.idAffectation)}
-                      />
+                      <View className="mt-5 rounded-2xl border border-line-subtle bg-white p-4">
+                        <Text className="text-[9px] font-extrabold uppercase tracking-[0.12em] text-brand-petrol">EMPLACEMENT SÉLECTIONNÉ</Text>
+                        <Text className="mt-1 text-sm font-extrabold text-ink-900">{selectedAssignment.contenuDossier.dossier.referenceDossier}</Text>
+                        <Text className="mt-1 text-[10px] text-ink-500">
+                          {coordinate ? coordinate.latitude.toFixed(5) + ', ' + coordinate.longitude.toFixed(5) : ''}
+                        </Text>
+                        <Pressable onPress={() => void openOpenStreetMap(selectedAssignment)} className="mt-4 rounded-xl bg-brand-forest px-4 py-3">
+                          <Text className="text-center text-xs font-extrabold text-white">Ouvrir sur OpenStreetMap</Text>
+                        </Pressable>
+                      </View>
                     );
-                  })}
-                </MapView>
-                <View className="flex-row items-center justify-between border-t border-line-subtle bg-white px-4 py-3">
-                  <Text className="text-[10px] font-extrabold text-ink-700">Carte interactive · {located.length} marqueur(s)</Text>
-                  <Text className="text-[9px] font-semibold text-ink-400">Déplacez et zoomez sur la carte</Text>
+                  })() : null}
+                </View>
+                <View className="border-t border-line-subtle bg-white px-4 py-3">
+                  <Text className="text-[9px] font-semibold text-ink-400">© Contributeurs OpenStreetMap · Données sous licence ODbL</Text>
                 </View>
               </View>
 
@@ -399,8 +354,8 @@ export default function AgentMapScreen() {
                       <Pressable onPress={() => openMission(selectedAssignment)} className="flex-1 rounded-xl border border-line-strong bg-white px-3 py-3">
                         <Text className="text-center text-[10px] font-extrabold text-brand-forest">Détails de la mission</Text>
                       </Pressable>
-                      <Pressable onPress={() => void openDirections(selectedAssignment)} className="flex-1 rounded-xl bg-brand-forest px-3 py-3">
-                        <Text className="text-center text-[10px] font-extrabold text-white">Itinéraire</Text>
+                      <Pressable onPress={() => void openOpenStreetMap(selectedAssignment)} className="flex-1 rounded-xl bg-brand-forest px-3 py-3">
+                        <Text className="text-center text-[10px] font-extrabold text-white">Voir la carte</Text>
                       </Pressable>
                     </View>
                   </View>
@@ -408,7 +363,7 @@ export default function AgentMapScreen() {
               })() : null}
 
               <View className="mt-4">
-                <Text className="text-xs font-extrabold text-ink-900">Sites affichés sur la carte</Text>
+                <Text className="text-xs font-extrabold text-ink-900">Sites géolocalisés</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 10 }}>
                   {located.map((assignment) => {
                     const selected = selectedAssignment?.idAffectation === assignment.idAffectation;
@@ -436,7 +391,7 @@ export default function AgentMapScreen() {
           {withoutCoordinates.length > 0 ? (
             <View className="mt-5 rounded-2xl border border-line-subtle bg-white p-4">
               <Text className="text-sm font-extrabold text-ink-900">Missions sans coordonnées ({withoutCoordinates.length})</Text>
-              <Text className="mt-1 text-xs leading-5 text-ink-500">Ces missions restent accessibles, mais aucun itinéraire ne peut être généré tant que leur localisation n’est pas renseignée.</Text>
+              <Text className="mt-1 text-xs leading-5 text-ink-500">Ces missions restent accessibles, mais aucun emplacement ne peut être ouvert tant que leur localisation n’est pas renseignée.</Text>
               <View className="mt-3 gap-2">
                 {withoutCoordinates.map((assignment) => (
                   <Pressable key={assignment.idAffectation} onPress={() => openMission(assignment)} className="flex-row items-center justify-between rounded-xl bg-surface-soft px-3 py-3">

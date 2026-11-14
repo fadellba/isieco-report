@@ -84,6 +84,6 @@ Les notifications, le mode hors connexion et l'affichage des preuves d'intervent
 
 ### Configuration des services natifs
 
-Pour afficher les tuiles Google Maps dans un build Android autonome, définir `GOOGLE_MAPS_API_KEY` dans l'environnement de build (EAS). Aucune clé ne doit être commitée dans ce dépôt. iOS utilise le fournisseur cartographique natif par défaut.
+La cartographie mobile utilise les liens OpenStreetMap : aucune clé API, aucun compte fournisseur et aucune configuration EAS ne sont nécessaires. L'ouverture de la carte se fait dans le navigateur de l'appareil. Respecter l'attribution OpenStreetMap et les conditions d'utilisation du service public.
 
 Pour tester la récupération de compte, autoriser dans Supabase Auth les URLs de redirection Web de l'application vers `/reinitialiser-mot-de-passe` ainsi que le schéma mobile `isiecoreport://**`. Vérifier le parcours sur des comptes de test, y compris un lien expiré.

@@ -33,8 +33,7 @@
     "react-native-url-polyfill": "4.0.0",
     "expo-image-picker": "~57.0.20",
     "expo-image-manipulator": "~57.0.21",
-    "expo-location": "~57.0.22",
-    "react-native-maps": "1.27.2"
+    "expo-location": "~57.0.22"
   },
   "devDependencies": {
     "@types/react": "19.2.0",
