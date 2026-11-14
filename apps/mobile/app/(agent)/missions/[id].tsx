@@ -231,7 +231,6 @@ export default function AgentMissionDetailScreen() {
   }
 
   const location = assignment.contenuDossier.dossier;
-  const canReport = intervention?.statutIntervention === 'EN_COURS' && author;
   const options = [
     { value: 'TERMINEE' as const, label: 'Terminée' },
     { value: 'PARTIELLE' as const, label: 'Partielle' },
