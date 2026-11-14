@@ -221,12 +221,15 @@ export function OperationalMap({ features, selectedFeatureId, onSelectFeature, o
     // features, so the simple distance pass remains inexpensive and predictable.
     const parents = points.map((_, index) => index);
     const findRoot = (value: number): number => {
+      let root = value;
+      while ((parents[root] ?? root) !== root) root = parents[root] ?? root;
       let current = value;
-      while (parents[current] !== current) {
-        parents[current] = parents[parents[current]] ?? parents[current]!;
-        current = parents[current] ?? current;
+      while (current !== root) {
+        const next = parents[current] ?? root;
+        parents[current] = root;
+        current = next;
       }
-      return current;
+      return root;
     };
     const join = (left: number, right: number) => {
       const leftRoot = findRoot(left);
