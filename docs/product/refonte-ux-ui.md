@@ -1,5 +1,15 @@
 # Refonte UX/UI ISIECO — cadrage produit v1
 
+## Périmètre global confirmé : tous les écrans, du premier au dernier
+
+La refonte ne se limite pas au tableau de bord, à quelques files métier ou aux écrans principaux. Elle concerne **l'intégralité des écrans existants sur Web et Mobile**, depuis le splash et l'onboarding jusqu'au profil, aux détails, aux formulaires et aux états de fin de parcours.
+
+Le périmètre inclut notamment la connexion, la création de compte citoyen, le choix d'espace, les erreurs d'authentification, les écrans d'accès refusé, les téléchargements, chaque espace par rôle, toutes les listes et tous les détails métier. Les écrans moins fréquents ou accessibles uniquement avec une habilitation spécifique sont inclus au même titre que les écrans d'accueil.
+
+L'inventaire de référence, route par route, est maintenu dans [l'inventaire exhaustif des écrans](./inventaire-ecrans-refonte-ux-ui.md). Il constitue le registre de couverture et d'acceptation : aucun écran ne sera considéré comme terminé sur la seule base d'un build ou de la présence de composants partagés.
+
+L'exécution se fait par couches : socle UI commun, entrée/authentification, parcours citoyen, parcours agent, puis tous les modules Web. Chaque écran doit ensuite être vérifié pour ses états de chargement, vide, erreur, validation, permissions, responsive et accessibilité lorsque cela s'applique. Les règles de rôles, d'auteur, d'appartenance, de transition et de sécurité restent celles de l'API.
+
 ## Intention
 
 ISIECO doit être immédiatement identifiable comme une plateforme de signalement, de qualification, d'affectation et de suivi des dépôts sauvages et des opérations de propreté urbaine. La refonte ne consiste pas à ajouter du vert aux écrans existants : elle doit installer une identité reconnaissable et rendre les parcours métier évidents.
