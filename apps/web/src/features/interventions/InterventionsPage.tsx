@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useAuth } from '../../app/auth-context';
 import { api } from '../../lib/api';
+import { StatusBadge, type StatusTone } from '../../components/StatusBadge';
 
 interface AgentTeam {
   idEquipe: string;
@@ -59,6 +60,22 @@ interface Intervention {
   };
 }
 
+function assignmentTone(status: string): StatusTone {
+  if (status === 'TERMINEE') return 'success';
+  if (status === 'ANNULEE') return 'danger';
+  if (status === 'ACTIVE') return 'info';
+  return 'neutral';
+}
+function decisionTone(decision: string): StatusTone {
+  if (decision === 'ACCEPTEE') return 'success';
+  if (decision === 'REFUSEE') return 'danger';
+  if (decision === 'EN_ATTENTE') return 'warning';
+  return 'neutral';
+}
+function displayStatus(value: string) {
+  return value.replaceAll('_', ' ').toLowerCase();
+}
+
 function errorMessage(reason: unknown): string {
   return reason instanceof Error ? reason.message : 'Une erreur inattendue est survenue.';
 }
@@ -89,6 +106,7 @@ export function InterventionsPage() {
   const [loadingWork, setLoadingWork] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
   const latestByAssignment = useMemo(() => {
     const map = new Map<string, Intervention>();
@@ -104,6 +122,23 @@ export function InterventionsPage() {
     }
     return map;
   }, [interventions]);
+
+  const visibleAssignments = useMemo(() => {
+    const query = search.trim().toLocaleLowerCase('fr-FR');
+    if (!query) return assignments;
+    return assignments.filter((assignment) => [
+      assignment.contenuDossier.dossier.referenceDossier,
+      assignment.contenuDossier.typeDechet.libelle,
+      assignment.equipe.nomEquipe,
+      assignment.motif ?? '',
+      assignment.motifRefusEquipe ?? '',
+    ].join(' ').toLocaleLowerCase('fr-FR').includes(query));
+  }, [assignments, search]);
+
+  const pendingCount = assignments.filter((item) => item.decisionEquipe === 'EN_ATTENTE').length;
+  const acceptedCount = assignments.filter((item) => item.decisionEquipe === 'ACCEPTEE').length;
+  const inProgressCount = interventions.filter((item) => item.statutIntervention === 'EN_COURS').length;
+  const verificationCount = interventions.filter((item) => item.statutIntervention === 'SOUMISE' && !item.verification).length;
 
   const loadTeams = useCallback(async () => {
     setLoadingTeams(true);
@@ -286,19 +321,22 @@ export function InterventionsPage() {
   const selectedTeam = teams.find((team) => team.idEquipe === selectedTeamId) ?? null;
 
   return (
-    <div className="space-y-6">
-      <header>
-        <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-brand-forest">Opérations de terrain</p>
-        <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-ink-900">Interventions</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-500">
-          Consultez les missions de vos équipes, répondez aux affectations et renseignez les interventions que vous avez démarrées. Les autorisations sont revérifiées par l’API à chaque action.
-        </p>
+    <div className="interventions-workspace">
+      <header className="interventions-workspace__hero">
+        <div>
+          <span className="interventions-workspace__eyebrow">OPÉRATIONS DE TERRAIN</span>
+          <h1>Interventions</h1>
+          <p>Acceptez les missions, documentez vos actions et transmettez vos comptes rendus. Les habilitations et l’auteur sont vérifiés à chaque opération.</p>
+        </div>
+        <div className="interventions-workspace__team-count">
+          <strong>{teams.length}</strong><span>Équipe(s)<br />active(s)</span>
+        </div>
       </header>
 
       {notice ? <div role="status" className="rounded-xl border border-line-strong bg-surface-base px-4 py-3 text-sm text-ink-900">{notice}</div> : null}
       {error ? <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div> : null}
 
-      <section className="rounded-2xl border border-line-strong bg-white p-5">
+      <section className="interventions-team-panel">
         <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
           <label className={labelClass}>Équipe active
             <select value={selectedTeamId} onChange={(event) => setSelectedTeamId(event.target.value)} disabled={loadingTeams || teams.length === 0} className={inputClass}>
@@ -324,20 +362,37 @@ export function InterventionsPage() {
       ) : null}
 
       {selectedTeam ? (
-        <section className="overflow-hidden rounded-2xl border border-line-strong bg-white">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-subtle px-5 py-4">
+        <>
+          <section className="interventions-summary" aria-label="Synthèse de l’équipe sélectionnée">
+            <article><span>À accepter</span><strong>{pendingCount}</strong><small>Réponse attendue</small></article>
+            <article><span>Acceptées</span><strong>{acceptedCount}</strong><small>Missions confiées</small></article>
+            <article><span>En cours</span><strong>{inProgressCount}</strong><small>Interventions démarrées</small></article>
+            <article><span>À vérifier</span><strong>{verificationCount}</strong><small>Comptes rendus transmis</small></article>
+          </section>
+
+          <section className="interventions-panel">
+          <div className="interventions-panel__header">
             <div>
-              <h2 className="font-bold text-ink-900">Missions de {selectedTeam.nomEquipe}</h2>
-              <p className="mt-1 text-xs text-ink-500">{assignments.length} affectation(s) active(s)</p>
+              <span className="interventions-workspace__eyebrow">VOTRE ÉQUIPE</span>
+              <h2>Missions de {selectedTeam.nomEquipe}</h2>
+              <p>{assignments.length} affectation(s) active(s) · {visibleAssignments.length} résultat(s)</p>
             </div>
             <button type="button" onClick={() => void loadWork()} disabled={loadingWork} className={secondaryClass}>
               {loadingWork ? 'Actualisation…' : 'Actualiser les missions'}
             </button>
           </div>
+          <div className="interventions-panel__toolbar">
+            <label className="interventions-search">
+              <span>Rechercher dans les missions</span>
+              <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Référence, type de déchet, équipe ou motif…" />
+            </label>
+            <span>{visibleAssignments.length} résultat(s)</span>
+          </div>
           {loadingWork && !assignments.length ? <p className="p-5 text-sm text-ink-500">Chargement des missions…</p> : null}
           {!loadingWork && assignments.length === 0 ? <p className="p-5 text-sm text-ink-500">Aucune affectation active pour cette équipe.</p> : null}
-          <div className="divide-y divide-slate-100">
-            {assignments.map((assignment) => {
+          {!loadingWork && assignments.length > 0 && visibleAssignments.length === 0 ? <div className="interventions-panel__empty"><strong>Aucune mission ne correspond à cette recherche.</strong><button type="button" onClick={() => setSearch('')}>Effacer la recherche</button></div> : null}
+          <div className="interventions-panel__list">
+            {visibleAssignments.map((assignment) => {
               const latest = latestByAssignment.get(assignment.idAffectation);
               const latestVerification = latest?.verification ?? null;
               const isAuthor = latest?.renseignePar === profile?.utilisateurId;
@@ -358,8 +413,8 @@ export function InterventionsPage() {
                       {assignment.contenuDossier.dossier.statutDossier ? <p className="mt-1 text-[11px] text-ink-400">Dossier : {assignment.contenuDossier.dossier.statutDossier} · contenu : {assignment.contenuDossier.etatPriseEnCharge}</p> : null}
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <span className="rounded-full bg-surface-soft px-2.5 py-1 text-[10px] font-bold text-ink-700">{assignment.etatAffectation}</span>
-                      <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-800">{assignment.decisionEquipe}</span>
+                      <StatusBadge label={'Affectation ' + displayStatus(assignment.etatAffectation)} tone={assignmentTone(assignment.etatAffectation)} />
+                      <StatusBadge label={'Équipe ' + displayStatus(assignment.decisionEquipe)} tone={decisionTone(assignment.decisionEquipe)} />
                     </div>
                   </div>
 
@@ -452,7 +507,8 @@ export function InterventionsPage() {
               );
             })}
           </div>
-        </section>
+          </section>
+        </>
       ) : null}
     </div>
   );
