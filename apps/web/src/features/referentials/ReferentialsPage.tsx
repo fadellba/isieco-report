@@ -55,10 +55,10 @@ function dateLabel(value: string): string {
     : new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium' }).format(date);
 }
 
-const inputClass = 'mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-eco-500 focus:ring-2 focus:ring-eco-100';
-const labelClass = 'block text-xs font-semibold text-slate-600';
-const buttonClass = 'rounded-lg bg-eco-700 px-4 py-2.5 text-xs font-bold text-white hover:bg-eco-600 disabled:cursor-not-allowed disabled:opacity-50';
-const secondaryClass = 'rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50';
+const inputClass = 'mt-1 w-full rounded-lg border border-line-strong bg-white px-3 py-2.5 text-sm text-ink-800 outline-none focus:border-eco-500 focus:ring-2 focus:ring-eco-100';
+const labelClass = 'block text-xs font-semibold text-ink-500';
+const buttonClass = 'rounded-lg bg-brand-forest px-4 py-2.5 text-xs font-bold text-white hover:bg-eco-600 disabled:cursor-not-allowed disabled:opacity-50';
+const secondaryClass = 'rounded-lg border border-line-strong bg-white px-3 py-2 text-xs font-semibold text-ink-500 hover:bg-surface-base disabled:opacity-50';
 
 export function ReferentialsPage() {
   const [tab, setTab] = useState<PageTab>('types');
@@ -216,15 +216,15 @@ export function ReferentialsPage() {
   return (
     <div className="space-y-6">
       <header>
-        <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-eco-700">Administration</p>
-        <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">Référentiels</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+        <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-brand-forest">Administration</p>
+        <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-ink-900">Référentiels</h1>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-500">
           Gérez les types de déchets, les équipes, leurs membres et leurs compétences.
         </p>
       </header>
 
       {error ? <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div> : null}
-      {notice ? <div role="status" className="rounded-xl border border-eco-200 bg-eco-50 px-4 py-3 text-sm text-eco-900">{notice}</div> : null}
+      {notice ? <div role="status" className="rounded-xl border border-line-strong bg-surface-base px-4 py-3 text-sm text-ink-900">{notice}</div> : null}
 
       <div className="flex flex-wrap gap-2">
         <button type="button" onClick={() => setTab('types')} className={tab === 'types' ? buttonClass : secondaryClass}>Types de déchets</button>
@@ -232,57 +232,57 @@ export function ReferentialsPage() {
         <button type="button" onClick={() => void load()} disabled={loading} className={secondaryClass}>Actualiser</button>
       </div>
 
-      {loading ? <p className="text-sm text-slate-500">Chargement des référentiels…</p> : null}
+      {loading ? <p className="text-sm text-ink-500">Chargement des référentiels…</p> : null}
 
       {tab === 'types' ? (
         <div className="space-y-4">
-          <form onSubmit={(event) => void createWasteType(event)} className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-5 md:grid-cols-3">
+          <form onSubmit={(event) => void createWasteType(event)} className="grid gap-3 rounded-2xl border border-line-strong bg-white p-5 md:grid-cols-3">
             <label className={labelClass}>Code du type<input required maxLength={80} value={typeCode} onChange={(event) => setTypeCode(event.target.value)} className={inputClass} placeholder="PLASTIQUE" /></label>
             <label className={labelClass}>Libellé<input required maxLength={255} value={typeLabel} onChange={(event) => setTypeLabel(event.target.value)} className={inputClass} placeholder="Déchets plastiques" /></label>
             <label className={labelClass}>Description<input maxLength={2000} value={typeDescription} onChange={(event) => setTypeDescription(event.target.value)} className={inputClass} placeholder="Description facultative" /></label>
             <div className="md:col-span-3 flex flex-wrap items-center justify-between gap-3">
-              <label className="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" checked={includeInactive} onChange={(event) => setIncludeInactive(event.target.checked)} />Afficher les types inactifs</label>
+              <label className="flex items-center gap-2 text-xs text-ink-500"><input type="checkbox" checked={includeInactive} onChange={(event) => setIncludeInactive(event.target.checked)} />Afficher les types inactifs</label>
               <button type="submit" disabled={busy === 'type-create'} className={buttonClass}>{busy === 'type-create' ? 'Création…' : 'Ajouter le type'}</button>
             </div>
           </form>
-          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-            <div className="border-b border-slate-100 px-5 py-4"><h2 className="font-bold text-slate-900">{wasteTypes.length} type(s) de déchets</h2></div>
+          <section className="overflow-hidden rounded-2xl border border-line-strong bg-white">
+            <div className="border-b border-line-subtle px-5 py-4"><h2 className="font-bold text-ink-900">{wasteTypes.length} type(s) de déchets</h2></div>
             <div className="divide-y divide-slate-100">
               {wasteTypes.map((item) => (
                 <article key={item.idTypeDechet} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
-                  <div><p className="font-bold text-slate-900">{item.libelle}</p><p className="mt-1 text-xs text-slate-500">{item.codeType}{item.description ? ' · ' + item.description : ''}</p></div>
-                  <div className="flex items-center gap-3"><span className={item.actif ? 'rounded-full bg-eco-50 px-2.5 py-1 text-xs font-bold text-eco-800' : 'rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600'}>{item.actif ? 'Actif' : 'Inactif'}</span><button type="button" onClick={() => void toggleWasteType(item)} disabled={busy === 'type-' + item.idTypeDechet} className={secondaryClass}>{item.actif ? 'Désactiver' : 'Réactiver'}</button></div>
+                  <div><p className="font-bold text-ink-900">{item.libelle}</p><p className="mt-1 text-xs text-ink-500">{item.codeType}{item.description ? ' · ' + item.description : ''}</p></div>
+                  <div className="flex items-center gap-3"><span className={item.actif ? 'rounded-full bg-surface-base px-2.5 py-1 text-xs font-bold text-ink-800' : 'rounded-full bg-surface-soft px-2.5 py-1 text-xs font-bold text-ink-500'}>{item.actif ? 'Actif' : 'Inactif'}</span><button type="button" onClick={() => void toggleWasteType(item)} disabled={busy === 'type-' + item.idTypeDechet} className={secondaryClass}>{item.actif ? 'Désactiver' : 'Réactiver'}</button></div>
                 </article>
               ))}
-              {!wasteTypes.length ? <p className="p-6 text-sm text-slate-500">Aucun type de déchet enregistré.</p> : null}
+              {!wasteTypes.length ? <p className="p-6 text-sm text-ink-500">Aucun type de déchet enregistré.</p> : null}
             </div>
           </section>
         </div>
       ) : (
         <div className="space-y-4">
-          <form onSubmit={(event) => void createTeam(event)} className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-5 md:grid-cols-[1fr_1fr_auto] md:items-end">
+          <form onSubmit={(event) => void createTeam(event)} className="grid gap-3 rounded-2xl border border-line-strong bg-white p-5 md:grid-cols-[1fr_1fr_auto] md:items-end">
             <label className={labelClass}>Nom de l’équipe<input required maxLength={150} value={teamName} onChange={(event) => setTeamName(event.target.value)} className={inputClass} /></label>
             <label className={labelClass}>Description<input maxLength={2000} value={teamDescription} onChange={(event) => setTeamDescription(event.target.value)} className={inputClass} /></label>
             <button type="submit" disabled={busy === 'team-create'} className={buttonClass}>Créer l’équipe</button>
           </form>
 
           {teams.map((team) => (
-            <section key={team.idEquipe} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
+            <section key={team.idEquipe} className="space-y-4 rounded-2xl border border-line-strong bg-white p-5">
               <header className="flex flex-wrap items-start justify-between gap-3">
-                <div><h2 className="text-lg font-bold text-slate-900">{team.nomEquipe}</h2><p className="mt-1 text-xs text-slate-500">{team.description || 'Aucune description'} · {team.etatEquipe}</p></div>
+                <div><h2 className="text-lg font-bold text-ink-900">{team.nomEquipe}</h2><p className="mt-1 text-xs text-ink-500">{team.description || 'Aucune description'} · {team.etatEquipe}</p></div>
                 <button type="button" onClick={() => void toggleTeam(team)} disabled={busy === 'team-' + team.idEquipe} className={secondaryClass}>{team.etatEquipe === 'ACTIVE' ? 'Désactiver' : 'Réactiver'}</button>
               </header>
 
               <div className="grid gap-4 lg:grid-cols-2">
                 <div className="space-y-3">
-                  <h3 className="text-sm font-bold text-slate-800">Membres actuels ({team.appartenances.length})</h3>
+                  <h3 className="text-sm font-bold text-ink-800">Membres actuels ({team.appartenances.length})</h3>
                   {team.appartenances.map((member) => (
-                    <div key={member.idUtilisateur + member.dateDebut} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2.5">
-                      <div><p className="text-sm font-semibold text-slate-800">{member.utilisateur.prenom ? member.utilisateur.prenom + ' ' : ''}{member.utilisateur.nom}</p><p className="text-xs text-slate-500">{member.utilisateur.email} · {member.fonction}</p></div>
+                    <div key={member.idUtilisateur + member.dateDebut} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-surface-base px-3 py-2.5">
+                      <div><p className="text-sm font-semibold text-ink-800">{member.utilisateur.prenom ? member.utilisateur.prenom + ' ' : ''}{member.utilisateur.nom}</p><p className="text-xs text-ink-500">{member.utilisateur.email} · {member.fonction}</p></div>
                       <button type="button" onClick={() => void removeMember(team.idEquipe, member)} className={secondaryClass}>Retirer</button>
                     </div>
                   ))}
-                  <form onSubmit={(event) => void addMember(team.idEquipe, event)} className="space-y-2 rounded-xl border border-slate-100 p-3">
+                  <form onSubmit={(event) => void addMember(team.idEquipe, event)} className="space-y-2 rounded-xl border border-line-subtle p-3">
                     <label className={labelClass}>UUID du compte utilisateur<input required value={memberIds[team.idEquipe] ?? ''} onChange={(event) => setMemberIds((current) => ({ ...current, [team.idEquipe]: event.target.value }))} className={inputClass} placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" /></label>
                     <label className={labelClass}>Fonction<input required value={memberFunctions[team.idEquipe] ?? ''} onChange={(event) => setMemberFunctions((current) => ({ ...current, [team.idEquipe]: event.target.value }))} className={inputClass} placeholder="Agent de terrain" /></label>
                     <button type="submit" disabled={busy === 'member-' + team.idEquipe} className={buttonClass}>Ajouter le membre</button>
@@ -290,14 +290,14 @@ export function ReferentialsPage() {
                 </div>
 
                 <div className="space-y-3">
-                  <h3 className="text-sm font-bold text-slate-800">Compétences actives ({team.competences.length})</h3>
+                  <h3 className="text-sm font-bold text-ink-800">Compétences actives ({team.competences.length})</h3>
                   {team.competences.map((skill) => (
-                    <div key={skill.idCompetenceEquipe} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2.5">
-                      <div><p className="text-sm font-semibold text-slate-800">{skill.typeDechet.libelle}</p><p className="text-xs text-slate-500">Attribuée le {dateLabel(skill.dateAttribution)}{skill.commentaire ? ' · ' + skill.commentaire : ''}</p></div>
+                    <div key={skill.idCompetenceEquipe} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-surface-base px-3 py-2.5">
+                      <div><p className="text-sm font-semibold text-ink-800">{skill.typeDechet.libelle}</p><p className="text-xs text-ink-500">Attribuée le {dateLabel(skill.dateAttribution)}{skill.commentaire ? ' · ' + skill.commentaire : ''}</p></div>
                       <button type="button" onClick={() => void removeSkill(team.idEquipe, skill)} className={secondaryClass}>Désactiver</button>
                     </div>
                   ))}
-                  <form onSubmit={(event) => void addSkill(team.idEquipe, event)} className="space-y-2 rounded-xl border border-slate-100 p-3">
+                  <form onSubmit={(event) => void addSkill(team.idEquipe, event)} className="space-y-2 rounded-xl border border-line-subtle p-3">
                     <label className={labelClass}>Type de déchet<select required value={skillTypes[team.idEquipe] ?? ''} onChange={(event) => setSkillTypes((current) => ({ ...current, [team.idEquipe]: event.target.value }))} className={inputClass}><option value="">Sélectionner</option>{activeTypes.map((type) => <option key={type.idTypeDechet} value={type.idTypeDechet}>{type.libelle}</option>)}</select></label>
                     <label className={labelClass}>Commentaire facultatif<input value={skillComments[team.idEquipe] ?? ''} onChange={(event) => setSkillComments((current) => ({ ...current, [team.idEquipe]: event.target.value }))} className={inputClass} /></label>
                     <button type="submit" disabled={busy === 'skill-add-' + team.idEquipe || !activeTypes.length} className={buttonClass}>Ajouter la compétence</button>
@@ -306,7 +306,7 @@ export function ReferentialsPage() {
               </div>
             </section>
           ))}
-          {!teams.length ? <p className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-500">Aucune équipe enregistrée.</p> : null}
+          {!teams.length ? <p className="rounded-xl border border-line-strong bg-white p-6 text-sm text-ink-500">Aucune équipe enregistrée.</p> : null}
         </div>
       )}
     </div>
