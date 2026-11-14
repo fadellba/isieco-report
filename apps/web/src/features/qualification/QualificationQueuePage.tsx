@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { api } from '../../lib/api';
+import { FeedbackBanner, StatusBadge } from '../../components/StatusBadge';
 
 interface QueueItem {
   idSignalement: string;
@@ -17,6 +18,12 @@ function dateLabel(value: string | null) {
   if (!value) return 'Date non renseignée';
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? 'Date non renseignée' : new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+}
+
+function qualificationTone(status: string): 'warning' | 'info' | 'neutral' {
+  if (status === 'SOUMIS') return 'warning';
+  if (status === 'COMPLEMENT_REPONDU') return 'info';
+  return 'neutral';
 }
 
 export function QualificationQueuePage() {
@@ -51,10 +58,10 @@ export function QualificationQueuePage() {
         <p className="mt-2 text-sm leading-6 text-slate-600">Examinez les signalements soumis ou ayant reçu une réponse de complément. Les décisions sont contrôlées et historisées par l'API.</p>
       </header>
 
-      {notice ? <div role="status" className="rounded-xl border border-eco-200 bg-eco-50 px-4 py-3 text-sm text-eco-900">{notice}</div> : null}
-      {error ? <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div> : null}
+      {notice ? <FeedbackBanner tone="success">{notice}</FeedbackBanner> : null}
+      {error ? <FeedbackBanner tone="error">{error}</FeedbackBanner> : null}
 
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <section className="workflow-queue overflow-hidden rounded-2xl border border-slate-200 bg-white">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
           <div>
             <h2 className="font-bold text-slate-900">Signalements à examiner</h2>
@@ -66,11 +73,11 @@ export function QualificationQueuePage() {
         {!loading && result?.items.length === 0 ? <p className="p-6 text-sm text-slate-500">Aucun signalement ne nécessite actuellement de décision.</p> : null}
         <div className="divide-y divide-slate-100">
           {result?.items.map((item) => (
-            <article key={item.idSignalement} className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <article key={item.idSignalement} className="workflow-list-item flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="font-bold text-slate-900">{item.utilisateur.prenom ? `${item.utilisateur.prenom} ${item.utilisateur.nom}` : item.utilisateur.nom}</h3>
-                  <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-800">{item.statutSignalement}</span>
+                  <StatusBadge label={item.statutSignalement.replaceAll('_', ' ').toLowerCase()} tone={qualificationTone(item.statutSignalement)} />
                 </div>
                 <p className="mt-1 text-xs text-slate-500">Soumis le {dateLabel(item.dateSoumission)}</p>
                 <p className="mt-2 line-clamp-2 max-w-3xl text-sm text-slate-600">{item.description || 'Aucune description fournie.'}</p>
