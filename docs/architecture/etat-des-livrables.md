@@ -2,7 +2,7 @@
 
 Dernier snapshot opérationnel détaillé du **7 novembre 2026**. Un delta du dépôt `main` a été vérifié après les fusions des PR #91, #94, #96 et #98, sur le commit `652d16d56b0e7898b639ca09a822a35de5fb2e3b` du **13 novembre 2026**. Les constats récents ci-dessous priment sur le snapshot historique. La politique de périmètre sans abonnement payant est détaillée dans [Périmètre gratuit et reports liés aux coûts](../deployment/perimetre-offre-gratuite.md).
 
-## Delta vérifié sur main au 13 novembre 2026 — commit `652d16d`
+## Delta fonctionnel vérifié au 13 novembre 2026 — révision `652d16d`
 
 | Domaine | État au commit `652d16d` |
 |---|---|

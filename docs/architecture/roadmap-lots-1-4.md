@@ -2,7 +2,7 @@
 
 **Date de référence :** 13 novembre 2026  
 **Branche de référence :** `main`  
-**Commit vérifié :** [`652d16d56b0e7898b639ca09a822a35de5fb2e3b`](https://github.com/fadellba/isieco-report/commit/652d16d56b0e7898b639ca09a822a35de5fb2e3b)
+**Révision fonctionnelle de référence :** [`652d16d56b0e7898b639ca09a822a35de5fb2e3b`](https://github.com/fadellba/isieco-report/commit/652d16d56b0e7898b639ca09a822a35de5fb2e3b). Les commits suivants PR #97/#99 ne modifient que la documentation.
 
 Ce document regroupe les travaux prioritaires en quatre lots cohérents. Il distingue explicitement une fonctionnalité présente dans le code, une validation attestée et un travail encore planifié. Une issue ouverte ou un build vert ne vaut pas livraison.
 

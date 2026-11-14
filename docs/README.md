@@ -26,8 +26,8 @@ En cas de divergence, ne pas recopier une ancienne référence MLD v2.13 sans la
 
 ## État du dépôt au 13 novembre 2026
 
-- Le commit courant de `main` est `652d16d56b0e7898b639ca09a822a35de5fb2e3b`. Il inclut les PR #86, #94, #96 et #98.
-- La CI de `main` est verte ([#43530992124](https://github.com/fadellba/isieco-report/actions/runs/43530992124)); les CI des PR #96 et #98 sont vertes ([#43516567328](https://github.com/fadellba/isieco-report/actions/runs/43516567328), [#43530017692](https://github.com/fadellba/isieco-report/actions/runs/43530017692)).
+- La révision fonctionnelle de référence est `652d16d56b0e7898b639ca09a822a35de5fb2e3b` (PR #86, #94, #96 et #98). La PR #97 a ensuite synchronisé les documents sans modifier le code applicatif.
+- La CI de la révision fonctionnelle de référence `652d16d` est verte ([#43530992124](https://github.com/fadellba/isieco-report/actions/runs/43530992124)); les CI des PR #96 et #98 sont vertes ([#43516567328](https://github.com/fadellba/isieco-report/actions/runs/43516567328), [#43530017692](https://github.com/fadellba/isieco-report/actions/runs/43530017692)).
 - 14 migrations sont versionnées dans Git ; 11 sont enregistrées en staging. Trois restent en attente : les deux migrations d'ordre du ledger et `20261113215000_command_center_event_notifications`.
 - Le workflow staging [#43516567399](https://github.com/fadellba/isieco-report/actions/runs/43516567399) s'arrête avant Render/readiness/E2E ; le trigger SSE n'est pas encore actif en staging.
 - Les étapes de déploiement Web/API en production ont été ignorées après les contrôles car `PRODUCTION_DEPLOY_ENABLED` n'est pas `true` ([Web #43530992214](https://github.com/fadellba/isieco-report/actions/runs/43530992214), [API #43530992105](https://github.com/fadellba/isieco-report/actions/runs/43530992105)).

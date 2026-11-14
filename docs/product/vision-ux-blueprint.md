@@ -458,7 +458,7 @@ Cibles de conception :
 
 ## 7. État actuel du produit et écarts à traiter
 
-État vérifié à partir de `main` au commit `652d16d56b0e7898b639ca09a822a35de5fb2e3b` le 13 novembre 2026, après fusion des PR #86, #94, #96 et #98. Cette section décrit le dépôt ; elle ne remplace pas une recette visuelle sur appareils réels.
+État fonctionnel vérifié sur la révision `652d16d56b0e7898b639ca09a822a35de5fb2e3b` le 13 novembre 2026, après fusion des PR #86, #94, #96 et #98. Les commits documentaires suivants ne changent pas les fonctionnalités décrites. Cette section ne remplace pas une recette visuelle sur appareils réels.
 
 | Domaine | État actuel constaté | Écart / conséquence |
 |---|---|---|
