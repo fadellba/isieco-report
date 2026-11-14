@@ -62,6 +62,17 @@ L'inventaire ci-dessous sert de registre de couverture. Une ligne n'est considé
 | `/(agent)/map` | Vue géolocalisée | Filtres, coordonnées réelles, itinéraires, missions non localisées |
 | `/(agent)/profile` | Profil agent | Identité, habilitations, équipe, déconnexion |
 
+## État d'avancement des premières reprises structurelles
+
+| Route | Première reprise UI | Validation restante |
+|---|---|---|
+| `/qualification` | File de travail avec synthèse, recherche locale, statuts et actions explicites | Recette responsive, clavier et tests de parcours |
+| `/qualification/:idSignalement` | Contexte, pièces jointes, historique et décision progressive séparés | Vérifier les états métier réels et les formulaires sur navigateur |
+| `/dossiers` | Création guidée avec aperçu source, recherche locale, filtres et cartes | Vérifier les cas vides, pagination et responsive |
+| `/dossiers/:idDossier` | Contenus, rattachements, localisation et priorité hiérarchisés ; réglages avancés repliés | Tester les modifications, confirmations, erreurs et état clôturé |
+
+Ces reprises sont des premières passes de conception et de structure, pas une validation finale. La route est considérée couverte seulement après recette de tous ses états et de ses actions.
+
 ## Parcours transverses et composants communs
 
 Tous les écrans sont évalués avec les états pertinents : première ouverture, chargement, vide, succès, erreur récupérable, indisponibilité réseau, absence de permission, accès refusé et action en cours. Les formulaires incluent aide, validation, erreurs au niveau du champ et prévention des doubles soumissions lorsque l'action le nécessite.
