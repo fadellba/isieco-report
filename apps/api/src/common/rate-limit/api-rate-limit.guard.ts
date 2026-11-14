@@ -51,9 +51,10 @@ export class ApiRateLimitGuard implements CanActivate {
     bucket.lastSeen = now;
 
     if (bucket.timestamps.length >= options.limit) {
+      const oldestTimestamp = bucket.timestamps[0] ?? now;
       const retryAfterSeconds = Math.max(
         1,
-        Math.ceil((bucket.timestamps[0] + options.windowMs - now) / 1000),
+        Math.ceil((oldestTimestamp + options.windowMs - now) / 1000),
       );
       response.setHeader('Retry-After', String(retryAfterSeconds));
       throw new HttpException(
