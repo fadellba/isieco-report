@@ -274,3 +274,10 @@ button { cursor: pointer; }
 .feedback-banner--error { color: #873d36; background: #f9ecea; border-color: #eed7d3; border-left-color: #b64e43; }
 .feedback-banner--warning { color: #795117; background: #f8f0e4; border-color: #eedfc4; border-left-color: #a8671a; }
 .feedback-banner--info { color: #245c6c; background: #eaf3f6; border-color: #d2e5ea; border-left-color: #28748a; }
+
+.workflow-queue { box-shadow: var(--shadow-card); }
+.workflow-list-item { border-left: 3px solid transparent; transition: background .16s ease, border-color .16s ease; }
+.workflow-list-item:hover { border-left-color: var(--brand-petrol); background: #f7faf6; }
+.verification-queue { box-shadow: var(--shadow-card); }
+.verification-queue-item { transition: background .16s ease; }
+.verification-queue-item:hover { background: #fcfdfb; }
