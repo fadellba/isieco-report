@@ -46,6 +46,19 @@ interface Tile {
   url: string;
 }
 
+interface VisibleMarker {
+  feature: MapFeature;
+  left: number;
+  top: number;
+}
+
+interface MarkerCluster {
+  key: string;
+  features: MapFeature[];
+  left: number;
+  top: number;
+}
+
 const TILE_SIZE = 256;
 const MIN_ZOOM = 6;
 const MAX_ZOOM = 18;
@@ -104,6 +117,7 @@ export function OperationalMap({ features, selectedFeatureId, onSelectFeature, o
   const [zoom, setZoom] = useState(DEFAULT_ZOOM);
   const [tileError, setTileError] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [expandedClusterKey, setExpandedClusterKey] = useState<string | null>(null);
   const fittedRef = useRef(false);
 
   useEffect(() => {
@@ -188,25 +202,96 @@ export function OperationalMap({ features, selectedFeatureId, onSelectFeature, o
     return result;
   }, [mapOrigin, viewport, zoom]);
 
-  const markers = useMemo(() => features.flatMap((feature) => {
-    const coordinate = featureCoordinate(feature);
-    if (!coordinate) return [];
-    const point = project(coordinate, zoom);
-    const worldSize = TILE_SIZE * 2 ** zoom;
-    let deltaX = point.x - centerPoint.x;
-    if (deltaX > worldSize / 2) deltaX -= worldSize;
-    if (deltaX < -worldSize / 2) deltaX += worldSize;
-    const left = viewport.width / 2 + deltaX;
-    const top = viewport.height / 2 + point.y - centerPoint.y;
-    if (left < -18 || left > viewport.width + 18 || top < -18 || top > viewport.height + 18) return [];
-    return [{ feature, left, top }];
-  }), [features, centerPoint, viewport, zoom]);
+  const markers = useMemo<MarkerCluster[]>(() => {
+    const points: VisibleMarker[] = features.flatMap((feature) => {
+      const coordinate = featureCoordinate(feature);
+      if (!coordinate) return [];
+      const point = project(coordinate, zoom);
+      const worldSize = TILE_SIZE * 2 ** zoom;
+      let deltaX = point.x - centerPoint.x;
+      if (deltaX > worldSize / 2) deltaX -= worldSize;
+      if (deltaX < -worldSize / 2) deltaX += worldSize;
+      const left = viewport.width / 2 + deltaX;
+      const top = viewport.height / 2 + point.y - centerPoint.y;
+      if (left < -24 || left > viewport.width + 24 || top < -24 || top > viewport.height + 24) return [];
+      return [{ feature, left, top }];
+    });
+
+    // Regroup points that would otherwise overlap. The viewport is capped at 200
+    // features, so the simple distance pass remains inexpensive and predictable.
+    const parents = points.map((_, index) => index);
+    const findRoot = (value: number): number => {
+      let current = value;
+      while (parents[current] !== current) {
+        parents[current] = parents[parents[current]] ?? parents[current]!;
+        current = parents[current] ?? current;
+      }
+      return current;
+    };
+    const join = (left: number, right: number) => {
+      const leftRoot = findRoot(left);
+      const rightRoot = findRoot(right);
+      if (leftRoot !== rightRoot) parents[rightRoot] = leftRoot;
+    };
+
+    for (let leftIndex = 0; leftIndex < points.length; leftIndex += 1) {
+      for (let rightIndex = leftIndex + 1; rightIndex < points.length; rightIndex += 1) {
+        const leftPoint = points[leftIndex];
+        const rightPoint = points[rightIndex];
+        if (!leftPoint || !rightPoint) continue;
+        if (Math.hypot(leftPoint.left - rightPoint.left, leftPoint.top - rightPoint.top) <= 36) {
+          join(leftIndex, rightIndex);
+        }
+      }
+    }
+
+    const grouped = new Map<number, VisibleMarker[]>();
+    points.forEach((point, index) => {
+      const root = findRoot(index);
+      const group = grouped.get(root) ?? [];
+      group.push(point);
+      grouped.set(root, group);
+    });
+
+    return [...grouped.values()].map((group) => {
+      const groupFeatures = group.map((point) => point.feature);
+      const key = groupFeatures.map((feature) => feature.kind + ':' + feature.id).sort().join('|');
+      return {
+        key,
+        features: groupFeatures,
+        left: group.reduce((sum, point) => sum + point.left, 0) / group.length,
+        top: group.reduce((sum, point) => sum + point.top, 0) / group.length,
+      };
+    });
+  }, [features, centerPoint, viewport, zoom]);
+
+  function handleMarkerClick(marker: MarkerCluster) {
+    if (marker.features.length === 1) {
+      const feature = marker.features[0];
+      if (feature) onSelectFeature(feature.id);
+      return;
+    }
+
+    setExpandedClusterKey(null);
+    if (zoom < MAX_ZOOM) {
+      const worldPoint = {
+        x: centerPoint.x + marker.left - viewport.width / 2,
+        y: centerPoint.y + marker.top - viewport.height / 2,
+      };
+      setCenter(unproject(worldPoint, zoom));
+      setZoom((current) => clamp(current + 2, MIN_ZOOM, MAX_ZOOM));
+      return;
+    }
+    setExpandedClusterKey((current) => current === marker.key ? null : marker.key);
+  }
 
   function zoomBy(amount: number) {
+    setExpandedClusterKey(null);
     setZoom((current) => clamp(current + amount, MIN_ZOOM, MAX_ZOOM));
   }
 
   function fitAll() {
+    setExpandedClusterKey(null);
     const coordinates = features.map(featureCoordinate).filter((item): item is Coordinate => item !== null);
     if (!coordinates.length) {
       setCenter(DEFAULT_CENTER);
@@ -230,6 +315,7 @@ export function OperationalMap({ features, selectedFeatureId, onSelectFeature, o
   function handlePointerDown(event: PointerEvent<HTMLDivElement>) {
     if ((event.target as HTMLElement).closest('button, a')) return;
     const point = project(center, zoom);
+    setExpandedClusterKey(null);
     dragRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
@@ -280,24 +366,52 @@ export function OperationalMap({ features, selectedFeatureId, onSelectFeature, o
             style={{ left: tile.left, top: tile.top }}
           />
         ))}
-        {markers.map(({ feature, left, top }) => (
-          <button
-            key={feature.kind + ':' + feature.id}
-            type="button"
-            className={[
-              'operational-map__marker',
-              feature.kind === 'DOSSIER' ? 'is-case' : 'is-report',
-              feature.priority === 'CRITIQUE' ? 'is-critical' : '',
-              selectedFeatureId === feature.id ? 'is-selected' : '',
-            ].filter(Boolean).join(' ')}
-            style={{ left, top }}
-            onClick={() => onSelectFeature(feature.id)}
-            title={feature.title}
-            aria-label={`${feature.kind === 'DOSSIER' ? 'Dossier' : 'Signalement'} : ${feature.title}`}
-          >
-            <span />
-          </button>
-        ))}
+        {markers.map((marker) => {
+          const singleFeature = marker.features.length === 1 ? marker.features[0] : null;
+          const containsSelection = marker.features.some((feature) => feature.id === selectedFeatureId);
+          return (
+            <div key={marker.key}>
+              <button
+                type="button"
+                className={[
+                  'operational-map__marker',
+                  marker.features.length > 1 ? 'is-cluster' : '',
+                  singleFeature?.kind === 'DOSSIER' ? 'is-case' : '',
+                  singleFeature?.kind === 'SIGNALEMENT' ? 'is-report' : '',
+                  singleFeature?.priority === 'CRITIQUE' ? 'is-critical' : '',
+                  containsSelection ? 'is-selected' : '',
+                ].filter(Boolean).join(' ')}
+                style={{ left: marker.left, top: marker.top }}
+                onClick={() => handleMarkerClick(marker)}
+                title={marker.features.length > 1 ? `${marker.features.length} éléments. Cliquez pour zoomer.` : singleFeature?.title}
+                aria-label={marker.features.length > 1
+                  ? `${marker.features.length} éléments regroupés. Cliquez pour zoomer.`
+                  : `${singleFeature?.kind === 'DOSSIER' ? 'Dossier' : 'Signalement'} : ${singleFeature?.title ?? ''}`}
+                aria-expanded={marker.features.length > 1 && expandedClusterKey === marker.key}
+              >
+                <span>{marker.features.length > 1 ? marker.features.length : null}</span>
+              </button>
+              {expandedClusterKey === marker.key ? (
+                <div className="operational-map__cluster-list" style={{ left: marker.left, top: marker.top }}>
+                  <strong>{marker.features.length} éléments au même emplacement</strong>
+                  {marker.features.map((feature) => (
+                    <button
+                      key={feature.kind + ':' + feature.id}
+                      type="button"
+                      onClick={() => {
+                        onSelectFeature(feature.id);
+                        setExpandedClusterKey(null);
+                      }}
+                    >
+                      <span>{feature.kind === 'DOSSIER' ? 'Dossier' : 'Signalement'}</span>
+                      <b>{feature.title}</b>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
         {!markers.length ? (
           <div className="operational-map__empty">
             <strong>Aucun élément à afficher dans cette zone</strong>
