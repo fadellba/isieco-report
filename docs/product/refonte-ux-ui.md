@@ -181,6 +181,9 @@ La branche `feat/isieco-ux-ui-foundation` porte une première livraison progress
 - Détail dossier Web : contenus, signalements associés, localisation et priorité hiérarchisés ; paramètres avancés repliés tant qu’ils ne sont pas nécessaires.
 - Affectations Web : création guidée contenu → équipe éligible → enregistrement, aperçu du contenu sélectionné, synthèse des décisions, recherche locale sur la page et réaffectation plus lisible.
 - Interventions Web : synthèse de l’équipe sélectionnée, compteurs par prochaine action, recherche locale des missions et statuts sémantiques ; les formulaires de preuve et de compte rendu restent réservés à l’auteur de l’intervention.
+- Page d’administration des comptes reprise comme annuaire de gestion des habilitations : recherche et filtres sur la page chargée, compteurs contextualisés, exclusion des rôles déjà attribués et confirmation de révocation.
+- Référentiels restructurés : catalogue de déchets, recherche, filtres actifs/inactifs, création progressive, équipes avec membres et compétences, historique des appartenances et confirmations des opérations de clôture/désactivation.
+- File de vérification indépendante enrichie : recherche et filtre locaux sur la page courante, compteurs par résultat terrain, examen des preuves privées, liens temporaires et décisions distinctes de validation ou de reprise.
 - Inventaire complet des routes Web/Mobile, avec écrans de repli et composants transverses, maintenu dans `docs/product/inventaire-ecrans-refonte-ux-ui.md`.
 - Onglet Carte mobile agent : affectations réelles regroupées par équipe, filtrage par état, accès au détail et ouverture de l’itinéraire ; les missions sans coordonnées sont isolées au lieu de recevoir une position fictive.
 
@@ -188,11 +191,11 @@ La branche `feat/isieco-ux-ui-foundation` porte une première livraison progress
 
 - Le fichier graphique natif `apps/mobile/assets/splash.png` n'a pas encore été redessiné. Seuls sa configuration et les couleurs d'environnement ont été harmonisés. Le visuel final doit être conçu pour les ratios Android/iOS puis testé sur appareils réels.
 - Le logo mobile embarqué et les déclinaisons d'icônes d'application doivent encore être validés comme un ensemble de marque complet.
-- La refonte écran par écran des modules Web de comptes et référentiels reste à poursuivre malgré l'harmonisation initiale des tokens, formulaires et tableaux. Les écrans de qualification, dossiers, affectations et interventions disposent maintenant d'une première reprise structurelle, à compléter par la recette et les itérations visuelles.
+- Les modules Web de comptes, référentiels et vérification ont maintenant reçu une première reprise structurelle et fonctionnelle. Comme les autres écrans, ils restent à passer en recette visuelle sur navigateur, avec vérification clavier, tailles d'écran et états d'erreur.
 - La fiche de mission est maintenant séparée de la file de travail. Une prochaine itération pourra encore approfondir le découpage visuel interne entre exécution, preuves et compte rendu, sans modifier le cycle métier.
 - La carte native interactive mobile n’est pas encore intégrée : l’onglet Carte fournit pour l’instant une vue géolocalisée exploitable avec ouverture d’itinéraire, et indique explicitement cette limite.
 - La carte Web utilise maintenant un regroupement visuel des marqueurs proches ; les règles avancées de densité à l’échelle territoriale et la représentation des secteurs restent à concevoir.
 - Les états hors connexion et les brouillons locaux restent hors de cette livraison.
 - La recette visuelle et l'accessibilité doivent encore être vérifiées sur navigateur, formats mobiles courants et appareils Android/iOS réels. Les vérifications de type et de build ne remplacent pas cette recette.
 
-Cette livraison établit une direction de conception et améliore quelques parcours critiques. Elle ne remplace pas une recette UX complète écran par écran.
+Cette livraison couvre maintenant une première reprise des routes applicatives Web et Mobile recensées, avec une attention renforcée aux parcours d'administration et de contrôle. Elle ne doit toutefois pas être déclarée définitivement terminée avant la recette visuelle réelle, la validation d'accessibilité, le redessin des assets natifs et le traitement des fonctionnalités identifiées comme absentes.
