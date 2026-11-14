@@ -13,9 +13,30 @@ import {
   type Supplement,
 } from '../../../src/features/reports/reports-api';
 import { dateLabel, reportStatusLabel } from '../../../src/features/reports/report-format';
+import { StatusBadge, type StatusTone } from '../../../src/ui/StatusBadge';
+import { FeedbackBanner } from '../../../src/ui/FeedbackBanner';
 import { captureMobilePhoto, pickMobilePhotos, type PreparedMobilePhoto } from '../../../src/features/media/mobile-media';
 
 const inputClass = 'mt-2 min-h-[100px] rounded-xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900';
+
+function reportTone(status: string): StatusTone {
+  if (status === 'REJETE') return 'danger';
+  if (status === 'EN_ATTENTE_COMPLEMENT') return 'warning';
+  if (status === 'QUALIFIE') return 'success';
+  if (status === 'COMPLEMENT_REPONDU') return 'info';
+  return 'brand';
+}
+
+function nextStepLabel(status: string): string | null {
+  const labels: Record<string, string> = {
+    SOUMIS: 'Votre signalement a été reçu. Le service doit maintenant examiner les informations transmises.',
+    EN_ATTENTE_COMPLEMENT: 'Une réponse de votre part est attendue pour permettre au service de poursuivre le traitement.',
+    COMPLEMENT_REPONDU: 'Votre complément a été transmis. Le service peut reprendre l’examen du signalement.',
+    QUALIFIE: 'Les informations ont été qualifiées. Consultez la chronologie pour suivre la suite de la prise en charge.',
+    REJETE: 'Le signalement n’a pas été retenu. Consultez le motif de décision affiché dans son détail.',
+  };
+  return labels[status] ?? null;
+}
 
 export default function CitizenReportDetailScreen() {
   const params = useLocalSearchParams<{ id: string; photosFailed?: string }>();
@@ -174,15 +195,24 @@ export default function CitizenReportDetailScreen() {
     <ScrollView className="flex-1 bg-eco-50" contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 48, paddingBottom: 40 }}>
       <Text className="text-xs font-extrabold uppercase tracking-[0.18em] text-eco-700">Suivi citoyen</Text>
       <Text className="mt-3 text-2xl font-extrabold text-eco-950">Détail du signalement</Text>
-      {error ? <Text className="mt-4 rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</Text> : null}
-      {notice ? <Text className="mt-4 rounded-xl bg-eco-100 p-4 text-sm text-eco-900">{notice}</Text> : null}
+      {error ? <View className="mt-4"><FeedbackBanner tone="error" message={error} /></View> : null}
+      {notice ? <View className="mt-4"><FeedbackBanner tone="success" message={notice} /></View> : null}
       {report ? (
         <>
           <View className="mt-5 rounded-2xl border border-eco-100 bg-white p-5">
             <View className="flex-row flex-wrap items-center justify-between gap-3">
               <Text className="font-mono text-xs text-slate-500">#{report.idSignalement.slice(0, 8).toUpperCase()}</Text>
-              <Text className="rounded-full bg-eco-50 px-3 py-1 text-xs font-bold text-eco-800">{reportStatusLabel(report.statutSignalement)}</Text>
+              <StatusBadge label={reportStatusLabel(report.statutSignalement)} tone={reportTone(report.statutSignalement)} />
             </View>
+            {nextStepLabel(report.statutSignalement) ? (
+              <View className="mt-4">
+                <FeedbackBanner
+                  tone={report.statutSignalement === 'EN_ATTENTE_COMPLEMENT' ? 'warning' : 'info'}
+                  title="Prochaine étape"
+                  message={nextStepLabel(report.statutSignalement)!}
+                />
+              </View>
+            ) : null}
             <Text className="mt-4 text-base font-bold text-slate-900">Description</Text>
             <Text className="mt-2 text-sm leading-6 text-slate-700">{report.description || 'Aucune description.'}</Text>
             <Text className="mt-4 text-xs text-slate-500">Soumis le {dateLabel(report.dateSoumission)}</Text>
