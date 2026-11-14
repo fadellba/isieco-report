@@ -11,6 +11,7 @@ import { recordBusinessEvent } from '../../infrastructure/audit/business-audit.j
 import { SupabaseStorageService } from '../../infrastructure/storage/supabase-storage.service.js';
 import type { DecideVerificationDto } from './dto/decide-verification.dto.js';
 import type { ListVerificationsQueryDto } from './dto/list-verifications-query.dto.js';
+import { pendingVerificationWhere } from './pending-verification.query.js';
 
 type Transaction = Prisma.TransactionClient;
 
@@ -111,32 +112,11 @@ export class VerificationService {
     const actorId = await this.actorId(authUserId);
     const page = Math.max(1, query.page ?? 1);
     const pageSize = Math.min(100, Math.max(1, query.pageSize ?? 20));
+    const where = pendingVerificationWhere(actorId);
     const [total, rows] = await this.prisma.$transaction([
-      this.prisma.intervention.count({
-        where: {
-          statutIntervention: 'SOUMISE',
-          dateSoumissionCompteRendu: { not: null },
-          verification: null,
-          renseignePar: { not: actorId },
-          affectation: {
-            dateFinAffectation: null,
-            etatAffectation: 'ACTIVE',
-            decisionEquipe: 'ACCEPTEE',
-          },
-        },
-      }),
+      this.prisma.intervention.count({ where }),
       this.prisma.intervention.findMany({
-        where: {
-          statutIntervention: 'SOUMISE',
-          dateSoumissionCompteRendu: { not: null },
-          verification: null,
-          renseignePar: { not: actorId },
-          affectation: {
-            dateFinAffectation: null,
-            etatAffectation: 'ACTIVE',
-            decisionEquipe: 'ACCEPTEE',
-          },
-        },
+        where,
         orderBy: [{ dateSoumissionCompteRendu: 'asc' }, { idIntervention: 'asc' }],
         skip: (page - 1) * pageSize,
         take: pageSize,
