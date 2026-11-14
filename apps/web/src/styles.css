@@ -505,3 +505,34 @@ button { cursor: pointer; }
   .app-topbar__signout span { display: none; }
   .app-topbar__signout { width: 34px; padding: 0; }
 }
+
+
+/* Shared form and data presentation across authenticated Web screens */
+.app-content input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.app-content select,
+.app-content textarea {
+  border-color: var(--line-strong); border-radius: 10px; background-color: white;
+  color: var(--ink-900); font-size: 12px; line-height: 1.55;
+  transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+}
+.app-content input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.app-content select { min-height: 40px; }
+.app-content textarea { min-height: 100px; }
+.app-content input::placeholder, .app-content textarea::placeholder { color: var(--ink-400); }
+.app-content input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+.app-content select:focus,
+.app-content textarea:focus {
+  border-color: var(--brand-petrol); outline: none;
+  box-shadow: 0 0 0 3px rgba(47,119,115,.10);
+}
+.app-content input:disabled, .app-content select:disabled, .app-content textarea:disabled {
+  cursor: not-allowed; background-color: var(--surface-soft); color: var(--ink-400);
+}
+.app-content table { width: 100%; border-collapse: separate; border-spacing: 0; }
+.app-content th { color: var(--ink-500); font-size: 9px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+.app-content td { color: var(--ink-700); font-size: 11px; line-height: 1.55; }
+.app-content th, .app-content td { border-bottom: 1px solid var(--line-subtle); }
+.app-content button:focus-visible, .app-content a:focus-visible, .app-content input:focus-visible,
+.app-content select:focus-visible, .app-content textarea:focus-visible {
+  outline: 3px solid rgba(47,119,115,.65); outline-offset: 2px;
+}
