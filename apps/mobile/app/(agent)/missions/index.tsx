@@ -110,7 +110,10 @@ export default function AgentMissionsScreen() {
     };
     for (const assignment of assignments) {
       const state = missionFilter(assignment, latestByAssignment.get(assignment.idAffectation));
-      if (state !== 'REFUSED') { result.ALL += 1; result[state] = (result[state] ?? 0) + 1; }
+      if (state !== 'REFUSED') {
+        result.ALL = (result.ALL ?? 0) + 1;
+        result[state] = (result[state] ?? 0) + 1;
+      }
     }
     return result;
   }, [assignments, latestByAssignment]);
