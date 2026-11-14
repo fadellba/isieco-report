@@ -173,11 +173,11 @@ export function CaseDetailPage() {
     );
   }
 
-  if (loading && !item) return <p className="text-sm text-slate-500">Chargement du dossier…</p>;
+  if (loading && !item) return <p className="text-sm text-ink-500">Chargement du dossier…</p>;
   if (!item) {
     return (
       <div className="space-y-4">
-        <Link to="/dossiers" className="text-sm font-semibold text-eco-700">← Retour aux dossiers</Link>
+        <Link to="/dossiers" className="text-sm font-semibold text-brand-forest">← Retour aux dossiers</Link>
         <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">{error || 'Dossier introuvable.'}</p>
       </div>
     );
@@ -187,47 +187,47 @@ export function CaseDetailPage() {
 
   return (
     <div className="space-y-6">
-      <Link to="/dossiers" className="text-sm font-semibold text-eco-700 hover:underline">← Retour aux dossiers</Link>
+      <Link to="/dossiers" className="text-sm font-semibold text-brand-forest hover:underline">← Retour aux dossiers</Link>
       {error ? <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div> : null}
-      {notice ? <div role="status" className="rounded-xl border border-eco-200 bg-eco-50 px-4 py-3 text-sm text-eco-900">{notice}</div> : null}
+      {notice ? <div role="status" className="rounded-xl border border-line-strong bg-surface-base px-4 py-3 text-sm text-ink-900">{notice}</div> : null}
 
       <header>
-        <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-eco-700">Dossier de traitement</p>
+        <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-brand-forest">Dossier de traitement</p>
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">{item.referenceDossier}</h1>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">{item.statutDossier}</span>
+          <h1 className="text-3xl font-extrabold tracking-tight text-ink-900">{item.referenceDossier}</h1>
+          <span className="rounded-full bg-surface-soft px-3 py-1 text-xs font-bold text-ink-700">{item.statutDossier}</span>
           <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800">{item.priorite}</span>
         </div>
-        <p className="mt-2 text-sm text-slate-600">{item.descriptionSynthese}</p>
-        <p className="mt-1 text-xs text-slate-400">Créé le {dateLabel(item.dateCreationDossier)}{item.dateCloture ? ` · Clôturé le ${dateLabel(item.dateCloture)}` : ''}</p>
+        <p className="mt-2 text-sm text-ink-500">{item.descriptionSynthese}</p>
+        <p className="mt-1 text-xs text-ink-400">Créé le {dateLabel(item.dateCreationDossier)}{item.dateCloture ? ` · Clôturé le ${dateLabel(item.dateCloture)}` : ''}</p>
       </header>
 
       <section className="grid gap-4 lg:grid-cols-2">
-        <article className="rounded-2xl border border-slate-200 bg-white p-5">
-          <h2 className="font-bold text-slate-900">Contenus à traiter</h2>
+        <article className="rounded-2xl border border-line-strong bg-white p-5">
+          <h2 className="font-bold text-ink-900">Contenus à traiter</h2>
           <div className="mt-3 space-y-2">
             {item.contenus.map((content) => (
-              <div key={content.idContenuDossier} className="rounded-xl bg-slate-50 px-3 py-3">
+              <div key={content.idContenuDossier} className="rounded-xl bg-surface-base px-3 py-3">
                 <div className="flex flex-wrap justify-between gap-2">
                   <span className="text-sm font-semibold">{content.typeDechet.libelle}</span>
-                  <span className="text-xs text-slate-500">{content.etatContenuDossier} · {content.etatPriseEnCharge}</span>
+                  <span className="text-xs text-ink-500">{content.etatContenuDossier} · {content.etatPriseEnCharge}</span>
                 </div>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-ink-500">
                   Quantité : {content.quantiteEstimee ?? '—'} · Volume : {content.volumeEstime ?? '—'}
                 </p>
               </div>
             ))}
-            {!item.contenus.length ? <p className="text-sm text-slate-500">Aucun contenu enregistré.</p> : null}
+            {!item.contenus.length ? <p className="text-sm text-ink-500">Aucun contenu enregistré.</p> : null}
           </div>
         </article>
 
-        <article className="rounded-2xl border border-slate-200 bg-white p-5">
+        <article className="rounded-2xl border border-line-strong bg-white p-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-bold text-slate-900">Signalements associés</h2>
-            <span className="text-xs text-slate-500">{item.signalements.length} signalement(s)</span>
+            <h2 className="font-bold text-ink-900">Signalements associés</h2>
+            <span className="text-xs text-ink-500">{item.signalements.length} signalement(s)</span>
           </div>
           {editable ? (
-            <label className="mt-3 block text-xs font-bold text-slate-600">
+            <label className="mt-3 block text-xs font-bold text-ink-500">
               Motif obligatoire pour rattacher ou retirer un signalement
               <textarea
                 value={associationMotif}
@@ -235,20 +235,20 @@ export function CaseDetailPage() {
                 minLength={5}
                 maxLength={500}
                 rows={2}
-                className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal"
+                className="mt-2 w-full rounded-lg border border-line-strong px-3 py-2 text-sm font-normal"
                 placeholder="Expliquez la raison de cette modification."
               />
             </label>
           ) : null}
           <div className="mt-3 space-y-3">
             {item.signalements.map((report) => (
-              <div key={report.idSignalement} className="rounded-xl border border-slate-100 p-3">
+              <div key={report.idSignalement} className="rounded-xl border border-line-subtle p-3">
                 <div className="flex flex-wrap justify-between gap-2">
-                  <span className="text-xs font-bold text-slate-700">#{report.idSignalement.slice(0, 8)}</span>
-                  <span className="text-xs text-slate-500">{report.statutSignalement}</span>
+                  <span className="text-xs font-bold text-ink-700">#{report.idSignalement.slice(0, 8)}</span>
+                  <span className="text-xs text-ink-500">{report.statutSignalement}</span>
                 </div>
-                <p className="mt-2 text-sm text-slate-700">{report.description || 'Aucune description.'}</p>
-                <p className="mt-1 text-xs text-slate-500">{report.utilisateur.prenom ? report.utilisateur.prenom + ' ' : ''}{report.utilisateur.nom}</p>
+                <p className="mt-2 text-sm text-ink-700">{report.description || 'Aucune description.'}</p>
+                <p className="mt-1 text-xs text-ink-500">{report.utilisateur.prenom ? report.utilisateur.prenom + ' ' : ''}{report.utilisateur.nom}</p>
                 {editable ? (
                   <div className="mt-3">
                     <button type="button" onClick={() => void detach(report.idSignalement)} disabled={busy || associationMotif.trim().length < 5} className="rounded-lg border border-red-200 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-50 disabled:opacity-40">Retirer du dossier</button>
@@ -259,10 +259,10 @@ export function CaseDetailPage() {
           </div>
 
           {editable ? (
-            <form onSubmit={(event) => void attach(event)} className="mt-4 space-y-3 border-t border-slate-100 pt-4">
-              <label className="block text-xs font-bold text-slate-600">
+            <form onSubmit={(event) => void attach(event)} className="mt-4 space-y-3 border-t border-line-subtle pt-4">
+              <label className="block text-xs font-bold text-ink-500">
                 Ajouter un signalement qualifié
-                <select value={selectedReport} onChange={(event) => setSelectedReport(event.target.value)} required disabled={!available.length} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-normal">
+                <select value={selectedReport} onChange={(event) => setSelectedReport(event.target.value)} required disabled={!available.length} className="mt-2 w-full rounded-lg border border-line-strong bg-white px-3 py-2.5 text-sm font-normal">
                   {available.map((report) => (
                     <option key={report.idSignalement} value={report.idSignalement}>
                       {report.utilisateur.prenom ? report.utilisateur.prenom + ' ' : ''}{report.utilisateur.nom} · {report.idSignalement.slice(0, 8)}
@@ -270,8 +270,8 @@ export function CaseDetailPage() {
                   ))}
                 </select>
               </label>
-              <button type="submit" disabled={!selectedReport || busy || associationMotif.trim().length < 5} className="rounded-lg bg-eco-700 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50">Associer le signalement</button>
-              {!available.length ? <p className="text-xs text-slate-500">Aucun signalement qualifié non associé n’est disponible.</p> : null}
+              <button type="submit" disabled={!selectedReport || busy || associationMotif.trim().length < 5} className="rounded-lg bg-brand-forest px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50">Associer le signalement</button>
+              {!available.length ? <p className="text-xs text-ink-500">Aucun signalement qualifié non associé n’est disponible.</p> : null}
             </form>
           ) : null}
         </article>
@@ -279,30 +279,30 @@ export function CaseDetailPage() {
 
       {editable ? (
         <section className="grid gap-4 lg:grid-cols-2">
-          <form onSubmit={(event) => void changePriority(event)} className="rounded-2xl border border-slate-200 bg-white p-5">
-            <h2 className="font-bold text-slate-900">Modifier la priorité</h2>
-            <label className="mt-3 block text-xs font-bold text-slate-600">
+          <form onSubmit={(event) => void changePriority(event)} className="rounded-2xl border border-line-strong bg-white p-5">
+            <h2 className="font-bold text-ink-900">Modifier la priorité</h2>
+            <label className="mt-3 block text-xs font-bold text-ink-500">
               Nouvelle priorité
-              <select value={priority} onChange={(event) => setPriority(event.target.value)} className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal">
+              <select value={priority} onChange={(event) => setPriority(event.target.value)} className="mt-2 w-full rounded-lg border border-line-strong px-3 py-2.5 text-sm font-normal">
                 {['BASSE', 'NORMALE', 'HAUTE', 'CRITIQUE'].map((value) => <option key={value}>{value}</option>)}
               </select>
             </label>
-            <button type="submit" disabled={busy} className="mt-3 rounded-lg bg-eco-700 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50">Enregistrer</button>
+            <button type="submit" disabled={busy} className="mt-3 rounded-lg bg-brand-forest px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50">Enregistrer</button>
           </form>
 
-          <form onSubmit={(event) => void changeLocation(event)} className="rounded-2xl border border-slate-200 bg-white p-5">
-            <h2 className="font-bold text-slate-900">Localisation</h2>
+          <form onSubmit={(event) => void changeLocation(event)} className="rounded-2xl border border-line-strong bg-white p-5">
+            <h2 className="font-bold text-ink-900">Localisation</h2>
             <div className="mt-3 grid grid-cols-2 gap-3">
-              <label className="text-xs font-bold text-slate-600">Latitude<input type="number" min="-90" max="90" step="0.000001" value={latitude} onChange={(event) => setLatitude(event.target.value)} className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal" /></label>
-              <label className="text-xs font-bold text-slate-600">Longitude<input type="number" min="-180" max="180" step="0.000001" value={longitude} onChange={(event) => setLongitude(event.target.value)} className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal" /></label>
+              <label className="text-xs font-bold text-ink-500">Latitude<input type="number" min="-90" max="90" step="0.000001" value={latitude} onChange={(event) => setLatitude(event.target.value)} className="mt-2 w-full rounded-lg border border-line-strong px-3 py-2 text-sm font-normal" /></label>
+              <label className="text-xs font-bold text-ink-500">Longitude<input type="number" min="-180" max="180" step="0.000001" value={longitude} onChange={(event) => setLongitude(event.target.value)} className="mt-2 w-full rounded-lg border border-line-strong px-3 py-2 text-sm font-normal" /></label>
             </div>
-            <label className="mt-3 block text-xs font-bold text-slate-600">Précision (m)<input type="number" min="0" max="100000" step="0.01" value={precision} onChange={(event) => setPrecision(event.target.value)} className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal" /></label>
-            <label className="mt-3 block text-xs font-bold text-slate-600">Description du lieu<input maxLength={1000} value={locationDescription} onChange={(event) => setLocationDescription(event.target.value)} className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal" /></label>
-            <button type="submit" disabled={busy} className="mt-3 rounded-lg bg-eco-700 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50">Enregistrer</button>
+            <label className="mt-3 block text-xs font-bold text-ink-500">Précision (m)<input type="number" min="0" max="100000" step="0.01" value={precision} onChange={(event) => setPrecision(event.target.value)} className="mt-2 w-full rounded-lg border border-line-strong px-3 py-2 text-sm font-normal" /></label>
+            <label className="mt-3 block text-xs font-bold text-ink-500">Description du lieu<input maxLength={1000} value={locationDescription} onChange={(event) => setLocationDescription(event.target.value)} className="mt-2 w-full rounded-lg border border-line-strong px-3 py-2 text-sm font-normal" /></label>
+            <button type="submit" disabled={busy} className="mt-3 rounded-lg bg-brand-forest px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50">Enregistrer</button>
           </form>
         </section>
       ) : (
-        <p className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">Ce dossier est clôturé et consultable en lecture seule.</p>
+        <p className="rounded-xl border border-line-strong bg-surface-base p-4 text-sm text-ink-500">Ce dossier est clôturé et consultable en lecture seule.</p>
       )}
     </div>
   );
