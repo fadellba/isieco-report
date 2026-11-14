@@ -342,7 +342,7 @@ export default function AgentMissionDetailScreen() {
                 {result !== 'TERMINEE' ? (
                   <>
                     <Text className="mt-4 text-xs font-bold text-ink-700">Motif d’exception · obligatoire</Text>
-                    <TextInput value={exceptionReason} onChangeText={setExceptionReason} minLength={5} maxLength={2000} multiline placeholder="Expliquez pourquoi le dépôt n’a pas pu être entièrement traité…" placeholderTextColor="#8A968D" className={inputClass + ' min-h-[88px]'} textAlignVertical="top" />
+                    <TextInput value={exceptionReason} onChangeText={setExceptionReason} maxLength={2000} multiline placeholder="Expliquez pourquoi le dépôt n’a pas pu être entièrement traité…" placeholderTextColor="#8A968D" className={inputClass + ' min-h-[88px]'} textAlignVertical="top" />
                   </>
                 ) : null}
                 <Pressable onPress={confirmSubmit} disabled={busy} className={primaryButton + ' mt-4'}><Text className="text-center text-sm font-extrabold text-white">{busy ? 'Transmission…' : 'Vérifier et transmettre le compte rendu'}</Text></Pressable>
