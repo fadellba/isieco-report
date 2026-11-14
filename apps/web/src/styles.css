@@ -671,3 +671,79 @@ button { cursor: pointer; }
   .qualification-category__fields { grid-template-columns: minmax(0, 1fr); }
   .qualification-category__remark { grid-column: auto; }
 }
+
+
+/* Qualification queue: reduced density, explicit next step and quick page search */
+.qualification-queue-page { display: flex; flex-direction: column; gap: 18px; }
+.qualification-queue-hero {
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 20px;
+  padding: 25px 27px; border-radius: 18px;
+  background: linear-gradient(112deg, #103b31 0%, #174c3d 61%, #2f7773 100%);
+  box-shadow: 0 13px 32px rgba(16,59,49,.1); color: white;
+}
+.qualification-queue-hero__eyebrow { color: #d7e6a5; font-size: 8px; font-weight: 900; letter-spacing: .17em; }
+.qualification-queue-hero h1 { margin: 10px 0 0; color: white; font-size: clamp(25px, 3vw, 34px); font-weight: 900; letter-spacing: -.045em; line-height: 1.1; }
+.qualification-queue-hero p { max-width: 650px; margin: 10px 0 0; color: rgba(255,255,255,.78); font-size: 11px; line-height: 1.7; }
+.qualification-queue-hero__note { display: flex; flex: 0 0 auto; align-items: center; gap: 10px; padding: 12px 14px; border: 1px solid rgba(255,255,255,.17); border-radius: 12px; background: rgba(255,255,255,.09); color: rgba(255,255,255,.74); font-size: 9px; line-height: 1.5; }
+.qualification-queue-hero__note strong { color: white; font-weight: 850; }
+.qualification-queue-hero__note-icon { display: grid; width: 27px; height: 27px; place-items: center; border-radius: 9px; background: #d7e6a5; color: var(--brand-forest); font-size: 13px; font-weight: 900; }
+.qualification-queue-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 11px; }
+.qualification-queue-stat { display: flex; min-width: 0; flex-direction: column; gap: 4px; padding: 14px 16px; border: 1px solid var(--line-subtle); border-radius: 13px; background: white; }
+.qualification-queue-stat > span { color: var(--ink-500); font-size: 9px; font-weight: 800; }
+.qualification-queue-stat > strong { color: var(--ink-900); font-size: 26px; font-weight: 900; letter-spacing: -.05em; line-height: 1.2; }
+.qualification-queue-stat > small { color: var(--ink-400); font-size: 8px; }
+.qualification-queue-stat--primary { border-color: #d4e4d4; background: #f7faf5; }
+.qualification-queue-stat--primary > strong { color: var(--brand-forest); }
+.qualification-queue-error { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.qualification-queue-error > :first-child { flex: 1 1 280px; }
+.qualification-queue-panel { overflow: hidden; border: 1px solid var(--line-subtle); border-radius: 16px; background: white; box-shadow: var(--shadow-card); }
+.qualification-queue-panel__header { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 18px 20px; border-bottom: 1px solid var(--line-subtle); }
+.qualification-queue-panel__header h2 { margin: 5px 0 0; color: var(--ink-900); font-size: 15px; font-weight: 900; letter-spacing: -.025em; }
+.qualification-queue-panel__header p { margin: 5px 0 0; color: var(--ink-400); font-size: 9px; }
+.qualification-queue-toolbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 15px; padding: 13px 20px; border-bottom: 1px solid var(--line-subtle); background: #fbfcfa; }
+.qualification-queue-search { display: flex; width: min(100%, 490px); flex-direction: column; gap: 6px; color: var(--ink-500); font-size: 8px; font-weight: 850; }
+.qualification-queue-search input { width: 100%; min-height: 38px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 9px; background: white; color: var(--ink-900); font-size: 10px; font-weight: 500; }
+.qualification-queue-search input:focus { border-color: var(--brand-petrol); outline: none; box-shadow: 0 0 0 3px rgba(47,119,115,.1); }
+.qualification-queue-toolbar__count { padding-bottom: 10px; color: var(--ink-400); font-size: 9px; font-weight: 750; }
+.qualification-queue-list { display: flex; flex-direction: column; }
+.qualification-queue-item { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 17px 20px; border-bottom: 1px solid var(--line-subtle); transition: background .15s ease; }
+.qualification-queue-item:last-child { border-bottom: 0; }
+.qualification-queue-item:hover { background: #fbfcfa; }
+.qualification-queue-item__main { min-width: 0; flex: 1; }
+.qualification-queue-item__title { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; }
+.qualification-queue-item__title h3 { margin: 0; color: var(--ink-900); font-size: 11px; font-weight: 900; }
+.qualification-queue-item__meta { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 5px; color: var(--ink-400); font-size: 8px; }
+.qualification-queue-item__meta code { color: var(--ink-500); font-size: 8px; font-weight: 800; }
+.qualification-queue-item__description { display: -webkit-box; max-width: 760px; overflow: hidden; margin: 9px 0 0; color: var(--ink-600, #52645a); font-size: 10px; line-height: 1.6; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.qualification-queue-item__tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+.qualification-queue-item__tags span { padding: 4px 8px; border: 1px solid #e2e9e0; border-radius: 999px; background: #f7faf5; color: var(--ink-700); font-size: 8px; font-weight: 750; }
+.qualification-queue-item__tags span.is-muted { border-style: dashed; background: white; color: var(--ink-400); }
+.qualification-queue-item__supplement { margin: 8px 0 0; color: var(--ink-400); font-size: 8px; }
+.qualification-queue-item__supplement strong { color: var(--ink-700); }
+.qualification-queue-item__action { flex: 0 0 auto; }
+.qualification-queue-item__action .workflow-button { gap: 13px; min-width: 110px; }
+.qualification-queue-empty, .qualification-queue-loading { display: flex; min-height: 220px; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 25px; text-align: center; }
+.qualification-queue-empty > span { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 14px; background: var(--surface-soft); color: var(--brand-forest); font-size: 20px; font-weight: 800; }
+.qualification-queue-empty strong, .qualification-queue-loading strong { color: var(--ink-800); font-size: 11px; font-weight: 900; }
+.qualification-queue-empty p, .qualification-queue-loading > span { max-width: 360px; margin: 0; color: var(--ink-500); font-size: 9px; line-height: 1.6; }
+.qualification-queue-clear { padding: 6px 8px; color: var(--brand-forest); font-size: 9px; font-weight: 850; text-decoration: underline; text-underline-offset: 3px; }
+.qualification-queue-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 20px; border-top: 1px solid var(--line-subtle); background: #fbfcfa; }
+.qualification-queue-pagination > span { color: var(--ink-500); font-size: 9px; font-weight: 750; }
+.qualification-queue-pagination > div { display: flex; gap: 7px; }
+@media (max-width: 760px) {
+  .qualification-queue-hero { align-items: flex-start; flex-direction: column; padding: 20px; }
+  .qualification-queue-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+  .qualification-queue-stat { padding: 11px; }
+  .qualification-queue-stat > strong { font-size: 22px; }
+  .qualification-queue-item { align-items: stretch; flex-direction: column; gap: 13px; }
+  .qualification-queue-item__action { display: flex; justify-content: flex-start; }
+  .qualification-queue-item__action .workflow-button { width: 100%; }
+}
+@media (max-width: 480px) {
+  .qualification-queue-panel__header, .qualification-queue-toolbar, .qualification-queue-pagination { align-items: stretch; flex-direction: column; }
+  .qualification-queue-toolbar__count { padding: 0; }
+  .qualification-queue-summary { grid-template-columns: minmax(0, 1fr); }
+  .qualification-queue-stat { display: grid; grid-template-columns: 1fr auto; align-items: center; }
+  .qualification-queue-stat > small { grid-column: 1 / -1; }
+  .qualification-queue-pagination > div { justify-content: space-between; }
+}
