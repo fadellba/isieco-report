@@ -343,11 +343,11 @@ export function AssignmentsPage() {
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
           <div><h2 className="font-bold text-slate-900">Historique des affectations</h2><p className="mt-1 text-xs text-slate-500">{result ? result.total + ' affectation(s)' : 'Chargement…'}</p></div>
           <div className="flex flex-wrap gap-2">
-            <select value={etatAffectation} onChange={(event) => { setPage(1); setEtatAffectation(event.target.value); }} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
-              <option value="">Tous les états</option><option value="ACTIVE">ACTIVE</option><option value="TERMINEE">TERMINEE</option><option value="ANNULEE">ANNULEE</option>
+            <select value={etatAffectation} onChange={(event) => { setPage(1); setEtatAffectation(event.target.value); }} aria-label="Filtrer par état de l’affectation" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+              <option value="">Tous les états</option><option value="ACTIVE">Active</option><option value="TERMINEE">Terminée</option><option value="ANNULEE">Annulée</option>
             </select>
-            <select value={decisionEquipe} onChange={(event) => { setPage(1); setDecisionEquipe(event.target.value); }} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
-              <option value="">Toutes les décisions</option><option value="EN_ATTENTE">EN_ATTENTE</option><option value="ACCEPTEE">ACCEPTEE</option><option value="REFUSEE">REFUSEE</option>
+            <select value={decisionEquipe} onChange={(event) => { setPage(1); setDecisionEquipe(event.target.value); }} aria-label="Filtrer par décision de l’équipe" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+              <option value="">Toutes les décisions</option><option value="EN_ATTENTE">En attente</option><option value="ACCEPTEE">Acceptée</option><option value="REFUSEE">Refusée</option>
             </select>
             <button type="button" onClick={() => void loadAssignments()} disabled={loading} className={secondaryClass}>Actualiser</button>
           </div>
