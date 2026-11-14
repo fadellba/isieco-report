@@ -54,7 +54,11 @@ export default function CitizenReportDetailScreen() {
   const [notice, setNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    if (!id) return;
+    if (!id) {
+      setError('Identifiant de signalement manquant. Revenez à votre liste pour sélectionner un signalement.');
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -189,6 +193,22 @@ export default function CitizenReportDetailScreen() {
 
   if (loading && !report) {
     return <View className="flex-1 items-center justify-center bg-eco-50"><ActivityIndicator color="#166534" /><Text className="mt-3 text-sm text-slate-500">Chargement…</Text></View>;
+  }
+
+  if (!report) {
+    return (
+      <View className="flex-1 justify-center bg-surface-base px-6 py-10">
+        <Text className="text-xs font-extrabold uppercase tracking-[0.16em] text-brand-petrol">Suivi citoyen</Text>
+        <Text className="mt-3 text-2xl font-extrabold text-ink-900">Signalement indisponible</Text>
+        <View className="mt-4">
+          <FeedbackBanner tone="error" message={error ?? 'Ce signalement ne peut pas être affiché pour le moment.'} />
+        </View>
+        <TouchableOpacity onPress={() => void load()} className="mt-5 rounded-xl bg-brand-forest px-4 py-3">
+          <Text className="text-center text-sm font-extrabold text-white">Réessayer</Text>
+        </TouchableOpacity>
+        <Link href="/(citizen)/reports" className="mt-4 text-center text-sm font-bold text-brand-forest">Retour à mes signalements</Link>
+      </View>
+    );
   }
 
   return (
