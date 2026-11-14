@@ -113,38 +113,38 @@ export function CasesPage() {
   return (
     <div className="space-y-6">
       <header>
-        <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-eco-700">Pilotage opérationnel</p>
-        <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">Dossiers de traitement</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Constituez des dossiers à partir de signalements qualifiés non encore rattachés et suivez leur prise en charge.</p>
+        <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-brand-forest">Pilotage opérationnel</p>
+        <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-ink-900">Dossiers de traitement</h1>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-500">Constituez des dossiers à partir de signalements qualifiés non encore rattachés et suivez leur prise en charge.</p>
       </header>
       {error ? <FeedbackBanner tone="error">{error}</FeedbackBanner> : null}
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5">
+      <section className="rounded-2xl border border-line-strong bg-white p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div><h2 className="font-bold text-slate-900">Créer un dossier</h2><p className="mt-1 text-xs text-slate-500">Seuls les signalements qualifiés sans rattachement actif sont proposés.</p></div>
-          <span className="rounded-full bg-eco-50 px-3 py-1 text-xs font-bold text-eco-800">{availableReports.length} disponible(s)</span>
+          <div><h2 className="font-bold text-ink-900">Créer un dossier</h2><p className="mt-1 text-xs text-ink-500">Seuls les signalements qualifiés sans rattachement actif sont proposés.</p></div>
+          <span className="rounded-full bg-surface-base px-3 py-1 text-xs font-bold text-ink-800">{availableReports.length} disponible(s)</span>
         </div>
         <form onSubmit={(event) => void createCase(event)} className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_150px_minmax(0,1fr)_auto]">
-          <label className="text-xs font-bold text-slate-600">Signalement source
-            <select value={selectedReport} onChange={(event) => setSelectedReport(event.target.value)} required disabled={!availableReports.length} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-normal">
+          <label className="text-xs font-bold text-ink-500">Signalement source
+            <select value={selectedReport} onChange={(event) => setSelectedReport(event.target.value)} required disabled={!availableReports.length} className="mt-2 w-full rounded-lg border border-line-strong bg-white px-3 py-2.5 text-sm font-normal">
               {availableReports.map((report) => <option key={report.idSignalement} value={report.idSignalement}>{report.utilisateur.prenom ? `${report.utilisateur.prenom} ${report.utilisateur.nom}` : report.utilisateur.nom} · {report.idSignalement.slice(0, 8)}</option>)}
             </select>
           </label>
-          <label className="text-xs font-bold text-slate-600">Priorité
-            <select value={priority} onChange={(event) => setPriority(event.target.value)} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-normal">{['BASSE', 'NORMALE', 'HAUTE', 'CRITIQUE'].map((value) => <option key={value}>{value}</option>)}</select>
+          <label className="text-xs font-bold text-ink-500">Priorité
+            <select value={priority} onChange={(event) => setPriority(event.target.value)} className="mt-2 w-full rounded-lg border border-line-strong bg-white px-3 py-2.5 text-sm font-normal">{['BASSE', 'NORMALE', 'HAUTE', 'CRITIQUE'].map((value) => <option key={value}>{value}</option>)}</select>
           </label>
-          <label className="text-xs font-bold text-slate-600">Résumé facultatif
-            <input value={summary} onChange={(event) => setSummary(event.target.value)} minLength={10} maxLength={5000} placeholder="Au moins 10 caractères…" className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal" />
+          <label className="text-xs font-bold text-ink-500">Résumé facultatif
+            <input value={summary} onChange={(event) => setSummary(event.target.value)} minLength={10} maxLength={5000} placeholder="Au moins 10 caractères…" className="mt-2 w-full rounded-lg border border-line-strong px-3 py-2.5 text-sm font-normal" />
           </label>
-          <div className="flex items-end"><button type="submit" disabled={!selectedReport || creating} className="w-full rounded-lg bg-eco-700 px-4 py-2.5 text-xs font-bold text-white hover:bg-eco-600 disabled:opacity-50">{creating ? 'Création…' : 'Créer le dossier'}</button></div>
+          <div className="flex items-end"><button type="submit" disabled={!selectedReport || creating} className="w-full rounded-lg bg-brand-forest px-4 py-2.5 text-xs font-bold text-white hover:bg-eco-600 disabled:opacity-50">{creating ? 'Création…' : 'Créer le dossier'}</button></div>
         </form>
-        {availableReports.length ? <div className="mt-4 space-y-2">{availableReports.slice(0, 4).map((report) => <div key={report.idSignalement} className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600"><span className="font-semibold">{report.utilisateur.prenom ? `${report.utilisateur.prenom} ${report.utilisateur.nom}` : report.utilisateur.nom}</span> · {report.description || 'Sans description'} · {report.contenus.map((item) => item.typeDechet.libelle).join(', ')}</div>)}</div> : <p className="mt-3 text-xs text-slate-500">Aucun signalement qualifié non rattaché n'est disponible.</p>}
+        {availableReports.length ? <div className="mt-4 space-y-2">{availableReports.slice(0, 4).map((report) => <div key={report.idSignalement} className="rounded-lg bg-surface-base px-3 py-2 text-xs text-ink-500"><span className="font-semibold">{report.utilisateur.prenom ? `${report.utilisateur.prenom} ${report.utilisateur.nom}` : report.utilisateur.nom}</span> · {report.description || 'Sans description'} · {report.contenus.map((item) => item.typeDechet.libelle).join(', ')}</div>)}</div> : <p className="mt-3 text-xs text-ink-500">Aucun signalement qualifié non rattaché n'est disponible.</p>}
       </section>
 
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
-          <div><h2 className="font-bold text-slate-900">Dossiers existants</h2><p className="mt-1 text-xs text-slate-500">{data ? `${data.total} dossier(s)` : 'Chargement…'}</p></div>
-          <select aria-label="Filtrer les dossiers par état" value={status} onChange={(event) => { setPage(1); setStatus(event.target.value); }} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+      <section className="overflow-hidden rounded-2xl border border-line-strong bg-white">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-subtle px-5 py-4">
+          <div><h2 className="font-bold text-ink-900">Dossiers existants</h2><p className="mt-1 text-xs text-ink-500">{data ? `${data.total} dossier(s)` : 'Chargement…'}</p></div>
+          <select aria-label="Filtrer les dossiers par état" value={status} onChange={(event) => { setPage(1); setStatus(event.target.value); }} className="rounded-lg border border-line-strong bg-white px-3 py-2 text-xs text-ink-500">
             <option value="">Tous les états</option>
             <option value="OUVERT">Ouvert</option>
             <option value="EN_COURS">En cours</option>
@@ -152,14 +152,14 @@ export function CasesPage() {
             <option value="CLOTURE">Clôturé</option>
           </select>
         </div>
-        {loading && !data ? <p className="p-6 text-sm text-slate-500">Chargement des dossiers…</p> : null}
-        {!loading && data?.items.length === 0 ? <p className="p-6 text-sm text-slate-500">Aucun dossier pour ce filtre.</p> : null}
-        <div className="divide-y divide-slate-100">{data?.items.map((item) => <Link key={item.idDossier} to={`/dossiers/${item.idDossier}`} className="workflow-list-item block p-5 transition hover:bg-slate-50">
-          <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-extrabold text-ink-900">{item.referenceDossier}</h3><p className="mt-1 text-xs text-slate-500">Créé le {formatDate(item.dateCreationDossier)}</p></div><div className="flex flex-wrap gap-2"><StatusBadge label={item.statutDossier.replaceAll('_', ' ').toLowerCase()} tone={caseStatusTone(item.statutDossier)} /><StatusBadge label={'Priorité ' + item.priorite.toLowerCase()} tone={priorityTone(item.priorite)} /></div></div>
-          <p className="mt-3 text-sm text-slate-600">{item.descriptionSynthese}</p>
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500"><span>{item.nombreSignalements} signalement(s)</span><span>·</span><span>{item.contenus.length} catégorie(s)</span>{item.contenus.map((content) => <span key={content.idTypeDechet} className="rounded-full border border-slate-200 px-2 py-1">{content.typeDechet.libelle}</span>)}</div>
+        {loading && !data ? <p className="p-6 text-sm text-ink-500">Chargement des dossiers…</p> : null}
+        {!loading && data?.items.length === 0 ? <p className="p-6 text-sm text-ink-500">Aucun dossier pour ce filtre.</p> : null}
+        <div className="divide-y divide-slate-100">{data?.items.map((item) => <Link key={item.idDossier} to={`/dossiers/${item.idDossier}`} className="workflow-list-item block p-5 transition hover:bg-surface-base">
+          <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-extrabold text-ink-900">{item.referenceDossier}</h3><p className="mt-1 text-xs text-ink-500">Créé le {formatDate(item.dateCreationDossier)}</p></div><div className="flex flex-wrap gap-2"><StatusBadge label={item.statutDossier.replaceAll('_', ' ').toLowerCase()} tone={caseStatusTone(item.statutDossier)} /><StatusBadge label={'Priorité ' + item.priorite.toLowerCase()} tone={priorityTone(item.priorite)} /></div></div>
+          <p className="mt-3 text-sm text-ink-500">{item.descriptionSynthese}</p>
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-ink-500"><span>{item.nombreSignalements} signalement(s)</span><span>·</span><span>{item.contenus.length} catégorie(s)</span>{item.contenus.map((content) => <span key={content.idTypeDechet} className="rounded-full border border-line-strong px-2 py-1">{content.typeDechet.libelle}</span>)}</div>
         </Link>)}</div>
-        <div className="flex items-center justify-between border-t border-slate-100 px-5 py-4"><p className="text-xs text-slate-500">Page {page} sur {totalPages}</p><div className="flex gap-2"><button type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={page <= 1 || loading} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold disabled:opacity-40">Précédent</button><button type="button" onClick={() => setPage((value) => Math.min(totalPages, value + 1))} disabled={page >= totalPages || loading} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold disabled:opacity-40">Suivant</button></div></div>
+        <div className="flex items-center justify-between border-t border-line-subtle px-5 py-4"><p className="text-xs text-ink-500">Page {page} sur {totalPages}</p><div className="flex gap-2"><button type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={page <= 1 || loading} className="rounded-lg border border-line-strong px-3 py-2 text-xs font-bold disabled:opacity-40">Précédent</button><button type="button" onClick={() => setPage((value) => Math.min(totalPages, value + 1))} disabled={page >= totalPages || loading} className="rounded-lg border border-line-strong px-3 py-2 text-xs font-bold disabled:opacity-40">Suivant</button></div></div>
       </section>
     </div>
   );
