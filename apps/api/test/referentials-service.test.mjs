@@ -139,3 +139,25 @@ test('lists only current memberships of active accounts in team referentials', a
   ]);
   assert.deepEqual(where.utilisateur, { etatCompte: 'ACTIF' });
 });
+
+
+test('lists only current memberships of active accounts in team referentials', async () => {
+  let args;
+  const prisma = basePrisma();
+  prisma.equipe = {
+    findMany: async (input) => {
+      args = input;
+      return [];
+    },
+  };
+
+  await new ReferentialsService(prisma).listTeams();
+
+  const where = args.include.appartenances.where;
+  assert.ok(where.dateDebut.lte instanceof Date);
+  assert.deepEqual(where.OR, [
+    { dateFin: null },
+    { dateFin: { gt: where.dateDebut.lte } },
+  ]);
+  assert.deepEqual(where.utilisateur, { etatCompte: 'ACTIF' });
+});
