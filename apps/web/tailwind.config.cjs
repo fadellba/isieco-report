@@ -1,6 +1,18 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
-  theme: { extend: { colors: { eco: { 50:'#eff8f3',100:'#d9eee2',600:'#28745b',700:'#17664d',900:'#182923' } } } },
+  theme: {
+    extend: {
+      colors: {
+        eco: {
+          50: '#E8F0E7',
+          100: '#D7E6D7',
+          600: '#2F7773',
+          700: '#23675F',
+          900: '#192820',
+        },
+      },
+    },
+  },
   plugins: [],
 };
