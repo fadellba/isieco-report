@@ -314,9 +314,15 @@ Les opérations de référentiel et d'administration de comptes restent dans des
 
 ### État de la cartographie et de l'actualisation
 
-Le centre de commandement dispose de l'endpoint agrégé `GET /api/v1/command-center/overview`, qui renvoie les KPI et les objets cartographiques autorisés. Depuis la PR #94, l'API accepte les quatre bornes du viewport, valide les plages et filtre les dossiers/signalements côté base avant pagination. La réponse fournit une pagination keyset avec ordre déterministe, curseur opaque lié au viewport, total du viewport indépendant du curseur et recalculé à chaque requête, `hasMore` et `nextCursor`. Chaque page reste plafonnée à 250 éléments ; l'interface charge la page suivante à la demande et recharge après 350 ms de stabilité du déplacement/zoom.
+Le centre de commandement dispose de l'endpoint agrégé `GET /api/v1/command-center/overview`. Depuis la PR #94, l'API accepte les quatre bornes du viewport, filtre les dossiers/signalements côté base et fournit une pagination keyset déterministe avec curseur lié au viewport, `hasMore`, `nextCursor` et un plafond de 250 éléments/page.
 
-Le frontend actualise encore les données par polling REST périodique (60 secondes). Aucun canal événementiel SSE/WebSocket n'est livré : les événements métier, la reconnexion/rattrapage et le fallback événementiel restent dans l'issue [#89](https://github.com/fadellba/isieco-report/issues/89). Les plans SQL sur dataset représentatif, la décision d'index spatial/PostGIS et le clustering restent également à mesurer. 
+L'actualisation événementielle existe dans le code depuis la PR #96. Après insertion d'un événement métier dans `audit.evenement_metier`, le trigger `audit.notify_command_center_change()` émet le marqueur générique PostgreSQL `pg_notify('command_center_changed', 'invalidate')`. L'API maintient un listener PostgreSQL `LISTEN command_center_changed` et expose `GET /api/v1/command-center/events` sous Supabase Auth + RolesGuard. Le flux envoie un heartbeat toutes les 15 secondes, renouvelle chaque connexion après 60 secondes et reconnecte le listener en cas de coupure. Le Web consomme SSE et recharge les données après invalidation (debounce 250 ms), avec un polling REST de 60 secondes en secours. Un événement `listener_connected` est aussi émis à la reconnexion du listener pour provoquer une resynchronisation.
+
+Depuis la PR #98, une réponse SSE HTTP 401/403 déclenche l'invalidation des requêtes en cours, la purge de la carte et de la sélection, puis le rafraîchissement du profil. Les gardes retirent le centre si l'habilitation n'est plus active.
+
+**État des environnements :** la migration `20261113215000_command_center_event_notifications` est versionnée mais pas encore appliquée au staging. 14 migrations sont dans Git, 11 sont enregistrées dans la base et trois restent à appliquer ; le workflow staging [#43516567399](https://github.com/fadellba/isieco-report/actions/runs/43516567399) s'arrête avant Render/readiness/E2E. Les CI des PR #96 [#43516567328](https://github.com/fadellba/isieco-report/actions/runs/43516567328), PR #98 [#43530017692](https://github.com/fadellba/isieco-report/actions/runs/43530017692) et de `main` [#43530992124](https://github.com/fadellba/isieco-report/actions/runs/43530992124) sont vertes.
+
+Les plans SQL sur dataset représentatif, la décision d'index spatial/PostGIS et le clustering restent à mesurer.
 
 **Règle de confidentialité : aucune télémétrie GPS des agents ne doit être collectée, stockée ou diffusée.** La carte Web porte sur les signalements et dossiers, jamais sur la position personnelle ou continue des équipes. La géolocalisation ponctuelle du citoyen lors d'un signalement est une fonctionnalité distincte, déclenchée à sa demande et limitée à l'avant-plan.
 
@@ -469,7 +475,7 @@ Cibles de conception :
 | Mode hors ligne | Pas de cache métier persistant, de brouillon durable ni de file de synchronisation | Chantier P2 à spécifier avec chiffrement local, idempotence et résolution de conflits |
 | Web back office | Shell et navigation par rôle, modules de qualification, dossiers, affectations, interventions, vérification, référentiels et comptes | Poursuivre la cohérence visuelle et la recette par rôle |
 | Centre de commandement Web | `GET /command-center/overview` renvoie KPI et entités géolocalisées ; PR #94 ajoute le filtre viewport, le curseur keyset, `hasMore`/`nextCursor`, le total par viewport et le bouton de page suivante | Recette visuelle et tests de performance sur volumes représentatifs restent à faire ; plafond serveur de 250 résultats/page |
-| Actualisation / télémétrie | Polling REST toutes les 60 secondes ; aucun flux SSE/WebSocket et aucune télémétrie GPS des agents | Ajouter une diffusion événementielle avec reconnexion/rattrapage et fallback si le besoin est confirmé ; ne jamais collecter ni afficher la position des agents |
+| Actualisation / télémétrie | SSE via PostgreSQL LISTEN/NOTIFY, heartbeat 15 s, bail 60 s et polling REST 60 s en fallback ; aucun GPS agent | Flux livré via PR #96 ; purge client sur HTTP 401/403 livrée via PR #98 ; activation staging après migration à valider |
 | Design system | Tokens de base, navigation et icônes SVG côté Web ; composants NativeWind et marque mobile | Le système partagé est une fondation, pas encore une bibliothèque complète de composants documentés et testés |
 
 ### 7.1 Contraintes métier à ne pas casser
@@ -496,7 +502,7 @@ Les exigences suivantes doivent être planifiées comme des travaux backend expl
 | P0 | Coordonnées et repère du dossier exposés aux membres actifs de l'équipe agent | Implémentés dans le DTO d'affectation utilisé par le mobile ; tester les cas de localisation absente ou imprécise. |
 | P1 | Centre de commandement cartographique avec KPI et entités géolocalisées | Implémenté sur Web via `GET /command-center/overview`, carte et panneau contextuel ; améliorer la couverture/recette. |
 | P1 | Filtrage cartographique par viewport et pagination spatiale | Implémentés et fusionnés via PR #94 : bounding box validée, curseur keyset lié au viewport, total du viewport indépendant du curseur, recalculé à chaque requête, et plafond de 250 éléments/page. Restent les tests de performance, l'analyse d'index/PostGIS et le clustering. |
-| P1 | Actualisation des opérations Web | Polling REST toutes les 60 secondes ; diffusion événementielle non implémentée. |
+| P1 | Actualisation des opérations Web | SSE livré via PR #96 (PostgreSQL LISTEN/NOTIFY), polling 60 s en fallback ; purge sur 401/403 livrée via PR #98. Activation staging après migration à valider. |
 | P2 | Carte native des missions agent | Écran placeholder ; choisir fournisseur, stratégie de clés et dépendances natives, puis tester sur appareils. |
 | P2 | Mode hors ligne agent | Non implémenté : cache limité, brouillons persistants, files de médias, reprise idempotente et résolution de conflits à concevoir. |
 | P2 | Télémétrie de position des équipes | Hors périmètre : ne pas collecter, stocker ni diffuser de GPS agent. La carte Web représente uniquement signalements et dossiers. |

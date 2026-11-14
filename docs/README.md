@@ -9,6 +9,7 @@ Cette documentation distingue le modèle conceptuel du PFE, le schéma réelleme
 | [Vision produit & UX](product/vision-ux-blueprint.md) | Vision ISIECO, personas, parcours Web/Mobile, design system, écarts API et feuille de route UX. |
 | [Architecture](architecture/README.md) | Architecture applicative, décisions, sécurité et état des livrables. |
 | [Feuille de route lots 1 à 4](architecture/roadmap-lots-1-4.md) | Documentation, reprise, fonctionnalités Mobile et cartographie du centre Web. |
+| [Actualisation événementielle du centre Web](architecture/command-center-realtime.md) | PostgreSQL LISTEN/NOTIFY + SSE livré, contrôles d'accès, reconnexion et validation staging. |
 | [Déploiement](deployment/README.md) | GitHub Actions, Vercel, Render, Supabase et distribution mobile. |
 | [Technologies](technologies/README.md) | Stack, versions épinglées et compatibilités. |
 | [Merise](merise/README.md) | Modèle simplifié et traduction Prisma/PostgreSQL. |
@@ -25,16 +26,17 @@ En cas de divergence, ne pas recopier une ancienne référence MLD v2.13 sans la
 
 ## État du dépôt au 13 novembre 2026
 
-- Le commit courant de `main` est `dab3b2dc3aecc140709beae91cefa1525edec0be`. Il inclut les PR #86 et #94.
-- La CI du commit de fusion est verte ([run #43513727264](https://github.com/fadellba/isieco-report/actions/runs/43513727264)).
-- Le dépôt contient 13 migrations Prisma ; le workflow staging [#43513727249](https://github.com/fadellba/isieco-report/actions/runs/43513727249) s'arrête avant Render car les deux migrations du 9 novembre ne sont pas appliquées.
-- Les workflows Web/API ont bien exécuté leurs jobs de garde. Le flag `PRODUCTION_DEPLOY_ENABLED` différent de `true` a conduit leurs étapes de déploiement à terminer avec `deployed=false` ; les smoke tests conditionnés à un déploiement réel ont été ignorés ([Web #43513727175](https://github.com/fadellba/isieco-report/actions/runs/43513727175), [API #43513727195](https://github.com/fadellba/isieco-report/actions/runs/43513727195)).
-- Le mode hors ligne et la carte native agent restent absents ([#87](https://github.com/fadellba/isieco-report/issues/87), [#88](https://github.com/fadellba/isieco-report/issues/88)) ; les notifications métier sont à réaliser ([#90](https://github.com/fadellba/isieco-report/issues/90)).
-- Le centre Web filtre désormais selon le viewport et pagine les résultats par curseur stable. L'actualisation événementielle reste à faire ; polling 60 secondes conservé ([#89](https://github.com/fadellba/isieco-report/issues/89)).
+- Le commit courant de `main` est `652d16d56b0e7898b639ca09a822a35de5fb2e3b`. Il inclut les PR #86, #94, #96 et #98.
+- La CI de `main` est verte ([#43530992124](https://github.com/fadellba/isieco-report/actions/runs/43530992124)); les CI des PR #96 et #98 sont vertes ([#43516567328](https://github.com/fadellba/isieco-report/actions/runs/43516567328), [#43530017692](https://github.com/fadellba/isieco-report/actions/runs/43530017692)).
+- 14 migrations sont versionnées dans Git ; 11 sont enregistrées en staging. Trois restent en attente : les deux migrations d'ordre du ledger et `20261113215000_command_center_event_notifications`.
+- Le workflow staging [#43516567399](https://github.com/fadellba/isieco-report/actions/runs/43516567399) s'arrête avant Render/readiness/E2E ; le trigger SSE n'est pas encore actif en staging.
+- Les étapes de déploiement Web/API en production ont été ignorées après les contrôles car `PRODUCTION_DEPLOY_ENABLED` n'est pas `true` ([Web #43530992214](https://github.com/fadellba/isieco-report/actions/runs/43530992214), [API #43530992105](https://github.com/fadellba/isieco-report/actions/runs/43530992105)).
+- Le centre Web dispose du viewport, de la pagination keyset et d'un flux SSE d'invalidation PostgreSQL ; le polling 60 secondes reste le fallback. Depuis PR #98, la carte est vidée sur HTTP 401/403 et le profil est rafraîchi.
+- Le mode hors ligne, la carte native agent et les notifications métier restent absents ([#87](https://github.com/fadellba/isieco-report/issues/87), [#88](https://github.com/fadellba/isieco-report/issues/88), [#90](https://github.com/fadellba/isieco-report/issues/90)).
 - Aucun test physique Android/iOS n'est attesté ([#53](https://github.com/fadellba/isieco-report/issues/53)).
-- La restauration indépendante PostgreSQL + Storage depuis des sauvegardes datées n'est pas démontrée ([#54](https://github.com/fadellba/isieco-report/issues/54)).
+- La restauration indépendante PostgreSQL + Storage n'est pas démontrée ([#54](https://github.com/fadellba/isieco-report/issues/54)).
 
-La feuille de route exécutable, les dépendances et les critères de sortie sont détaillés dans [architecture/roadmap-lots-1-4.md](architecture/roadmap-lots-1-4.md).
+La feuille de route exécutable et les dépendances sont détaillées dans [architecture/roadmap-lots-1-4.md](architecture/roadmap-lots-1-4.md).
 
 ## Règle de validation
 

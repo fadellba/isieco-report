@@ -1,27 +1,28 @@
 # État des livrables
 
-Dernier snapshot opérationnel détaillé du **7 novembre 2026**. Un delta du dépôt `main` a été vérifié après les fusions des PR #91 et #94, sur le commit `dab3b2dc3aecc140709beae91cefa1525edec0be` du **13 novembre 2026**. Les constats récents ci-dessous priment sur le snapshot historique. La politique de périmètre sans abonnement payant est détaillée dans [Périmètre gratuit et reports liés aux coûts](../deployment/perimetre-offre-gratuite.md).
+Dernier snapshot opérationnel détaillé du **7 novembre 2026**. Un delta du dépôt `main` a été vérifié après les fusions des PR #91, #94, #96 et #98, sur le commit `652d16d56b0e7898b639ca09a822a35de5fb2e3b` du **13 novembre 2026**. Les constats récents ci-dessous priment sur le snapshot historique. La politique de périmètre sans abonnement payant est détaillée dans [Périmètre gratuit et reports liés aux coûts](../deployment/perimetre-offre-gratuite.md).
 
-## Delta vérifié sur main au 13 novembre 2026 — commit `dab3b2d`
+## Delta vérifié sur main au 13 novembre 2026 — commit `652d16d`
 
-| Domaine | État au commit `dab3b2dc` |
+| Domaine | État au commit `652d16d` |
 |---|---|
-| CI main | **Réussie** sur le commit de fusion : [run #43513727264](https://github.com/fadellba/isieco-report/actions/runs/43513727264). Migrations vierges, replay historique, API/OpenAPI, typecheck, tests et builds Web/API/Mobile réussis. |
-| Migrations dans Git | **13 migrations** sont présentes dans `prisma/migrations`. |
-| Migrations staging | Le run [Staging Forward Deploy #43513727249](https://github.com/fadellba/isieco-report/actions/runs/43513727249) s'arrête à `prisma migrate status` : `20261109100000_business_audit_event_order` et `20261109110000_backfill_business_audit_event_sequence_order` ne sont pas appliquées. Aucun hook Render, readiness, smoke test ou E2E staging n'a été exécuté. |
-| Production Web/API | Les workflows [Web #43513727175](https://github.com/fadellba/isieco-report/actions/runs/43513727175) et [API #43513727195](https://github.com/fadellba/isieco-report/actions/runs/43513727195) confirment que `PRODUCTION_DEPLOY_ENABLED` n'est pas `true`, que `deployed=false` et que les smoke tests ont été ignorés. **Aucun déploiement production réalisé.** |
-| PR #86 | **Fusionnée** dans `main`. Le signalement mobile peut être envoyé sans photo si au moins une information utile est fournie. |
+| CI main | **Réussie** sur le SHA courant : [run #43530992124](https://github.com/fadellba/isieco-report/actions/runs/43530992124). CI PR #96 réussie : [#43516567328](https://github.com/fadellba/isieco-report/actions/runs/43516567328) ; CI PR #98 réussie : [#43530017692](https://github.com/fadellba/isieco-report/actions/runs/43530017692). |
+| Migrations dans Git | **14 migrations** dans `prisma/migrations`. |
+| Migrations staging | 11 migrations enregistrées ; trois en attente : `20261109100000_business_audit_event_order`, `20261109110000_backfill_business_audit_event_sequence_order`, `20261113215000_command_center_event_notifications`. Le workflow [#43516567399](https://github.com/fadellba/isieco-report/actions/runs/43516567399) s'arrête avant Render, readiness et E2E. Le trigger SSE n'est pas actif en staging. |
+| Production Web/API | Les workflows [Web #43530992214](https://github.com/fadellba/isieco-report/actions/runs/43530992214) et [API #43530992105](https://github.com/fadellba/isieco-report/actions/runs/43530992105) ont exécuté leurs contrôles ; `PRODUCTION_DEPLOY_ENABLED` différent de `true` a conduit à `deployed=false` et les smoke tests ont été ignorés. **Aucun déploiement production.** |
+| PR #86 | **Fusionnée** : signalement mobile sans photo si au moins une information utile est fournie. |
+| PR #94 | **Fusionnée** : filtre viewport, pagination keyset, curseur lié au viewport, total sans curseur recalculé à chaque requête, plafond serveur de 250 éléments/page. |
+| PR #96 | **Fusionnée** : journal métier → trigger `pg_notify` → API PostgreSQL `LISTEN` → endpoint SSE protégé par rôles ; heartbeat 15 s, durée de connexion 60 s, reconnexion exponentielle et polling REST 60 s en fallback. La migration du trigger est versionnée, mais pas appliquée au staging. |
+| PR #98 | **Fusionnée** : sur HTTP 401/403 du SSE, le client invalide les requêtes, vide les données de carte et de sélection, rafraîchit le profil et laisse les gardes retirer le centre si le rôle n'est plus actif. |
 | Mode hors ligne Mobile | Absent ; backlog [#87](https://github.com/fadellba/isieco-report/issues/87). |
-| Carte native Mobile | Absente ; `apps/mobile/app/(agent)/map.tsx` reste un placeholder. L'API d'affectation expose déjà les coordonnées ; backlog [#88](https://github.com/fadellba/isieco-report/issues/88). |
-| Notifications Mobile | Aucune notification métier push/localisée identifiée dans le package Mobile ; backlog [#90](https://github.com/fadellba/isieco-report/issues/90). |
-| Cartographie Web | **Viewport + pagination keyset livrés** par la PR #94 : bornes validées, filtre SQL avant pagination, curseur stable lié au viewport, tri déterministe, total du viewport calculé indépendamment du curseur à chaque requête (il peut évoluer si les données changent entre deux pages), lookahead, gestion des dates nulles, réponse HTTP 400 documentée. Plafond serveur de 250 par page. |
-| Actualisation Web | Polling REST de 60 secondes maintenu. SSE/WebSocket, reconnexion/rattrapage et fallback événementiel restent à réaliser dans [#89](https://github.com/fadellba/isieco-report/issues/89). |
-| Performance cartographique | Pas encore de validation sur dataset volumineux / plans SQL représentatifs ; choix d'index spatial/PostGIS et clustering à mesurer avant implémentation. |
-| GPS agents | Aucune télémétrie GPS des agents collectée, stockée ou diffusée. La géolocalisation ponctuelle citoyenne à l'avant-plan est distincte. |
+| Carte native Mobile | Absente ; `apps/mobile/app/(agent)/map.tsx` reste un placeholder ; backlog [#88](https://github.com/fadellba/isieco-report/issues/88). |
+| Notifications Mobile | Non implémentées ; backlog [#90](https://github.com/fadellba/isieco-report/issues/90). |
+| Performance cartographique | Pas encore de mesure sur dataset volumineux/plans SQL représentatifs ; index spatial/PostGIS et clustering à décider sur mesures ([#89](https://github.com/fadellba/isieco-report/issues/89)). |
+| GPS agents | Aucune télémétrie GPS des agents collectée, stockée ou diffusée. |
 | Tests physiques | Aucun test attesté sur appareils Android/iOS réels ; [#53](https://github.com/fadellba/isieco-report/issues/53) reste ouvert. |
-| Sauvegarde / restauration | Aucune preuve d'une restauration indépendante depuis des sauvegardes PostgreSQL et Storage datées. Le drill actuel copie la source staging active ; il ne mesure pas le RPO d'un snapshot historique. [#54](https://github.com/fadellba/isieco-report/issues/54) et la porte de production [#51](https://github.com/fadellba/isieco-report/issues/51) restent ouvertes. |
+| Sauvegarde / restauration | Aucune preuve de restauration indépendante depuis backups PostgreSQL + Storage datés ; [#54](https://github.com/fadellba/isieco-report/issues/54) et [#51](https://github.com/fadellba/isieco-report/issues/51) restent ouverts. |
 
-La tranche viewport/pagination est fusionnée via [PR #94](https://github.com/fadellba/isieco-report/pull/94). Le chantier [#89](https://github.com/fadellba/isieco-report/issues/89) reste ouvert pour l'actualisation événementielle et les vérifications de performance/clustering.
+La carte Web, le flux SSE et la purge après refus d'accès sont intégrés en source via les PR #94, #96 et #98. La migration du trigger reste bloquée par les portes de sauvegarde/migration staging.
 
 ## Snapshot historique des validations staging du 7 novembre
 

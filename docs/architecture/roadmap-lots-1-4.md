@@ -2,7 +2,7 @@
 
 **Date de référence :** 13 novembre 2026  
 **Branche de référence :** `main`  
-**Commit vérifié :** [`dab3b2dc3aecc140709beae91cefa1525edec0be`](https://github.com/fadellba/isieco-report/commit/dab3b2dc3aecc140709beae91cefa1525edec0be)
+**Commit vérifié :** [`652d16d56b0e7898b639ca09a822a35de5fb2e3b`](https://github.com/fadellba/isieco-report/commit/652d16d56b0e7898b639ca09a822a35de5fb2e3b)
 
 Ce document regroupe les travaux prioritaires en quatre lots cohérents. Il distingue explicitement une fonctionnalité présente dans le code, une validation attestée et un travail encore planifié. Une issue ouverte ou un build vert ne vaut pas livraison.
 
@@ -10,10 +10,10 @@ Ce document regroupe les travaux prioritaires en quatre lots cohérents. Il dist
 
 | Lot | Périmètre | Statut constaté | Suivi GitHub |
 |---|---|---|---|
-| 1 | Documentation et état réel du dépôt | Réconciliation de base fusionnée via PR #91 ; présente mise à jour synchronise la documentation avec PR #94 et les preuves CI/staging/production du commit de fusion | Ce document, [état des livrables](etat-des-livrables.md) |
-| 2 | Sauvegardes, restauration et préparation à la production | Non clôturé : restauration indépendante PostgreSQL + Storage non démontrée ; staging en retard de deux migrations | [#54](https://github.com/fadellba/isieco-report/issues/54), [#51](https://github.com/fadellba/isieco-report/issues/51) |
+| 1 | Documentation et état réel du dépôt | Réconciliation de base fusionnée via PR #91 ; présente mise à jour synchronise la documentation avec PR #94, PR #96, PR #98 et les preuves CI/staging/production du commit courant | Ce document, [état des livrables](etat-des-livrables.md) |
+| 2 | Sauvegardes, restauration et préparation à la production | Non clôturé : restauration indépendante PostgreSQL + Storage non démontrée ; staging en retard de trois migrations | [#54](https://github.com/fadellba/isieco-report/issues/54), [#51](https://github.com/fadellba/isieco-report/issues/51) |
 | 3 | Mobile hors ligne, carte native et notifications | Trois capacités absentes du code ; aucun test matériel attesté | [#87](https://github.com/fadellba/isieco-report/issues/87), [#88](https://github.com/fadellba/isieco-report/issues/88), [#90](https://github.com/fadellba/isieco-report/issues/90), recette [#53](https://github.com/fadellba/isieco-report/issues/53) |
-| 4 | Cartographie et actualisation du centre Web | Viewport + pagination keyset livrés via PR #94 ; actualisation événementielle et validation de performance restent ouvertes | [#89](https://github.com/fadellba/isieco-report/issues/89) |
+| 4 | Cartographie et actualisation du centre Web | Viewport/pagination livrés via PR #94 ; SSE livré via PR #96 ; purge sur révocation livrée via PR #98 ; activation staging et performance restent à valider | [#89](https://github.com/fadellba/isieco-report/issues/89) |
 
 ## Lot 1 — Réconcilier la documentation avec le dépôt
 
@@ -23,7 +23,7 @@ Ce document regroupe les travaux prioritaires en quatre lots cohérents. Il dist
 - Aligner le README racine, l'index documentaire, l'état des livrables et le blueprint UX sur le commit courant.
 - Documenter le nombre exact de migrations suivies dans Git et distinguer ce nombre du nombre réellement appliqué en staging.
 - Corriger les statuts de PR et de commits ; la PR #86 est fusionnée dans `main`.
-- Décrire précisément l'état de la carte Web : filtre viewport et pagination keyset livrés par PR #94, limite de 250 par page, polling périodique et événements non livrés.
+- Décrire précisément l'état de la carte Web : viewport/pagination livrés via PR #94, SSE via PR #96, purge sur révocation via PR #98, polling de secours de 60 secondes et activation staging non attestée.
 - Documenter les absences Mobile : mode hors ligne, carte native agent et notifications métier.
 - Remplacer toute formulation qui pourrait suggérer un suivi GPS des agents par une règle explicite d'absence de télémétrie.
 - Relier chaque écart à une issue de suivi et conserver les preuves (SHA, run, appareil, résultat) à proximité de la décision.
@@ -103,32 +103,53 @@ Après intégration des fonctionnalités, produire une build de test liée au SH
 - Notifications : envoi fiable, payload minimisé et ouverture protégée par l'API.
 - Android et iOS : rapports de recette sur appareils physiques, associés au commit et à la version exacts.
 
-## Lot 4 — Cartographie du centre de commandement Web
+## Lot 4 — Cartographie et actualisation du centre de commandement Web
 
-**Objectif :** rendre l'exploration cartographique scalable, limitée à la zone visible et réactive, sans suivi GPS des agents.
+**Objectif :** rendre la carte limitée à la zone visible, paginée, réactive et sécurisée, sans suivi GPS des agents.
 
-### Livré dans main — PR #94 (commit de fusion `dab3b2d`)
-- **Viewport :** le client calcule les bornes géographiques visibles, attend 350 ms après un déplacement/zoom, puis appelle l'API avec les quatre bornes.
-- **Validation API :** bornes complètes et plages latitude/longitude vérifiées ; viewports traversant l'antiméridien pris en charge ; valeurs vides/non numériques et latitudes inversées rejetées en HTTP 400.
-- **Filtrage base :** dossiers et signalements sont filtrés au niveau Prisma avant récupération des pages.
-- **Pagination keyset :** curseur opaque et validé, lié au viewport initial ; tri déterministe date/type/identifiant ; deux flux (dossiers et signalements) récupèrent `limit + 1` pour calculer `hasMore`.
-- **Stabilité :** le total du viewport est calculé sans le curseur ; il peut varier entre requêtes si des enregistrements changent pendant la pagination ; dates de soumission nulles traitées en fin de flux ; curseur rejeté s'il est réutilisé sur une autre zone.
-- **Interface :** bouton de chargement des pages suivantes ; protection contre les réponses HTTP obsolètes ; maximum serveur de 250 éléments par page.
-- **Confidentialité :** aucune permission, télémétrie, historique ou position GPS d'agent ajouté.
+### Livré dans main — PR #94, PR #96 et PR #98
 
-La CI de PR #94 [#43512678022](https://github.com/fadellba/isieco-report/actions/runs/43512678022) et la CI du commit de fusion [#43513727264](https://github.com/fadellba/isieco-report/actions/runs/43513727264) ont réussi : typecheck, tests applicatifs, builds Web/API/Mobile et génération/validation OpenAPI.
+**Viewport et pagination — PR #94**
+- Le client calcule les bornes géographiques visibles, attend 350 ms après un déplacement/zoom, puis appelle l'API avec les quatre bornes.
+- L'API valide bornes et plages, prend en charge les viewports traversant l'antiméridien et rejette les valeurs invalides en HTTP 400.
+- Dossiers et signalements sont filtrés en base avant pagination.
+- Pagination keyset, curseur opaque lié au viewport, ordre déterministe, lookahead `limit + 1`, total viewport calculé sans curseur et recalculé à chaque requête.
+- Plafond serveur de 250 résultats/page, bouton « Charger les éléments suivants » et protection contre les réponses HTTP obsolètes.
+
+**Actualisation événementielle — PR #96**
+- Le ledger append-only `audit.evenement_metier` déclenche `audit.notify_command_center_change()`.
+- Après insertion du ledger, le trigger émet `pg_notify('command_center_changed', 'invalidate')` pour les entités autres que `UTILISATEUR`. Le payload est constant et ne transmet aucune donnée métier.
+- `CommandCenterEventsService` maintient une connexion PostgreSQL dédiée, exécute `LISTEN command_center_changed`, relaie un message SSE et reconnecte avec backoff exponentiel de 1 à 30 s.
+- `GET /api/v1/command-center/events` est protégé par `SupabaseAuthGuard` et `RolesGuard`, envoie des heartbeats toutes les 15 s et renouvelle chaque connexion après 60 s.
+- À la connexion initiale ou après reconnexion du listener, un événement `listener_connected` provoque aussi un rafraîchissement.
+- Le Web récupère un jeton Supabase à chaque reconnexion, consomme SSE, regroupe les invalidations sur 250 ms et garde le polling REST 60 s comme fallback.
+- Aucun GPS agent ni permission de localisation mobile n'est ajouté.
+
+**Révocation d'accès — PR #98**
+- Sur HTTP 401/403 du SSE, le client invalide les requêtes en cours, vide la carte et la sélection, rafraîchit le profil et laisse `ProtectedRoute` retirer le centre si le rôle n'est plus actif.
+
+La CI PR #96 [#43516567328](https://github.com/fadellba/isieco-report/actions/runs/43516567328), PR #98 [#43530017692](https://github.com/fadellba/isieco-report/actions/runs/43530017692) et main [#43530992124](https://github.com/fadellba/isieco-report/actions/runs/43530992124) a réussi.
+
+### État de déploiement
+La migration `20261113215000_command_center_event_notifications` est versionnée mais non appliquée au staging. Sur les 14 migrations Git, 11 sont enregistrées ; trois sont en attente :
+- `20261109100000_business_audit_event_order`
+- `20261109110000_backfill_business_audit_event_sequence_order`
+- `20261113215000_command_center_event_notifications`
+
+Le workflow [Staging Forward Deploy #43516567399](https://github.com/fadellba/isieco-report/actions/runs/43516567399) échoue au contrôle de cohérence avant Render/readiness/E2E. Le flux SSE est livré dans le code, mais l'activation du trigger en staging n'est pas attestée.
 
 ### Travaux restants — issue #89
-1. **Actualisation événementielle :** étudier SSE/WebSocket ou une solution adaptée, sélectionner les événements métier, sécuriser les abonnements, gérer reconnexion, rattrapage et fallback polling.
-2. **Performance :** mesurer les plans SQL et la latence sur un dataset représentatif ; n'ajouter des index spatiaux ou PostGIS que si les mesures le justifient.
-3. **Clustering et densité :** définir un seuil d'agrégation et tester lisibilité, pagination et volume sur des zones denses.
-4. **Filtres métier serveur :** vérifier les besoins de filtres de statut/priorité/période et les combiner au viewport si nécessaire ; les filtres Web de type/recherche actuels opèrent sur les entités déjà reçues.
+1. **Activation staging :** réconcilier les trois migrations après validation des sauvegardes/restauration et autorisation d'exploitation.
+2. **Listener PostgreSQL :** valider `DIRECT_URL` (ou connexion session dédiée), TLS et reconnexion sur staging ; vérifier le trigger après migration contrôlée.
+3. **Performance :** mesurer plans SQL et latence sur un dataset représentatif ; n'ajouter des index géographiques/PostGIS que sur preuve.
+4. **Clustering/densité :** tester lisibilité, taille de réponse et navigation sur zones chargées.
+5. **Filtres métier :** vérifier si statut/priorité/période doivent être appliqués côté serveur avant pagination.
 
 ### Critères de sortie restants
-- Les plans SQL et temps de réponse sont mesurés sur un jeu représentatif.
-- Le clustering est validé sur des cas de densité réalistes.
-- Les mises à jour métier pertinentes sont propagées par événement avec reconnexion/rattrapage ; le fallback fonctionne.
-- Les événements ne divulguent aucune donnée non autorisée.
+- Les trois migrations sont appliquées après validation des sauvegardes/restauration et autorisation d'exploitation.
+- Le trigger et le listener fonctionnent sur staging ; le client recharge l'API après reconnexion et le polling reste opérationnel.
+- Une révocation de rôle ne laisse pas les données périmées visibles après HTTP 401/403 ; la connexion SSE réévalue l'accès au plus tard toutes les 60 s.
+- Les plans SQL, latences et comportements de densité sont mesurés sur un dataset représentatif.
 - Aucun emplacement personnel d'agent n'est collecté, stocké ou diffusé.
 
 ## Ordre et dépendances
