@@ -149,7 +149,9 @@ La branche `feat/isieco-ux-ui-foundation` porte une première livraison progress
 - Écran de préparation après lancement et couleurs de splash natif alignés à la marque.
 - Formulaire citoyen rendu plus explicite sur les informations utiles, le caractère facultatif de la photo et l'ordre des repères affichés.
 - Détail du signalement : prochaine étape expliquée à partir du statut métier et action de reprise disponible si le chargement échoue.
-- Liste des missions agent : statuts d'affectation et d'intervention séparés, prochaine action attendue, distinction entre mission à accepter, à démarrer, en cours, à vérifier et reprise.
+- Liste des missions agent transformée en file de travail filtrable (à accepter, à démarrer, en cours, à vérifier, reprises et validées), avec compteurs et priorisation par prochaine action.
+- Fiche de mission dédiée `/(agent)/missions/[id]` avec contexte du dépôt, localisation, équipe, réponse à l'affectation, démarrage de l'intervention, ajout des preuves et compte rendu.
+- Navigation imbriquée liste → détail, avec conservation du contexte d'équipe et retour à la file.
 - Files Web de qualification, affectation et vérification : états sémantiques, messages cohérents et libellés de filtres compréhensibles.
 - Liste Web des dossiers : statuts et priorités présentés avec une signification visuelle stable.
 
@@ -158,7 +160,7 @@ La branche `feat/isieco-ux-ui-foundation` porte une première livraison progress
 - Le fichier graphique natif `apps/mobile/assets/splash.png` n'a pas encore été redessiné. Seuls sa configuration et les couleurs d'environnement ont été harmonisés. Le visuel final doit être conçu pour les ratios Android/iOS puis testé sur appareils réels.
 - Le logo mobile embarqué et les déclinaisons d'icônes d'application doivent encore être validés comme un ensemble de marque complet.
 - Les écrans de détail/qualification, création et réaffectation Web nécessitent encore un passage UI complet.
-- Le grand écran de mission agent reste à découper en vues « détail », « exécution » et « compte rendu » ; la présente tranche clarifie les statuts et le guidage, mais ne réalise pas ce découpage.
+- La fiche de mission est maintenant séparée de la file de travail. Une prochaine itération pourra encore approfondir le découpage visuel interne entre exécution, preuves et compte rendu, sans modifier le cycle métier.
 - Le composant de carte Web reste à approfondir : regroupement de marqueurs, légende métier, filtres, densité et représentation des secteurs.
 - Les états hors connexion et les brouillons locaux restent hors de cette livraison.
 - L'accessibilité et le rendu doivent encore être vérifiés sur navigateur, formats mobiles courants et appareils Android/iOS réels.
