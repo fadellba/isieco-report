@@ -25,6 +25,7 @@ L'inventaire ci-dessous sert de registre de couverture. Une ligne n'est considé
 | `/qualification/:idSignalement` | Détail qualification | Contexte, médias, décision, complément, validation |
 | `/dossiers` | Liste des dossiers | Recherche, filtres, priorités, états et accès au détail |
 | `/dossiers/:idDossier` | Détail dossier | Informations, historique, affectation, progression opérationnelle |
+| `/affectations` | Création guidée contenu → équipe éligible, compteurs de décision, recherche locale et réaffectation simplifiée | Vérifier habilitations, filtres, motifs, pagination et erreurs |
 | `/affectations` | Affectations | Équipes, charge, choix, confirmation et erreurs |
 | `/verification` | Vérification indépendante | File, examen des preuves, validation ou reprise motivée |
 | `/interventions` | Interventions | Missions, statuts, résultats et consultation des comptes rendus |
