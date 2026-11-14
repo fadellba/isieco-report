@@ -156,80 +156,80 @@ export function QualificationDetailPage() {
     }
   }
 
-  if (loading && !report) return <p className="text-sm text-slate-500">Chargement du signalement…</p>;
-  if (!report) return <div className="space-y-4"><Link to="/qualification" className="text-sm font-semibold text-eco-700">← Retour à la file</Link><div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">{error || 'Signalement indisponible ou déjà traité.'}</div></div>;
+  if (loading && !report) return <p className="text-sm text-ink-500">Chargement du signalement…</p>;
+  if (!report) return <div className="space-y-4"><Link to="/qualification" className="text-sm font-semibold text-brand-forest">← Retour à la file</Link><div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">{error || 'Signalement indisponible ou déjà traité.'}</div></div>;
 
   return (
     <div className="space-y-6">
-      <Link to="/qualification" className="text-sm font-semibold text-eco-700 hover:underline">← Retour à la file de qualification</Link>
+      <Link to="/qualification" className="text-sm font-semibold text-brand-forest hover:underline">← Retour à la file de qualification</Link>
       {error ? <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div> : null}
       <header>
-        <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-eco-700">Examen du signalement</p>
+        <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-brand-forest">Examen du signalement</p>
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">{report.utilisateur.prenom ? `${report.utilisateur.prenom} ${report.utilisateur.nom}` : report.utilisateur.nom}</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight text-ink-900">{report.utilisateur.prenom ? `${report.utilisateur.prenom} ${report.utilisateur.nom}` : report.utilisateur.nom}</h1>
           <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800">{report.statutSignalement}</span>
         </div>
-        <p className="mt-2 text-xs text-slate-500">Soumis le {dateLabel(report.dateSoumission)} · {report.idSignalement}</p>
+        <p className="mt-2 text-xs text-ink-500">Soumis le {dateLabel(report.dateSoumission)} · {report.idSignalement}</p>
       </header>
 
       <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-        <article className="rounded-2xl border border-slate-200 bg-white p-5">
-          <h2 className="font-bold text-slate-900">Description et localisation</h2>
-          <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">{report.description || 'Aucune description fournie.'}</p>
+        <article className="rounded-2xl border border-line-strong bg-white p-5">
+          <h2 className="font-bold text-ink-900">Description et localisation</h2>
+          <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-ink-700">{report.description || 'Aucune description fournie.'}</p>
           <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-            <p><span className="block text-xs font-bold text-slate-400">Coordonnées</span><span className="mt-1 block">{report.latitude && report.longitude ? `${report.latitude}, ${report.longitude}` : 'Non renseignées'}</span></p>
-            <p><span className="block text-xs font-bold text-slate-400">Description du lieu</span><span className="mt-1 block">{report.descriptionLocalisation || '—'}</span></p>
-            <p><span className="block text-xs font-bold text-slate-400">Précision (m)</span><span className="mt-1 block">{report.precisionLocalisation || '—'}</span></p>
+            <p><span className="block text-xs font-bold text-ink-400">Coordonnées</span><span className="mt-1 block">{report.latitude && report.longitude ? `${report.latitude}, ${report.longitude}` : 'Non renseignées'}</span></p>
+            <p><span className="block text-xs font-bold text-ink-400">Description du lieu</span><span className="mt-1 block">{report.descriptionLocalisation || '—'}</span></p>
+            <p><span className="block text-xs font-bold text-ink-400">Précision (m)</span><span className="mt-1 block">{report.precisionLocalisation || '—'}</span></p>
           </div>
         </article>
-        <article className="rounded-2xl border border-slate-200 bg-white p-5">
-          <h2 className="font-bold text-slate-900">Photos privées</h2>
-          {!report.photos.length ? <p className="mt-3 text-sm text-slate-500">Aucune photo associée.</p> : <div className="mt-3 grid grid-cols-2 gap-3">
-            {report.photos.map((photo) => <div key={photo.idPhotoSignalement} className="overflow-hidden rounded-xl border border-slate-200">
-              {photoUrls[photo.idPhotoSignalement] ? <a href={photoUrls[photo.idPhotoSignalement]} target="_blank" rel="noreferrer"><img src={photoUrls[photo.idPhotoSignalement]} alt={photo.description || 'Photo du signalement'} className="h-32 w-full object-cover" /></a> : <div className="grid h-32 place-items-center bg-slate-50 px-2 text-center text-xs text-slate-400">Photo expirée ou inaccessible</div>}
-              <div className="p-2"><p className="line-clamp-2 text-xs text-slate-600">{photo.description || 'Sans description'}</p><p className="mt-1 text-[10px] text-slate-400">{photo.etatPublication}</p></div>
+        <article className="rounded-2xl border border-line-strong bg-white p-5">
+          <h2 className="font-bold text-ink-900">Photos privées</h2>
+          {!report.photos.length ? <p className="mt-3 text-sm text-ink-500">Aucune photo associée.</p> : <div className="mt-3 grid grid-cols-2 gap-3">
+            {report.photos.map((photo) => <div key={photo.idPhotoSignalement} className="overflow-hidden rounded-xl border border-line-strong">
+              {photoUrls[photo.idPhotoSignalement] ? <a href={photoUrls[photo.idPhotoSignalement]} target="_blank" rel="noreferrer"><img src={photoUrls[photo.idPhotoSignalement]} alt={photo.description || 'Photo du signalement'} className="h-32 w-full object-cover" /></a> : <div className="grid h-32 place-items-center bg-surface-base px-2 text-center text-xs text-ink-400">Photo expirée ou inaccessible</div>}
+              <div className="p-2"><p className="line-clamp-2 text-xs text-ink-500">{photo.description || 'Sans description'}</p><p className="mt-1 text-[10px] text-ink-400">{photo.etatPublication}</p></div>
             </div>)}
           </div>}
         </article>
       </section>
 
-      {report.demandesComplement.length ? <section className="rounded-2xl border border-slate-200 bg-white p-5">
-        <h2 className="font-bold text-slate-900">Historique des compléments</h2>
-        <div className="mt-3 space-y-3">{report.demandesComplement.map((request) => <article key={request.idDemande} className="rounded-xl bg-slate-50 p-4">
-          <div className="flex flex-wrap justify-between gap-2"><span className="text-sm font-semibold">{request.etatDemande}</span><span className="text-xs text-slate-400">{dateLabel(request.dateDemande)}</span></div>
-          <p className="mt-2 text-sm text-slate-600">{request.motif}</p>
-          {request.reponse ? <div className="mt-3 border-l-2 border-eco-500 pl-3"><p className="text-xs font-bold text-eco-800">Réponse citoyenne · {dateLabel(request.reponse.dateReponse)}</p><p className="mt-1 whitespace-pre-wrap text-sm">{request.reponse.contenu}</p></div> : null}
+      {report.demandesComplement.length ? <section className="rounded-2xl border border-line-strong bg-white p-5">
+        <h2 className="font-bold text-ink-900">Historique des compléments</h2>
+        <div className="mt-3 space-y-3">{report.demandesComplement.map((request) => <article key={request.idDemande} className="rounded-xl bg-surface-base p-4">
+          <div className="flex flex-wrap justify-between gap-2"><span className="text-sm font-semibold">{request.etatDemande}</span><span className="text-xs text-ink-400">{dateLabel(request.dateDemande)}</span></div>
+          <p className="mt-2 text-sm text-ink-500">{request.motif}</p>
+          {request.reponse ? <div className="mt-3 border-l-2 border-eco-500 pl-3"><p className="text-xs font-bold text-ink-800">Réponse citoyenne · {dateLabel(request.reponse.dateReponse)}</p><p className="mt-1 whitespace-pre-wrap text-sm">{request.reponse.contenu}</p></div> : null}
         </article>)}</div>
       </section> : null}
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5">
-        <h2 className="font-bold text-slate-900">Décision de qualification</h2>
+      <section className="rounded-2xl border border-line-strong bg-white p-5">
+        <h2 className="font-bold text-ink-900">Décision de qualification</h2>
         <form onSubmit={(event) => void submit(event)} className="mt-4 space-y-4">
           <div className="flex flex-wrap gap-2">
             {([
               ['accept', 'Accepter et qualifier'],
               ['supplement', 'Demander un complément'],
               ['reject', 'Rejeter'],
-            ] as const).map(([value, label]) => <button key={value} type="button" onClick={() => setAction(value)} className={`rounded-lg px-3 py-2 text-xs font-bold ${action === value ? 'bg-eco-700 text-white' : 'border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>{label}</button>)}
+            ] as const).map(([value, label]) => <button key={value} type="button" onClick={() => setAction(value)} className={`rounded-lg px-3 py-2 text-xs font-bold ${action === value ? 'bg-brand-forest text-white' : 'border border-line-strong text-ink-500 hover:bg-surface-base'}`}>{label}</button>)}
           </div>
           {action === 'accept' ? <div className="space-y-3">
-            <p className="text-sm text-slate-600">Retenez les catégories déclarées et ajustez les estimations.</p>
+            <p className="text-sm text-ink-500">Retenez les catégories déclarées et ajustez les estimations.</p>
             {contents.map((item, index) => {
               const declared = report.contenus.find((content) => content.idTypeDechet === item.idTypeDechet);
-              return <article key={item.idTypeDechet} className="rounded-xl border border-slate-200 p-4">
+              return <article key={item.idTypeDechet} className="rounded-xl border border-line-strong p-4">
                 <label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={item.selected} onChange={(event) => patchContent(index, { selected: event.target.checked })} />{declared?.typeDechet.libelle || declared?.typeDechet.codeType}</label>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <label className="text-xs font-semibold text-slate-600">Quantité<input type="number" min="0" step="0.001" value={item.quantiteEstimee} onChange={(event) => patchContent(index, { quantiteEstimee: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal" /></label>
-                  <label className="text-xs font-semibold text-slate-600">Volume<input type="number" min="0" step="0.001" value={item.volumeEstime} onChange={(event) => patchContent(index, { volumeEstime: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal" /></label>
+                  <label className="text-xs font-semibold text-ink-500">Quantité<input type="number" min="0" step="0.001" value={item.quantiteEstimee} onChange={(event) => patchContent(index, { quantiteEstimee: event.target.value })} className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-sm font-normal" /></label>
+                  <label className="text-xs font-semibold text-ink-500">Volume<input type="number" min="0" step="0.001" value={item.volumeEstime} onChange={(event) => patchContent(index, { volumeEstime: event.target.value })} className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-sm font-normal" /></label>
                 </div>
-                <label className="mt-3 block text-xs font-semibold text-slate-600">Remarque<input maxLength={1000} value={item.remarque} onChange={(event) => patchContent(index, { remarque: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal" /></label>
+                <label className="mt-3 block text-xs font-semibold text-ink-500">Remarque<input maxLength={1000} value={item.remarque} onChange={(event) => patchContent(index, { remarque: event.target.value })} className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-sm font-normal" /></label>
               </article>;
             })}
             {!contents.length ? <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Aucune catégorie n'est déclarée. Une catégorie doit être disponible avant de pouvoir qualifier ce signalement.</p> : null}
-          </div> : <label className="block text-xs font-bold text-slate-600">{action === 'reject' ? 'Motif du rejet' : 'Informations à compléter'}<textarea required minLength={5} maxLength={2000} rows={4} value={motif} onChange={(event) => setMotif(event.target.value)} className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal" /></label>}
-          <div className="flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-4">
-            <Link to="/qualification" className="rounded-lg border border-slate-200 px-4 py-2.5 text-xs font-bold text-slate-600">Annuler</Link>
-            <button type="submit" disabled={busy || (action === 'accept' && !contents.some((item) => item.selected))} className="rounded-lg bg-eco-700 px-5 py-2.5 text-xs font-bold text-white disabled:opacity-50">{busy ? 'Enregistrement…' : action === 'accept' ? 'Confirmer la qualification' : action === 'reject' ? 'Confirmer le rejet' : 'Envoyer la demande'}</button>
+          </div> : <label className="block text-xs font-bold text-ink-500">{action === 'reject' ? 'Motif du rejet' : 'Informations à compléter'}<textarea required minLength={5} maxLength={2000} rows={4} value={motif} onChange={(event) => setMotif(event.target.value)} className="mt-2 w-full rounded-lg border border-line-strong px-3 py-2.5 text-sm font-normal" /></label>}
+          <div className="flex flex-wrap justify-end gap-2 border-t border-line-subtle pt-4">
+            <Link to="/qualification" className="rounded-lg border border-line-strong px-4 py-2.5 text-xs font-bold text-ink-500">Annuler</Link>
+            <button type="submit" disabled={busy || (action === 'accept' && !contents.some((item) => item.selected))} className="rounded-lg bg-brand-forest px-5 py-2.5 text-xs font-bold text-white disabled:opacity-50">{busy ? 'Enregistrement…' : action === 'accept' ? 'Confirmer la qualification' : action === 'reject' ? 'Confirmer le rejet' : 'Envoyer la demande'}</button>
           </div>
         </form>
       </section>
