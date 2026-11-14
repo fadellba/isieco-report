@@ -110,6 +110,7 @@ export function AssignmentsPage() {
   const [page, setPage] = useState(1);
   const [etatAffectation, setEtatAffectation] = useState('');
   const [decisionEquipe, setDecisionEquipe] = useState('');
+  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -120,6 +121,21 @@ export function AssignmentsPage() {
     [pendingContents, selectedContentKey],
   );
   const createTeams = selectedContent ? eligibleByType[selectedContent.idTypeDechet] ?? [] : [];
+  const visibleAssignments = useMemo(() => {
+    const query = search.trim().toLocaleLowerCase('fr-FR');
+    if (!query || !result) return result?.items ?? [];
+    return result.items.filter((item) => [
+      item.contenuDossier.dossier.referenceDossier,
+      item.contenuDossier.typeDechet.libelle,
+      item.equipe.nomEquipe,
+      item.motif ?? '',
+      item.observation ?? '',
+      item.motifRefusEquipe ?? '',
+    ].join(' ').toLocaleLowerCase('fr-FR').includes(query));
+  }, [result, search]);
+  const waitingCount = result?.items.filter((item) => item.decisionEquipe === 'EN_ATTENTE').length ?? 0;
+  const refusedCount = result?.items.filter((item) => item.decisionEquipe === 'REFUSEE').length ?? 0;
+  const acceptedCount = result?.items.filter((item) => item.decisionEquipe === 'ACCEPTEE').length ?? 0;
 
   const loadAssignments = useCallback(async () => {
     setLoading(true);
@@ -137,7 +153,9 @@ export function AssignmentsPage() {
       setResult(assignments);
       setPendingContents(contents.items);
       setSelectedContentKey((current) =>
-        current || (contents.items[0] ? contents.items[0].idContenuDossier : ''),
+        contents.items.some((item) => item.idContenuDossier === current)
+          ? current
+          : contents.items[0]?.idContenuDossier ?? '',
       );
     } catch (reason) {
       setError(errorMessage(reason));
@@ -266,17 +284,22 @@ export function AssignmentsPage() {
   const totalPages = result ? Math.max(1, Math.ceil(result.total / result.pageSize)) : 1;
 
   return (
-    <div className="space-y-6">
-      <header>
-        <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-brand-forest">Pilotage opérationnel</p>
-        <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-ink-900">
-          {dossierFilter ? 'Affectations du dossier' : 'Affectations'}
-        </h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-500">
-          {dossierFilter
-            ? 'Cette vue est limitée au dossier sélectionné : historique des missions et contenus encore disponibles pour affectation.'
-            : 'Affectez chaque catégorie d’un dossier à une équipe compétente. L’API revalide l’éligibilité et protège les opérations contre les doublons et les décisions concurrentes.'}
-        </p>
+    <div className="assignment-workspace">
+      <header className="assignment-workspace__hero">
+        <div>
+          <span className="assignment-workspace__eyebrow">PILOTAGE OPÉRATIONNEL</span>
+          <h1>{dossierFilter ? 'Affectations du dossier' : 'Affectations des équipes'}</h1>
+          <p>
+            {dossierFilter
+              ? 'Cette vue est limitée au dossier sélectionné : contenus disponibles, équipe responsable et historique des réponses.'
+              : 'Associez chaque contenu de dossier à une équipe compétente, puis suivez sa réponse et les éventuelles réaffectations.'}
+          </p>
+        </div>
+        <div className="assignment-workspace__hero-count">
+          <strong>{result ? result.total : '—'}</strong>
+          <span>Affectation(s)<br />dans la sélection</span>
+        </div>
+      </header>
         {dossierFilter ? (
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <span className="rounded-full bg-surface-base px-3 py-1 text-xs font-bold text-ink-800">
@@ -292,13 +315,24 @@ export function AssignmentsPage() {
       {notice ? <FeedbackBanner tone="success">{notice}</FeedbackBanner> : null}
       {error ? <FeedbackBanner tone="error">{error}</FeedbackBanner> : null}
 
-      <section className="rounded-2xl border border-line-strong bg-white p-5">
+      <section className="assignment-workspace__summary" aria-label="Synthèse des affectations">
+        <article><span>À confirmer</span><strong>{result ? waitingCount : '—'}</strong><small>Décision de l’équipe</small></article>
+        <article><span>Acceptées</span><strong>{result ? acceptedCount : '—'}</strong><small>Sur la page affichée</small></article>
+        <article><span>Refusées</span><strong>{result ? refusedCount : '—'}</strong><small>À réexaminer si nécessaire</small></article>
+      </section>
+
+      <section className="assignment-create-panel">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="font-bold text-ink-900">Nouvelle affectation</h2>
             <p className="mt-1 text-xs leading-5 text-ink-500">Seuls les contenus actifs en attente, non déjà affectés et rattachés à un dossier ouvert sont proposés.</p>
           </div>
           <span className="rounded-full bg-surface-base px-3 py-1 text-xs font-bold text-ink-800">{pendingContents.length} contenu(s) disponible(s)</span>
+        </div>
+        <div className="assignment-create-steps" aria-label="Étapes de création">
+          <span><b>01</b> Contenu du dossier</span><i />
+          <span><b>02</b> Équipe éligible</span><i />
+          <span><b>03</b> Créer l’affectation</span>
         </div>
         <div className="mt-4 grid gap-3 lg:grid-cols-2">
           <label className={labelClass}>Contenu du dossier
@@ -328,8 +362,18 @@ export function AssignmentsPage() {
             <input value={createObservation} onChange={(event) => setCreateObservation(event.target.value)} maxLength={2000} className={inputClass} />
           </label>
         </div>
+        {selectedContent ? (
+          <div className="assignment-create-preview">
+            <span className="assignment-create-preview__icon" aria-hidden="true">↳</span>
+            <div>
+              <strong>{selectedContent.dossier.referenceDossier} · {selectedContent.typeDechet.libelle}</strong>
+              <p>Priorité du dossier : {stateLabel(selectedContent.dossier.priorite)} · État du contenu : {stateLabel(selectedContent.etatContenuDossier)}</p>
+              {selectedTeamId ? <small>Équipe sélectionnée : {createTeams.find((team) => team.idEquipe === selectedTeamId)?.nomEquipe ?? 'Équipe sélectionnée'}</small> : null}
+            </div>
+          </div>
+        ) : null}
         {selectedContent && !createTeams.length && teamsLoadingFor !== selectedContent.idTypeDechet
-          ? <p className="mt-3 text-xs text-amber-700">Aucune équipe active ne possède de compétence active pour ce type de déchet. La capacité et le calendrier des équipes ne sont pas encore modélisés.</p>
+          ? <p className="assignment-create-warning">Aucune équipe active ne possède de compétence active pour ce type de déchet. La capacité et le calendrier des équipes ne sont pas encore modélisés.</p>
           : null}
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <p className="text-[11px] text-ink-400">Une clé idempotente est conservée pour éviter les doublons lors d’une nouvelle tentative.</p>
@@ -339,9 +383,15 @@ export function AssignmentsPage() {
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-2xl border border-line-strong bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-subtle px-5 py-4">
-          <div><h2 className="font-bold text-ink-900">Historique des affectations</h2><p className="mt-1 text-xs text-ink-500">{result ? result.total + ' affectation(s)' : 'Chargement…'}</p></div>
+      <section className="assignment-history-panel">
+        <div className="assignment-history-panel__header">
+          <div><span className="assignment-workspace__eyebrow">SUIVI DES ÉQUIPES</span><h2>Historique des affectations</h2><p>{result ? result.total + ' affectation(s) · ' + result.items.length + ' sur cette page' : 'Chargement…'}</p></div>
+        </div>
+        <div className="assignment-history-panel__toolbar">
+          <label className="assignment-history-search">
+            <span>Rechercher sur cette page</span>
+            <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Référence, type de déchet, équipe ou motif…" />
+          </label>
           <div className="flex flex-wrap gap-2">
             <select value={etatAffectation} onChange={(event) => { setPage(1); setEtatAffectation(event.target.value); }} aria-label="Filtrer par état de l’affectation" className="rounded-lg border border-line-strong bg-white px-3 py-2 text-xs text-ink-500">
               <option value="">Tous les états</option><option value="ACTIVE">Active</option><option value="TERMINEE">Terminée</option><option value="ANNULEE">Annulée</option>
@@ -353,13 +403,14 @@ export function AssignmentsPage() {
           </div>
         </div>
         {loading && !result ? <p className="p-6 text-sm text-ink-500">Chargement…</p> : null}
-        {!loading && result?.items.length === 0 ? <p className="p-6 text-sm text-ink-500">Aucune affectation pour ces filtres.</p> : null}
-        <div className="divide-y divide-slate-100">
-          {result?.items.map((item) => {
+        {!loading && result?.items.length === 0 ? <div className="assignment-history-empty"><strong>Aucune affectation pour ces filtres</strong><p>Modifiez les filtres ou créez une nouvelle affectation à partir d’un contenu disponible.</p></div> : null}
+        {!loading && (result?.items.length ?? 0) > 0 && visibleAssignments.length === 0 ? <div className="assignment-history-empty"><strong>Aucun résultat pour cette recherche</strong><p>Essayez une autre référence, équipe ou catégorie.</p><button type="button" onClick={() => setSearch('')}>Effacer la recherche</button></div> : null}
+        <div className="assignment-history-list">
+          {visibleAssignments.map((item) => {
             const canReassign = item.decisionEquipe === 'REFUSEE' || (item.dateFinAffectation === null && item.decisionEquipe === 'EN_ATTENTE');
             const teams = eligibleByType[item.idTypeDechet] ?? [];
             return (
-              <article key={item.idAffectation} className="workflow-list-item space-y-3 p-5">
+              <article key={item.idAffectation} className="assignment-history-item">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <h3 className="font-bold text-ink-900">{item.contenuDossier.dossier.referenceDossier} · {item.contenuDossier.typeDechet.libelle}</h3>
@@ -397,7 +448,7 @@ export function AssignmentsPage() {
             );
           })}
         </div>
-        <div className="flex items-center justify-between border-t border-line-subtle px-5 py-4">
+        <div className="assignment-history-panel__pagination">
           <p className="text-xs text-ink-500">Page {page} sur {totalPages}</p>
           <div className="flex gap-2">
             <button type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={page <= 1 || loading} className={secondaryClass}>Précédent</button>
