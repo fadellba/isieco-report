@@ -30,6 +30,12 @@ Supabase Auth gère les identités et les sessions. Les routes protégées reço
 
 Le rôle est requis en plus des contrôles contextuels : propriété du signalement, appartenance active à une équipe, auteur de l'intervention, état courant et séparation des tâches. Une garde de route ne remplace pas la validation métier dans le service.
 
+## Limitation de débit
+
+Les contrôleurs `reports` et `interventions` appliquent une fenêtre glissante par utilisateur authentifié et par route. Par défaut, chaque route de ces contrôleurs est limitée à **60 requêtes/minute** ; les créations de signalement sont limitées à **10/minute** et les uploads photo de signalement ou de preuve d'intervention à **5/minute**. Un dépassement retourne HTTP `429` et l'en-tête `Retry-After`.
+
+Le stockage du compteur est en mémoire dans chaque processus API. Cette protection couvre les abus ordinaires d'une instance unique, mais **ne constitue pas un limiteur distribué ni une protection anti-DDoS**. Avant d'exécuter plusieurs instances, partager le compteur via un store commun ou activer une limitation équivalente au niveau du proxy/WAF. Les limites ne remplacent pas les quotas métier et les contrôles d'accès.
+
 ## Inventaire des routes implémentées
 
 Les routes utilisent le préfixe commun `/api/v1`. Les paramètres UUID doivent être valides. Les détails des DTO, contraintes de pagination, codes de réponse et erreurs sont générés par Swagger.
@@ -66,7 +72,7 @@ Le modèle simplifié ne comporte plus de référentiels région/département/co
 | Méthode | Route | Accès |
 |---|---|---|
 | POST | `/reports` | `CITOYEN` ; dépôt JSON idempotent avec l'en-tête `Idempotency-Key`. |
-| POST | `/reports/with-photo` | `CITOYEN` ; dépôt photo-first multipart avec photo obligatoire et métadonnées facultatives. |
+| POST | `/reports/with-photo` | `CITOYEN` ; dépôt multipart avec photo facultative et métadonnées facultatives, sous réserve d'au moins une information utile. |
 | GET | `/reports/waste-types` | `CITOYEN` ; types de déchets actifs pour la déclaration. |
 | GET | `/reports` | `CITOYEN` ; liste paginée appartenant au compte connecté. |
 | GET | `/reports/:id` | `CITOYEN` propriétaire ; détail du signalement. |
@@ -118,6 +124,8 @@ L'association courante est matérialisée par `signalement.id_dossier`. Aucun hi
 | GET | `/assignments/team/:idEquipe` | `AGENT_TERRAIN` membre actif de l'équipe ; ses affectations. |
 | POST | `/assignments/:idAffectation/response` | `AGENT_TERRAIN` membre actif de l'équipe ; accepte ou refuse. |
 | POST | `/assignments/:idAffectation/reassign` | `RESPONSABLE_AFFECTATION` ; réaffectation d'une mission éligible. |
+
+La liste des équipes éligibles repose uniquement sur une équipe active et une compétence active pour le type de déchet. **Le modèle ne calcule pas la disponibilité, le calendrier, les absences ni la capacité de charge** ; l'interface ne doit donc pas présenter ces équipes comme libres ou disponibles.
 
 La création référence directement un `ContenuDossier`, une équipe et une `CompetenceEquipe`. Le service revalide les états et l'éligibilité dans une transaction ; le header `Idempotency-Key` est requis pour créer ou réaffecter. Les réponses `GET /assignments/team/:idEquipe` exposent aussi les coordonnées et le libellé de localisation du dossier pour la navigation de l'agent ; les valeurs peuvent être nulles.
 
