@@ -99,5 +99,5 @@ export class CreateReportDto {
   contenus?: CreateReportContentDto[];
 }
 
-/** Multipart metadata DTO for the first photo-led citizen report. */
+/** Multipart metadata DTO for a citizen report; the initial photo is optional. */
 export class CreateReportWithPhotoDto extends CreateReportDto {}
