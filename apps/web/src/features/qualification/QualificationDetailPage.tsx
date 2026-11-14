@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../lib/api';
+import { FeedbackBanner, StatusBadge } from '../../components/StatusBadge';
 
 interface ReportContent {
   idTypeDechet: string;
@@ -44,11 +45,31 @@ interface ContentForm {
   volumeEstime: string;
   remarque: string;
 }
+type QualificationAction = 'accept' | 'supplement' | 'reject';
+
 function dateLabel(value: string | null) {
-  if (!value) return '—';
+  if (!value) return 'Non renseignée';
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '—' : new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+  return Number.isNaN(date.getTime())
+    ? 'Non renseignée'
+    : new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
 }
+
+function statusTone(status: string): 'warning' | 'info' | 'neutral' {
+  if (status === 'SOUMIS') return 'warning';
+  if (status === 'COMPLEMENT_REPONDU') return 'info';
+  return 'neutral';
+}
+
+function displayStatus(status: string) {
+  return status.replaceAll('_', ' ').toLowerCase();
+}
+
+const actions: Array<{ value: QualificationAction; label: string; description: string }> = [
+  { value: 'accept', label: 'Qualifier', description: 'Retenir les catégories confirmées et transmettre le dossier au traitement.' },
+  { value: 'supplement', label: 'Demander un complément', description: 'Demander au citoyen les informations nécessaires avant de poursuivre.' },
+  { value: 'reject', label: 'Rejeter', description: 'Clore l’examen par une décision motivée de rejet.' },
+];
 
 export function QualificationDetailPage() {
   const { idSignalement } = useParams();
@@ -56,14 +77,18 @@ export function QualificationDetailPage() {
   const [report, setReport] = useState<ReportDetail | null>(null);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
   const [contents, setContents] = useState<ContentForm[]>([]);
-  const [action, setAction] = useState<'accept' | 'supplement' | 'reject'>('accept');
+  const [action, setAction] = useState<QualificationAction>('accept');
   const [motif, setMotif] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    if (!idSignalement) return;
+    if (!idSignalement) {
+      setError('La référence du signalement est absente.');
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -103,7 +128,7 @@ export function QualificationDetailPage() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!idSignalement) return;
+    if (!idSignalement || busy) return;
     setBusy(true);
     setError(null);
     try {
@@ -146,7 +171,10 @@ export function QualificationDetailPage() {
         method: 'POST',
         body: JSON.stringify({ contenus: payload }),
       });
-      navigate('/qualification', { replace: true, state: { notice: 'Le signalement a été qualifié et transmis au traitement.' } });
+      navigate('/qualification', {
+        replace: true,
+        state: { notice: 'Le signalement a été qualifié et transmis au traitement.' },
+      });
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : 'La décision n’a pas pu être enregistrée.';
       await load();
@@ -156,83 +184,264 @@ export function QualificationDetailPage() {
     }
   }
 
-  if (loading && !report) return <p className="text-sm text-ink-500">Chargement du signalement…</p>;
-  if (!report) return <div className="space-y-4"><Link to="/qualification" className="text-sm font-semibold text-brand-forest">← Retour à la file</Link><div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">{error || 'Signalement indisponible ou déjà traité.'}</div></div>;
+  if (loading && !report) {
+    return (
+      <section className="workflow-state" role="status" aria-live="polite">
+        <span className="workflow-state__spinner" aria-hidden="true" />
+        <h1>Ouverture du signalement</h1>
+        <p>Chargement des informations et des pièces jointes sécurisées.</p>
+      </section>
+    );
+  }
+
+  if (!report) {
+    return (
+      <section className="workflow-state workflow-state--error">
+        <span className="workflow-state__icon" aria-hidden="true">!</span>
+        <h1>Signalement indisponible</h1>
+        <p>{error || 'Ce signalement est introuvable ou ne peut plus être examiné.'}</p>
+        <div className="workflow-state__actions">
+          <button type="button" onClick={() => void load()} className="workflow-button workflow-button--primary">Réessayer</button>
+          <Link to="/qualification" className="workflow-button workflow-button--secondary">Retour à la file</Link>
+        </div>
+      </section>
+    );
+  }
+
+  const citizenName = report.utilisateur.prenom
+    ? report.utilisateur.prenom + ' ' + report.utilisateur.nom
+    : report.utilisateur.nom;
+  const selectedCount = contents.filter((item) => item.selected).length;
 
   return (
-    <div className="space-y-6">
-      <Link to="/qualification" className="text-sm font-semibold text-brand-forest hover:underline">← Retour à la file de qualification</Link>
-      {error ? <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div> : null}
-      <header>
-        <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-brand-forest">Examen du signalement</p>
-        <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="text-3xl font-extrabold tracking-tight text-ink-900">{report.utilisateur.prenom ? `${report.utilisateur.prenom} ${report.utilisateur.nom}` : report.utilisateur.nom}</h1>
-          <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800">{report.statutSignalement}</span>
+    <div className="qualification-detail">
+      <div className="qualification-detail__topline">
+        <Link to="/qualification" className="workflow-back-link"><span aria-hidden="true">←</span> File de qualification</Link>
+        <span className="qualification-detail__step">EXAMEN · DÉCISION</span>
+      </div>
+
+      <header className="qualification-detail__header">
+        <div className="qualification-detail__heading">
+          <div className="qualification-detail__eyebrow">SIGNALEMENT À EXAMINER</div>
+          <h1>{citizenName}</h1>
+          <p>Déposé le {dateLabel(report.dateSoumission)}</p>
         </div>
-        <p className="mt-2 text-xs text-ink-500">Soumis le {dateLabel(report.dateSoumission)} · {report.idSignalement}</p>
+        <div className="qualification-detail__status">
+          <StatusBadge label={displayStatus(report.statutSignalement)} tone={statusTone(report.statutSignalement)} />
+          <span>Référence <code>{report.idSignalement.slice(0, 8).toUpperCase()}</code></span>
+        </div>
       </header>
 
-      <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-        <article className="rounded-2xl border border-line-strong bg-white p-5">
-          <h2 className="font-bold text-ink-900">Description et localisation</h2>
-          <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-ink-700">{report.description || 'Aucune description fournie.'}</p>
-          <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-            <p><span className="block text-xs font-bold text-ink-400">Coordonnées</span><span className="mt-1 block">{report.latitude && report.longitude ? `${report.latitude}, ${report.longitude}` : 'Non renseignées'}</span></p>
-            <p><span className="block text-xs font-bold text-ink-400">Description du lieu</span><span className="mt-1 block">{report.descriptionLocalisation || '—'}</span></p>
-            <p><span className="block text-xs font-bold text-ink-400">Précision (m)</span><span className="mt-1 block">{report.precisionLocalisation || '—'}</span></p>
-          </div>
-        </article>
-        <article className="rounded-2xl border border-line-strong bg-white p-5">
-          <h2 className="font-bold text-ink-900">Photos privées</h2>
-          {!report.photos.length ? <p className="mt-3 text-sm text-ink-500">Aucune photo associée.</p> : <div className="mt-3 grid grid-cols-2 gap-3">
-            {report.photos.map((photo) => <div key={photo.idPhotoSignalement} className="overflow-hidden rounded-xl border border-line-strong">
-              {photoUrls[photo.idPhotoSignalement] ? <a href={photoUrls[photo.idPhotoSignalement]} target="_blank" rel="noreferrer"><img src={photoUrls[photo.idPhotoSignalement]} alt={photo.description || 'Photo du signalement'} className="h-32 w-full object-cover" /></a> : <div className="grid h-32 place-items-center bg-surface-base px-2 text-center text-xs text-ink-400">Photo expirée ou inaccessible</div>}
-              <div className="p-2"><p className="line-clamp-2 text-xs text-ink-500">{photo.description || 'Sans description'}</p><p className="mt-1 text-[10px] text-ink-400">{photo.etatPublication}</p></div>
-            </div>)}
-          </div>}
-        </article>
-      </section>
+      {error ? <FeedbackBanner tone="error">{error}</FeedbackBanner> : null}
 
-      {report.demandesComplement.length ? <section className="rounded-2xl border border-line-strong bg-white p-5">
-        <h2 className="font-bold text-ink-900">Historique des compléments</h2>
-        <div className="mt-3 space-y-3">{report.demandesComplement.map((request) => <article key={request.idDemande} className="rounded-xl bg-surface-base p-4">
-          <div className="flex flex-wrap justify-between gap-2"><span className="text-sm font-semibold">{request.etatDemande}</span><span className="text-xs text-ink-400">{dateLabel(request.dateDemande)}</span></div>
-          <p className="mt-2 text-sm text-ink-500">{request.motif}</p>
-          {request.reponse ? <div className="mt-3 border-l-2 border-eco-500 pl-3"><p className="text-xs font-bold text-ink-800">Réponse citoyenne · {dateLabel(request.reponse.dateReponse)}</p><p className="mt-1 whitespace-pre-wrap text-sm">{request.reponse.contenu}</p></div> : null}
-        </article>)}</div>
-      </section> : null}
+      <div className="qualification-detail__layout">
+        <div className="qualification-detail__context">
+          <section className="qualification-panel">
+            <div className="qualification-panel__header">
+              <div>
+                <span className="qualification-panel__eyebrow">01 · CONTEXTE</span>
+                <h2>Description du signalement</h2>
+              </div>
+              <span className="qualification-panel__meta">{dateLabel(report.dateConstat)}</span>
+            </div>
+            <p className="qualification-detail__description">
+              {report.description || 'Le citoyen n’a pas ajouté de description.'}
+            </p>
+            <div className="qualification-location">
+              <div className="qualification-location__icon" aria-hidden="true">⌖</div>
+              <div>
+                <span>LOCALISATION</span>
+                <strong>{report.descriptionLocalisation || 'Repère non renseigné'}</strong>
+                <p>
+                  {report.latitude && report.longitude
+                    ? `GPS : ${report.latitude}, ${report.longitude}${report.precisionLocalisation ? ` · précision ±${report.precisionLocalisation} m` : ''}`
+                    : 'Coordonnées GPS non renseignées'}
+                </p>
+              </div>
+              {report.latitude && report.longitude ? (
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(report.latitude + ',' + report.longitude)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="qualification-location__map"
+                >
+                  Carte ↗
+                </a>
+              ) : null}
+            </div>
+          </section>
 
-      <section className="rounded-2xl border border-line-strong bg-white p-5">
-        <h2 className="font-bold text-ink-900">Décision de qualification</h2>
-        <form onSubmit={(event) => void submit(event)} className="mt-4 space-y-4">
-          <div className="flex flex-wrap gap-2">
-            {([
-              ['accept', 'Accepter et qualifier'],
-              ['supplement', 'Demander un complément'],
-              ['reject', 'Rejeter'],
-            ] as const).map(([value, label]) => <button key={value} type="button" onClick={() => setAction(value)} className={`rounded-lg px-3 py-2 text-xs font-bold ${action === value ? 'bg-brand-forest text-white' : 'border border-line-strong text-ink-500 hover:bg-surface-base'}`}>{label}</button>)}
-          </div>
-          {action === 'accept' ? <div className="space-y-3">
-            <p className="text-sm text-ink-500">Retenez les catégories déclarées et ajustez les estimations.</p>
-            {contents.map((item, index) => {
-              const declared = report.contenus.find((content) => content.idTypeDechet === item.idTypeDechet);
-              return <article key={item.idTypeDechet} className="rounded-xl border border-line-strong p-4">
-                <label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={item.selected} onChange={(event) => patchContent(index, { selected: event.target.checked })} />{declared?.typeDechet.libelle || declared?.typeDechet.codeType}</label>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <label className="text-xs font-semibold text-ink-500">Quantité<input type="number" min="0" step="0.001" value={item.quantiteEstimee} onChange={(event) => patchContent(index, { quantiteEstimee: event.target.value })} className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-sm font-normal" /></label>
-                  <label className="text-xs font-semibold text-ink-500">Volume<input type="number" min="0" step="0.001" value={item.volumeEstime} onChange={(event) => patchContent(index, { volumeEstime: event.target.value })} className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-sm font-normal" /></label>
+          <section className="qualification-panel">
+            <div className="qualification-panel__header">
+              <div>
+                <span className="qualification-panel__eyebrow">02 · PIÈCES JOINTES</span>
+                <h2>Photos du signalement</h2>
+              </div>
+              <span className="qualification-panel__count">{report.photos.length}</span>
+            </div>
+            {!report.photos.length ? (
+              <div className="qualification-empty-inline">
+                <span aria-hidden="true">▧</span>
+                <p>Aucune photo n’a été jointe à ce signalement. La photo est facultative.</p>
+              </div>
+            ) : (
+              <div className="qualification-photos">
+                {report.photos.map((photo, index) => (
+                  <article key={photo.idPhotoSignalement} className="qualification-photo">
+                    {photoUrls[photo.idPhotoSignalement] ? (
+                      <a href={photoUrls[photo.idPhotoSignalement]} target="_blank" rel="noreferrer" className="qualification-photo__image-link">
+                        <img src={photoUrls[photo.idPhotoSignalement]} alt={photo.description || 'Photo du dépôt signalé'} />
+                        <span>Ouvrir ↗</span>
+                      </a>
+                    ) : (
+                      <div className="qualification-photo__unavailable">Photo expirée ou inaccessible</div>
+                    )}
+                    <div className="qualification-photo__caption">
+                      <strong>Photo {index + 1}</strong>
+                      <span>{photo.description || 'Sans description'} · {dateLabel(photo.dateAjout)}</span>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {report.demandesComplement.length ? (
+            <section className="qualification-panel">
+              <div className="qualification-panel__header">
+                <div>
+                  <span className="qualification-panel__eyebrow">03 · HISTORIQUE</span>
+                  <h2>Demandes de complément</h2>
                 </div>
-                <label className="mt-3 block text-xs font-semibold text-ink-500">Remarque<input maxLength={1000} value={item.remarque} onChange={(event) => patchContent(index, { remarque: event.target.value })} className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-sm font-normal" /></label>
-              </article>;
-            })}
-            {!contents.length ? <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Aucune catégorie n'est déclarée. Une catégorie doit être disponible avant de pouvoir qualifier ce signalement.</p> : null}
-          </div> : <label className="block text-xs font-bold text-ink-500">{action === 'reject' ? 'Motif du rejet' : 'Informations à compléter'}<textarea required minLength={5} maxLength={2000} rows={4} value={motif} onChange={(event) => setMotif(event.target.value)} className="mt-2 w-full rounded-lg border border-line-strong px-3 py-2.5 text-sm font-normal" /></label>}
-          <div className="flex flex-wrap justify-end gap-2 border-t border-line-subtle pt-4">
-            <Link to="/qualification" className="rounded-lg border border-line-strong px-4 py-2.5 text-xs font-bold text-ink-500">Annuler</Link>
-            <button type="submit" disabled={busy || (action === 'accept' && !contents.some((item) => item.selected))} className="rounded-lg bg-brand-forest px-5 py-2.5 text-xs font-bold text-white disabled:opacity-50">{busy ? 'Enregistrement…' : action === 'accept' ? 'Confirmer la qualification' : action === 'reject' ? 'Confirmer le rejet' : 'Envoyer la demande'}</button>
-          </div>
-        </form>
-      </section>
+                <span className="qualification-panel__count">{report.demandesComplement.length}</span>
+              </div>
+              <div className="qualification-history">
+                {report.demandesComplement.map((request) => (
+                  <article key={request.idDemande} className="qualification-history__item">
+                    <div className="qualification-history__meta">
+                      <StatusBadge label={displayStatus(request.etatDemande)} tone={request.etatDemande === 'OUVERTE' ? 'warning' : 'success'} />
+                      <time>{dateLabel(request.dateDemande)}</time>
+                    </div>
+                    <p>{request.motif}</p>
+                    {request.reponse ? (
+                      <div className="qualification-history__reply">
+                        <strong>Réponse du citoyen · {dateLabel(request.reponse.dateReponse)}</strong>
+                        <p>{request.reponse.contenu}</p>
+                      </div>
+                    ) : null}
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
+        </div>
+
+        <aside className="qualification-decision">
+          <section className="qualification-panel qualification-panel--decision">
+            <div className="qualification-panel__header">
+              <div>
+                <span className="qualification-panel__eyebrow">04 · VOTRE ACTION</span>
+                <h2>Décision de qualification</h2>
+              </div>
+            </div>
+            <form onSubmit={(event) => void submit(event)}>
+              <div className="qualification-actions" role="group" aria-label="Choisir une décision">
+                {actions.map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    aria-pressed={action === item.value}
+                    onClick={() => { setAction(item.value); setError(null); }}
+                    className={`qualification-action${action === item.value ? ' is-active' : ''}${item.value === 'reject' ? ' is-danger' : ''}`}
+                  >
+                    <span className="qualification-action__radio" aria-hidden="true" />
+                    <span className="qualification-action__copy">
+                      <strong>{item.label}</strong>
+                      <small>{item.description}</small>
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {action === 'accept' ? (
+                <div className="qualification-decision__fields">
+                  <div className="qualification-decision__intro">
+                    <strong>Catégories à retenir</strong>
+                    <span>{selectedCount} / {contents.length} sélectionnée(s)</span>
+                  </div>
+                  <p className="qualification-decision__hint">Conservez les catégories confirmées et complétez les estimations utiles au traitement.</p>
+                  {contents.map((item, index) => {
+                    const declared = report.contenus.find((content) => content.idTypeDechet === item.idTypeDechet);
+                    return (
+                      <article key={item.idTypeDechet} className={`qualification-category${item.selected ? ' is-selected' : ''}`}>
+                        <label className="qualification-category__toggle">
+                          <input
+                            type="checkbox"
+                            checked={item.selected}
+                            onChange={(event) => patchContent(index, { selected: event.target.checked })}
+                          />
+                          <span><strong>{declared?.typeDechet.libelle || declared?.typeDechet.codeType}</strong><small>{declared?.typeDechet.codeType}</small></span>
+                        </label>
+                        {item.selected ? (
+                          <div className="qualification-category__fields">
+                            <label>Quantité estimée
+                              <input type="number" min="0" step="0.001" inputMode="decimal" value={item.quantiteEstimee} onChange={(event) => patchContent(index, { quantiteEstimee: event.target.value })} placeholder="Non renseignée" />
+                            </label>
+                            <label>Volume estimé
+                              <input type="number" min="0" step="0.001" inputMode="decimal" value={item.volumeEstime} onChange={(event) => patchContent(index, { volumeEstime: event.target.value })} placeholder="Non renseigné" />
+                            </label>
+                            <label className="qualification-category__remark">Remarque
+                              <input maxLength={1000} value={item.remarque} onChange={(event) => patchContent(index, { remarque: event.target.value })} placeholder="Précision facultative" />
+                            </label>
+                          </div>
+                        ) : null}
+                      </article>
+                    );
+                  })}
+                  {!contents.length ? (
+                    <div className="qualification-warning">
+                      Aucune catégorie n’a été déclarée. Une catégorie doit être disponible avant de pouvoir qualifier ce signalement.
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                <label className="qualification-motive">
+                  <span>{action === 'reject' ? 'Motif du rejet' : 'Informations à demander'}</span>
+                  <small>{action === 'reject' ? 'Expliquez clairement la raison de la décision.' : 'Indiquez les éléments nécessaires pour poursuivre l’examen.'}</small>
+                  <textarea
+                    required
+                    minLength={5}
+                    maxLength={2000}
+                    rows={5}
+                    value={motif}
+                    onChange={(event) => setMotif(event.target.value)}
+                    placeholder={action === 'reject' ? 'Expliquez le motif du rejet…' : 'Précisez les informations à compléter…'}
+                  />
+                  <span className="qualification-motive__count">{motif.trim().length} / 2000 caractères · 5 minimum</span>
+                </label>
+              )}
+
+              <div className="qualification-decision__footer">
+                <p>Votre décision sera enregistrée dans l’historique du signalement.</p>
+                <button
+                  type="submit"
+                  disabled={busy || (action === 'accept' && (!contents.some((item) => item.selected) || !contents.length))}
+                  className={`workflow-button workflow-button--primary qualification-submit${action === 'reject' ? ' is-danger' : ''}`}
+                >
+                  {busy
+                    ? 'Enregistrement…'
+                    : action === 'accept'
+                      ? 'Confirmer la qualification'
+                      : action === 'reject'
+                        ? 'Confirmer le rejet'
+                        : 'Envoyer la demande'}
+                </button>
+                <Link to="/qualification" className="qualification-decision__cancel">Annuler et revenir à la file</Link>
+              </div>
+            </form>
+          </section>
+        </aside>
+      </div>
     </div>
   );
 }
