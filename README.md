@@ -52,9 +52,9 @@ La CI #184 et la PR #34 sont des validations historiques du socle et du replay d
 
 ## État du dépôt au 13 novembre 2026
 
-Le commit courant de `main` est [`652d16d56b0e7898b639ca09a822a35de5fb2e3b`](https://github.com/fadellba/isieco-report/commit/652d16d56b0e7898b639ca09a822a35de5fb2e3b). Il intègre les PR #86 (signalement mobile sans photo), #94 (viewport et pagination keyset), #96 (actualisation événementielle PostgreSQL LISTEN/NOTIFY + SSE) et #98 (purge du centre Web après refus d'accès SSE).
+La révision fonctionnelle de référence est [`652d16d56b0e7898b639ca09a822a35de5fb2e3b`](https://github.com/fadellba/isieco-report/commit/652d16d56b0e7898b639ca09a822a35de5fb2e3b). Elle intègre les PR #86 (signalement mobile sans photo), #94 (viewport et pagination keyset), #96 (actualisation événementielle PostgreSQL LISTEN/NOTIFY + SSE) et #98 (purge du centre Web après refus d'accès SSE). La PR #97 a ensuite synchronisé la documentation sans modifier le code applicatif.
 
-- **CI :** le workflow [#43530992124](https://github.com/fadellba/isieco-report/actions/runs/43530992124) est réussi sur le commit courant de `main`.
+- **CI :** la CI de la révision fonctionnelle [#43530992124](https://github.com/fadellba/isieco-report/actions/runs/43530992124) est réussie.
 - **Migrations :** 14 migrations sont versionnées dans Git ; 11 sont enregistrées dans le staging. Trois migrations restent en attente : `20261109100000_business_audit_event_order`, `20261109110000_backfill_business_audit_event_sequence_order` et `20261113215000_command_center_event_notifications`.
 - **Staging :** le workflow [#43516567399](https://github.com/fadellba/isieco-report/actions/runs/43516567399) s'arrête à la porte de cohérence des migrations avant Render, readiness et E2E. Le trigger SSE n'est donc pas encore activé dans la base staging.
 - **Production :** les contrôles Web [#43530992214](https://github.com/fadellba/isieco-report/actions/runs/43530992214) et API [#43530992105](https://github.com/fadellba/isieco-report/actions/runs/43530992105) ont tourné, mais `PRODUCTION_DEPLOY_ENABLED` n'est pas `true`, les étapes de déploiement ont produit `deployed=false` et les smoke tests ont été ignorés. Aucun déploiement production n'a eu lieu.
