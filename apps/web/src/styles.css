@@ -313,3 +313,5 @@ button { cursor: pointer; }
 .operational-map__cluster-list button:hover { border-color: #9bbda3; background: #f7fbf7; }
 .operational-map__cluster-list button span { color: var(--ink-400); font-size: 9px; font-weight: 750; }
 .operational-map__cluster-list button b { max-width: 100%; overflow: hidden; color: var(--ink-900); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+
+.command-center__legend i.is-cluster { width: 11px; height: 11px; border-radius: 50%; background: var(--brand-forest); }
