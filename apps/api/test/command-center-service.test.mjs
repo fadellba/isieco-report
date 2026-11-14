@@ -439,3 +439,31 @@ test('paginates null-dated reports after dated dossiers without losing the rows'
   assert.ok(reportPageQuery.where.AND.some((filter) => filter.OR?.some((part) => part.dateSoumission === null)));
   assert.equal(reportPageQuery.orderBy[0].dateSoumission.nulls, 'last');
 });
+
+
+test('counts only complete, active, eligible submissions in the independent-verification metric', async () => {
+  let capturedWhere;
+  const prisma = {
+    signalement: { count: async () => 0, findMany: async () => [] },
+    dossierTraitement: { count: async () => 0, findMany: async () => [] },
+    affectation: { count: async () => 0 },
+    intervention: {
+      count: async ({ where }) => { capturedWhere = where; return 3; },
+    },
+  };
+
+  const result = await new CommandCenterService(prisma).getOverview({});
+  assert.equal(result.summary.pendingVerifications, 3);
+  assert.equal(capturedWhere.statutIntervention, 'SOUMISE');
+  assert.deepEqual(capturedWhere.dateSoumissionCompteRendu, { not: null });
+  assert.deepEqual(capturedWhere.dateHeureDebut, { not: null });
+  assert.deepEqual(capturedWhere.resultatIntervention, { not: null });
+  assert.deepEqual(capturedWhere.compteRendu, { not: null });
+  assert.equal(capturedWhere.verification, null);
+  assert.equal(capturedWhere.affectation.etatAffectation, 'ACTIVE');
+  assert.equal(capturedWhere.affectation.decisionEquipe, 'ACCEPTEE');
+  assert.deepEqual(capturedWhere.affectation.dateFinAffectation, null);
+  assert.equal(capturedWhere.affectation.contenuDossier.etatContenuDossier, 'ACTIF');
+  assert.equal(capturedWhere.affectation.contenuDossier.etatPriseEnCharge, 'EN_COURS');
+  assert.deepEqual(capturedWhere.affectation.contenuDossier.dossier.statutDossier, { not: 'CLOTURE' });
+});

@@ -32,18 +32,21 @@ Les secrets d'authentification ne sont pas répliqués dans la base métier. La 
 - Les secrets de stockage et les chaînes PostgreSQL sont réservés à l'environnement API ; aucune clé privilégiée n'est embarquée dans Web ou Mobile.
 - Les erreurs ne divulguent pas SQL, stack traces, jetons ou secrets.
 
-## Traçabilité réellement portée par le modèle simplifié
+## Journal d'audit métier
 
-Le modèle cible ne contient plus de table générique `EvenementMetier`, de journal avant/après ni de module/endpoint Audit autonome. Il ne faut donc pas présenter le produit courant comme disposant d'un journal d'audit générique.
+Le modèle Prisma conserve 18 modèles métier dans `public`. Le journal d'audit est une table PostgreSQL distincte, `audit.evenement_metier`, non exposée par les clients Supabase Data API. Il enregistre les transitions et mutations métier explicitement couvertes par `recordBusinessEvent`, dans la même transaction que la modification métier.
 
-Deux informations historiques métier restent structurées :
+Le ledger est protégé par RLS sans policy d'accès direct, révocation des privilèges Data API et triggers append-only contre UPDATE, DELETE et TRUNCATE ordinaires. Cette garantie ne protège pas contre un propriétaire de table ou un superutilisateur PostgreSQL compromis ; une garantie face à un DBA nécessite un rôle runtime distinct du propriétaire et du rôle de migration.
 
-- `HistoriqueStatutSignalement` conserve les transitions de statut d'un signalement, avec ancien/nouveau statut, date, acteur éventuel et motif.
-- `UtilisateurRole` conserve les périodes d'attribution d'un rôle via ses dates de début/fin, ainsi que l'attribution initiale et son motif lorsqu'ils sont fournis. La date de fin matérialise la fermeture de la période.
+Les métadonnées sont allowlistées. Les changements de priorité enregistrent maintenant l'ancienne et la nouvelle priorité. Les changements de localisation enregistrent les coordonnées, la précision et le libellé de localisation avant/après. Ces valeurs sont écrites dans une transaction sérialisable. Les libellés de localisation sont bornés à 1 000 caractères ; les événements ne doivent pas contenir de jetons, URL signées, e-mails, téléphones, comptes rendus ou contenus de fichiers.
 
-Les deux mécanismes ont un périmètre précis. Ils ne constituent pas un journal complet de toutes les mutations, des accès, des tentatives refusées, des changements de priorité/localisation ou des opérations d'administration. Les champs retirés avec l'ancien audit générique ne sont pas reconstruits par la migration.
+Le journal ne constitue pas un audit exhaustif de tous les accès, lectures, tentatives refusées ou événements techniques. Les historiques de priorité/localisation supprimés lors de la simplification antérieure du modèle ne peuvent pas être reconstitués rétroactivement. Le code actuel permet de conserver les changements futurs, pas de recréer les anciennes valeurs disparues. La documentation détaillée se trouve dans [Journal d'audit métier](business-audit-ledger.md).
 
-Toute exigence réglementaire ou opérationnelle de journalisation exhaustive, d'immutabilité, de preuve de révocation, d'export ou de consultation globale doit faire l'objet d'une décision de conception et d'un modèle dédié avant d'être annoncée comme fonctionnalité.
+## Limitation de débit
+
+Les contrôleurs citoyens `reports` et agents `interventions` appliquent une fenêtre glissante par utilisateur et par route. Les routes ont une limite de base de 60 requêtes/minute ; les créations de signalement utilisent 10/minute et les uploads photo 5/minute. Un dépassement retourne HTTP 429 avec `Retry-After`.
+
+Le compteur est en mémoire et local à chaque processus. Il ne protège pas contre une attaque distribuée et ne synchronise pas les quotas entre plusieurs instances. Avant tout déploiement multi-instance, ajouter un store partagé ou une règle équivalente au proxy/WAF. La limitation de débit n'est pas un substitut à l'authentification, à l'autorisation, aux quotas métier ou à la protection anti-DDoS.
 
 ## Médias et RLS
 

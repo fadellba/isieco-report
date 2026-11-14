@@ -216,3 +216,79 @@ test('refuses to detach a report once the dossier is closed', async () => {
   );
   assert.equal(reportRead, false);
 });
+
+
+test('audits previous and next priority values atomically', async () => {
+  let auditValues;
+  const tx = {
+    dossierTraitement: {
+      findUnique: async () => ({ priorite: 'NORMALE', statutDossier: 'OUVERT' }),
+      updateMany: async ({ data }) => {
+        assert.deepEqual(data, { priorite: 'HAUTE' });
+        return { count: 1 };
+      },
+    },
+    $executeRaw: async (strings, ...values) => { auditValues = values; return 1; },
+  };
+  const prisma = {
+    utilisateur: { findUnique: async () => ({ idUtilisateur: actorId, etatCompte: 'ACTIF' }) },
+    dossierTraitement: { findUnique: async () => dossier },
+    $transaction: async (operation, options) => {
+      assert.equal(options.isolationLevel, 'Serializable');
+      return operation(tx);
+    },
+  };
+
+  await new CasesService(prisma).updatePriority(dossierId, { priorite: 'HAUTE' }, authId);
+
+  assert.deepEqual(JSON.parse(auditValues.at(-1)), {
+    previousPriority: 'NORMALE',
+    nextPriority: 'HAUTE',
+  });
+});
+
+test('audits previous and next coordinates and clears precision when coordinates are cleared', async () => {
+  let auditValues;
+  let updateData;
+  const tx = {
+    dossierTraitement: {
+      findUnique: async () => ({
+        statutDossier: 'OUVERT',
+        latitude: '14.700000',
+        longitude: '-17.400000',
+        precisionLocalisation: '5.00',
+        descriptionLocalisation: 'Ancienne zone',
+      }),
+      updateMany: async ({ data }) => { updateData = data; return { count: 1 }; },
+    },
+    $executeRaw: async (strings, ...values) => { auditValues = values; return 1; },
+  };
+  const prisma = {
+    utilisateur: { findUnique: async () => ({ idUtilisateur: actorId, etatCompte: 'ACTIF' }) },
+    dossierTraitement: { findUnique: async () => dossier },
+    $transaction: async (operation, options) => {
+      assert.equal(options.isolationLevel, 'Serializable');
+      return operation(tx);
+    },
+  };
+
+  await new CasesService(prisma).updateLocation(dossierId, {
+    latitude: null,
+    longitude: null,
+    descriptionLocalisation: 'Zone non géolocalisée',
+  }, authId);
+
+  assert.equal(updateData.latitude, null);
+  assert.equal(updateData.longitude, null);
+  assert.equal(updateData.precisionLocalisation, null);
+  assert.deepEqual(JSON.parse(auditValues.at(-1)), {
+    previousLatitude: '14.700000',
+    previousLongitude: '-17.400000',
+    previousPrecision: '5.00',
+    previousLocationLabel: 'Ancienne zone',
+    nextLatitude: null,
+    nextLongitude: null,
+    nextPrecision: null,
+    nextLocationLabel: 'Zone non géolocalisée',
+  });
+});

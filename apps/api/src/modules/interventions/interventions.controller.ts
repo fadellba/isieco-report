@@ -28,6 +28,8 @@ import type { User } from '@supabase/supabase-js';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { MAX_IMAGE_SIZE_BYTES } from '../../infrastructure/storage/media-file.js';
 import { InterventionPhotoUploadResponseDto } from '../../infrastructure/storage/dto/media-response.dto.js';
+import { ApiRateLimit } from '../../common/rate-limit/rate-limit.decorator.js';
+import { ApiRateLimitGuard } from '../../common/rate-limit/api-rate-limit.guard.js';
 import { CurrentAuthUser } from '../../auth/current-auth-user.decorator.js';
 import { Roles } from '../../auth/roles.decorator.js';
 import { RolesGuard } from '../../auth/roles.guard.js';
@@ -39,7 +41,8 @@ import { InterventionsService } from './interventions.service.js';
 
 @ApiTags('interventions')
 @ApiBearerAuth()
-@UseGuards(SupabaseAuthGuard, RolesGuard)
+@UseGuards(SupabaseAuthGuard, ApiRateLimitGuard, RolesGuard)
+@ApiRateLimit({ limit: 60, windowMs: 60_000 })
 @Roles('AGENT_TERRAIN')
 @Controller('interventions')
 export class InterventionsController {
@@ -89,6 +92,7 @@ export class InterventionsController {
   }
 
   @Post(':idIntervention/photos')
+  @ApiRateLimit({ limit: 5, windowMs: 60_000 })
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_IMAGE_SIZE_BYTES, files: 1 } }))
   @ApiOperation({
     summary: 'Ajoute une preuve photo à une intervention en cours',

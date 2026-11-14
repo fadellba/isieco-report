@@ -5,7 +5,7 @@ Le module gère le dépôt initial, le suivi des signalements citoyens et les de
 ## API
 
 - `POST /api/v1/reports` : création JSON par un compte `CITOYEN` actif ;
-- `POST /api/v1/reports/with-photo` : création photo-first multipart, avec photo initiale obligatoire et description/catégories facultatives ;
+- `POST /api/v1/reports/with-photo` : création multipart avec photo initiale facultative ;
 - `GET /api/v1/reports` : liste paginée des seuls signalements du citoyen connecté ;
 - `GET /api/v1/reports/:id` : détail réservé au propriétaire ;
 - `GET /api/v1/reports/:id/history` : chronologie citoyenne des statuts et des jalons opérationnels communicables ;
@@ -14,7 +14,7 @@ Le module gère le dépôt initial, le suivi des signalements citoyens et les de
 - `POST /api/v1/reports/:id/photos` : upload d'une photo privée ;
 - `GET /api/v1/reports/:id/photos/:photoId/url` : URL de consultation temporaire.
 
-La création exige `Idempotency-Key` (8 à 128 caractères), scoped par utilisateur et associée à l'empreinte SHA-256 du corps canonique. Un retry identique retourne le signalement initial ; réutiliser la clé avec un corps différent retourne HTTP 409. Le contrat JSON accepte une description, une catégorie ou une localisation ; la variante `/with-photo` exige une image JPEG/PNG/WebP et permet de laisser la description et les catégories vides. La première photo, la ligne signalement, les contenus, l'historique initial et les événements d'audit sont validés dans une seule transaction ; un échec DB déclenche le nettoyage de l'objet Storage temporaire.
+La création exige `Idempotency-Key` (8 à 128 caractères), scoped par utilisateur et associée à l'empreinte SHA-256 de la requête canonique, incluant les octets de la photo lorsqu'elle est présente. Un retry identique retourne le signalement initial ; réutiliser la clé avec un contenu différent retourne HTTP 409. Les deux variantes acceptent une photo, une description, une catégorie ou une indication de localisation, mais refusent un signalement entièrement vide. La variante `/with-photo` utilise le format multipart et la photo est facultative. Lorsque la photo est fournie, son upload, la ligne signalement, les contenus, l'historique initial et les événements d'audit sont validés comme une seule opération métier ; un échec DB déclenche le nettoyage de l'objet Storage temporaire.
 
 Le service vérifie l'état du compte, les types de déchets actifs et la cohérence des coordonnées. La soumission, les contenus facultatifs, la clé d'idempotence et les événements initiaux sont écrits dans une transaction sérialisable.
 

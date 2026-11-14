@@ -292,7 +292,7 @@ export function AssignmentsPage() {
               ))}
             </select>
           </label>
-          <label className={labelClass}>Équipe éligible
+          <label className={labelClass}>Équipe active et compétente
             <select value={selectedTeamId} onChange={(event) => setSelectedTeamId(event.target.value)} disabled={!selectedContent || teamsLoadingFor === selectedContent.idTypeDechet || !createTeams.length} className={inputClass}>
               <option value="">Sélectionner une équipe</option>
               {createTeams.map((team) => (
@@ -310,7 +310,7 @@ export function AssignmentsPage() {
           </label>
         </div>
         {selectedContent && !createTeams.length && teamsLoadingFor !== selectedContent.idTypeDechet
-          ? <p className="mt-3 text-xs text-amber-700">Aucune équipe active ne possède une compétence valide et une disponibilité compatible pour ce type.</p>
+          ? <p className="mt-3 text-xs text-amber-700">Aucune équipe active ne possède de compétence active pour ce type de déchet. La capacité et le calendrier des équipes ne sont pas encore modélisés.</p>
           : null}
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <p className="text-[11px] text-slate-400">Une clé idempotente est conservée pour éviter les doublons lors d’une nouvelle tentative.</p>

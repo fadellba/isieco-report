@@ -32,6 +32,8 @@ import type { User } from '@supabase/supabase-js';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { MAX_IMAGE_SIZE_BYTES } from '../../infrastructure/storage/media-file.js';
 import { ReportPhotoUploadResponseDto, SignedMediaUrlResponseDto } from '../../infrastructure/storage/dto/media-response.dto.js';
+import { ApiRateLimit } from '../../common/rate-limit/rate-limit.decorator.js';
+import { ApiRateLimitGuard } from '../../common/rate-limit/api-rate-limit.guard.js';
 import { CurrentAuthUser } from '../../auth/current-auth-user.decorator.js';
 import { Roles } from '../../auth/roles.decorator.js';
 import { RolesGuard } from '../../auth/roles.guard.js';
@@ -47,22 +49,24 @@ import { ReportSupplementListResponseDto, SupplementAnswerDto } from './dto/repo
 
 @ApiTags('reports')
 @ApiBearerAuth()
-@UseGuards(SupabaseAuthGuard, RolesGuard)
+@UseGuards(SupabaseAuthGuard, ApiRateLimitGuard, RolesGuard)
+@ApiRateLimit({ limit: 60, windowMs: 60_000 })
 @Roles('CITOYEN')
 @Controller('reports')
 export class ReportsController {
   constructor(private readonly reports: ReportsService) {}
 
   @Post('with-photo')
+  @ApiRateLimit({ limit: 5, windowMs: 60_000 })
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_IMAGE_SIZE_BYTES, files: 1 } }))
   @ApiOperation({
-    summary: 'Crée un signalement citoyen avec sa première photo',
-    description: 'La photo et le signalement sont enregistrés comme une seule opération métier. La description et les catégories sont facultatives. La clé idempotente inclut le contenu de la photo.',
+    summary: 'Crée un signalement citoyen avec une première photo facultative',
+    description: 'Le signalement et, si elle est fournie, sa première photo sont enregistrés comme une seule opération métier. La photo, la description, les catégories et la localisation sont facultatives séparément ; au moins une information utile doit être fournie. La clé idempotente inclut le contenu de la photo lorsqu’elle est présente.',
   })
   @ApiHeader({
     name: 'Idempotency-Key',
     required: true,
-    description: 'Clé opaque de 8 à 128 caractères conservée en cas de retry du même formulaire et de la même photo.',
+    description: 'Clé opaque de 8 à 128 caractères conservée en cas de retry du même formulaire et, le cas échéant, de la même photo.',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -81,7 +85,7 @@ export class ReportsController {
     },
   })
   @ApiCreatedResponse({ type: ReportResponseDto })
-  @ApiBadRequestResponse({ description: 'Photo, localisation ou métadonnées invalides.' })
+  @ApiBadRequestResponse({ description: 'Photo éventuelle, localisation ou métadonnées invalides, ou signalement entièrement vide.' })
   @ApiConflictResponse({ description: 'Clé idempotente réutilisée avec un autre contenu.' })
   createWithPhoto(
     @Body() dto: CreateReportWithPhotoDto,
@@ -93,6 +97,7 @@ export class ReportsController {
   }
 
   @Post()
+  @ApiRateLimit({ limit: 10, windowMs: 60_000 })
   @ApiOperation({
     summary: 'Dépose un signalement citoyen',
     description:
@@ -157,6 +162,7 @@ export class ReportsController {
     return this.reports.getMine(id, user.id);
   }
   @Post(':id/photos')
+  @ApiRateLimit({ limit: 5, windowMs: 60_000 })
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_IMAGE_SIZE_BYTES, files: 1 } }))
   @ApiOperation({ summary: 'Ajoute une photo privée à un signalement appartenant au citoyen connecté' })
   @ApiParam({ name: 'id', format: 'uuid' })
@@ -208,6 +214,7 @@ export class ReportsController {
   }
 
   @Post(':id/supplements/:demandeId/responses')
+  @ApiRateLimit({ limit: 10, windowMs: 60_000 })
   @ApiOperation({
     summary: 'Répond à une demande de complément ouverte',
     description: 'La réponse est limitée au propriétaire du signalement et ne peut être enregistrée qu’une fois.',
