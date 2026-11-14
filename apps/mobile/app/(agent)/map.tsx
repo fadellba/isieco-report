@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
+import MapView, { Marker, type Region } from 'react-native-maps';
 import { ActivityIndicator, Alert, Linking, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import {
   getAgentProfile, listMyTeams, listTeamAssignments, listTeamInterventions,
@@ -41,6 +42,42 @@ function missionState(assignment: TeamAssignment, latest: TeamIntervention | und
   return 'TO_VERIFY';
 }
 
+function mapRegionFor(items: TeamAssignment[]): Region | null {
+  const points = items
+    .map(coordinatesFor)
+    .filter((point): point is { latitude: number; longitude: number } => point !== null);
+  if (points.length === 0) return null;
+
+  const latitudes = points.map((point) => point.latitude);
+  const longitudes = points.map((point) => point.longitude);
+  const latitudeRange = Math.max(...latitudes) - Math.min(...latitudes);
+  const longitudeRange = Math.max(...longitudes) - Math.min(...longitudes);
+
+  return {
+    latitude: (Math.min(...latitudes) + Math.max(...latitudes)) / 2,
+    longitude: (Math.min(...longitudes) + Math.max(...longitudes)) / 2,
+    latitudeDelta: Math.min(3, Math.max(0.015, latitudeRange * 1.6 + 0.01)),
+    longitudeDelta: Math.min(3, Math.max(0.015, longitudeRange * 1.6 + 0.01)),
+  };
+}
+
+function markerColor(state: MissionState): string {
+  switch (state) {
+    case 'TO_ACCEPT':
+    case 'RESTART':
+      return '#B97827';
+    case 'TO_START':
+    case 'TO_VERIFY':
+      return '#28748A';
+    case 'IN_PROGRESS':
+      return '#2F7773';
+    case 'RESOLVED':
+      return '#23764F';
+    case 'REFUSED':
+      return '#B64E43';
+  }
+}
+
 function missionPresentation(state: MissionState): { label: string; tone: StatusTone; action: string } {
   const values: Record<MissionState, { label: string; tone: StatusTone; action: string }> = {
     TO_ACCEPT: { label: 'À accepter', tone: 'warning', action: 'Répondre à l’affectation' },
@@ -73,6 +110,7 @@ export default function AgentMapScreen() {
   const [assignments, setAssignments] = useState<TeamAssignment[]>([]);
   const [interventions, setInterventions] = useState<TeamIntervention[]>([]);
   const [filter, setFilter] = useState<MapFilter>('ALL');
+  const [selectedMissionId, setSelectedMissionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -144,6 +182,11 @@ export default function AgentMapScreen() {
 
   const located = useMemo(() => filtered.filter((assignment) => coordinatesFor(assignment) !== null), [filtered]);
   const withoutCoordinates = useMemo(() => filtered.filter((assignment) => coordinatesFor(assignment) === null), [filtered]);
+  const mapRegion = useMemo(() => mapRegionFor(located), [located]);
+  const selectedAssignment = useMemo(
+    () => located.find((assignment) => assignment.idAffectation === selectedMissionId) ?? located[0] ?? null,
+    [located, selectedMissionId],
+  );
   const counts = useMemo(() => {
     const result: Record<MapFilter, number> = { ALL: 0, ACTION: 0, IN_PROGRESS: 0, TO_VERIFY: 0, RESOLVED: 0 };
     for (const assignment of teamFiltered) {
@@ -205,12 +248,7 @@ export default function AgentMapScreen() {
         </View>
       </View>
 
-      <View className="mt-4 rounded-2xl border border-line-subtle bg-white px-4 py-3">
-        <Text className="text-xs font-extrabold text-ink-900">Vue géolocalisée</Text>
-        <Text className="mt-1 text-xs leading-5 text-ink-500">
-          Cette version affiche les missions avec leurs coordonnées réelles et délègue l’itinéraire à l’application de cartes de l’appareil. Aucun point n’est inventé ; la carte native interactive reste à intégrer.
-        </Text>
-      </View>
+
 
       {error ? (
         <View className="mt-4">
@@ -290,7 +328,7 @@ export default function AgentMapScreen() {
             </ScrollView>
           </View>
 
-          {located.length === 0 ? (
+          {located.length === 0 || !mapRegion ? (
             <View className="rounded-2xl border border-line-subtle bg-white px-5 py-7">
               <Text className="text-sm font-extrabold text-ink-900">Aucun site géolocalisé dans cette vue</Text>
               <Text className="mt-2 text-sm leading-6 text-ink-500">
@@ -298,39 +336,101 @@ export default function AgentMapScreen() {
               </Text>
             </View>
           ) : (
-            <View className="gap-3">
-              {located.map((assignment) => {
-                const state = missionState(assignment, latestByAssignment.get(assignment.idAffectation));
+            <>
+              <View className="overflow-hidden rounded-3xl border border-line-subtle bg-white">
+                <MapView
+                  key={selectedTeamId + ':' + filter + ':' + located.length}
+                  style={{ width: '100%', height: 340 }}
+                  initialRegion={mapRegion}
+                  mapType="standard"
+                  showsCompass
+                  showsScale
+                  toolbarEnabled
+                  rotateEnabled
+                  pitchEnabled={false}
+                  moveOnMarkerPress={false}
+                >
+                  {located.map((assignment) => {
+                    const coordinate = coordinatesFor(assignment);
+                    if (!coordinate) return null;
+                    const state = missionState(assignment, latestByAssignment.get(assignment.idAffectation));
+                    return (
+                      <Marker
+                        key={assignment.idAffectation}
+                        coordinate={coordinate}
+                        title={assignment.contenuDossier.dossier.referenceDossier}
+                        description={assignment.contenuDossier.typeDechet.libelle}
+                        pinColor={markerColor(state)}
+                        onPress={() => setSelectedMissionId(assignment.idAffectation)}
+                      />
+                    );
+                  })}
+                </MapView>
+                <View className="flex-row items-center justify-between border-t border-line-subtle bg-white px-4 py-3">
+                  <Text className="text-[10px] font-extrabold text-ink-700">Carte interactive · {located.length} marqueur(s)</Text>
+                  <Text className="text-[9px] font-semibold text-ink-400">Déplacez et zoomez sur la carte</Text>
+                </View>
+              </View>
+
+              {selectedAssignment ? (() => {
+                const state = missionState(selectedAssignment, latestByAssignment.get(selectedAssignment.idAffectation));
                 const presentation = missionPresentation(state);
-                const coordinate = coordinatesFor(assignment);
-                const location = assignment.contenuDossier.dossier.descriptionLocalisation;
+                const coordinate = coordinatesFor(selectedAssignment);
                 return (
-                  <View key={assignment.idAffectation} className="rounded-3xl border border-line-subtle bg-white p-4">
+                  <View className="mt-3 rounded-3xl border border-line-subtle bg-white p-4">
                     <View className="flex-row items-start justify-between gap-3">
                       <View className="min-w-0 flex-1">
-                        <Text className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-brand-petrol">DOSSIER · {assignment.contenuDossier.dossier.referenceDossier}</Text>
-                        <Text className="mt-1 text-sm font-extrabold text-ink-900">{assignment.contenuDossier.typeDechet.libelle}</Text>
+                        <Text className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-brand-petrol">DOSSIER · {selectedAssignment.contenuDossier.dossier.referenceDossier}</Text>
+                        <Text className="mt-1 text-sm font-extrabold text-ink-900">{selectedAssignment.contenuDossier.typeDechet.libelle}</Text>
                       </View>
                       <StatusBadge label={presentation.label} tone={presentation.tone} />
                     </View>
-                    <Text className="mt-3 text-xs leading-5 text-ink-600">{location || 'Description du lieu non renseignée'}</Text>
+                    <Text className="mt-3 text-xs leading-5 text-ink-600">
+                      {selectedAssignment.contenuDossier.dossier.descriptionLocalisation || 'Description du lieu non renseignée'}
+                    </Text>
                     <Text className="mt-1 text-[10px] text-ink-400">
                       {coordinate ? coordinate.latitude.toFixed(5) + ', ' + coordinate.longitude.toFixed(5) : ''}
-                      {assignment.contenuDossier.dossier.precisionLocalisation ? ' · ' + assignment.contenuDossier.dossier.precisionLocalisation : ''}
+                      {selectedAssignment.contenuDossier.dossier.precisionLocalisation ? ' · ' + selectedAssignment.contenuDossier.dossier.precisionLocalisation : ''}
                     </Text>
-                    <Text className="mt-2 text-[10px] font-medium text-ink-400">{assignment.equipe.nomEquipe} · affectée le {dateLabel(assignment.dateHeureAffectation)}</Text>
+                    <Text className="mt-2 text-[10px] font-medium text-ink-400">
+                      {selectedAssignment.equipe.nomEquipe} · affectée le {dateLabel(selectedAssignment.dateHeureAffectation)}
+                    </Text>
                     <View className="mt-4 flex-row gap-2 border-t border-line-subtle pt-3">
-                      <Pressable onPress={() => openMission(assignment)} className="flex-1 rounded-xl border border-line-strong bg-white px-3 py-3">
-                        <Text className="text-center text-[10px] font-extrabold text-brand-forest">Détails</Text>
+                      <Pressable onPress={() => openMission(selectedAssignment)} className="flex-1 rounded-xl border border-line-strong bg-white px-3 py-3">
+                        <Text className="text-center text-[10px] font-extrabold text-brand-forest">Détails de la mission</Text>
                       </Pressable>
-                      <Pressable onPress={() => void openDirections(assignment)} className="flex-1 rounded-xl bg-brand-forest px-3 py-3">
+                      <Pressable onPress={() => void openDirections(selectedAssignment)} className="flex-1 rounded-xl bg-brand-forest px-3 py-3">
                         <Text className="text-center text-[10px] font-extrabold text-white">Itinéraire</Text>
                       </Pressable>
                     </View>
                   </View>
                 );
-              })}
-            </View>
+              })() : null}
+
+              <View className="mt-4">
+                <Text className="text-xs font-extrabold text-ink-900">Sites affichés sur la carte</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 10 }}>
+                  {located.map((assignment) => {
+                    const selected = selectedAssignment?.idAffectation === assignment.idAffectation;
+                    const state = missionState(assignment, latestByAssignment.get(assignment.idAffectation));
+                    const presentation = missionPresentation(state);
+                    return (
+                      <Pressable
+                        key={assignment.idAffectation}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected }}
+                        onPress={() => setSelectedMissionId(assignment.idAffectation)}
+                        className={selected ? 'w-56 rounded-2xl border border-brand-petrol bg-brand-mist p-3' : 'w-56 rounded-2xl border border-line-subtle bg-white p-3'}
+                      >
+                        <Text className="text-[9px] font-extrabold text-brand-petrol">{assignment.contenuDossier.dossier.referenceDossier}</Text>
+                        <Text numberOfLines={1} className="mt-1 text-xs font-extrabold text-ink-900">{assignment.contenuDossier.typeDechet.libelle}</Text>
+                        <Text className="mt-2 text-[9px] font-semibold text-ink-500">{presentation.label}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            </>
           )}
 
           {withoutCoordinates.length > 0 ? (
