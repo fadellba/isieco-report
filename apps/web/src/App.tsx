@@ -14,6 +14,7 @@ import { VerificationPage } from './features/verification/VerificationPage';
 import { AccessDeniedPage } from './pages/AccessDeniedPage';
 import { DownloadPage } from './pages/DownloadPage';
 import { SignInPage } from './pages/SignInPage';
+import { NotFoundPage } from './pages/NotFoundPage';
 
 export function App() {
   return (
@@ -75,7 +76,7 @@ export function App() {
         } />
         <Route path="acces-refuse" element={<AccessDeniedPage />} />
       </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }
