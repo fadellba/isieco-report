@@ -60,13 +60,13 @@ export class ReportsController {
   @ApiRateLimit({ limit: 5, windowMs: 60_000 })
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_IMAGE_SIZE_BYTES, files: 1 } }))
   @ApiOperation({
-    summary: 'Crée un signalement citoyen avec sa première photo',
-    description: 'La photo et le signalement sont enregistrés comme une seule opération métier. La description et les catégories sont facultatives. La clé idempotente inclut le contenu de la photo.',
+    summary: 'Crée un signalement citoyen avec une première photo facultative',
+    description: 'Le signalement et, si elle est fournie, sa première photo sont enregistrés comme une seule opération métier. La photo, la description, les catégories et la localisation sont facultatives séparément ; au moins une information utile doit être fournie. La clé idempotente inclut le contenu de la photo lorsqu’elle est présente.',
   })
   @ApiHeader({
     name: 'Idempotency-Key',
     required: true,
-    description: 'Clé opaque de 8 à 128 caractères conservée en cas de retry du même formulaire et de la même photo.',
+    description: 'Clé opaque de 8 à 128 caractères conservée en cas de retry du même formulaire et, le cas échéant, de la même photo.',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -85,7 +85,7 @@ export class ReportsController {
     },
   })
   @ApiCreatedResponse({ type: ReportResponseDto })
-  @ApiBadRequestResponse({ description: 'Photo, localisation ou métadonnées invalides.' })
+  @ApiBadRequestResponse({ description: 'Photo éventuelle, localisation ou métadonnées invalides, ou signalement entièrement vide.' })
   @ApiConflictResponse({ description: 'Clé idempotente réutilisée avec un autre contenu.' })
   createWithPhoto(
     @Body() dto: CreateReportWithPhotoDto,
