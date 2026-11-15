@@ -189,8 +189,8 @@ La branche `feat/isieco-ux-ui-foundation` porte une première livraison progress
 
 ### Points explicitement non terminés
 
-- Les nouveaux PNG d’icône et de splash sont préparés en 1024×1024 et livrés dans une archive séparée ; les fichiers binaires présents dans le dépôt n’ont pas encore été remplacés.
-- Le logo mobile embarqué et les déclinaisons d'icônes d'application doivent encore être validés comme un ensemble de marque complet.
+- Les assets natifs ont été remplacés dans `apps/mobile/assets/` : icône, adaptive icon, splash et brand mark. Leur rendu final doit encore être vérifié dans des builds Android/iOS réels.
+- Le logo mobile embarqué et les déclinaisons d'icônes d'application partagent maintenant le monogramme ISIECO ; la validation visuelle reste à effectuer sur appareils réels.
 - Les modules Web de comptes, référentiels et vérification ont maintenant reçu une première reprise structurelle et fonctionnelle. Comme les autres écrans, ils restent à passer en recette visuelle sur navigateur, avec vérification clavier, tailles d'écran et états d'erreur.
 - La fiche de mission est maintenant séparée de la file de travail. Une prochaine itération pourra encore approfondir le découpage visuel interne entre exécution, preuves et compte rendu, sans modifier le cycle métier.
 - La carte Mobile ouvre les emplacements sur OpenStreetMap via le navigateur système. Le SDK Google Maps et sa clé API ne sont plus nécessaires ; les parcours restent à tester sur appareils Android/iOS réels.
@@ -209,4 +209,4 @@ Cette livraison couvre maintenant une première reprise des routes applicatives 
 - Configuration Supabase à faire avant recette : autoriser l'URL Web exacte `https://<domaine-web>/reinitialiser-mot-de-passe` et le schéma mobile `isiecoreport://**` dans Auth > URL Configuration > Redirect URLs.
 - Carte Mobile agent : les coordonnées réelles ouvrent l’emplacement correspondant sur OpenStreetMap ; aucune position fictive n’est ajoutée. Les missions dépourvues de coordonnées restent accessibles dans leur section dédiée.
 - Cartographie Mobile : OpenStreetMap est ouvert via le navigateur système. Aucune clé API ou variable EAS n’est à configurer.
-- Assets natifs : `icon.png`, `adaptive-icon.png`, `splash.png` et `brand-mark.png` ont été générés et validés. Les PNG préparés sont fournis en archive, mais les fichiers binaires du dépôt restent à remplacer via l’interface GitHub.
+- Assets natifs : `icon.png` (1024×1024), `adaptive-icon.png` (1024×1024 transparent), `splash.png` (1024×1024 transparent) et `brand-mark.png` (512×512 transparent) sont maintenant committés dans `apps/mobile/assets/`.
