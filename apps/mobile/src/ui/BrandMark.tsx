@@ -12,7 +12,7 @@ export function BrandMark({ compact = false, inverted = false }: BrandMarkProps)
         <Image
           source={require('../../assets/brand-mark.png')}
           resizeMode="contain"
-          style={{ width: 28, height: 28, tintColor: inverted ? '#14532D' : '#FFFFFF' }}
+          style={{ width: 28, height: 28, tintColor: inverted ? '#174C3D' : '#FFFFFF' }}
           accessibilityIgnoresInvertColors
         />
       </View>

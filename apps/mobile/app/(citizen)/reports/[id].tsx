@@ -13,9 +13,31 @@ import {
   type Supplement,
 } from '../../../src/features/reports/reports-api';
 import { dateLabel, reportStatusLabel } from '../../../src/features/reports/report-format';
+import { StatusBadge, type StatusTone } from '../../../src/ui/StatusBadge';
+import { FeedbackBanner } from '../../../src/ui/FeedbackBanner';
+import { BrandMark } from '../../../src/ui/BrandMark';
 import { captureMobilePhoto, pickMobilePhotos, type PreparedMobilePhoto } from '../../../src/features/media/mobile-media';
 
-const inputClass = 'mt-2 min-h-[100px] rounded-xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900';
+const inputClass = 'mt-2 min-h-[100px] rounded-xl border border-line-strong bg-white px-4 py-3 text-sm text-ink-900';
+
+function reportTone(status: string): StatusTone {
+  if (status === 'REJETE') return 'danger';
+  if (status === 'EN_ATTENTE_COMPLEMENT') return 'warning';
+  if (status === 'QUALIFIE') return 'success';
+  if (status === 'COMPLEMENT_REPONDU') return 'info';
+  return 'brand';
+}
+
+function nextStepLabel(status: string): string | null {
+  const labels: Record<string, string> = {
+    SOUMIS: 'Votre signalement a été reçu. Le service doit maintenant examiner les informations transmises.',
+    EN_ATTENTE_COMPLEMENT: 'Une réponse de votre part est attendue pour permettre au service de poursuivre le traitement.',
+    COMPLEMENT_REPONDU: 'Votre complément a été transmis. Le service peut reprendre l’examen du signalement.',
+    QUALIFIE: 'Les informations ont été qualifiées. Consultez la chronologie pour suivre la suite de la prise en charge.',
+    REJETE: 'Le signalement n’a pas été retenu. Consultez le motif de décision affiché dans son détail.',
+  };
+  return labels[status] ?? null;
+}
 
 export default function CitizenReportDetailScreen() {
   const params = useLocalSearchParams<{ id: string; photosFailed?: string }>();
@@ -33,7 +55,11 @@ export default function CitizenReportDetailScreen() {
   const [notice, setNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    if (!id) return;
+    if (!id) {
+      setError('Identifiant de signalement manquant. Revenez à votre liste pour sélectionner un signalement.');
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -167,33 +193,62 @@ export default function CitizenReportDetailScreen() {
   }
 
   if (loading && !report) {
-    return <View className="flex-1 items-center justify-center bg-eco-50"><ActivityIndicator color="#166534" /><Text className="mt-3 text-sm text-slate-500">Chargement…</Text></View>;
+    return <View className="flex-1 items-center justify-center bg-surface-base"><ActivityIndicator color="#174C3D" /><Text className="mt-3 text-sm text-ink-500">Chargement…</Text></View>;
+  }
+
+  if (!report) {
+    return (
+      <View className="flex-1 justify-center bg-surface-base px-6 py-10">
+        <Text className="text-xs font-extrabold uppercase tracking-[0.16em] text-brand-petrol">Suivi citoyen</Text>
+        <Text className="mt-3 text-2xl font-extrabold text-ink-900">Signalement indisponible</Text>
+        <View className="mt-4">
+          <FeedbackBanner tone="error" message={error ?? 'Ce signalement ne peut pas être affiché pour le moment.'} />
+        </View>
+        <TouchableOpacity onPress={() => void load()} className="mt-5 rounded-xl bg-brand-forest px-4 py-3">
+          <Text className="text-center text-sm font-extrabold text-white">Réessayer</Text>
+        </TouchableOpacity>
+        <Link href="/(citizen)/reports" className="mt-4 text-center text-sm font-bold text-brand-forest">Retour à mes signalements</Link>
+      </View>
+    );
   }
 
   return (
-    <ScrollView className="flex-1 bg-eco-50" contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 48, paddingBottom: 40 }}>
-      <Text className="text-xs font-extrabold uppercase tracking-[0.18em] text-eco-700">Suivi citoyen</Text>
-      <Text className="mt-3 text-2xl font-extrabold text-eco-950">Détail du signalement</Text>
-      {error ? <Text className="mt-4 rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</Text> : null}
-      {notice ? <Text className="mt-4 rounded-xl bg-eco-100 p-4 text-sm text-eco-900">{notice}</Text> : null}
+    <ScrollView className="flex-1 bg-surface-base" contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 28, paddingBottom: 40 }}>
+      <View className="flex-row items-center justify-between">
+        <BrandMark />
+        <View className="rounded-full bg-brand-mist px-3 py-2"><Text className="text-[10px] font-extrabold text-brand-forest">ESPACE CITOYEN</Text></View>
+      </View>
+      <Text className="mt-8 text-[10px] font-extrabold uppercase tracking-[0.16em] text-brand-petrol">VOTRE SUIVI</Text>
+      <Text className="mt-2 text-2xl font-extrabold tracking-tight text-ink-900">Détail du signalement</Text>
+      {error ? <View className="mt-4"><FeedbackBanner tone="error" message={error} /></View> : null}
+      {notice ? <View className="mt-4"><FeedbackBanner tone="success" message={notice} /></View> : null}
       {report ? (
         <>
-          <View className="mt-5 rounded-2xl border border-eco-100 bg-white p-5">
+          <View className="mt-5 rounded-2xl border border-line-subtle bg-white p-5">
             <View className="flex-row flex-wrap items-center justify-between gap-3">
-              <Text className="font-mono text-xs text-slate-500">#{report.idSignalement.slice(0, 8).toUpperCase()}</Text>
-              <Text className="rounded-full bg-eco-50 px-3 py-1 text-xs font-bold text-eco-800">{reportStatusLabel(report.statutSignalement)}</Text>
+              <Text className="font-mono text-xs text-ink-500">#{report.idSignalement.slice(0, 8).toUpperCase()}</Text>
+              <StatusBadge label={reportStatusLabel(report.statutSignalement)} tone={reportTone(report.statutSignalement)} />
             </View>
-            <Text className="mt-4 text-base font-bold text-slate-900">Description</Text>
-            <Text className="mt-2 text-sm leading-6 text-slate-700">{report.description || 'Aucune description.'}</Text>
-            <Text className="mt-4 text-xs text-slate-500">Soumis le {dateLabel(report.dateSoumission)}</Text>
-            {report.dateConstat ? <Text className="mt-1 text-xs text-slate-500">Constaté le {dateLabel(report.dateConstat)}</Text> : null}
-            {report.descriptionLocalisation ? <Text className="mt-3 text-sm text-slate-600">Lieu : {report.descriptionLocalisation}</Text> : null}
-            {report.latitude && report.longitude ? <Text className="mt-1 text-xs text-slate-500">Coordonnées : {report.latitude}, {report.longitude}</Text> : null}
-            {report.motifDecision ? <Text className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Motif de décision : {report.motifDecision}</Text> : null}
+            {nextStepLabel(report.statutSignalement) ? (
+              <View className="mt-4">
+                <FeedbackBanner
+                  tone={report.statutSignalement === 'EN_ATTENTE_COMPLEMENT' ? 'warning' : 'info'}
+                  title="Prochaine étape"
+                  message={nextStepLabel(report.statutSignalement)!}
+                />
+              </View>
+            ) : null}
+            <Text className="mt-4 text-base font-bold text-ink-900">Description</Text>
+            <Text className="mt-2 text-sm leading-6 text-ink-700">{report.description || 'Aucune description.'}</Text>
+            <Text className="mt-4 text-xs text-ink-500">Soumis le {dateLabel(report.dateSoumission)}</Text>
+            {report.dateConstat ? <Text className="mt-1 text-xs text-ink-500">Constaté le {dateLabel(report.dateConstat)}</Text> : null}
+            {report.descriptionLocalisation ? <Text className="mt-3 text-sm text-ink-500">Lieu : {report.descriptionLocalisation}</Text> : null}
+            {report.latitude && report.longitude ? <Text className="mt-1 text-xs text-ink-500">Coordonnées : {report.latitude}, {report.longitude}</Text> : null}
+            {report.motifDecision ? <Text className="mt-4 rounded-lg bg-status-warning/5 p-3 text-sm text-amber-900">Motif de décision : {report.motifDecision}</Text> : null}
             {report.contenus.length ? (
-              <View className="mt-5 border-t border-slate-100 pt-4">
-                <Text className="text-sm font-bold text-slate-800">Catégories qualifiées</Text>
-                {report.contenus.map((item) => <Text key={item.idTypeDechet} className="mt-2 text-sm text-slate-600">• {item.typeDechet.libelle}</Text>)}
+              <View className="mt-5 border-t border-line-subtle pt-4">
+                <Text className="text-sm font-bold text-ink-800">Catégories qualifiées</Text>
+                {report.contenus.map((item) => <Text key={item.idTypeDechet} className="mt-2 text-sm text-ink-500">• {item.typeDechet.libelle}</Text>)}
               </View>
             ) : null}
           </View>
@@ -222,61 +277,61 @@ export default function CitizenReportDetailScreen() {
             </View>
           </View>
 
-          <View className="mt-6 rounded-2xl border border-eco-100 bg-white p-5">
+          <View className="mt-6 rounded-2xl border border-line-subtle bg-white p-5">
             <View className="flex-row items-center justify-between gap-3">
-              <Text className="text-base font-bold text-slate-900">Photos du signalement</Text>
-              <Text className="text-xs text-slate-500">{report.photos.length}</Text>
+              <Text className="text-base font-bold text-ink-900">Photos du signalement</Text>
+              <Text className="text-xs text-ink-500">{report.photos.length}</Text>
             </View>
-            <Text className="mt-1 text-xs leading-5 text-slate-500">Les photos sont privées. Un lien temporaire est obtenu uniquement lorsque vous demandez à les afficher.</Text>
+            <Text className="mt-1 text-xs leading-5 text-ink-500">Les photos sont privées. Un lien temporaire est obtenu uniquement lorsque vous demandez à les afficher.</Text>
             <View className="mt-3 flex-row gap-2">
               <TouchableOpacity onPress={() => void choosePhotoGallery()} disabled={photoBusy} className="flex-1 rounded-lg border border-eco-200 bg-white px-3 py-3 disabled:opacity-50">
-                <Text className="text-center text-xs font-bold text-eco-800">Ajouter depuis la galerie</Text>
+                <Text className="text-center text-xs font-bold text-ink-800">Ajouter depuis la galerie</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => void takeReportPhoto()} disabled={photoBusy} className="flex-1 rounded-lg bg-eco-700 px-3 py-3 disabled:opacity-50">
+              <TouchableOpacity onPress={() => void takeReportPhoto()} disabled={photoBusy} className="flex-1 rounded-lg bg-brand-forest px-3 py-3 disabled:opacity-50">
                 <Text className="text-center text-xs font-bold text-white">Prendre une photo</Text>
               </TouchableOpacity>
             </View>
-            {photoBusy ? <Text className="mt-2 text-xs text-slate-500">Traitement…</Text> : null}
+            {photoBusy ? <Text className="mt-2 text-xs text-ink-500">Traitement…</Text> : null}
             <View className="mt-3 gap-3">
               {report.photos.map((photo) => {
                 const link = photoLinks[photo.idPhotoSignalement];
                 const active = link && link.expiresAt > Date.now() ? link : null;
                 return (
-                  <View key={photo.idPhotoSignalement} className="rounded-xl border border-slate-100 p-3">
+                  <View key={photo.idPhotoSignalement} className="rounded-xl border border-line-subtle p-3">
                     {active ? (
                       <Image source={{ uri: active.url }} resizeMode="contain" style={{ width: '100%', height: 180, borderRadius: 8 }} />
                     ) : null}
-                    <Text className="mt-2 text-xs text-slate-600">{photo.description || 'Photo du signalement'}</Text>
-                    <Text className="mt-1 text-[10px] text-slate-400">Ajoutée le {dateLabel(photo.dateAjout)} · {photo.etatPublication}</Text>
+                    <Text className="mt-2 text-xs text-ink-500">{photo.description || 'Photo du signalement'}</Text>
+                    <Text className="mt-1 text-[10px] text-ink-400">Ajoutée le {dateLabel(photo.dateAjout)} · {photo.etatPublication}</Text>
                     <TouchableOpacity onPress={() => void openPrivatePhoto(photo.idPhotoSignalement)} disabled={photoBusy} className="mt-2 self-start">
-                      <Text className="text-xs font-bold text-eco-700">{active ? 'Renouveler le lien privé (60 s)' : 'Afficher la photo (60 s)'}</Text>
+                      <Text className="text-xs font-bold text-brand-forest">{active ? 'Renouveler le lien privé (60 s)' : 'Afficher la photo (60 s)'}</Text>
                     </TouchableOpacity>
                   </View>
                 );
               })}
-              {!report.photos.length ? <Text className="text-xs text-slate-500">Aucune photo jointe pour le moment.</Text> : null}
+              {!report.photos.length ? <Text className="text-xs text-ink-500">Aucune photo jointe pour le moment.</Text> : null}
             </View>
           </View>
 
-          <Text className="mt-7 text-lg font-extrabold text-eco-950">Demandes de complément</Text>
-          {!supplements.length ? <Text className="mt-2 text-sm text-slate-500">Aucune demande de complément.</Text> : null}
+          <Text className="mt-7 text-lg font-extrabold text-ink-900">Demandes de complément</Text>
+          {!supplements.length ? <Text className="mt-2 text-sm text-ink-500">Aucune demande de complément.</Text> : null}
           <View className="mt-3 gap-3">
             {supplements.map((demand) => (
-              <View key={demand.idDemande} className="rounded-2xl border border-eco-100 bg-white p-5">
+              <View key={demand.idDemande} className="rounded-2xl border border-line-subtle bg-white p-5">
                 <View className="flex-row items-center justify-between gap-3">
-                  <Text className="text-xs font-bold text-slate-600">Demandé le {dateLabel(demand.dateDemande)}</Text>
-                  <Text className="text-[10px] font-bold text-amber-700">{demand.etatDemande}</Text>
+                  <Text className="text-xs font-bold text-ink-500">Demandé le {dateLabel(demand.dateDemande)}</Text>
+                  <Text className="text-[10px] font-bold text-status-warning">{demand.etatDemande}</Text>
                 </View>
-                <Text className="mt-3 text-sm leading-6 text-slate-800">{demand.motif}</Text>
+                <Text className="mt-3 text-sm leading-6 text-ink-800">{demand.motif}</Text>
                 {demand.reponse ? (
-                  <View className="mt-4 rounded-lg bg-eco-50 p-3">
-                    <Text className="text-xs font-bold text-eco-800">Votre réponse · {dateLabel(demand.reponse.dateReponse)}</Text>
-                    <Text className="mt-2 text-sm leading-6 text-slate-700">{demand.reponse.contenu}</Text>
+                  <View className="mt-4 rounded-lg bg-surface-base p-3">
+                    <Text className="text-xs font-bold text-ink-800">Votre réponse · {dateLabel(demand.reponse.dateReponse)}</Text>
+                    <Text className="mt-2 text-sm leading-6 text-ink-700">{demand.reponse.contenu}</Text>
                   </View>
                 ) : null}
                 {demand.etatDemande === 'OUVERTE' ? (
                   <View className="mt-4">
-                    <Text className="text-xs font-bold text-slate-700">Votre réponse (10 à 4000 caractères)</Text>
+                    <Text className="text-xs font-bold text-ink-700">Votre réponse (10 à 4000 caractères)</Text>
                     <TextInput
                       multiline
                       textAlignVertical="top"
@@ -286,7 +341,7 @@ export default function CitizenReportDetailScreen() {
                       className={inputClass}
                       placeholder="Précisez les informations demandées…"
                     />
-                    <TouchableOpacity onPress={() => void sendAnswer(demand)} disabled={busyId === demand.idDemande} className="mt-3 rounded-xl bg-eco-700 px-4 py-3 disabled:opacity-50">
+                    <TouchableOpacity onPress={() => void sendAnswer(demand)} disabled={busyId === demand.idDemande} className="mt-3 rounded-xl bg-brand-forest px-4 py-3 disabled:opacity-50">
                       <Text className="text-center text-sm font-bold text-white">{busyId === demand.idDemande ? 'Envoi…' : 'Transmettre la réponse'}</Text>
                     </TouchableOpacity>
                   </View>
@@ -296,7 +351,7 @@ export default function CitizenReportDetailScreen() {
           </View>
         </>
       ) : null}
-      <Link href="/(citizen)/reports" className="mt-8 text-center text-sm font-semibold text-eco-700">Retour à mes signalements</Link>
+      <Link href="/(citizen)/reports" className="mt-8 text-center text-sm font-semibold text-brand-forest">Retour à mes signalements</Link>
     </ScrollView>
   );
 }

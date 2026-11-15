@@ -11,7 +11,7 @@
     "splash": {
       "image": "./assets/splash.png",
       "imageWidth": 176,
-      "backgroundColor": "#14532D",
+      "backgroundColor": "#103B31",
       "resizeMode": "contain"
     },
     "plugins": [
@@ -34,7 +34,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#14532D"
+        "backgroundColor": "#103B31"
       },
       "package": "com.isieco.report",
       "permissions": [

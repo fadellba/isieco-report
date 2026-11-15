@@ -19,10 +19,10 @@ export default function AgentLayout() {
           state={state}
           navigation={navigation}
           items={[
-            { route: 'home', label: 'Accueil', glyph: '⌂' },
-            { route: 'missions', label: 'Missions', glyph: '▤' },
-            { route: 'map', label: 'Carte', glyph: '⌖' },
-            { route: 'profile', label: 'Profil', glyph: '○' },
+            { route: 'home', label: 'Accueil', icon: 'home' },
+            { route: 'missions', label: 'Missions', icon: 'list' },
+            { route: 'map', label: 'Carte', icon: 'map' },
+            { route: 'profile', label: 'Profil', icon: 'profile' },
           ]}
         />
       )}

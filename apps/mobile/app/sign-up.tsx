@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link, useRouter } from 'expo-router';
-import { KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
 import { supabase } from '../src/lib/supabase';
-import { BrandMark } from '../src/ui/BrandMark';
+import { AuthScreenFrame } from '../src/ui/AuthScreenFrame';
+
+const inputClass = 'mt-2 min-h-[50px] rounded-2xl border border-line-strong bg-surface-base px-4 py-3.5 text-sm text-ink-900';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -10,11 +12,13 @@ export default function SignUpScreen() {
   const [prenom, setPrenom] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function handleSubmit() {
+    if (busy || nom.trim().length < 2 || prenom.trim().length < 2 || !email.trim() || password.length < 12) return;
     setError(null);
     setMessage(null);
     setBusy(true);
@@ -25,7 +29,7 @@ export default function SignUpScreen() {
         options: { data: { nom: nom.trim(), prenom: prenom.trim() } },
       });
       if (authError) {
-        setError(authError.message);
+        setError('La création du compte est impossible. Vérifiez les informations saisies ou réessayez plus tard.');
         return;
       }
       if (data.session) {
@@ -40,56 +44,121 @@ export default function SignUpScreen() {
     }
   }
 
-  const inputClass = 'mt-2 rounded-2xl border border-line-strong bg-white px-4 py-4 text-sm text-ink-900';
+  const canSubmit = !busy && nom.trim().length >= 2 && prenom.trim().length >= 2 && Boolean(email.trim()) && password.length >= 12;
 
   return (
-    <KeyboardAvoidingView className="flex-1 bg-surface-base" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 40 }}>
-        <BrandMark />
-        <View className="mt-10">
-          <Text className="text-xs font-bold uppercase tracking-[0.16em] text-brand-forest">Rejoindre ISIECO</Text>
-          <Text className="mt-3 text-3xl font-extrabold tracking-tight text-ink-900">Créer un compte citoyen</Text>
-          <Text className="mt-3 text-sm leading-6 text-ink-500">
-            Les nouveaux comptes reçoivent uniquement le rôle citoyen. Les autres habilitations sont attribuées par l’administration.
-          </Text>
+    <AuthScreenFrame
+      eyebrow="Rejoindre ISIECO"
+      title="Créer votre compte citoyen."
+      description="Déclarez une situation, retrouvez vos signalements et suivez les étapes de leur traitement."
+    >
+      <View>
+        <Text className="text-xs font-extrabold text-ink-700">Nom</Text>
+        <TextInput
+          accessibilityLabel="Nom"
+          autoCapitalize="words"
+          autoComplete="name"
+          className={inputClass}
+          onChangeText={setNom}
+          placeholder="Votre nom"
+          placeholderTextColor="#8A968D"
+          returnKeyType="next"
+          value={nom}
+        />
+      </View>
+
+      <View className="mt-4">
+        <Text className="text-xs font-extrabold text-ink-700">Prénom</Text>
+        <TextInput
+          accessibilityLabel="Prénom"
+          autoCapitalize="words"
+          className={inputClass}
+          onChangeText={setPrenom}
+          placeholder="Votre prénom"
+          placeholderTextColor="#8A968D"
+          returnKeyType="next"
+          value={prenom}
+        />
+      </View>
+
+      <View className="mt-4">
+        <Text className="text-xs font-extrabold text-ink-700">Adresse e-mail</Text>
+        <TextInput
+          accessibilityLabel="Adresse e-mail"
+          autoCapitalize="none"
+          autoComplete="email"
+          autoCorrect={false}
+          className={inputClass}
+          keyboardType="email-address"
+          onChangeText={setEmail}
+          placeholder="nom@exemple.com"
+          placeholderTextColor="#8A968D"
+          returnKeyType="next"
+          textContentType="emailAddress"
+          value={email}
+        />
+      </View>
+
+      <View className="mt-4">
+        <View className="flex-row items-center justify-between">
+          <Text className="text-xs font-extrabold text-ink-700">Mot de passe</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+            onPress={() => setShowPassword((visible) => !visible)}
+            hitSlop={8}
+          >
+            <Text className="text-[10px] font-extrabold text-brand-petrol">{showPassword ? 'Masquer' : 'Afficher'}</Text>
+          </Pressable>
         </View>
+        <TextInput
+          accessibilityLabel="Mot de passe, 12 caractères minimum"
+          autoCapitalize="none"
+          autoComplete="new-password"
+          className={inputClass}
+          onChangeText={setPassword}
+          placeholder="12 caractères minimum"
+          placeholderTextColor="#8A968D"
+          returnKeyType="done"
+          secureTextEntry={!showPassword}
+          textContentType="newPassword"
+          value={password}
+        />
+        <Text className="mt-2 text-[10px] leading-4 text-ink-400">Utilisez au moins 12 caractères. Évitez un mot de passe déjà utilisé ailleurs.</Text>
+      </View>
 
-        <View className="mt-8 gap-4">
-          <View>
-            <Text className="text-xs font-bold text-ink-700">Nom</Text>
-            <TextInput autoCapitalize="words" className={inputClass} onChangeText={setNom} placeholder="Votre nom" placeholderTextColor="#8A948C" value={nom} />
-          </View>
-          <View>
-            <Text className="text-xs font-bold text-ink-700">Prénom</Text>
-            <TextInput autoCapitalize="words" className={inputClass} onChangeText={setPrenom} placeholder="Votre prénom" placeholderTextColor="#8A948C" value={prenom} />
-          </View>
-          <View>
-            <Text className="text-xs font-bold text-ink-700">Adresse e-mail</Text>
-            <TextInput autoCapitalize="none" autoComplete="email" autoCorrect={false} className={inputClass} keyboardType="email-address" onChangeText={setEmail} placeholder="nom@exemple.com" placeholderTextColor="#8A948C" value={email} />
-          </View>
-          <View>
-            <Text className="text-xs font-bold text-ink-700">Mot de passe</Text>
-            <TextInput autoCapitalize="none" autoComplete="new-password" className={inputClass} onChangeText={setPassword} placeholder="12 caractères minimum" placeholderTextColor="#8A948C" secureTextEntry value={password} />
-          </View>
+      <View className="mt-5 rounded-xl border border-brand-forest/10 bg-brand-mist px-3.5 py-3">
+        <Text className="text-[11px] leading-5 text-brand-forest">
+          La création publique donne uniquement accès à l’espace citoyen. Les habilitations agents et administrateurs sont attribuées par l’organisation.
+        </Text>
+      </View>
+
+      {message ? (
+        <View className="mt-4 rounded-2xl border border-status-success/20 bg-status-success/5 p-4">
+          <Text accessibilityRole="alert" className="text-xs leading-5 text-status-success">{message}</Text>
+          <Link className="mt-3 text-xs font-extrabold text-brand-forest" href="/sign-in">Retour à la connexion</Link>
         </View>
-
-        {message ? <Text className="mt-5 rounded-2xl border border-brand-forest/15 bg-brand-mist p-4 text-sm leading-5 text-brand-forest">{message}</Text> : null}
-        {error ? <Text accessibilityRole="alert" className="mt-5 rounded-2xl border border-status-danger/20 bg-status-danger/5 p-4 text-sm leading-5 text-status-danger">{error}</Text> : null}
-
-        <TouchableOpacity
-          accessibilityRole="button"
-          className="mt-6 rounded-2xl bg-brand-forest px-5 py-4 disabled:opacity-50"
-          disabled={busy || nom.trim().length < 2 || prenom.trim().length < 2 || !email.trim() || password.length < 12}
-          onPress={() => void handleSubmit()}
-        >
-          <Text className="text-center text-sm font-extrabold text-white">{busy ? 'Création…' : 'Créer mon compte'}</Text>
-        </TouchableOpacity>
-
-        <View className="mt-7 flex-row items-center justify-center">
-          <Text className="text-xs text-ink-500">Vous avez déjà un compte ? </Text>
-          <Link className="text-xs font-extrabold text-brand-forest" href="/sign-in">Se connecter</Link>
+      ) : null}
+      {error ? (
+        <View className="mt-4 rounded-2xl border border-status-danger/20 bg-status-danger/5 p-4">
+          <Text accessibilityRole="alert" className="text-xs leading-5 text-status-danger">{error}</Text>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      ) : null}
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ disabled: !canSubmit }}
+        className="mt-6 min-h-[52px] items-center justify-center rounded-2xl bg-brand-forest px-5 py-4 disabled:opacity-50"
+        disabled={!canSubmit}
+        onPress={() => void handleSubmit()}
+      >
+        <Text className="text-sm font-extrabold text-white">{busy ? 'Création en cours…' : 'Créer mon compte'}</Text>
+      </Pressable>
+
+      <View className="mt-6 flex-row flex-wrap items-center justify-center border-t border-line-subtle pt-5">
+        <Text className="text-xs text-ink-500">Vous avez déjà un compte ? </Text>
+        <Link className="text-xs font-extrabold text-brand-forest" href="/sign-in">Se connecter</Link>
+      </View>
+    </AuthScreenFrame>
   );
 }

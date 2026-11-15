@@ -20,13 +20,12 @@ export default function CitizenLayout() {
           state={state}
           navigation={navigation}
           items={[
-            { route: 'home', label: 'Accueil', glyph: '⌂' },
-            { route: 'reports', label: 'Suivi', glyph: '◷' },
-            { route: 'profile', label: 'Profil', glyph: '○' },
+            { route: 'home', label: 'Accueil', icon: 'home' },
+            { route: 'reports', label: 'Suivi', icon: 'list' },
+            { route: 'profile', label: 'Profil', icon: 'profile' },
           ]}
           action={{
             label: 'Signaler',
-            glyph: '+',
             onPress: () => router.push('/(citizen)/reports/new'),
           }}
         />

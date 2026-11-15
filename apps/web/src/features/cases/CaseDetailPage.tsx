@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../../lib/api';
+import { FeedbackBanner, StatusBadge, type StatusTone } from '../../components/StatusBadge';
 
 interface Signalement {
   idSignalement: string;
@@ -44,11 +45,26 @@ function errorText(reason: unknown) {
   return reason instanceof Error ? reason.message : 'Une erreur inattendue est survenue.';
 }
 function dateLabel(value: string | null) {
-  if (!value) return '—';
+  if (!value) return 'Non renseignée';
   const date = new Date(value);
   return Number.isNaN(date.getTime())
-    ? '—'
+    ? 'Non renseignée'
     : new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+}
+function statusTone(status: string): StatusTone {
+  if (['CLOTURE', 'TERMINE', 'TERMINEE', 'VALIDE'].includes(status)) return 'success';
+  if (['EN_COURS', 'ACTIVE', 'OUVERT'].includes(status)) return 'info';
+  if (['ANNULE', 'ANNULEE', 'REJETE', 'REFUSE'].includes(status)) return 'danger';
+  if (['EN_ATTENTE', 'A_TRAITER'].includes(status)) return 'warning';
+  return 'neutral';
+}
+function stateLabel(value: string) {
+  return value.replaceAll('_', ' ').toLowerCase();
+}
+function personName(report: Pick<Signalement, 'utilisateur'> | AvailableReport) {
+  return report.utilisateur.prenom
+    ? report.utilisateur.prenom + ' ' + report.utilisateur.nom
+    : report.utilisateur.nom;
 }
 
 export function CaseDetailPage() {
@@ -66,9 +82,14 @@ export function CaseDetailPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const load = useCallback(async () => {
-    if (!idDossier) return;
+    if (!idDossier) {
+      setError('La référence du dossier est absente.');
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -83,7 +104,11 @@ export function CaseDetailPage() {
       setPrecision(detail.precisionLocalisation ?? '');
       setLocationDescription(detail.descriptionLocalisation ?? '');
       setAvailable(reports.items);
-      setSelectedReport((current) => current || reports.items[0]?.idSignalement || '');
+      setSelectedReport((current) =>
+        reports.items.some((report) => report.idSignalement === current)
+          ? current
+          : reports.items[0]?.idSignalement ?? '',
+      );
     } catch (reason) {
       setItem(null);
       setError(errorText(reason));
@@ -95,6 +120,7 @@ export function CaseDetailPage() {
   useEffect(() => { void load(); }, [load]);
 
   async function mutate(success: string, operation: () => Promise<unknown>) {
+    if (busy) return;
     setBusy(true);
     setError(null);
     setNotice(null);
@@ -127,8 +153,21 @@ export function CaseDetailPage() {
     if (!idDossier) return;
     const lat = latitude.trim() ? Number(latitude) : null;
     const lon = longitude.trim() ? Number(longitude) : null;
+    const accuracy = precision.trim() ? Number(precision) : null;
     if ((lat === null) !== (lon === null)) {
       setError('Latitude et longitude doivent être renseignées ensemble.');
+      return;
+    }
+    if (lat !== null && (!Number.isFinite(lat) || lat < -90 || lat > 90)) {
+      setError('La latitude doit être comprise entre -90 et 90.');
+      return;
+    }
+    if (lon !== null && (!Number.isFinite(lon) || lon < -180 || lon > 180)) {
+      setError('La longitude doit être comprise entre -180 et 180.');
+      return;
+    }
+    if (accuracy !== null && (lat === null || !Number.isFinite(accuracy) || accuracy < 0 || accuracy > 100000)) {
+      setError('La précision doit être comprise entre 0 et 100000 mètres et nécessite des coordonnées.');
       return;
     }
     await mutate('Localisation du dossier mise à jour.', () =>
@@ -137,7 +176,7 @@ export function CaseDetailPage() {
         body: JSON.stringify({
           latitude: lat,
           longitude: lon,
-          precisionLocalisation: lat !== null && precision.trim() ? Number(precision) : null,
+          precisionLocalisation: accuracy,
           descriptionLocalisation: locationDescription.trim() || null,
         }),
       }),
@@ -157,6 +196,7 @@ export function CaseDetailPage() {
         body: JSON.stringify({ motif: associationMotif.trim() }),
       }),
     );
+    setAssociationMotif('');
   }
 
   async function detach(idSignalement: string) {
@@ -171,139 +211,239 @@ export function CaseDetailPage() {
         body: JSON.stringify({ motif: associationMotif.trim() }),
       }),
     );
+    setAssociationMotif('');
   }
 
-  if (loading && !item) return <p className="text-sm text-slate-500">Chargement du dossier…</p>;
+  if (loading && !item) {
+    return (
+      <section className="workflow-state" role="status" aria-live="polite">
+        <span className="workflow-state__spinner" aria-hidden="true" />
+        <h1>Ouverture du dossier</h1>
+        <p>Chargement des informations, des contenus et des signalements associés.</p>
+      </section>
+    );
+  }
+
   if (!item) {
     return (
-      <div className="space-y-4">
-        <Link to="/dossiers" className="text-sm font-semibold text-eco-700">← Retour aux dossiers</Link>
-        <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">{error || 'Dossier introuvable.'}</p>
-      </div>
+      <section className="workflow-state workflow-state--error">
+        <span className="workflow-state__icon" aria-hidden="true">!</span>
+        <h1>Dossier indisponible</h1>
+        <p>{error || 'Ce dossier est introuvable ou ne peut pas être affiché.'}</p>
+        <div className="workflow-state__actions">
+          <button type="button" onClick={() => void load()} className="workflow-button workflow-button--primary">Réessayer</button>
+          <Link to="/dossiers" className="workflow-button workflow-button--secondary">Retour aux dossiers</Link>
+        </div>
+      </section>
     );
   }
 
   const editable = item.statutDossier !== 'CLOTURE';
+  const mapUrl = item.latitude && item.longitude
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.latitude + ',' + item.longitude)}`
+    : null;
 
   return (
-    <div className="space-y-6">
-      <Link to="/dossiers" className="text-sm font-semibold text-eco-700 hover:underline">← Retour aux dossiers</Link>
-      {error ? <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div> : null}
-      {notice ? <div role="status" className="rounded-xl border border-eco-200 bg-eco-50 px-4 py-3 text-sm text-eco-900">{notice}</div> : null}
+    <div className="case-detail">
+      <div className="case-detail__topline">
+        <Link to="/dossiers" className="workflow-back-link"><span aria-hidden="true">←</span> Tous les dossiers</Link>
+        <span className="case-detail__topline-note">DOSSIER OPÉRATIONNEL</span>
+      </div>
 
-      <header>
-        <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-eco-700">Dossier de traitement</p>
-        <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">{item.referenceDossier}</h1>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">{item.statutDossier}</span>
-          <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800">{item.priorite}</span>
+      {error ? <FeedbackBanner tone="error">{error}</FeedbackBanner> : null}
+      {notice ? <FeedbackBanner tone="success">{notice}</FeedbackBanner> : null}
+
+      <header className="case-detail__hero">
+        <div className="case-detail__hero-main">
+          <span className="case-detail__eyebrow">RÉFÉRENCE DU DOSSIER</span>
+          <h1>{item.referenceDossier}</h1>
+          <p>{item.descriptionSynthese || 'Aucune synthèse renseignée.'}</p>
+          <div className="case-detail__hero-meta">
+            <span>Créé le {dateLabel(item.dateCreationDossier)}</span>
+            {item.dateCloture ? <span>Clôturé le {dateLabel(item.dateCloture)}</span> : null}
+          </div>
         </div>
-        <p className="mt-2 text-sm text-slate-600">{item.descriptionSynthese}</p>
-        <p className="mt-1 text-xs text-slate-400">Créé le {dateLabel(item.dateCreationDossier)}{item.dateCloture ? ` · Clôturé le ${dateLabel(item.dateCloture)}` : ''}</p>
+        <div className="case-detail__hero-status">
+          <StatusBadge label={stateLabel(item.statutDossier)} tone={statusTone(item.statutDossier)} />
+          <span className={`case-detail__priority is-${item.priorite.toLowerCase()}`}>Priorité {stateLabel(item.priorite)}</span>
+        </div>
       </header>
 
-      <section className="grid gap-4 lg:grid-cols-2">
-        <article className="rounded-2xl border border-slate-200 bg-white p-5">
-          <h2 className="font-bold text-slate-900">Contenus à traiter</h2>
-          <div className="mt-3 space-y-2">
-            {item.contenus.map((content) => (
-              <div key={content.idContenuDossier} className="rounded-xl bg-slate-50 px-3 py-3">
-                <div className="flex flex-wrap justify-between gap-2">
-                  <span className="text-sm font-semibold">{content.typeDechet.libelle}</span>
-                  <span className="text-xs text-slate-500">{content.etatContenuDossier} · {content.etatPriseEnCharge}</span>
-                </div>
-                <p className="mt-1 text-xs text-slate-500">
-                  Quantité : {content.quantiteEstimee ?? '—'} · Volume : {content.volumeEstime ?? '—'}
-                </p>
-              </div>
-            ))}
-            {!item.contenus.length ? <p className="text-sm text-slate-500">Aucun contenu enregistré.</p> : null}
-          </div>
-        </article>
-
-        <article className="rounded-2xl border border-slate-200 bg-white p-5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-bold text-slate-900">Signalements associés</h2>
-            <span className="text-xs text-slate-500">{item.signalements.length} signalement(s)</span>
-          </div>
-          {editable ? (
-            <label className="mt-3 block text-xs font-bold text-slate-600">
-              Motif obligatoire pour rattacher ou retirer un signalement
-              <textarea
-                value={associationMotif}
-                onChange={(event) => setAssociationMotif(event.target.value)}
-                minLength={5}
-                maxLength={500}
-                rows={2}
-                className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal"
-                placeholder="Expliquez la raison de cette modification."
-              />
-            </label>
-          ) : null}
-          <div className="mt-3 space-y-3">
-            {item.signalements.map((report) => (
-              <div key={report.idSignalement} className="rounded-xl border border-slate-100 p-3">
-                <div className="flex flex-wrap justify-between gap-2">
-                  <span className="text-xs font-bold text-slate-700">#{report.idSignalement.slice(0, 8)}</span>
-                  <span className="text-xs text-slate-500">{report.statutSignalement}</span>
-                </div>
-                <p className="mt-2 text-sm text-slate-700">{report.description || 'Aucune description.'}</p>
-                <p className="mt-1 text-xs text-slate-500">{report.utilisateur.prenom ? report.utilisateur.prenom + ' ' : ''}{report.utilisateur.nom}</p>
-                {editable ? (
-                  <div className="mt-3">
-                    <button type="button" onClick={() => void detach(report.idSignalement)} disabled={busy || associationMotif.trim().length < 5} className="rounded-lg border border-red-200 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-50 disabled:opacity-40">Retirer du dossier</button>
-                  </div>
-                ) : null}
-              </div>
-            ))}
-          </div>
-
-          {editable ? (
-            <form onSubmit={(event) => void attach(event)} className="mt-4 space-y-3 border-t border-slate-100 pt-4">
-              <label className="block text-xs font-bold text-slate-600">
-                Ajouter un signalement qualifié
-                <select value={selectedReport} onChange={(event) => setSelectedReport(event.target.value)} required disabled={!available.length} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-normal">
-                  {available.map((report) => (
-                    <option key={report.idSignalement} value={report.idSignalement}>
-                      {report.utilisateur.prenom ? report.utilisateur.prenom + ' ' : ''}{report.utilisateur.nom} · {report.idSignalement.slice(0, 8)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button type="submit" disabled={!selectedReport || busy || associationMotif.trim().length < 5} className="rounded-lg bg-eco-700 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50">Associer le signalement</button>
-              {!available.length ? <p className="text-xs text-slate-500">Aucun signalement qualifié non associé n’est disponible.</p> : null}
-            </form>
-          ) : null}
-        </article>
+      <section className="case-detail__metrics" aria-label="Résumé du dossier">
+        <article><span>Contenus</span><strong>{item.contenus.length}</strong><small>Types de déchets suivis</small></article>
+        <article><span>Signalements</span><strong>{item.signalements.length}</strong><small>Déclarations rattachées</small></article>
+        <article><span>Localisation</span><strong>{mapUrl ? 'GPS' : 'À préciser'}</strong><small>{item.descriptionLocalisation || 'Aucun repère renseigné'}</small></article>
       </section>
 
-      {editable ? (
-        <section className="grid gap-4 lg:grid-cols-2">
-          <form onSubmit={(event) => void changePriority(event)} className="rounded-2xl border border-slate-200 bg-white p-5">
-            <h2 className="font-bold text-slate-900">Modifier la priorité</h2>
-            <label className="mt-3 block text-xs font-bold text-slate-600">
-              Nouvelle priorité
-              <select value={priority} onChange={(event) => setPriority(event.target.value)} className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal">
-                {['BASSE', 'NORMALE', 'HAUTE', 'CRITIQUE'].map((value) => <option key={value}>{value}</option>)}
-              </select>
-            </label>
-            <button type="submit" disabled={busy} className="mt-3 rounded-lg bg-eco-700 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50">Enregistrer</button>
-          </form>
-
-          <form onSubmit={(event) => void changeLocation(event)} className="rounded-2xl border border-slate-200 bg-white p-5">
-            <h2 className="font-bold text-slate-900">Localisation</h2>
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              <label className="text-xs font-bold text-slate-600">Latitude<input type="number" min="-90" max="90" step="0.000001" value={latitude} onChange={(event) => setLatitude(event.target.value)} className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal" /></label>
-              <label className="text-xs font-bold text-slate-600">Longitude<input type="number" min="-180" max="180" step="0.000001" value={longitude} onChange={(event) => setLongitude(event.target.value)} className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal" /></label>
+      <div className="case-detail__columns">
+        <div className="case-detail__main">
+          <section className="case-detail-panel">
+            <div className="case-detail-panel__heading">
+              <div><span>01 · PÉRIMÈTRE DU DOSSIER</span><h2>Contenus à traiter</h2></div>
+              <span className="case-detail-panel__count">{item.contenus.length}</span>
             </div>
-            <label className="mt-3 block text-xs font-bold text-slate-600">Précision (m)<input type="number" min="0" max="100000" step="0.01" value={precision} onChange={(event) => setPrecision(event.target.value)} className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal" /></label>
-            <label className="mt-3 block text-xs font-bold text-slate-600">Description du lieu<input maxLength={1000} value={locationDescription} onChange={(event) => setLocationDescription(event.target.value)} className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal" /></label>
-            <button type="submit" disabled={busy} className="mt-3 rounded-lg bg-eco-700 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50">Enregistrer</button>
-          </form>
-        </section>
-      ) : (
-        <p className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">Ce dossier est clôturé et consultable en lecture seule.</p>
-      )}
+            {!item.contenus.length ? (
+              <div className="case-detail-empty">Aucun contenu n’est enregistré dans ce dossier.</div>
+            ) : (
+              <div className="case-detail-contents">
+                {item.contenus.map((content) => (
+                  <article key={content.idContenuDossier} className="case-detail-content">
+                    <div className="case-detail-content__top">
+                      <div><strong>{content.typeDechet.libelle}</strong><span>{content.typeDechet.codeType}</span></div>
+                      <StatusBadge label={stateLabel(content.etatContenuDossier)} tone={statusTone(content.etatContenuDossier)} />
+                    </div>
+                    <div className="case-detail-content__metrics">
+                      <div><span>Quantité estimée</span><strong>{content.quantiteEstimee ?? 'Non renseignée'}</strong></div>
+                      <div><span>Volume estimé</span><strong>{content.volumeEstime ?? 'Non renseigné'}</strong></div>
+                    </div>
+                    <div className="case-detail-content__footer">
+                      <span>Prise en charge</span><StatusBadge label={stateLabel(content.etatPriseEnCharge)} tone={statusTone(content.etatPriseEnCharge)} />
+                    </div>
+                    {content.remarque ? <p className="case-detail-content__remark">{content.remarque}</p> : null}
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="case-detail-panel">
+            <div className="case-detail-panel__heading">
+              <div><span>02 · ORIGINE DU DOSSIER</span><h2>Signalements associés</h2></div>
+              <span className="case-detail-panel__count">{item.signalements.length}</span>
+            </div>
+
+            {item.signalements.length ? (
+              <div className="case-detail-reports">
+                {item.signalements.map((report) => (
+                  <article key={report.idSignalement} className="case-detail-report">
+                    <div className="case-detail-report__top">
+                      <code>#{report.idSignalement.slice(0, 8).toUpperCase()}</code>
+                      <StatusBadge label={stateLabel(report.statutSignalement)} tone={statusTone(report.statutSignalement)} />
+                    </div>
+                    <p>{report.description || 'Aucune description fournie.'}</p>
+                    <div className="case-detail-report__meta">
+                      <span>{personName(report)}</span>
+                      <span>{dateLabel(report.dateSoumission)}</span>
+                    </div>
+                    {editable ? (
+                      <button
+                        type="button"
+                        onClick={() => void detach(report.idSignalement)}
+                        disabled={busy || associationMotif.trim().length < 5}
+                        className="case-detail-report__remove"
+                      >
+                        Retirer ce signalement
+                      </button>
+                    ) : null}
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="case-detail-empty">Aucun signalement n’est actuellement rattaché.</div>
+            )}
+
+            {editable ? (
+              <div className="case-detail-association">
+                <div className="case-detail-association__heading">
+                  <strong>Gérer les rattachements</strong>
+                  <span>Un motif est requis pour chaque modification.</span>
+                </div>
+                <label className="case-detail-label">
+                  Motif de l’association ou du retrait
+                  <textarea
+                    value={associationMotif}
+                    onChange={(event) => setAssociationMotif(event.target.value)}
+                    minLength={5}
+                    maxLength={500}
+                    rows={3}
+                    placeholder="Expliquez pourquoi ce signalement doit être associé ou retiré…"
+                  />
+                  <small>{associationMotif.trim().length} / 500 caractères · 5 minimum</small>
+                </label>
+                <form onSubmit={(event) => void attach(event)} className="case-detail-association__form">
+                  <label className="case-detail-label">
+                    Ajouter un signalement qualifié
+                    <select value={selectedReport} onChange={(event) => setSelectedReport(event.target.value)} required disabled={!available.length}>
+                      <option value="">Sélectionner un signalement</option>
+                      {available.map((report) => (
+                        <option key={report.idSignalement} value={report.idSignalement}>
+                          {personName(report)} · {report.idSignalement.slice(0, 8)}
+                        </option>
+                      ))}
+                    </select>
+                    {available.length ? <small>{available.length} signalement(s) qualifié(s) disponible(s)</small> : <small>Aucun signalement qualifié non associé n’est disponible.</small>}
+                  </label>
+                  <button type="submit" disabled={!selectedReport || busy || associationMotif.trim().length < 5} className="workflow-button workflow-button--primary">Associer au dossier</button>
+                </form>
+              </div>
+            ) : null}
+          </section>
+        </div>
+
+        <aside className="case-detail-sidebar">
+          <section className="case-detail-panel case-detail-location">
+            <div className="case-detail-panel__heading">
+              <div><span>03 · TERRITOIRE</span><h2>Localisation</h2></div>
+            </div>
+            <div className="case-detail-location__value">
+              <span aria-hidden="true">⌖</span>
+              <div>
+                <strong>{item.descriptionLocalisation || 'Repère non renseigné'}</strong>
+                <p>{mapUrl ? `${item.latitude}, ${item.longitude}` : 'Coordonnées GPS non renseignées'}</p>
+                {item.precisionLocalisation ? <small>Précision ±{item.precisionLocalisation} m</small> : null}
+              </div>
+            </div>
+            {mapUrl ? <a className="case-detail-location__map" href={mapUrl} target="_blank" rel="noreferrer">Ouvrir dans la carte ↗</a> : null}
+          </section>
+
+          <section className="case-detail-panel case-detail-priority">
+            <div className="case-detail-panel__heading">
+              <div><span>04 · SUIVI</span><h2>Priorité</h2></div>
+            </div>
+            <StatusBadge label={stateLabel(item.priorite)} tone={item.priorite === 'CRITIQUE' || item.priorite === 'HAUTE' ? 'warning' : 'neutral'} />
+            {editable ? (
+              <form onSubmit={(event) => void changePriority(event)} className="case-detail-form">
+                <label className="case-detail-label">Niveau de priorité
+                  <select value={priority} onChange={(event) => setPriority(event.target.value)}>
+                    {['BASSE', 'NORMALE', 'HAUTE', 'CRITIQUE'].map((value) => <option key={value} value={value}>{stateLabel(value)}</option>)}
+                  </select>
+                </label>
+                <button type="submit" disabled={busy || priority === item.priorite} className="workflow-button workflow-button--primary">Mettre à jour</button>
+              </form>
+            ) : <p className="case-detail-readonly">Le dossier est clôturé. La priorité est consultable en lecture seule.</p>}
+          </section>
+
+          {editable ? (
+            <details className="case-detail-panel case-detail-settings" open={settingsOpen} onToggle={(event) => setSettingsOpen(event.currentTarget.open)}>
+              <summary><span><small>PARAMÈTRES AVANCÉS</small><strong>Modifier la localisation</strong></span><span aria-hidden="true">⌄</span></summary>
+              <form onSubmit={(event) => void changeLocation(event)} className="case-detail-form">
+                <label className="case-detail-label">Description du lieu
+                  <input maxLength={1000} value={locationDescription} onChange={(event) => setLocationDescription(event.target.value)} placeholder="Rue, quartier, repère…" />
+                </label>
+                <div className="case-detail-coordinate-grid">
+                  <label className="case-detail-label">Latitude
+                    <input type="number" min="-90" max="90" step="0.000001" value={latitude} onChange={(event) => setLatitude(event.target.value)} placeholder="-90 à 90" />
+                  </label>
+                  <label className="case-detail-label">Longitude
+                    <input type="number" min="-180" max="180" step="0.000001" value={longitude} onChange={(event) => setLongitude(event.target.value)} placeholder="-180 à 180" />
+                  </label>
+                </div>
+                <label className="case-detail-label">Précision (m)
+                  <input type="number" min="0" max="100000" step="0.01" value={precision} onChange={(event) => setPrecision(event.target.value)} placeholder="Facultatif" />
+                </label>
+                <button type="submit" disabled={busy} className="workflow-button workflow-button--primary">Enregistrer la localisation</button>
+              </form>
+            </details>
+          ) : null}
+
+          {!editable ? (
+            <div className="case-detail-closed">
+              <StatusBadge label="Dossier clôturé" tone="success" />
+              <p>Ce dossier est consultable en lecture seule. Les paramètres et rattachements ne peuvent plus être modifiés.</p>
+            </div>
+          ) : null}
+        </aside>
+      </div>
     </div>
   );
 }

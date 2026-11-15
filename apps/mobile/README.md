@@ -22,27 +22,30 @@ pnpm --filter @isieco/mobile exec expo install --check
 pnpm dev:mobile
 ```
 
-L'authentification Supabase et le chargement du profil métier via l'API sont intégrés. L'accueil présente les espaces correspondant aux rôles `CITOYEN` et `AGENT_TERRAIN`.
+L'application présente un splash natif Expo assorti à l'identité ISIECO, puis une introduction de première ouverture qui explique les parcours citoyen et agent. L'authentification Supabase et le chargement du profil métier via l'API sont intégrés. Après connexion, les espaces correspondent aux rôles `CITOYEN` et `AGENT_TERRAIN` ; un compte disposant des deux rôles choisit son espace.
 
 ## Parcours citoyen — Phase 18 intégrée
 
 - `/(citizen)/reports` : liste paginée et suivi des seuls signalements du compte connecté ;
-- `/(citizen)/reports/new` : signalement photo-first avec photo obligatoire, localisation ponctuelle ou manuelle, description et catégories facultatives ;
+- `/(citizen)/reports/new` : signalement avec photo facultative, localisation ponctuelle ou manuelle, description et catégories facultatives ;
 - `/(citizen)/reports/[id]` : détail propriétaire, chronologie des statuts et jalons opérationnels, photos privées, catégories qualifiées et demandes de complément.
 
-La soumission utilise `POST /api/v1/reports/with-photo` et l'en-tête `Idempotency-Key`. Le signalement et sa première photo privée sont créés ensemble ; la clé est conservée lors d'une nouvelle tentative avec les mêmes métadonnées et la même photo, et renouvelée lorsque le formulaire change. La chronologie provient de `GET /api/v1/reports/:id/history`. Les demandes et réponses réutilisent les endpoints Reports existants. Aucun endpoint de référentiel réservé au gestionnaire n'est appelé par le citoyen.
+La soumission utilise `POST /api/v1/reports/with-photo` et l'en-tête `Idempotency-Key`. Le signalement et, lorsqu’elle est fournie, sa première photo privée sont créés ensemble ; la clé est conservée lors d'une nouvelle tentative avec les mêmes métadonnées et la même photo, et renouvelée lorsque le formulaire change. La chronologie provient de `GET /api/v1/reports/:id/history`. Les demandes et réponses réutilisent les endpoints Reports existants. Aucun endpoint de référentiel réservé au gestionnaire n'est appelé par le citoyen.
 
 ## Parcours Agent terrain — Phase 19 intégrée
 
 La PR #24 a intégré `/(agent)/missions` :
 
 - découverte des équipes actives auxquelles appartient le compte connecté via `GET /api/v1/interventions/my-teams` ;
-- consultation des affectations et interventions de l'équipe sélectionnée ;
+- consultation des affectations et interventions de l'équipe sélectionnée dans une file filtrable par prochaine action ;
+- ouverture d'une fiche dédiée `/(agent)/missions/[id]` pour examiner le contexte, accepter/refuser, démarrer l'intervention, ajouter une preuve et transmettre le compte rendu ;
 - acceptation ou refus motivé d'une affectation ;
 - démarrage d'une intervention acceptée ;
 - saisie du compte rendu et du résultat terrain ;
 - motif obligatoire si le résultat est `PARTIELLE` ou `IMPOSSIBLE` ;
 - démarrage d'une reprise uniquement après une décision de vérification `REPRISE`.
+
+L'onglet `/(agent)/map` affiche une carte interactive des affectations des équipes actives avec filtres d'équipe et d'état, marqueurs sur les seules coordonnées réelles, sélection d'une mission, accès à sa fiche et ouverture d'un itinéraire. Les affectations sans coordonnées restent dans une liste séparée et ne reçoivent aucune position fictive.
 
 Le formulaire de compte rendu n'est affiché que pour l'agent auteur de l'intervention. L'API recontrôle l'appartenance, l'auteur et les états métier à chaque opération.
 
@@ -63,18 +66,26 @@ L'API reste l'autorité : elle vérifie le propriétaire du signalement ou l'aut
 
 ## Build et distribution native
 
-`eas.json` contient les profils `preview-apk` et `production-apk` (Android, format APK). La CI GitHub vérifie le typecheck, les tests et l'export JavaScript/bundles Android (`expo export --platform android`) ; cet export n'est **pas** un APK Android signé. Aucun build EAS, APK signé ou SHA-256 de binaire n'a été vérifié au 6 novembre 2026.
+`eas.json` contient les profils `preview-apk` et `production-apk`. Le profil `preview-apk` embarque les paramètres **publics** de staging (URL API, URL Supabase et clé publishable Supabase) ; aucune clé privilégiée n'est incluse. La CI standard valide les tests, le typecheck et l'export JavaScript Android, mais cet export n'est **pas** un APK installable.
 
-EAS Free inclut jusqu'à **15 builds Android et 15 builds iOS par mois**, en file basse priorité, sans dépassement facturé sur l'offre gratuite : lorsque le quota est épuisé, les nouveaux builds attendent le renouvellement du quota. Le profil Android `preview-apk` peut donc être utilisé sans abonnement EAS payant si le quota est disponible. Les étapes de liaison du projet Expo, de configuration de `EXPO_TOKEN` et de gestion du keystore Android ne nécessitent pas en elles-mêmes un plan payant. Voir [Plans EAS](https://docs.expo.dev/billing/plans/) et [Tarifs EAS](https://expo.dev/pricing).
+Le workflow GitHub Actions `.github/workflows/eas-android-preview.yml` est limité à la PR #101 et à la branche `feat/isieco-ux-ui-foundation`. Il lance le profil interne `preview-apk` après une mise à jour de la PR qui touche l'application Mobile ou ses dépendances. Il ne publie rien sur Google Play. Le workflow ne reçoit le jeton Expo que sur les étapes EAS ; sans le secret, il signale que le build natif a été ignoré.
 
-Avant de produire l'APK de test, vérifier/lier l'identifiant du projet Expo, configurer `EXPO_TOKEN` comme secret CI, puis lancer uniquement le profil `preview-apk`. Télécharger le binaire, calculer son SHA-256, l'associer au SHA Git testé et l'installer sur Android physique. Ne pas utiliser `production-apk` pour cette recette.
+Pour activer le build, ajouter un secret GitHub Actions nommé `EXPO_TOKEN` dans [les secrets du dépôt](https://github.com/fadellba/isieco-report/settings/secrets/actions). Ne jamais mettre ce jeton dans le dépôt, dans `eas.json` ou dans une conversation. Une fois le secret disponible, relancer le workflow Android preview depuis l'onglet Actions.
 
-Pour iOS, une distribution interne ad hoc sur iPhone exige un compte Apple Developer payant et l'enregistrement des appareils. Cette variante est différée dans le périmètre sans frais. Un smoke test sur iPhone via Expo Go peut être effectué gratuitement pour les fonctionnalités compatibles avec Expo Go ; il ne remplace pas une validation d'une build native ad hoc. La publication sur Google Play ou l'App Store est hors périmètre et nécessite les adhésions développeur correspondantes. Voir [distribution interne EAS](https://docs.expo.dev/build/internal-distribution/).
+EAS Free comprend actuellement jusqu'à **15 builds Android et 15 builds iOS par mois**, en file basse priorité. Le profil Android `preview-apk` peut donc être utilisé sans abonnement payant si le quota gratuit est disponible. Voir [Tarifs EAS](https://expo.dev/pricing).
 
+Après le build, télécharger l'APK depuis la page de build Expo, calculer son SHA-256, l'associer au SHA Git testé et l'installer sur un appareil Android physique. Ne pas utiliser le profil `production-apk` pour cette recette.
 
+Pour iOS, une distribution interne ad hoc sur iPhone exige un compte Apple Developer payant et l'enregistrement des appareils. Cette variante est différée dans le périmètre sans frais. Un smoke test sur iPhone via Expo Go peut couvrir les fonctionnalités compatibles, mais ne remplace pas une validation native ad hoc. La publication sur Google Play ou l'App Store est hors périmètre et nécessite les adhésions développeur correspondantes. Voir [distribution interne EAS](https://docs.expo.dev/build/internal-distribution/).
 
 Les conditions et les tâches différées en raison d'un coût sont centralisées dans [Périmètre gratuit et reports liés aux coûts](../../docs/deployment/perimetre-offre-gratuite.md).
 
 ## Limites restantes
 
 Les notifications, le mode hors connexion et l'affichage des preuves d'intervention après upload restent à réaliser. La recette sur appareils Android/iOS réels est à effectuer avec le [protocole de recette](../../docs/mobile/recette-appareils.md), sur un environnement de test et avec des comptes fictifs. Le bucket Supabase distant, la rétention des médias et la planification Cron doivent être configurés indépendamment du client Mobile.
+
+### Configuration des services natifs
+
+La cartographie mobile utilise les liens OpenStreetMap : aucune clé API, aucun compte fournisseur et aucune configuration EAS ne sont nécessaires. L'ouverture de la carte se fait dans le navigateur de l'appareil. Respecter l'attribution OpenStreetMap et les conditions d'utilisation du service public.
+
+Pour tester la récupération de compte, autoriser dans Supabase Auth les URLs de redirection Web de l'application vers `/reinitialiser-mot-de-passe` ainsi que le schéma mobile `isiecoreport://**`. Vérifier le parcours sur des comptes de test, y compris un lien expiré.

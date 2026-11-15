@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
+import { FeedbackBanner, StatusBadge, type StatusTone } from '../../components/StatusBadge';
 
 interface CaseContent {
   idTypeDechet: string;
@@ -26,9 +27,30 @@ interface QualifiedReport {
   contenus: Array<{ idTypeDechet: string; typeDechet: { codeType: string; libelle: string } }>;
 }
 interface Page<T> { items: T[]; page: number; pageSize: number; total: number }
+
 function formatDate(value: string) {
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '—' : new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium' }).format(date);
+  return Number.isNaN(date.getTime()) ? 'Date non renseignée' : new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium' }).format(date);
+}
+function personName(report: QualifiedReport) {
+  return report.utilisateur.prenom
+    ? report.utilisateur.prenom + ' ' + report.utilisateur.nom
+    : report.utilisateur.nom;
+}
+function caseStatusTone(status: string): StatusTone {
+  if (status === 'CLOTURE') return 'success';
+  if (status === 'EN_COURS') return 'info';
+  if (status === 'EN_ATTENTE') return 'warning';
+  return 'neutral';
+}
+function priorityTone(priority: string): StatusTone {
+  if (priority === 'CRITIQUE') return 'danger';
+  if (priority === 'HAUTE') return 'warning';
+  if (priority === 'BASSE') return 'neutral';
+  return 'info';
+}
+function stateLabel(value: string) {
+  return value.replaceAll('_', ' ').toLowerCase();
 }
 
 export function CasesPage() {
@@ -37,6 +59,7 @@ export function CasesPage() {
   const [availableReports, setAvailableReports] = useState<QualifiedReport[]>([]);
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState('');
+  const [search, setSearch] = useState('');
   const [selectedReport, setSelectedReport] = useState('');
   const [priority, setPriority] = useState('NORMALE');
   const [summary, setSummary] = useState('');
@@ -56,7 +79,11 @@ export function CasesPage() {
       ]);
       setData(cases);
       setAvailableReports(reports.items);
-      setSelectedReport((current) => current || reports.items[0]?.idSignalement || '');
+      setSelectedReport((current) =>
+        reports.items.some((report) => report.idSignalement === current)
+          ? current
+          : reports.items[0]?.idSignalement ?? '',
+      );
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Impossible de charger les dossiers.');
     } finally {
@@ -68,7 +95,7 @@ export function CasesPage() {
 
   async function createCase(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selectedReport) return;
+    if (creating || !selectedReport) return;
     if (summary.trim() && summary.trim().length < 10) {
       setError('Le résumé doit contenir au moins 10 caractères.');
       return;
@@ -94,51 +121,178 @@ export function CasesPage() {
   }
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
+  const selectedSource = availableReports.find((report) => report.idSignalement === selectedReport) ?? null;
+  const filteredCases = useMemo(() => {
+    const query = search.trim().toLocaleLowerCase('fr-FR');
+    if (!query || !data) return data?.items ?? [];
+    return data.items.filter((item) => [
+      item.referenceDossier,
+      item.descriptionSynthese,
+      ...item.contenus.map((content) => content.typeDechet.libelle + ' ' + content.typeDechet.codeType),
+    ].join(' ').toLocaleLowerCase('fr-FR').includes(query));
+  }, [data, search]);
+
+  const openCount = data?.items.filter((item) => item.statutDossier !== 'CLOTURE').length ?? 0;
+  const closedCount = data?.items.filter((item) => item.statutDossier === 'CLOTURE').length ?? 0;
 
   return (
-    <div className="space-y-6">
-      <header>
-        <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-eco-700">Pilotage opérationnel</p>
-        <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">Dossiers de traitement</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Constituez des dossiers à partir de signalements qualifiés non encore rattachés et suivez leur prise en charge.</p>
-      </header>
-      {error ? <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div> : null}
-
-      <section className="rounded-2xl border border-slate-200 bg-white p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div><h2 className="font-bold text-slate-900">Créer un dossier</h2><p className="mt-1 text-xs text-slate-500">Seuls les signalements qualifiés sans rattachement actif sont proposés.</p></div>
-          <span className="rounded-full bg-eco-50 px-3 py-1 text-xs font-bold text-eco-800">{availableReports.length} disponible(s)</span>
+    <div className="case-workspace">
+      <header className="case-workspace__hero">
+        <div>
+          <span className="case-workspace__eyebrow">PILOTAGE OPÉRATIONNEL</span>
+          <h1>Dossiers de traitement</h1>
+          <p>Transformez les signalements qualifiés en dossiers suivis, puis pilotez leur prise en charge jusqu’à la clôture.</p>
         </div>
-        <form onSubmit={(event) => void createCase(event)} className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_150px_minmax(0,1fr)_auto]">
-          <label className="text-xs font-bold text-slate-600">Signalement source
-            <select value={selectedReport} onChange={(event) => setSelectedReport(event.target.value)} required disabled={!availableReports.length} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-normal">
-              {availableReports.map((report) => <option key={report.idSignalement} value={report.idSignalement}>{report.utilisateur.prenom ? `${report.utilisateur.prenom} ${report.utilisateur.nom}` : report.utilisateur.nom} · {report.idSignalement.slice(0, 8)}</option>)}
-            </select>
-          </label>
-          <label className="text-xs font-bold text-slate-600">Priorité
-            <select value={priority} onChange={(event) => setPriority(event.target.value)} className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-normal">{['BASSE', 'NORMALE', 'HAUTE', 'CRITIQUE'].map((value) => <option key={value}>{value}</option>)}</select>
-          </label>
-          <label className="text-xs font-bold text-slate-600">Résumé facultatif
-            <input value={summary} onChange={(event) => setSummary(event.target.value)} minLength={10} maxLength={5000} placeholder="Au moins 10 caractères…" className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal" />
-          </label>
-          <div className="flex items-end"><button type="submit" disabled={!selectedReport || creating} className="w-full rounded-lg bg-eco-700 px-4 py-2.5 text-xs font-bold text-white hover:bg-eco-600 disabled:opacity-50">{creating ? 'Création…' : 'Créer le dossier'}</button></div>
-        </form>
-        {availableReports.length ? <div className="mt-4 space-y-2">{availableReports.slice(0, 4).map((report) => <div key={report.idSignalement} className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600"><span className="font-semibold">{report.utilisateur.prenom ? `${report.utilisateur.prenom} ${report.utilisateur.nom}` : report.utilisateur.nom}</span> · {report.description || 'Sans description'} · {report.contenus.map((item) => item.typeDechet.libelle).join(', ')}</div>)}</div> : <p className="mt-3 text-xs text-slate-500">Aucun signalement qualifié non rattaché n'est disponible.</p>}
+        <div className="case-workspace__hero-stamp">
+          <span aria-hidden="true">▤</span>
+          <div><strong>{data ? data.total : '—'}</strong><small>Dossiers au total</small></div>
+        </div>
+      </header>
+
+      {error ? (
+        <div className="case-workspace__error">
+          <FeedbackBanner tone="error">{error}</FeedbackBanner>
+          <button type="button" onClick={() => void load()} disabled={loading} className="workflow-button workflow-button--secondary">Réessayer</button>
+        </div>
+      ) : null}
+
+      <section className="case-workspace__create">
+        <div className="case-workspace__create-heading">
+          <div>
+            <span className="case-workspace__section-eyebrow">NOUVEAU DOSSIER</span>
+            <h2>Créer à partir d’un signalement qualifié</h2>
+            <p>Un signalement source est nécessaire. Vous pourrez ensuite compléter le dossier et y rattacher d’autres signalements.</p>
+          </div>
+          <span className="case-workspace__available">{availableReports.length} disponible(s)</span>
+        </div>
+
+        {availableReports.length ? (
+          <form onSubmit={(event) => void createCase(event)} className="case-workspace__create-form">
+            <div className="case-workspace__create-fields">
+              <label className="case-workspace__field case-workspace__field--source">
+                <span>Signalement source</span>
+                <select value={selectedReport} onChange={(event) => setSelectedReport(event.target.value)} required>
+                  <option value="">Sélectionner un signalement</option>
+                  {availableReports.map((report) => (
+                    <option key={report.idSignalement} value={report.idSignalement}>
+                      {personName(report)} · {report.idSignalement.slice(0, 8).toUpperCase()}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="case-workspace__field">
+                <span>Priorité initiale</span>
+                <select value={priority} onChange={(event) => setPriority(event.target.value)}>
+                  {['BASSE', 'NORMALE', 'HAUTE', 'CRITIQUE'].map((value) => <option key={value} value={value}>{stateLabel(value)}</option>)}
+                </select>
+              </label>
+              <label className="case-workspace__field case-workspace__field--summary">
+                <span>Synthèse <small>Facultative · 10 caractères minimum si renseignée</small></span>
+                <input value={summary} onChange={(event) => setSummary(event.target.value)} minLength={10} maxLength={5000} placeholder="Résumez le contexte opérationnel…" />
+              </label>
+              <button type="submit" disabled={!selectedReport || creating} className="workflow-button workflow-button--primary case-workspace__create-submit">
+                {creating ? 'Création…' : 'Créer le dossier'} <span aria-hidden="true">→</span>
+              </button>
+            </div>
+
+            {selectedSource ? (
+              <div className="case-workspace__source-preview">
+                <span className="case-workspace__source-icon" aria-hidden="true">↳</span>
+                <div>
+                  <strong>Signalement sélectionné · {personName(selectedSource)}</strong>
+                  <p>{selectedSource.description || 'Aucune description fournie.'}</p>
+                  <div>{selectedSource.contenus.map((content) => <span key={content.idTypeDechet}>{content.typeDechet.libelle}</span>)}</div>
+                </div>
+              </div>
+            ) : null}
+          </form>
+        ) : (
+          <div className="case-workspace__no-source">
+            <span aria-hidden="true">✓</span>
+            <div><strong>Aucun signalement à convertir</strong><p>Les signalements qualifiés disponibles apparaîtront ici lorsqu’ils seront prêts à être rattachés à un dossier.</p></div>
+          </div>
+        )}
       </section>
 
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
-          <div><h2 className="font-bold text-slate-900">Dossiers existants</h2><p className="mt-1 text-xs text-slate-500">{data ? `${data.total} dossier(s)` : 'Chargement…'}</p></div>
-          <select value={status} onChange={(event) => { setPage(1); setStatus(event.target.value); }} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600"><option value="">Tous les états</option>{['OUVERT', 'EN_COURS', 'EN_ATTENTE', 'CLOTURE'].map((value) => <option key={value}>{value}</option>)}</select>
+      <section className="case-workspace__list">
+        <div className="case-workspace__list-heading">
+          <div>
+            <span className="case-workspace__section-eyebrow">SUIVI OPÉRATIONNEL</span>
+            <h2>Dossiers existants</h2>
+            <p>{data ? `${data.total} dossier(s) · ${data.items.length} affiché(s) sur cette page` : 'Chargement…'}</p>
+          </div>
+          <button type="button" onClick={() => void load()} disabled={loading} className="workflow-button workflow-button--secondary">{loading ? 'Actualisation…' : 'Actualiser'}</button>
         </div>
-        {loading && !data ? <p className="p-6 text-sm text-slate-500">Chargement des dossiers…</p> : null}
-        {!loading && data?.items.length === 0 ? <p className="p-6 text-sm text-slate-500">Aucun dossier pour ce filtre.</p> : null}
-        <div className="divide-y divide-slate-100">{data?.items.map((item) => <Link key={item.idDossier} to={`/dossiers/${item.idDossier}`} className="block p-5 transition hover:bg-slate-50">
-          <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-bold text-slate-900">{item.referenceDossier}</h3><p className="mt-1 text-xs text-slate-500">Créé le {formatDate(item.dateCreationDossier)}</p></div><div className="flex gap-2"><span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-700">{item.statutDossier}</span><span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-800">{item.priorite}</span></div></div>
-          <p className="mt-3 text-sm text-slate-600">{item.descriptionSynthese}</p>
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500"><span>{item.nombreSignalements} signalement(s)</span><span>·</span><span>{item.contenus.length} catégorie(s)</span>{item.contenus.map((content) => <span key={content.idTypeDechet} className="rounded-full border border-slate-200 px-2 py-1">{content.typeDechet.libelle}</span>)}</div>
-        </Link>)}</div>
-        <div className="flex items-center justify-between border-t border-slate-100 px-5 py-4"><p className="text-xs text-slate-500">Page {page} sur {totalPages}</p><div className="flex gap-2"><button type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={page <= 1 || loading} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold disabled:opacity-40">Précédent</button><button type="button" onClick={() => setPage((value) => Math.min(totalPages, value + 1))} disabled={page >= totalPages || loading} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold disabled:opacity-40">Suivant</button></div></div>
+
+        <div className="case-workspace__filters">
+          <label className="case-workspace__field case-workspace__field--search">
+            <span>Rechercher sur cette page</span>
+            <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Référence, synthèse ou type de déchet…" />
+          </label>
+          <label className="case-workspace__field">
+            <span>État du dossier</span>
+            <select value={status} onChange={(event) => { setPage(1); setStatus(event.target.value); }}>
+              <option value="">Tous les états</option>
+              <option value="OUVERT">Ouvert</option>
+              <option value="EN_COURS">En cours</option>
+              <option value="EN_ATTENTE">En attente</option>
+              <option value="CLOTURE">Clôturé</option>
+            </select>
+          </label>
+          <div className="case-workspace__filter-count"><strong>{filteredCases.length}</strong><span>résultat(s)</span></div>
+        </div>
+
+        <div className="case-workspace__quick-counts">
+          <span><i className="is-open" /> {openCount} ouvert(s) sur cette page</span>
+          <span><i className="is-closed" /> {closedCount} clôturé(s) sur cette page</span>
+        </div>
+
+        {loading && !data ? (
+          <div className="case-workspace__state" role="status"><span className="workflow-state__spinner" /><strong>Chargement des dossiers</strong></div>
+        ) : null}
+        {!loading && data?.items.length === 0 ? (
+          <div className="case-workspace__state"><strong>Aucun dossier pour ce filtre</strong><p>Modifiez le filtre d’état pour afficher d’autres dossiers.</p></div>
+        ) : null}
+        {!loading && (data?.items.length ?? 0) > 0 && filteredCases.length === 0 ? (
+          <div className="case-workspace__state"><strong>Aucun résultat pour cette recherche</strong><p>Essayez une autre référence ou un autre terme.</p><button type="button" onClick={() => setSearch('')}>Effacer la recherche</button></div>
+        ) : null}
+
+        <div className="case-workspace__items">
+          {filteredCases.map((item) => (
+            <Link key={item.idDossier} to={`/dossiers/${item.idDossier}`} className="case-workspace-card">
+              <div className="case-workspace-card__top">
+                <div><span className="case-workspace-card__reference">DOSSIER</span><h3>{item.referenceDossier}</h3></div>
+                <div className="case-workspace-card__badges">
+                  <StatusBadge label={stateLabel(item.statutDossier)} tone={caseStatusTone(item.statutDossier)} />
+                  <StatusBadge label={'Priorité ' + stateLabel(item.priorite)} tone={priorityTone(item.priorite)} />
+                </div>
+              </div>
+              <p className="case-workspace-card__summary">{item.descriptionSynthese || 'Aucune synthèse renseignée.'}</p>
+              <div className="case-workspace-card__footer">
+                <span>{formatDate(item.dateCreationDossier)}</span>
+                <span>{item.nombreSignalements} signalement(s)</span>
+                <span>{item.contenus.length} contenu(s)</span>
+                <span className="case-workspace-card__open">Ouvrir le dossier <b aria-hidden="true">→</b></span>
+              </div>
+              {item.contenus.length ? (
+                <div className="case-workspace-card__tags">
+                  {item.contenus.slice(0, 4).map((content) => <span key={content.idTypeDechet}>{content.typeDechet.libelle}</span>)}
+                  {item.contenus.length > 4 ? <span>+{item.contenus.length - 4}</span> : null}
+                </div>
+              ) : null}
+            </Link>
+          ))}
+        </div>
+
+        {data && data.total > data.pageSize ? (
+          <div className="case-workspace__pagination">
+            <span>Page {page} sur {totalPages}</span>
+            <div>
+              <button type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={page <= 1 || loading} className="workflow-button workflow-button--secondary">Précédent</button>
+              <button type="button" onClick={() => setPage((value) => Math.min(totalPages, value + 1))} disabled={page >= totalPages || loading} className="workflow-button workflow-button--secondary">Suivant</button>
+            </div>
+          </div>
+        ) : null}
       </section>
     </div>
   );

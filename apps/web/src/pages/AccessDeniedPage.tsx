@@ -2,13 +2,17 @@ import { Link } from 'react-router-dom';
 
 export function AccessDeniedPage() {
   return (
-    <div className="mx-auto max-w-xl rounded-2xl border border-amber-200 bg-white p-8 text-center">
-      <p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-700">Accès refusé</p>
-      <h1 className="mt-3 text-2xl font-extrabold text-slate-900">Habilitation manquante</h1>
-      <p className="mt-3 text-sm leading-6 text-slate-600">
-        Votre compte ne possède pas le rôle nécessaire pour accéder à cette page. Les droits sont attribués par l'administration.
+    <section className="page-state-card page-state-card--warning" aria-labelledby="access-denied-title">
+      <div className="page-state-card__icon" aria-hidden="true">!</div>
+      <span className="page-state-card__eyebrow">HABILITATIONS</span>
+      <h1 id="access-denied-title">Cet espace n’est pas accessible.</h1>
+      <p>
+        Votre compte est bien identifié, mais il ne possède pas le rôle requis pour consulter cette page.
+        Les habilitations sont attribuées par l’administration.
       </p>
-      <Link to="/" className="mt-6 inline-flex rounded-lg bg-eco-700 px-4 py-2.5 text-sm font-bold text-white">Retour à l'accueil</Link>
-    </div>
+      <div className="page-state-card__actions">
+        <Link to="/" className="page-state-card__primary">Retour à mon espace</Link>
+      </div>
+    </section>
   );
 }

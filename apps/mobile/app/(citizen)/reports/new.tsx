@@ -9,6 +9,7 @@ import {
   type WasteTypeOption,
 } from '../../../src/features/reports/reports-api';
 import { parseOptionalCoordinate } from '../../../src/features/reports/report-format';
+import { FeedbackBanner } from '../../../src/ui/FeedbackBanner';
 import {
   captureMobilePhoto,
   pickMobilePhotos,
@@ -149,10 +150,29 @@ export default function NewCitizenReportScreen() {
       <Text className="text-xs font-extrabold uppercase tracking-[0.18em] text-brand-forest">Espace citoyen</Text>
       <Text className="mt-3 text-3xl font-extrabold text-ink-900">Signaler un dépôt</Text>
       <Text className="mt-2 text-sm leading-6 text-ink-500">
-        Commencez par une photo ou ajoutez les informations dont vous disposez. La localisation, la description et la catégorie restent facultatives.
+        Ajoutez au moins une information utile : une photo, un lieu, une description ou un type de déchet. La photo et le GPS ne sont pas obligatoires.
       </Text>
 
-      <View className="mt-6 gap-5">
+      <View className="mt-5 rounded-2xl border border-brand-mist bg-brand-mist/70 p-4">
+        <Text className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-brand-petrol">Comment signaler ?</Text>
+        <View className="mt-3 flex-row items-center">
+          {[
+            { number: '01', label: 'Décrire' },
+            { number: '02', label: 'Localiser' },
+            { number: '03', label: 'Transmettre' },
+          ].map((item, index) => (
+            <View key={item.number} className="min-w-0 flex-1 items-center">
+              <View className="h-7 w-7 items-center justify-center rounded-full bg-white">
+                <Text className="text-[9px] font-extrabold text-brand-forest">{item.number}</Text>
+              </View>
+              <Text className="mt-2 text-[10px] font-bold text-ink-700">{item.label}</Text>
+            </View>
+          ))}
+        </View>
+        <Text className="mt-3 text-[10px] leading-4 text-ink-500">La photo est facultative. Ajoutez au moins une information utile pour que le service puisse examiner votre signalement.</Text>
+      </View>
+
+      <View className="mt-5 gap-4">
         <View className="rounded-3xl border border-line-subtle bg-white p-4">
           <View className="flex-row items-center justify-between">
             <Text className="text-sm font-extrabold text-ink-900">1. Photo du dépôt</Text>
@@ -169,7 +189,7 @@ export default function NewCitizenReportScreen() {
             <View className="mt-3 min-h-[180px] items-center justify-center rounded-2xl border border-dashed border-line-strong bg-surface-base px-5 py-6">
               <Text className="text-4xl text-brand-forest">＋</Text>
               <Text className="mt-2 text-sm font-bold text-ink-800">Photographiez le dépôt</Text>
-              <Text className="mt-1 text-center text-xs leading-5 text-ink-500">Prenez une photo maintenant ou choisissez-en une dans votre galerie.</Text>
+              <Text className="mt-1 text-center text-xs leading-5 text-ink-500">Ajoutez une photo si elle aide à reconnaître le dépôt. Elle reste facultative.</Text>
             </View>
           )}
           <View className="mt-3 flex-row gap-2">
@@ -187,7 +207,7 @@ export default function NewCitizenReportScreen() {
           <Text className="text-sm font-extrabold text-ink-900">2. Localisation</Text>
           <Text className="mt-1 text-xs leading-5 text-ink-500">Autorisez la localisation ponctuelle ou indiquez un repère. Vous pouvez aussi envoyer sans GPS.</Text>
           <TouchableOpacity onPress={() => void useCurrentLocation()} disabled={gettingLocation || busy} className="mt-3 rounded-xl bg-brand-mist px-4 py-3 disabled:opacity-50">
-            <Text className="text-center text-xs font-extrabold text-brand-forest">{gettingLocation ? 'Localisation…' : 'Utiliser ma position actuelle'}</Text>
+            <Text className="text-center text-xs font-extrabold text-brand-forest">{gettingLocation ? 'Localisation…' : 'Ajouter ma position GPS'}</Text>
           </TouchableOpacity>
           <TextInput
             value={locationDescription}
@@ -238,7 +258,7 @@ export default function NewCitizenReportScreen() {
         </View>
       </View>
 
-      {error ? <Text accessibilityRole="alert" className="mt-5 rounded-xl border border-status-danger/20 bg-status-danger/5 p-4 text-sm text-status-danger">{error}</Text> : null}
+      {error ? <View className="mt-5"><FeedbackBanner tone="error" message={error} /></View> : null}
       <TouchableOpacity
         onPress={() => void handleSubmit()}
         disabled={busy || mediaBusy || gettingLocation}

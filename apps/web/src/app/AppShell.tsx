@@ -1,17 +1,24 @@
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './auth-context';
 import { navigationItems, type NavigationGroup } from './navigation';
 import { AppIcon } from '../components/AppIcon';
+import { BrandMark } from '../components/BrandMark';
 
 const groups: NavigationGroup[] = ['Opérations', 'Administration'];
 
 export function AppShell() {
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const activeRoles = profile?.roles ?? [];
   const links = navigationItems.filter((item) =>
     item.roles.some((role) => activeRoles.some((active) => active.code === role)),
   );
+  const currentItem = links.find((item) =>
+    location.pathname === item.to || location.pathname.startsWith(item.to + '/'),
+  );
+  const pageGroup = currentItem?.group ?? 'Supervision';
+  const pageTitle = currentItem?.label ?? 'Vue d’ensemble';
   const initials = [profile?.prenom?.[0], profile?.nom?.[0]].filter(Boolean).join('').toUpperCase() || 'IS';
 
   async function handleSignOut() {
@@ -27,11 +34,7 @@ export function AppShell() {
     <div className="app-shell">
       <aside className="app-sidebar">
         <Link to="/" className="app-brand" aria-label="ISIECO, accueil du back office">
-          <span className="app-brand__mark">IE</span>
-          <span className="app-brand__copy">
-            <strong>ISIECO</strong>
-            <small>PROPRETÉ URBAINE</small>
-          </span>
+          <BrandMark />
         </Link>
 
         <div className="app-sidebar__context">
@@ -44,7 +47,7 @@ export function AppShell() {
           <NavLink
             to="/"
             end
-            className={({ isActive }) => `app-nav-link ${isActive ? 'is-active' : ''}`}
+            className={({ isActive }) => `app-nav-link \${isActive ? 'is-active' : ''}`}
           >
             <span className="app-nav-link__icon"><AppIcon name="overview" /></span>
             <span>Vue d’ensemble</span>
@@ -60,7 +63,7 @@ export function AppShell() {
                   <NavLink
                     key={item.to}
                     to={item.to}
-                    className={({ isActive }) => `app-nav-link ${isActive ? 'is-active' : ''}`}
+                    className={({ isActive }) => `app-nav-link \${isActive ? 'is-active' : ''}`}
                     title={item.description}
                   >
                     <span className="app-nav-link__icon"><AppIcon name={item.icon} /></span>
@@ -76,7 +79,7 @@ export function AppShell() {
           <div className="app-user-card">
             <span className="app-user-avatar">{initials}</span>
             <span className="app-user-card__identity">
-              <strong>{profile?.prenom ? `${profile.prenom} ${profile.nom}` : profile?.nom}</strong>
+              <strong>{profile?.prenom ? `\${profile.prenom} \${profile.nom}` : profile?.nom}</strong>
               <small>{profile?.email}</small>
             </span>
           </div>
@@ -90,22 +93,26 @@ export function AppShell() {
       <div className="app-main">
         <header className="app-topbar">
           <div className="app-topbar__titles">
-            <span className="app-topbar__eyebrow">ISIECO / GESTION DES OPÉRATIONS</span>
-            <strong>Plateforme de propreté urbaine</strong>
+            <span className="app-topbar__eyebrow">ISIECO / {pageGroup.toUpperCase()}</span>
+            <strong>{pageTitle}</strong>
           </div>
           <div className="app-topbar__account">
             <span className="app-role-count">{activeRoles.length} habilitation{activeRoles.length > 1 ? 's' : ''}</span>
             <span className="app-user-avatar app-user-avatar--small">{initials}</span>
+            <button type="button" onClick={() => void handleSignOut()} className="app-topbar__signout">
+              <AppIcon name="logout" size={14} />
+              <span>Déconnexion</span>
+            </button>
           </div>
         </header>
 
         <nav className="app-mobile-nav" aria-label="Navigation des espaces">
-          <NavLink to="/" end className={({ isActive }) => `app-mobile-nav__link ${isActive ? 'is-active' : ''}`}>
+          <NavLink to="/" end className={({ isActive }) => `app-mobile-nav__link \${isActive ? 'is-active' : ''}`}>
             <AppIcon name="overview" size={16} />
             <span>Vue d’ensemble</span>
           </NavLink>
           {links.map((item) => (
-            <NavLink key={item.to} to={item.to} className={({ isActive }) => `app-mobile-nav__link ${isActive ? 'is-active' : ''}`}>
+            <NavLink key={item.to} to={item.to} className={({ isActive }) => `app-mobile-nav__link \${isActive ? 'is-active' : ''}`}>
               <AppIcon name={item.icon} size={16} />
               <span>{item.label}</span>
             </NavLink>

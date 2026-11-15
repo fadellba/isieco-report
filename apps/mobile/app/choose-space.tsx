@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { useMobileAuth } from '../src/features/auth/mobile-auth-context';
-import { BrandMark } from '../src/ui/BrandMark';
+import { AuthScreenFrame } from '../src/ui/AuthScreenFrame';
 
 export default function ChooseSpaceScreen() {
   const router = useRouter();
@@ -10,25 +10,42 @@ export default function ChooseSpaceScreen() {
   const hasAgent = profile?.roles.some((role) => role.code === 'AGENT_TERRAIN') ?? false;
 
   return (
-    <View className="flex-1 justify-center bg-surface-base px-6 py-10">
-      <BrandMark />
-      <Text className="mt-10 text-xs font-bold uppercase tracking-[0.16em] text-brand-forest">Bienvenue sur ISIECO</Text>
-      <Text className="mt-2 text-3xl font-extrabold tracking-tight text-ink-900">Quel espace souhaitez-vous ouvrir ?</Text>
-      <Text className="mt-3 text-sm leading-6 text-ink-500">Votre compte dispose de plusieurs espaces. Vous pourrez changer à tout moment depuis votre profil.</Text>
+    <AuthScreenFrame
+      eyebrow="Vos accès ISIECO"
+      title="Choisissez votre espace."
+      description="Votre compte dispose de plusieurs espaces. Sélectionnez celui qui correspond à votre action du moment."
+    >
       {hasCitizen ? (
-        <TouchableOpacity onPress={() => router.replace('/(citizen)/home')} className="mt-7 rounded-3xl bg-brand-forest p-5">
-          <Text className="text-xs font-bold uppercase tracking-wide text-white/70">Espace citoyen</Text>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.replace('/(citizen)/home')}
+          className="rounded-2xl bg-brand-forest p-5"
+        >
+          <Text className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-brand-lime">Espace citoyen</Text>
           <Text className="mt-2 text-xl font-extrabold text-white">Signaler et suivre</Text>
-          <Text className="mt-1 text-sm text-white/75">Déclarer un dépôt et suivre son traitement.</Text>
-        </TouchableOpacity>
+          <Text className="mt-2 text-xs leading-5 text-white/75">Déclarer un dépôt, consulter vos signalements et suivre leur traitement.</Text>
+          <Text className="mt-5 text-xs font-extrabold text-white">Ouvrir cet espace  →</Text>
+        </Pressable>
       ) : null}
+
       {hasAgent ? (
-        <TouchableOpacity onPress={() => router.replace('/(agent)/home')} className="mt-3 rounded-3xl border border-line-subtle bg-white p-5">
-          <Text className="text-xs font-bold uppercase tracking-wide text-brand-forest">Espace agent</Text>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.replace('/(agent)/home')}
+          className="mt-3 rounded-2xl border border-line-subtle bg-surface-base p-5"
+        >
+          <Text className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-brand-petrol">Espace agent</Text>
           <Text className="mt-2 text-xl font-extrabold text-ink-900">Mes missions terrain</Text>
-          <Text className="mt-1 text-sm text-ink-500">Consulter les affectations et rendre compte des interventions.</Text>
-        </TouchableOpacity>
+          <Text className="mt-2 text-xs leading-5 text-ink-500">Consulter les affectations, documenter les interventions et transmettre les comptes rendus.</Text>
+          <Text className="mt-5 text-xs font-extrabold text-brand-forest">Ouvrir cet espace  →</Text>
+        </Pressable>
       ) : null}
-    </View>
+
+      <View className="mt-5 rounded-xl border border-line-subtle px-4 py-3">
+        <Text className="text-[10px] leading-5 text-ink-500">
+          Les espaces disponibles sont déterminés par les habilitations actives de votre compte.
+        </Text>
+      </View>
+    </AuthScreenFrame>
   );
 }
