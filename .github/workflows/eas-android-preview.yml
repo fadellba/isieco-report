@@ -1,6 +1,15 @@
 name: Android preview APK
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/mobile/**"
+      - "packages/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/eas-android-preview.yml"
+  workflow_dispatch:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened]
@@ -15,22 +24,32 @@ permissions:
   contents: read
 
 concurrency:
-  group: android-preview-${{ github.event.pull_request.number }}
+  group: android-preview-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 
 jobs:
   build-android-preview:
     name: Build internal Android APK
     if: >-
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      github.event.pull_request.head.ref == 'feat/isieco-ux-ui-foundation'
+      github.repository == 'fadellba/isieco-report' &&
+      (
+        (
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          github.event.pull_request.head.ref == 'feat/isieco-ux-ui-foundation'
+        ) ||
+        (
+          (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+          github.ref == 'refs/heads/main'
+        )
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
-      - name: Checkout PR source
+      - name: Checkout source
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -74,7 +93,7 @@ jobs:
       - name: Build preview APK (no store submission)
         if: steps.expo-auth.outputs.available == 'true'
         working-directory: apps/mobile
-        run: eas build --profile preview-apk --platform android --non-interactive
+        run: eas build --profile preview-apk --platform android --non-interactive --wait
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
