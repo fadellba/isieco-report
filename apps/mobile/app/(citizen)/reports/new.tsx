@@ -16,6 +16,7 @@ import {
   requestCurrentForegroundCoordinates,
   type PreparedMobilePhoto,
 } from '../../../src/features/media/mobile-media';
+import NativeMapCanvas, { type NativeMapMarker } from '../../../src/ui/NativeMapCanvas';
 
 const inputClass = 'mt-1 rounded-xl border border-line-strong bg-white px-4 py-3 text-base text-ink-900';
 
@@ -86,6 +87,23 @@ export default function NewCitizenReportScreen() {
       setGettingLocation(false);
     }
   }
+
+  async function chooseMapCenter(coordinates: { latitude: number; longitude: number }) {
+    setLatitude(coordinates.latitude.toFixed(6));
+    setLongitude(coordinates.longitude.toFixed(6));
+    setPrecision('');
+  }
+
+  const mapMarkers: NativeMapMarker[] = latitude.trim() && longitude.trim()
+    ? [{
+        id: 'new-report-location',
+        title: 'Lieu du signalement',
+        subtitle: locationDescription || 'Emplacement choisi',
+        latitude: Number(latitude),
+        longitude: Number(longitude),
+        tone: 'success',
+      }]
+    : [];
 
   async function handleSubmit() {
     setError(null);
@@ -205,7 +223,18 @@ export default function NewCitizenReportScreen() {
 
         <View className="rounded-3xl border border-line-subtle bg-white p-4">
           <Text className="text-sm font-extrabold text-ink-900">2. Localisation</Text>
-          <Text className="mt-1 text-xs leading-5 text-ink-500">Autorisez la localisation ponctuelle ou indiquez un repère. Vous pouvez aussi envoyer sans GPS.</Text>
+          <Text className="mt-1 text-xs leading-5 text-ink-500">Ajoutez votre position GPS ou déplacez la carte pour choisir précisément le point du dépôt. Le GPS reste facultatif.</Text>
+          <View className="mt-3 overflow-hidden rounded-2xl border border-line-subtle">
+            <NativeMapCanvas
+              markers={mapMarkers}
+              onSelect={async () => undefined}
+              centerCoordinates={latitude.trim() && longitude.trim() ? { latitude: Number(latitude), longitude: Number(longitude) } : null}
+              allowCenterSelection
+              onChooseCenter={chooseMapCenter}
+              emptyLabel="Déplacez la carte puis choisissez le centre pour placer le repère."
+              dom={{ style: { width: '100%', height: 220 }, userAgent: 'ISIECO/0.1.0 (+https://github.com/fadellba/isieco-report)' }}
+            />
+          </View>
           <TouchableOpacity onPress={() => void useCurrentLocation()} disabled={gettingLocation || busy} className="mt-3 rounded-xl bg-brand-mist px-4 py-3 disabled:opacity-50">
             <Text className="text-center text-xs font-extrabold text-brand-forest">{gettingLocation ? 'Localisation…' : 'Ajouter ma position GPS'}</Text>
           </TouchableOpacity>
