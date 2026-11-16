@@ -204,3 +204,13 @@
   .command-center__side-panel { display: flex; }
   .command-center__updated { font-size: 9px; }
 }
+
+@media (max-width: 820px) {
+  .app-mobile-nav { gap: 5px; padding: 9px 14px; border-bottom-color: #e7ece6; background: #fff; }
+  .app-mobile-nav__link { border-radius: 999px; color: #5e7569; }
+  .app-mobile-nav__link.is-active { background: #e8f3e7; color: #176d46; }
+}
+@media (max-width: 620px) {
+  .app-content { padding: 16px 13px 28px; }
+  .app-topbar__account { gap: 8px; }
+}
