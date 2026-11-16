@@ -8,6 +8,7 @@ import {
 import { dateLabel } from '../../src/features/reports/report-format';
 import { FeedbackBanner } from '../../src/ui/FeedbackBanner';
 import { StatusBadge, type StatusTone } from '../../src/ui/StatusBadge';
+import NativeMapCanvas, { type NativeMapMarker } from '../../src/ui/NativeMapCanvas';
 
 type MissionState = 'TO_ACCEPT' | 'TO_START' | 'IN_PROGRESS' | 'TO_VERIFY' | 'RESTART' | 'RESOLVED' | 'REFUSED';
 type MapFilter = 'ALL' | 'ACTION' | 'IN_PROGRESS' | 'TO_VERIFY' | 'RESOLVED';
@@ -144,6 +145,19 @@ export default function AgentMapScreen() {
     }), [teamFiltered, filter, latestByAssignment]);
 
   const located = useMemo(() => filtered.filter((assignment) => coordinatesFor(assignment) !== null), [filtered]);
+  const mapMarkers = useMemo<NativeMapMarker[]>(() => located.flatMap((assignment) => {
+    const coordinate = coordinatesFor(assignment);
+    if (!coordinate) return [];
+    const state = missionState(assignment, latestByAssignment.get(assignment.idAffectation));
+    return [{
+      id: assignment.idAffectation,
+      title: assignment.contenuDossier.dossier.referenceDossier,
+      subtitle: assignment.contenuDossier.dossier.descriptionLocalisation || assignment.contenuDossier.typeDechet.libelle,
+      latitude: coordinate.latitude,
+      longitude: coordinate.longitude,
+      tone: state === 'TO_VERIFY' ? 'warning' : state === 'RESOLVED' ? 'success' : 'danger',
+    }];
+  }), [located, latestByAssignment]);
   const withoutCoordinates = useMemo(() => filtered.filter((assignment) => coordinatesFor(assignment) === null), [filtered]);
   const selectedAssignment = useMemo(
     () => located.find((assignment) => assignment.idAffectation === selectedMissionId) ?? located[0] ?? null,
@@ -300,31 +314,23 @@ export default function AgentMapScreen() {
           ) : (
             <>
                             <View className="overflow-hidden rounded-3xl border border-line-subtle bg-white">
-                <View className="bg-brand-mist px-5 py-6">
-                  <Text className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-brand-petrol">CARTOGRAPHIE LIBRE</Text>
-                  <Text className="mt-2 text-xl font-extrabold text-ink-900">OpenStreetMap</Text>
-                  <Text className="mt-2 text-sm leading-6 text-ink-600">
-                    Aucun compte, aucune clé API et aucun SDK cartographique payant. L’emplacement s’ouvre dans le navigateur de l’appareil.
-                  </Text>
-                  {selectedAssignment ? (() => {
-                    const coordinate = coordinatesFor(selectedAssignment);
-                    return (
-                      <View className="mt-5 rounded-2xl border border-line-subtle bg-white p-4">
-                        <Text className="text-[9px] font-extrabold uppercase tracking-[0.12em] text-brand-petrol">EMPLACEMENT SÉLECTIONNÉ</Text>
-                        <Text className="mt-1 text-sm font-extrabold text-ink-900">{selectedAssignment.contenuDossier.dossier.referenceDossier}</Text>
-                        <Text className="mt-1 text-[10px] text-ink-500">
-                          {coordinate ? coordinate.latitude.toFixed(5) + ', ' + coordinate.longitude.toFixed(5) : ''}
-                        </Text>
-                        <Pressable onPress={() => void openOpenStreetMap(selectedAssignment)} className="mt-4 rounded-xl bg-brand-forest px-4 py-3">
-                          <Text className="text-center text-xs font-extrabold text-white">Ouvrir sur OpenStreetMap</Text>
-                        </Pressable>
-                      </View>
-                    );
-                  })() : null}
+                <View className="flex-row items-center justify-between bg-white px-4 py-4">
+                  <View>
+                    <Text className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-brand-petrol">ESPACE AGENT · TERRAIN</Text>
+                    <Text className="mt-1 text-lg font-extrabold text-ink-900">Carte des missions</Text>
+                    <Text className="mt-1 text-[10px] text-ink-500">Sélectionnez un marqueur pour afficher la mission.</Text>
+                  </View>
+                  <View className="rounded-full bg-brand-mist px-3 py-2">
+                    <Text className="text-[9px] font-extrabold text-brand-forest">{located.length} site(s)</Text>
+                  </View>
                 </View>
-                <View className="border-t border-line-subtle bg-white px-4 py-3">
-                  <Text className="text-[9px] font-semibold text-ink-400">© Contributeurs OpenStreetMap · Données sous licence ODbL</Text>
-                </View>
+                <NativeMapCanvas
+                  markers={mapMarkers}
+                  selectedId={selectedAssignment?.idAffectation ?? selectedMissionId}
+                  onSelect={async (id) => setSelectedMissionId(id)}
+                  emptyLabel="Aucune mission géolocalisée dans cette vue."
+                  dom={{ style: { width: '100%', height: 300 }, userAgent: 'ISIECO/0.1.0 (+https://github.com/fadellba/isieco-report)' }}
+                />
               </View>
 
               {selectedAssignment ? (() => {
