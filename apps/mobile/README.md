@@ -68,7 +68,7 @@ L'API reste l'autorité : elle vérifie le propriétaire du signalement ou l'aut
 
 `eas.json` contient les profils `preview-apk` et `production-apk`. Le profil `preview-apk` embarque les paramètres **publics** de staging (URL API, URL Supabase et clé publishable Supabase) ; aucune clé privilégiée n'est incluse. La CI standard valide les tests, le typecheck et l'export JavaScript Android, mais cet export n'est **pas** un APK installable.
 
-Le workflow GitHub Actions `.github/workflows/eas-android-preview.yml` est limité à la PR #101 et à la branche `feat/isieco-ux-ui-foundation`. Il lance le profil interne `preview-apk` après une mise à jour de la PR qui touche l'application Mobile ou ses dépendances. Il ne publie rien sur Google Play. Le workflow ne reçoit le jeton Expo que sur les étapes EAS ; sans le secret, il signale que le build natif a été ignoré.
+Le workflow GitHub Actions `.github/workflows/eas-android-preview.yml` construit un APK interne pour les PR Mobile autorisées, notamment `feat/isieco-ux-ui-foundation` et `feat/frontend-reference-fidelity`, lorsque les sources Mobile ou leurs dépendances changent. Il ne publie rien sur Google Play. Le workflow ne reçoit le jeton Expo que sur les étapes EAS ; sans le secret, il signale que le build natif a été ignoré.
 
 Pour activer le build, ajouter un secret GitHub Actions nommé `EXPO_TOKEN` dans [les secrets du dépôt](https://github.com/fadellba/isieco-report/settings/secrets/actions). Ne jamais mettre ce jeton dans le dépôt, dans `eas.json` ou dans une conversation. Une fois le secret disponible, relancer le workflow Android preview depuis l'onglet Actions.
 
@@ -86,6 +86,6 @@ Les notifications, le mode hors connexion et l'affichage des preuves d'intervent
 
 ### Configuration des services natifs
 
-La cartographie mobile utilise les liens OpenStreetMap : aucune clé API, aucun compte fournisseur et aucune configuration EAS ne sont nécessaires. L'ouverture de la carte se fait dans le navigateur de l'appareil. Respecter l'attribution OpenStreetMap et les conditions d'utilisation du service public.
+La cartographie Mobile utilise un composant cartographique intégré basé sur les tuiles raster OpenStreetMap, via un composant Expo DOM (`'use dom'`) compatible avec Expo SDK 57. Aucune clé API, aucun compte fournisseur ni configuration EAS cartographique ne sont nécessaires. L'accueil citoyen n'affiche que les signalements du compte connecté disposant de coordonnées ; le détail et le formulaire permettent de visualiser ou de choisir un emplacement. L'espace agent affiche les seules affectations des équipes auxquelles le compte appartient, avec coordonnées réelles et sélection d'une mission. L'attribution OpenStreetMap et un lien de signalement d'erreur cartographique restent visibles. L'application identifie les requêtes avec un User-Agent stable et ne précharge pas de zones hors écran ; les tuiles ne sont pas proposées en téléchargement hors ligne. Respecter les conditions d'utilisation du service public.
 
 Pour tester la récupération de compte, autoriser dans Supabase Auth les URLs de redirection Web de l'application vers `/reinitialiser-mot-de-passe` ainsi que le schéma mobile `isiecoreport://**`. Vérifier le parcours sur des comptes de test, y compris un lien expiré.
