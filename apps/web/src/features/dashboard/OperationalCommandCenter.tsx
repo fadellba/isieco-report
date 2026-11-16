@@ -430,7 +430,7 @@ export function OperationalCommandCenter() {
         <aside className="command-center__side-panel">
           <section className="command-center__activity-card" aria-label="Activité récente">
             <div className="command-center__side-heading">
-              <div><h3>Activité récente</h3><p>Derniers signalements et dossiers connus</p></div>
+              <div><h3>Activité récente</h3><p>Éléments récents de la zone affichée</p></div>
               <span>{recentFeatures.length}</span>
             </div>
             {recentFeatures.length ? (
@@ -454,7 +454,7 @@ export function OperationalCommandCenter() {
               </div>
             ) : (
               <div className="command-center__activity-empty">
-                {loading ? 'Chargement des dernières données…' : 'Aucun signalement ou dossier géolocalisé à afficher.'}
+                {loading ? 'Chargement des dernières données…' : 'Aucun élément géolocalisé dans cette zone.'}
               </div>
             )}
           </section>
