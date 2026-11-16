@@ -16,6 +16,7 @@ import { dateLabel, reportStatusLabel } from '../../../src/features/reports/repo
 import { StatusBadge, type StatusTone } from '../../../src/ui/StatusBadge';
 import { FeedbackBanner } from '../../../src/ui/FeedbackBanner';
 import { BrandMark } from '../../../src/ui/BrandMark';
+import NativeMapCanvas, { type NativeMapMarker } from '../../../src/ui/NativeMapCanvas';
 import { captureMobilePhoto, pickMobilePhotos, type PreparedMobilePhoto } from '../../../src/features/media/mobile-media';
 
 const inputClass = 'mt-2 min-h-[100px] rounded-xl border border-line-strong bg-white px-4 py-3 text-sm text-ink-900';
@@ -253,6 +254,32 @@ export default function CitizenReportDetailScreen() {
             ) : null}
           </View>
 
+
+          {report.latitude !== null && report.longitude !== null &&
+            Number.isFinite(Number(report.latitude)) && Number.isFinite(Number(report.longitude)) &&
+            Number(report.latitude) >= -90 && Number(report.latitude) <= 90 &&
+            Number(report.longitude) >= -180 && Number(report.longitude) <= 180 ? (
+            <View className="mt-6 overflow-hidden rounded-2xl border border-line-subtle bg-white">
+              <View className="px-4 py-4">
+                <Text className="text-base font-extrabold text-ink-900">Localisation du signalement</Text>
+                <Text className="mt-1 text-[10px] text-ink-500">{report.descriptionLocalisation || 'Emplacement transmis avec le signalement'}</Text>
+              </View>
+              <NativeMapCanvas
+                markers={[{
+                  id: report.idSignalement,
+                  title: 'Votre signalement',
+                  subtitle: report.descriptionLocalisation || 'Emplacement du dépôt',
+                  latitude: Number(report.latitude),
+                  longitude: Number(report.longitude),
+                  tone: 'success',
+                } satisfies NativeMapMarker]}
+                selectedId={report.idSignalement}
+                onSelect={async () => undefined}
+                centerCoordinates={{ latitude: Number(report.latitude), longitude: Number(report.longitude) }}
+                dom={{ style: { width: '100%', height: 190 }, userAgent: 'ISIECO/0.1.0 (+https://github.com/fadellba/isieco-report)' }}
+              />
+            </View>
+          ) : null}
 
           <View className="mt-6 rounded-2xl border border-line-subtle bg-white p-5">
             <Text className="text-base font-extrabold text-ink-900">Chronologie du traitement</Text>
