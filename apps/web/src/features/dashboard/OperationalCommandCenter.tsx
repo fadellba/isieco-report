@@ -76,14 +76,10 @@ function statusLabel(status: string) {
 }
 
 const metricCards = [
-  { key: 'openCases', label: 'Dossiers ouverts', hint: 'Dossiers non clôturés' },
-  { key: 'urgentCases', label: 'Priorité haute / critique', hint: 'À surveiller en premier' },
-  { key: 'reportsAwaitingQualification', label: 'À qualifier', hint: 'Soumis ou complément reçu' },
-  { key: 'reportsAwaitingCitizen', label: 'Attente citoyen', hint: 'Complément demandé' },
-  { key: 'activeAssignments', label: 'Affectations actives', hint: 'Missions non terminées' },
-  { key: 'activeInterventions', label: 'Interventions actives', hint: 'Travaux en cours sur le terrain' },
-  { key: 'pendingVerifications', label: 'À vérifier', hint: 'Comptes rendus transmis' },
-  { key: 'withoutLocation', label: 'Sans coordonnées', hint: 'À géolocaliser pour la carte' },
+  { key: 'reportsAwaitingQualification', label: 'Signalements à traiter', hint: 'Soumis ou complément reçu', accent: 'leaf' },
+  { key: 'activeInterventions', label: 'Interventions en cours', hint: 'Opérations terrain actives', accent: 'truck' },
+  { key: 'openCases', label: 'Dossiers ouverts', hint: 'Dossiers non clôturés', accent: 'check' },
+  { key: 'pendingVerifications', label: 'À vérifier', hint: 'Comptes rendus transmis', accent: 'clock' },
 ] as const;
 
 type MetricKey = (typeof metricCards)[number]['key'];
@@ -312,6 +308,14 @@ export function OperationalCommandCenter() {
     [filteredFeatures, selectedFeatureId],
   );
 
+  const recentFeatures = useMemo(
+    () => [...(data?.map.items ?? [])]
+      .filter((item) => item.occurredAt)
+      .sort((left, right) => new Date(right.occurredAt ?? 0).getTime() - new Date(left.occurredAt ?? 0).getTime())
+      .slice(0, 4),
+    [data],
+  );
+
   const selectedActions = useMemo(() => {
     if (!selectedFeature) return [];
     if (selectedFeature.kind === 'SIGNALEMENT') {
@@ -333,15 +337,27 @@ export function OperationalCommandCenter() {
   }, [selectedFeature, roles]);
 
   return (
-    <section className="command-center" aria-label="Centre de commandement opérationnel">
-      <div className="command-center__heading">
-        <div>
-          <p className="dashboard-eyebrow">PILOTAGE OPÉRATIONNEL</p>
-          <h2>Centre de commandement</h2>
-          <p>Vue agrégée des dossiers, signalements et missions disposant de données géographiques.</p>
-        </div>
-        <div className="command-center__refresh">
-          {data ? <span>Actualisé à {new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' }).format(new Date(data.generatedAt))}</span> : null}
+    <section className="command-center command-center--reference" aria-label="Centre de commandement opérationnel">
+      <div className="command-center__toolbar">
+        <label className="command-center__global-search">
+          <span aria-hidden="true">⌕</span>
+          <input
+            type="search"
+            value={searchTerm}
+            onChange={(event) => {
+              setSearchTerm(event.target.value);
+              setSelectedFeatureId(null);
+            }}
+            placeholder="Rechercher un signalement, une adresse…"
+            aria-label="Rechercher un signalement, une adresse ou une équipe"
+          />
+        </label>
+        <div className="command-center__toolbar-actions">
+          {data ? (
+            <span className="command-center__updated">
+              <i /> En temps réel · {new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' }).format(new Date(data.generatedAt))}
+            </span>
+          ) : null}
           <button type="button" onClick={() => void load(true)} disabled={refreshing || loading}>
             {refreshing ? 'Actualisation…' : 'Actualiser'}
           </button>
@@ -357,114 +373,145 @@ export function OperationalCommandCenter() {
 
       <div className="command-center__metrics">
         {metricCards.map((metric) => (
-          <article className="command-center__metric" key={metric.key}>
-            <span>{metric.label}</span>
-            <strong>{loading && !data ? '—' : numberFormat.format(data?.summary[metric.key as MetricKey] ?? 0)}</strong>
-            <small>{metric.hint}</small>
+          <article className={`command-center__metric command-center__metric--${metric.accent}`} key={metric.key}>
+            <span className="command-center__metric-icon" aria-hidden="true" />
+            <div className="command-center__metric-copy">
+              <strong>{loading && !data ? '—' : numberFormat.format(data?.summary[metric.key as MetricKey] ?? 0)}</strong>
+              <span>{metric.label}</span>
+              <small>{metric.hint}</small>
+            </div>
           </article>
         ))}
       </div>
 
-      <div className="command-center__map-heading">
-        <div>
-          <h3>Carte des opérations</h3>
-          <p>
-            {data
-              ? `${numberFormat.format(filteredFeatures.length)} / ${numberFormat.format(data.map.totalLocated)} entité(s) affichée(s) · ${numberFormat.format(data.summary.withoutLocation)} sans coordonnées`
-              : 'Chargement des données géographiques…'}
-          </p>
-        </div>
-        <div className="command-center__legend">
-          <span><i className="is-case" /> Dossier</span>
-          <span><i className="is-report" /> Signalement</span>
-          <span><i className="is-cluster" /> Groupe de points</span>
-        </div>
-      </div>
-
-      <div className="command-center__filters">
-        <div className="command-center__filter-tabs" role="group" aria-label="Filtrer les types d'entités">
-          {([
-            ['TOUS', 'Tout'],
-            ['DOSSIER', 'Dossiers'],
-            ['SIGNALEMENT', 'Signalements'],
-          ] as const).map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              className={kindFilter === value ? 'is-active' : ''}
-              aria-pressed={kindFilter === value}
-              onClick={() => {
-                setKindFilter(value);
-                setSelectedFeatureId(null);
-              }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <label className="command-center__search">
-          <span>Rechercher</span>
-          <input
-            type="search"
-            value={searchTerm}
-            onChange={(event) => {
-              setSearchTerm(event.target.value);
-              setSelectedFeatureId(null);
-            }}
-            placeholder="Référence, statut, lieu, équipe, déchet…"
-          />
-        </label>
-      </div>
-
-      {data ? (
-        <OperationalMap
-          features={filteredFeatures}
-          selectedFeatureId={selectedFeatureId}
-          onSelectFeature={setSelectedFeatureId}
-          onViewportChange={setViewportBounds}
-        />
-      ) : (
-        <div className="command-center__map-loading">
-          {loading ? 'Chargement de la carte opérationnelle…' : 'Les données de la carte ne sont pas disponibles.'}
-        </div>
-      )}
-
-      {data?.map.hasMore ? (
-        <div className="command-center__pagination">
-          <button type="button" onClick={() => void loadMore()} disabled={loadingMore || loading}>
-            {loadingMore ? 'Chargement…' : 'Charger les éléments suivants'}
-          </button>
-        </div>
-      ) : null}
-
-      <div className="command-center__footnote">
-        Les résultats sont limités à la zone visible. Actualisation périodique toutes les 60 secondes ; aucune position GPS d’agent n’est collectée.
-      </div>
-
-      {selectedFeature ? (
-        <div className="command-center__selected" aria-live="polite">
-          <div>
-            <span className={selectedFeature.kind === 'DOSSIER' ? 'command-center__type command-center__type--case' : 'command-center__type command-center__type--report'}>
-              {selectedFeature.kind === 'DOSSIER' ? 'Dossier' : 'Signalement'}
-            </span>
-            <strong>{selectedFeature.title}</strong>
-            <span>{statusLabel(selectedFeature.status)}{selectedFeature.priority ? ` · Priorité ${selectedFeature.priority.toLowerCase()}` : ''}</span>
-            <small>{selectedFeature.locationLabel || 'Localisation textuelle non renseignée'} · {dateTimeLabel(selectedFeature.occurredAt)}</small>
-            {selectedFeature.teamNames.length ? <small>Équipe(s) : {selectedFeature.teamNames.join(', ')}</small> : null}
-            {selectedFeature.wasteTypes.length ? <small>Déchets : {selectedFeature.wasteTypes.join(', ')}</small> : null}
-            <div className="command-center__actions">
-              {selectedActions.length ? selectedActions.map((action) => (
-                <Link key={action.to} to={action.to}>{action.label}</Link>
-              )) : (
-                <span className="command-center__read-only">
-                  Aucune action directe disponible pour vos habilitations sur cette entité.
-                </span>
-              )}
+      <div className="command-center__body-grid">
+        <div className="command-center__map-column">
+          <div className="command-center__map-heading">
+            <div>
+              <h3>Carte opérationnelle</h3>
+              <p>
+                {data
+                  ? `${numberFormat.format(filteredFeatures.length)} / ${numberFormat.format(data.map.totalLocated)} entité(s) visibles · ${numberFormat.format(data.summary.withoutLocation)} sans coordonnées`
+                  : 'Chargement des données géographiques…'}
+              </p>
+            </div>
+            <div className="command-center__legend">
+              <span><i className="is-report" /> Signalement</span>
+              <span><i className="is-case" /> Dossier</span>
+              <span><i className="is-cluster" /> Groupe</span>
             </div>
           </div>
-          <button type="button" onClick={() => setSelectedFeatureId(null)}>Fermer</button>
+
+          {data ? (
+            <OperationalMap
+              features={filteredFeatures}
+              selectedFeatureId={selectedFeatureId}
+              onSelectFeature={setSelectedFeatureId}
+              onViewportChange={setViewportBounds}
+            />
+          ) : (
+            <div className="command-center__map-loading">
+              {loading ? 'Chargement de la carte opérationnelle…' : 'Les données de la carte ne sont pas disponibles.'}
+            </div>
+          )}
+
+          {data?.map.hasMore ? (
+            <div className="command-center__pagination">
+              <button type="button" onClick={() => void loadMore()} disabled={loadingMore || loading}>
+                {loadingMore ? 'Chargement…' : 'Charger les éléments suivants'}
+              </button>
+            </div>
+          ) : null}
+          <p className="command-center__footnote">
+            Les éléments affichés sont limités à la zone visible. Actualisation événementielle, avec secours périodique toutes les 60 secondes. Aucune position GPS d’agent n’est collectée.
+          </p>
         </div>
-      ) : null}
+
+        <aside className="command-center__side-panel">
+          <section className="command-center__activity-card" aria-label="Activité récente">
+            <div className="command-center__side-heading">
+              <div><h3>Activité récente</h3><p>Derniers signalements et dossiers connus</p></div>
+              <span>{recentFeatures.length}</span>
+            </div>
+            {recentFeatures.length ? (
+              <div className="command-center__activity-list">
+                {recentFeatures.map((item) => (
+                  <button
+                    key={item.kind + ':' + item.id}
+                    type="button"
+                    className={selectedFeatureId === item.id ? 'command-center__activity-item is-selected' : 'command-center__activity-item'}
+                    onClick={() => setSelectedFeatureId(item.id)}
+                  >
+                    <i className={item.kind === 'DOSSIER' ? 'is-case' : 'is-report'} />
+                    <span className="command-center__activity-copy">
+                      <strong>{item.title}</strong>
+                      <small>{statusLabel(item.status)} · {dateTimeLabel(item.occurredAt)}</small>
+                      {item.locationLabel ? <small>{item.locationLabel}</small> : null}
+                    </span>
+                    <span className="command-center__activity-arrow">›</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="command-center__activity-empty">
+                {loading ? 'Chargement des dernières données…' : 'Aucun signalement ou dossier géolocalisé à afficher.'}
+              </div>
+            )}
+          </section>
+
+          <section className="command-center__filters-card" aria-label="Filtres de la carte">
+            <div className="command-center__side-heading">
+              <div><h3>Filtres</h3><p>Affiner les éléments affichés</p></div>
+            </div>
+            <div className="command-center__filter-tabs" role="group" aria-label="Filtrer les types d'entités">
+              {([
+                ['TOUS', 'Tous types'],
+                ['SIGNALEMENT', 'Signalements'],
+                ['DOSSIER', 'Dossiers'],
+              ] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={kindFilter === value ? 'is-active' : ''}
+                  aria-pressed={kindFilter === value}
+                  onClick={() => {
+                    setKindFilter(value);
+                    setSelectedFeatureId(null);
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <span className="command-center__filter-date"><i /> Données de la zone visible</span>
+          </section>
+
+          {selectedFeature ? (
+            <section className="command-center__selected command-center__selected--side" aria-live="polite">
+              <div>
+                <span className={selectedFeature.kind === 'DOSSIER' ? 'command-center__type command-center__type--case' : 'command-center__type command-center__type--report'}>
+                  {selectedFeature.kind === 'DOSSIER' ? 'Dossier' : 'Signalement'}
+                </span>
+                <strong>{selectedFeature.title}</strong>
+                <span>{statusLabel(selectedFeature.status)}{selectedFeature.priority ? ` · Priorité ${selectedFeature.priority.toLowerCase()}` : ''}</span>
+                <small>{selectedFeature.locationLabel || 'Localisation textuelle non renseignée'} · {dateTimeLabel(selectedFeature.occurredAt)}</small>
+                {selectedFeature.teamNames.length ? <small>Équipe(s) : {selectedFeature.teamNames.join(', ')}</small> : null}
+                {selectedFeature.wasteTypes.length ? <small>Déchets : {selectedFeature.wasteTypes.join(', ')}</small> : null}
+                <div className="command-center__actions">
+                  {selectedActions.length ? selectedActions.map((action) => (
+                    <Link key={action.to} to={action.to}>{action.label}</Link>
+                  )) : (
+                    <span className="command-center__read-only">
+                      Aucune action directe disponible pour vos habilitations sur cette entité.
+                    </span>
+                  )}
+                </div>
+              </div>
+              <button type="button" onClick={() => setSelectedFeatureId(null)}>Fermer</button>
+            </section>
+          ) : null}
+        </aside>
+      </div>
     </section>
   );
 }
