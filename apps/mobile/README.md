@@ -24,6 +24,10 @@ pnpm dev:mobile
 
 L'application présente un splash natif Expo assorti à l'identité ISIECO, puis une introduction de première ouverture qui explique les parcours citoyen et agent. L'authentification Supabase et le chargement du profil métier via l'API sont intégrés. Après connexion, les espaces correspondent aux rôles `CITOYEN` et `AGENT_TERRAIN` ; un compte disposant des deux rôles choisit son espace.
 
+## Cartographie intégrée — interface de référence
+
+Le composant `src/ui/NativeMapCanvas.tsx` s'appuie sur le runtime DOM d'Expo SDK 57. Les dépendances `react-dom`, `react-native-web` et `@expo/metro-runtime` sont déclarées dans le workspace Mobile et verrouillées dans `pnpm-lock.yaml`. Après toute modification des dépendances Mobile, mettre à jour le lockfile depuis la racine avec `pnpm install --lockfile-only`, puis vérifier `pnpm install --frozen-lockfile`.
+
 ## Parcours citoyen — Phase 18 intégrée
 
 - `/(citizen)/reports` : liste paginée et suivi des seuls signalements du compte connecté ;
