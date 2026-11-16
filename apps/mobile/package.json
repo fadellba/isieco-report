@@ -33,7 +33,10 @@
     "react-native-url-polyfill": "4.0.0",
     "expo-image-picker": "~57.0.20",
     "expo-image-manipulator": "~57.0.21",
-    "expo-location": "~57.0.22"
+    "expo-location": "~57.0.22",
+    "react-dom": "19.2.3",
+    "react-native-web": "~0.21.0",
+    "@expo/metro-runtime": "~57.0.17"
   },
   "devDependencies": {
     "@types/react": "19.2.0",
