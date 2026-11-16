@@ -229,10 +229,13 @@ test('business audit ledger is private and append-only', { skip: !databaseUrl },
     assert.equal(table.rows[0]?.relrowsecurity, true, 'RLS must be enabled on the audit ledger.');
 
     const access = await client.query(
-      `SELECT
-         has_schema_privilege('anon', 'audit', 'USAGE') AS anon_usage,
-         has_schema_privilege('authenticated', 'audit', 'USAGE') AS authenticated_usage,
-         has_schema_privilege('service_role', 'audit', 'USAGE') AS service_usage`,
+`      SELECT
+         CASE WHEN EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon')
+           THEN has_schema_privilege('anon', 'audit', 'USAGE') ELSE false END AS anon_usage,
+         CASE WHEN EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated')
+           THEN has_schema_privilege('authenticated', 'audit', 'USAGE') ELSE false END AS authenticated_usage,
+         CASE WHEN EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role')
+           THEN has_schema_privilege('service_role', 'audit', 'USAGE') ELSE false END AS service_usage`,
     );
     assert.deepEqual(access.rows[0], {
       anon_usage: false,
