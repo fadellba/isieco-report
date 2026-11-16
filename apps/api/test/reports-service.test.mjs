@@ -271,14 +271,19 @@ test('returns a citizen-safe timeline with status and operational milestones', a
       { idHistoriqueStatut: 'status-2', dateChangement: new Date('2026-11-01T11:00:00Z'), nouveauStatut: 'QUALIFIE' },
     ],
   };
-  prisma.$queryRaw = async () => [
-    { id: 'event-1', occurredAt: new Date('2026-11-02T09:00:00Z'), actionCode: 'AFFECTATION_CREEE' },
-    { id: 'event-2', occurredAt: new Date('2026-11-02T10:00:00Z'), actionCode: 'INTERVENTION_DEMARREE' },
-  ];
+  let operationQuery = '';
+  prisma.$queryRaw = async (strings) => {
+    operationQuery = strings.join(' ');
+    return [
+      { id: 'event-1', occurredAt: new Date('2026-11-02T09:00:00Z'), actionCode: 'AFFECTATION_CREEE' },
+      { id: 'event-2', occurredAt: new Date('2026-11-02T10:00:00Z'), actionCode: 'INTERVENTION_DEMARREE' },
+    ];
+  };
   const service = new ReportsService(prisma, {});
   const result = await service.getMyHistory(reportId, authId);
 
   assert.equal(result.idSignalement, reportId);
+  assert.match(operationQuery, /ORDER BY occurred_at ASC, event_sequence ASC/);
   assert.deepEqual(result.events.map((item) => item.type), ['STATUT', 'STATUT', 'OPERATION', 'OPERATION']);
   assert.deepEqual(result.events.map((item) => item.title), [
     'Signalement reçu',
