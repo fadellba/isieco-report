@@ -210,18 +210,17 @@ export default function NativeMapCanvas({
     };
 
     const onPointerUp = (event: PointerEvent) => {
-      if (drag) {
-        const pointX = drag.centerX - (event.clientX - drag.x);
-        const pointY = drag.centerY - (event.clientY - drag.y);
-        const scale = TILE_SIZE * 2 ** viewState.current.zoom;
-        const longitude = (pointX / scale) * 360 - 180;
-        const n = Math.PI - (2 * Math.PI * pointY) / scale;
-        const latitude = (180 / Math.PI) * Math.atan(Math.sinh(n));
-        viewState.current.center = {
-          latitude: Math.max(-85.05112878, Math.min(85.05112878, latitude)),
-          longitude: ((longitude + 180) % 360 + 360) % 360 - 180,
-        };
-      }
+      if (!drag) return;
+      const pointX = drag.centerX - (event.clientX - drag.x);
+      const pointY = drag.centerY - (event.clientY - drag.y);
+      const scale = TILE_SIZE * 2 ** viewState.current.zoom;
+      const longitude = (pointX / scale) * 360 - 180;
+      const n = Math.PI - (2 * Math.PI * pointY) / scale;
+      const latitude = (180 / Math.PI) * Math.atan(Math.sinh(n));
+      viewState.current.center = {
+        latitude: Math.max(-85.05112878, Math.min(85.05112878, latitude)),
+        longitude: ((longitude + 180) % 360 + 360) % 360 - 180,
+      };
       drag = null;
       tileLayer.style.transform = '';
       markerLayer.style.transform = '';
