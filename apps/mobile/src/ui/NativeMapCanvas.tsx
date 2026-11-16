@@ -234,7 +234,7 @@ export default function NativeMapCanvas({
     };
 
     const onClick = (event: MouseEvent) => {
-      const target = (event.target as HTMLElement).closest<HTMLElement>('[data-map-zoom], [data-marker-id]');
+      const target = (event.target as HTMLElement).closest<HTMLElement>('[data-map-zoom], [data-marker-id], [data-map-use-center]');
       if (!target) return;
       if (target.dataset.mapZoom) {
         zoomAtCenter(viewState.current.zoom + (target.dataset.mapZoom === 'in' ? 1 : -1));
