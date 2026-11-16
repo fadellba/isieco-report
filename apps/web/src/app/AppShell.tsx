@@ -50,7 +50,7 @@ export function AppShell() {
             className={({ isActive }) => `app-nav-link \${isActive ? 'is-active' : ''}`}
           >
             <span className="app-nav-link__icon"><AppIcon name="overview" /></span>
-            <span>Vue d’ensemble</span>
+            <span>Tableau de bord</span>
           </NavLink>
 
           {groups.map((group) => {
@@ -109,7 +109,7 @@ export function AppShell() {
         <nav className="app-mobile-nav" aria-label="Navigation des espaces">
           <NavLink to="/" end className={({ isActive }) => `app-mobile-nav__link \${isActive ? 'is-active' : ''}`}>
             <AppIcon name="overview" size={16} />
-            <span>Vue d’ensemble</span>
+            <span>Tableau de bord</span>
           </NavLink>
           {links.map((item) => (
             <NavLink key={item.to} to={item.to} className={({ isActive }) => `app-mobile-nav__link \${isActive ? 'is-active' : ''}`}>
