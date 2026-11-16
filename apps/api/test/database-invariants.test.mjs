@@ -229,7 +229,7 @@ test('business audit ledger is private and append-only', { skip: !databaseUrl },
     assert.equal(table.rows[0]?.relrowsecurity, true, 'RLS must be enabled on the audit ledger.');
 
     const access = await client.query(
-`      SELECT
+      `SELECT
          CASE WHEN EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon')
            THEN has_schema_privilege('anon', 'audit', 'USAGE') ELSE false END AS anon_usage,
          CASE WHEN EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated')
