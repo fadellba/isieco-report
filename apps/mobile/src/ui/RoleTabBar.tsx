@@ -173,10 +173,12 @@ export function RoleTabBar({ state, navigation, items, action }: RoleTabBarProps
             accessibilityRole="button"
             accessibilityLabel={action.label}
             onPress={action.onPress}
-            className="-mt-6 mx-2 h-[58px] min-w-[66px] items-center justify-center rounded-2xl bg-brand-forest px-3 shadow-lg"
+            className="-mt-7 mx-2 h-[58px] w-[58px] items-center justify-center rounded-full border-[4px] border-white bg-brand-forest shadow-lg"
           >
-            <Text className="text-2xl font-light text-white">+</Text>
-            <Text className="mt-0.5 text-[9px] font-extrabold text-white">{action.label}</Text>
+            <View style={{ width: 22, height: 18, borderWidth: 2, borderColor: '#FFFFFF', borderRadius: 5, alignItems: 'center', justifyContent: 'center' }}>
+              <View style={{ position: 'absolute', top: -5, left: 3, width: 8, height: 4, borderTopLeftRadius: 3, borderTopRightRadius: 3, backgroundColor: '#FFFFFF' }} />
+              <View style={{ width: 9, height: 9, borderRadius: 6, borderWidth: 2, borderColor: '#FFFFFF' }} />
+            </View>
           </Pressable>
           {items.slice(1).map(renderItem)}
         </>
