@@ -365,7 +365,7 @@ export class ReportsService {
       }
     }
 
-    // Array#sort is stable: equal timestamps retain the database event_sequence order.
+    // Keep ties stable: ledger operations are read by event_sequence before merging.
     events.sort((left, right) => left.occurredAt.getTime() - right.occurredAt.getTime());
     return { idSignalement, events };
   }
