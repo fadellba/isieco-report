@@ -73,7 +73,17 @@ export class CasesController {
       type: 'array',
       items: {
         type: 'object',
-        required: ['id', 'occurredAt', 'actorId', 'actionCode', 'entityType', 'entityId', 'dossierId', 'reason', 'metadata'],
+        required: [
+          'id',
+          'occurredAt',
+          'actorId',
+          'actionCode',
+          'entityType',
+          'entityId',
+          'dossierId',
+          'reason',
+          'metadata',
+        ],
         properties: {
           id: { type: 'string', format: 'uuid' },
           occurredAt: { type: 'string', format: 'date-time' },
