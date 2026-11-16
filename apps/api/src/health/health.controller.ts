@@ -29,7 +29,11 @@ export class HealthController {
           required: ['database'],
           properties: { database: { type: 'string', enum: ['ok'] } },
         },
-        revision: { type: 'string', nullable: true, description: 'SHA Git exposé par RENDER_GIT_COMMIT.' },
+        revision: {
+          type: 'string',
+          nullable: true,
+          description: 'SHA Git exposé par RENDER_GIT_COMMIT.',
+        },
         timestamp: { type: 'string', format: 'date-time' },
       },
     },
