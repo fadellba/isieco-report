@@ -18,7 +18,7 @@ export function AppShell() {
     location.pathname === item.to || location.pathname.startsWith(item.to + '/'),
   );
   const pageGroup = currentItem?.group ?? 'Supervision';
-  const pageTitle = currentItem?.label ?? 'Vue d’ensemble';
+  const pageTitle = currentItem?.label ?? 'Tableau de bord';
   const initials = [profile?.prenom?.[0], profile?.nom?.[0]].filter(Boolean).join('').toUpperCase() || 'IS';
 
   async function handleSignOut() {
