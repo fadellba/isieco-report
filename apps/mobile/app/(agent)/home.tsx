@@ -227,7 +227,7 @@ export default function AgentHomeScreen() {
         {activeAssignments.slice(0, 3).map((assignment) => (
           <TouchableOpacity
             key={assignment.idAffectation}
-            onPress={() => openNextMission()}
+            onPress={() => void openMission(assignment.idAffectation)}
             className="rounded-2xl border border-line-subtle bg-white p-3"
           >
             <Text className="text-[9px] font-extrabold text-brand-petrol">{assignment.equipe.nomEquipe}</Text>
