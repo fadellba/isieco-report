@@ -305,7 +305,10 @@ export default function NativeMapCanvas({
         <button type="button" data-map-zoom="in" aria-label="Zoom avant">+</button>
         <button type="button" data-map-zoom="out" aria-label="Zoom arrière">−</button>
       </div>
-      <div className="isieco-map__attribution"><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a></div>
+      <div className="isieco-map__attribution">
+        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a>
+        <a href="https://www.openstreetmap.org/fixthemap" target="_blank" rel="noreferrer">Signaler une erreur</a>
+      </div>
     </div>
   );
 }
