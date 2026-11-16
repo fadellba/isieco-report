@@ -67,7 +67,27 @@ export class CasesController {
   @Get(':idDossier/history')
   @ApiOperation({ summary: 'Consulte l’historique métier d’un dossier' })
   @ApiParam({ name: 'idDossier', format: 'uuid' })
-  @ApiOkResponse({ description: 'Événements métier du dossier, du plus récent au plus ancien.' })
+  @ApiOkResponse({
+    description: 'Événements métier du dossier, du plus récent au plus ancien.',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['id', 'occurredAt', 'actorId', 'actionCode', 'entityType', 'entityId', 'dossierId', 'reason', 'metadata'],
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          occurredAt: { type: 'string', format: 'date-time' },
+          actorId: { type: 'string', format: 'uuid', nullable: true },
+          actionCode: { type: 'string' },
+          entityType: { type: 'string' },
+          entityId: { type: 'string', format: 'uuid' },
+          dossierId: { type: 'string', format: 'uuid', nullable: true },
+          reason: { type: 'string', nullable: true },
+          metadata: { type: 'object', additionalProperties: true },
+        },
+      },
+    },
+  })
   @ApiNotFoundResponse({ description: 'Dossier introuvable.' })
   getHistory(@Param('idDossier', ParseUUIDPipe) idDossier: string) {
     return this.cases.getCaseHistory(idDossier);
