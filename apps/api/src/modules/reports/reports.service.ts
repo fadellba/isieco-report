@@ -350,7 +350,7 @@ export class ReportsService {
             'VERIFICATION_REPRISE',
             'DOSSIER_CLOTURE'
           )
-        ORDER BY occurred_at ASC, id ASC
+        ORDER BY occurred_at ASC, event_sequence ASC
       `;
       for (const item of operationRows) {
         const title = operationalTimelineLabels[item.actionCode];
@@ -365,9 +365,8 @@ export class ReportsService {
       }
     }
 
-    events.sort((left, right) =>
-      left.occurredAt.getTime() - right.occurredAt.getTime() || left.id.localeCompare(right.id),
-    );
+    // Array#sort is stable: equal timestamps retain the database event_sequence order.
+    events.sort((left, right) => left.occurredAt.getTime() - right.occurredAt.getTime());
     return { idSignalement, events };
   }
 
