@@ -16,6 +16,9 @@ interface NativeMapCanvasProps {
   selectedId?: string | null;
   onSelect: (id: string) => Promise<void>;
   emptyLabel?: string;
+  centerCoordinates?: { latitude: number; longitude: number } | null;
+  allowCenterSelection?: boolean;
+  onChooseCenter?: (coordinates: { latitude: number; longitude: number }) => Promise<void>;
   dom?: import('expo/dom').DOMProps;
 }
 
@@ -55,10 +58,16 @@ export default function NativeMapCanvas({
   selectedId = null,
   onSelect,
   emptyLabel,
+  centerCoordinates = null,
+  allowCenterSelection = false,
+  onChooseCenter,
   dom,
 }: NativeMapCanvasProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const onSelectRef = useRef(onSelect);
+  const onChooseCenterRef = useRef(onChooseCenter);
+  const centerKey = centerCoordinates ? `${centerCoordinates.latitude}:${centerCoordinates.longitude}` : '';
+  const lastCenterKey = useRef('');
   const viewState = useRef<{
     center: { latitude: number; longitude: number };
     zoom: number;
@@ -67,7 +76,8 @@ export default function NativeMapCanvas({
 
   useEffect(() => {
     onSelectRef.current = onSelect;
-  }, [onSelect]);
+    onChooseCenterRef.current = onChooseCenter;
+  }, [onSelect, onChooseCenter]);
 
   useEffect(() => {
     const container = mapRef.current;
@@ -79,9 +89,13 @@ export default function NativeMapCanvas({
     if (!tileLayer || !markerLayer || !emptyNotice) return;
 
     if (!viewState.current.initialized) {
-      viewState.current.center = fitCenter(markers);
+      viewState.current.center = centerCoordinates ?? fitCenter(markers);
       viewState.current.zoom = markers.length > 1 ? 13 : 15;
       viewState.current.initialized = true;
+      lastCenterKey.current = centerKey;
+    } else if (centerKey && centerKey !== lastCenterKey.current && centerCoordinates) {
+      viewState.current.center = centerCoordinates;
+      lastCenterKey.current = centerKey;
     }
 
     let disposed = false;
@@ -219,6 +233,11 @@ export default function NativeMapCanvas({
         zoomAtCenter(viewState.current.zoom + (target.dataset.mapZoom === 'in' ? 1 : -1));
         return;
       }
+      if (target.dataset.mapUseCenter === 'true' && onChooseCenterRef.current) {
+        const center = viewState.current.center;
+        void onChooseCenterRef.current({ latitude: center.latitude, longitude: center.longitude });
+        return;
+      }
       const markerId = target.dataset.markerId;
       if (markerId) void onSelectRef.current(markerId);
     };
@@ -243,7 +262,7 @@ export default function NativeMapCanvas({
       container.removeEventListener('wheel', onWheel);
       container.removeEventListener('click', onClick);
     };
-  }, [markers, selectedId, emptyLabel]);
+  }, [markers, selectedId, emptyLabel, allowCenterSelection, centerKey]);
 
   return (
     <div ref={mapRef} className="isieco-map" role="application" aria-label="Carte interactive des signalements et missions">
@@ -262,6 +281,8 @@ export default function NativeMapCanvas({
         .isieco-map__popup small { overflow:hidden; color:#74847a; font-size:8px; text-overflow:ellipsis; white-space:nowrap; }
         .isieco-map__controls { position:absolute; top:12px; right:12px; z-index:10; display:flex; flex-direction:column; gap:5px; }
         .isieco-map__controls button { display:grid; width:32px; height:32px; place-items:center; border:1px solid #dce5dc; border-radius:8px; background:rgba(255,255,255,.96); color:#1f4938; box-shadow:0 2px 8px rgba(0,0,0,.1); font-size:19px; font-weight:700; }
+        .isieco-map__center-pin { position:absolute; top:50%; left:50%; z-index:3; width:18px; height:18px; border:3px solid #fff; border-radius:50% 50% 50% 3px; background:#148a4c; box-shadow:0 2px 8px rgba(0,0,0,.3); transform:translate(-50%,-85%) rotate(-45deg); pointer-events:none; }
+        .isieco-map__choose { position:absolute; left:50%; bottom:22px; z-index:10; padding:9px 13px; transform:translateX(-50%); border:0; border-radius:999px; background:#087844; color:#fff; box-shadow:0 3px 12px rgba(0,0,0,.2); font-size:10px; font-weight:800; white-space:nowrap; }
         .isieco-map__attribution { position:absolute; right:0; bottom:0; z-index:10; padding:4px 7px; border-top-left-radius:7px; background:rgba(255,255,255,.94); color:#405047; font-size:8px; }
         .isieco-map__attribution a { color:inherit; text-decoration:underline; }
         .isieco-map__empty { position:absolute; top:50%; left:50%; z-index:5; width:min(260px,calc(100% - 32px)); padding:12px 15px; transform:translate(-50%,-50%); border:1px solid rgba(255,255,255,.85); border-radius:12px; background:rgba(255,255,255,.94); color:#68766d; font-size:10px; line-height:1.5; text-align:center; }
@@ -269,6 +290,8 @@ export default function NativeMapCanvas({
       `}</style>
       <div className="isieco-map__tiles" data-map-tiles />
       <div className="isieco-map__markers" data-map-markers />
+      {allowCenterSelection ? <div className="isieco-map__center-pin" aria-hidden="true" /> : null}
+      {allowCenterSelection && onChooseCenter ? <button type="button" className="isieco-map__choose" data-map-use-center="true">Utiliser le centre de la carte</button> : null}
       <div className="isieco-map__empty" data-map-empty>{emptyLabel ?? 'Aucune position géographique disponible.'}</div>
       <div className="isieco-map__controls">
         <button type="button" data-map-zoom="in" aria-label="Zoom avant">+</button>
