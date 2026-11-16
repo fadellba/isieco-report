@@ -167,6 +167,7 @@ test('returns the dossier audit timeline by its historical dossier id', async ()
 
   assert.deepEqual(result, events);
   assert.match(calls.sql, /WHERE dossier_id = \?::uuid/);
+  assert.match(calls.sql, /ORDER BY occurred_at DESC, event_sequence DESC/);
   assert.deepEqual(calls.values, [dossierId]);
 });
 
