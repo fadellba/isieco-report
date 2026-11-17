@@ -2,9 +2,22 @@ import { Text, View } from 'react-native';
 
 export type FeedbackTone = 'success' | 'error' | 'warning' | 'info';
 
-const palettes: Record<FeedbackTone, { background: string; border: string; accent: string; title: string }> = {
-  success: { background: '#EAF4ED', border: '#D3E7D9', accent: '#23764F', title: 'Opération confirmée' },
-  error: { background: '#F9ECEA', border: '#EED7D3', accent: '#A64239', title: 'Une erreur est survenue' },
+const palettes: Record<
+  FeedbackTone,
+  { background: string; border: string; accent: string; title: string }
+> = {
+  success: {
+    background: '#EAF4ED',
+    border: '#D3E7D9',
+    accent: '#23764F',
+    title: 'Opération confirmée',
+  },
+  error: {
+    background: '#F9ECEA',
+    border: '#EED7D3',
+    accent: '#A64239',
+    title: 'Une erreur est survenue',
+  },
   warning: { background: '#F8F0E4', border: '#EEDFC4', accent: '#8B5B1D', title: 'Attention' },
   info: { background: '#EAF3F6', border: '#D2E5EA', accent: '#246779', title: 'Information' },
 };

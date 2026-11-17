@@ -95,8 +95,7 @@ function unproject(point: { x: number; y: number }, zoom: number): Coordinate {
 }
 
 function mapTileUrl(zoom: number, x: number, y: number) {
-  return TILE_URL_TEMPLATE
-    .replaceAll('{z}', String(zoom))
+  return TILE_URL_TEMPLATE.replaceAll('{z}', String(zoom))
     .replaceAll('{x}', String(x))
     .replaceAll('{y}', String(y));
 }
@@ -109,9 +108,20 @@ function featureCoordinate(feature: MapFeature): Coordinate | null {
   return { latitude, longitude };
 }
 
-export function OperationalMap({ features, selectedFeatureId, onSelectFeature, onViewportChange }: OperationalMapProps) {
+export function OperationalMap({
+  features,
+  selectedFeatureId,
+  onSelectFeature,
+  onViewportChange,
+}: OperationalMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<{ pointerId: number; startX: number; startY: number; centerX: number; centerY: number } | null>(null);
+  const dragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    centerX: number;
+    centerY: number;
+  } | null>(null);
   const [viewport, setViewport] = useState<Viewport>({ width: 960, height: 460 });
   const [center, setCenter] = useState<Coordinate>(DEFAULT_CENTER);
   const [zoom, setZoom] = useState(DEFAULT_ZOOM);
@@ -137,7 +147,9 @@ export function OperationalMap({ features, selectedFeatureId, onSelectFeature, o
 
   useEffect(() => {
     if (fittedRef.current || !features.length) return;
-    const coordinates = features.map(featureCoordinate).filter((item): item is Coordinate => item !== null);
+    const coordinates = features
+      .map(featureCoordinate)
+      .filter((item): item is Coordinate => item !== null);
     if (!coordinates.length) return;
     const latitudes = coordinates.map((item) => item.latitude);
     const longitudes = coordinates.map((item) => item.longitude);
@@ -154,16 +166,22 @@ export function OperationalMap({ features, selectedFeatureId, onSelectFeature, o
 
   const centerPoint = useMemo(() => project(center, zoom), [center, zoom]);
   const visibleBounds = useMemo<MapViewportBounds>(() => {
-    const southWest = unproject({
-      x: centerPoint.x - viewport.width / 2,
-      y: centerPoint.y + viewport.height / 2,
-    }, zoom);
-    const northEast = unproject({
-      x: centerPoint.x + viewport.width / 2,
-      y: centerPoint.y - viewport.height / 2,
-    }, zoom);
+    const southWest = unproject(
+      {
+        x: centerPoint.x - viewport.width / 2,
+        y: centerPoint.y + viewport.height / 2,
+      },
+      zoom,
+    );
+    const northEast = unproject(
+      {
+        x: centerPoint.x + viewport.width / 2,
+        y: centerPoint.y - viewport.height / 2,
+      },
+      zoom,
+    );
     const normalizeLongitude = (longitude: number) =>
-      ((longitude + 180) % 360 + 360) % 360 - 180;
+      ((((longitude + 180) % 360) + 360) % 360) - 180;
     return {
       minLat: clamp(southWest.latitude, -90, 90),
       maxLat: clamp(northEast.latitude, -90, 90),
@@ -176,17 +194,23 @@ export function OperationalMap({ features, selectedFeatureId, onSelectFeature, o
     const timer = window.setTimeout(() => onViewportChange(visibleBounds), 350);
     return () => window.clearTimeout(timer);
   }, [onViewportChange, visibleBounds]);
-  const mapOrigin = useMemo(() => ({
-    x: centerPoint.x - viewport.width / 2,
-    y: centerPoint.y - viewport.height / 2,
-  }), [centerPoint, viewport]);
+  const mapOrigin = useMemo(
+    () => ({
+      x: centerPoint.x - viewport.width / 2,
+      y: centerPoint.y - viewport.height / 2,
+    }),
+    [centerPoint, viewport],
+  );
 
   const tiles = useMemo<Tile[]>(() => {
     const worldTileCount = 2 ** zoom;
     const firstX = Math.floor(mapOrigin.x / TILE_SIZE);
     const lastX = Math.floor((mapOrigin.x + viewport.width) / TILE_SIZE);
     const firstY = Math.max(0, Math.floor(mapOrigin.y / TILE_SIZE));
-    const lastY = Math.min(worldTileCount - 1, Math.floor((mapOrigin.y + viewport.height) / TILE_SIZE));
+    const lastY = Math.min(
+      worldTileCount - 1,
+      Math.floor((mapOrigin.y + viewport.height) / TILE_SIZE),
+    );
     const result: Tile[] = [];
     for (let tileY = firstY; tileY <= lastY; tileY += 1) {
       for (let tileX = firstX; tileX <= lastX; tileX += 1) {
@@ -213,7 +237,8 @@ export function OperationalMap({ features, selectedFeatureId, onSelectFeature, o
       if (deltaX < -worldSize / 2) deltaX += worldSize;
       const left = viewport.width / 2 + deltaX;
       const top = viewport.height / 2 + point.y - centerPoint.y;
-      if (left < -24 || left > viewport.width + 24 || top < -24 || top > viewport.height + 24) return [];
+      if (left < -24 || left > viewport.width + 24 || top < -24 || top > viewport.height + 24)
+        return [];
       return [{ feature, left, top }];
     });
 
@@ -257,7 +282,10 @@ export function OperationalMap({ features, selectedFeatureId, onSelectFeature, o
 
     return [...grouped.values()].map((group) => {
       const groupFeatures = group.map((point) => point.feature);
-      const key = groupFeatures.map((feature) => feature.kind + ':' + feature.id).sort().join('|');
+      const key = groupFeatures
+        .map((feature) => feature.kind + ':' + feature.id)
+        .sort()
+        .join('|');
       return {
         key,
         features: groupFeatures,
@@ -284,7 +312,7 @@ export function OperationalMap({ features, selectedFeatureId, onSelectFeature, o
       setZoom((current) => clamp(current + 2, MIN_ZOOM, MAX_ZOOM));
       return;
     }
-    setExpandedClusterKey((current) => current === marker.key ? null : marker.key);
+    setExpandedClusterKey((current) => (current === marker.key ? null : marker.key));
   }
 
   function zoomBy(amount: number) {
@@ -294,7 +322,9 @@ export function OperationalMap({ features, selectedFeatureId, onSelectFeature, o
 
   function fitAll() {
     setExpandedClusterKey(null);
-    const coordinates = features.map(featureCoordinate).filter((item): item is Coordinate => item !== null);
+    const coordinates = features
+      .map(featureCoordinate)
+      .filter((item): item is Coordinate => item !== null);
     if (!coordinates.length) {
       setCenter(DEFAULT_CENTER);
       setZoom(DEFAULT_ZOOM);
@@ -370,7 +400,9 @@ export function OperationalMap({ features, selectedFeatureId, onSelectFeature, o
         ))}
         {markers.map((marker) => {
           const singleFeature = marker.features.length === 1 ? marker.features[0] : null;
-          const containsSelection = marker.features.some((feature) => feature.id === selectedFeatureId);
+          const containsSelection = marker.features.some(
+            (feature) => feature.id === selectedFeatureId,
+          );
           return (
             <div key={marker.key}>
               <button
@@ -382,19 +414,30 @@ export function OperationalMap({ features, selectedFeatureId, onSelectFeature, o
                   singleFeature?.kind === 'SIGNALEMENT' ? 'is-report' : '',
                   singleFeature?.priority === 'CRITIQUE' ? 'is-critical' : '',
                   containsSelection ? 'is-selected' : '',
-                ].filter(Boolean).join(' ')}
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
                 style={{ left: marker.left, top: marker.top }}
                 onClick={() => handleMarkerClick(marker)}
-                title={marker.features.length > 1 ? `${marker.features.length} éléments. Cliquez pour zoomer.` : singleFeature?.title}
-                aria-label={marker.features.length > 1
-                  ? `${marker.features.length} éléments regroupés. Cliquez pour zoomer.`
-                  : `${singleFeature?.kind === 'DOSSIER' ? 'Dossier' : 'Signalement'} : ${singleFeature?.title ?? ''}`}
+                title={
+                  marker.features.length > 1
+                    ? `${marker.features.length} éléments. Cliquez pour zoomer.`
+                    : singleFeature?.title
+                }
+                aria-label={
+                  marker.features.length > 1
+                    ? `${marker.features.length} éléments regroupés. Cliquez pour zoomer.`
+                    : `${singleFeature?.kind === 'DOSSIER' ? 'Dossier' : 'Signalement'} : ${singleFeature?.title ?? ''}`
+                }
                 aria-expanded={marker.features.length > 1 && expandedClusterKey === marker.key}
               >
                 <span>{marker.features.length > 1 ? marker.features.length : null}</span>
               </button>
               {expandedClusterKey === marker.key ? (
-                <div className="operational-map__cluster-list" style={{ left: marker.left, top: marker.top }}>
+                <div
+                  className="operational-map__cluster-list"
+                  style={{ left: marker.left, top: marker.top }}
+                >
                   <strong>{marker.features.length} éléments au même emplacement</strong>
                   {marker.features.map((feature) => (
                     <button
@@ -417,22 +460,38 @@ export function OperationalMap({ features, selectedFeatureId, onSelectFeature, o
         {!markers.length ? (
           <div className="operational-map__empty">
             <strong>Aucun élément à afficher dans cette zone</strong>
-            <span>Les points apparaissent uniquement lorsque des coordonnées sont enregistrées.</span>
+            <span>
+              Les points apparaissent uniquement lorsque des coordonnées sont enregistrées.
+            </span>
           </div>
         ) : null}
         <div className="operational-map__controls" aria-label="Contrôles de la carte">
-          <button type="button" onClick={() => zoomBy(1)} aria-label="Zoom avant">+</button>
-          <button type="button" onClick={() => zoomBy(-1)} aria-label="Zoom arrière">−</button>
-          <button type="button" onClick={fitAll} aria-label="Centrer sur les opérations">⌖</button>
+          <button type="button" onClick={() => zoomBy(1)} aria-label="Zoom avant">
+            +
+          </button>
+          <button type="button" onClick={() => zoomBy(-1)} aria-label="Zoom arrière">
+            −
+          </button>
+          <button type="button" onClick={fitAll} aria-label="Centrer sur les opérations">
+            ⌖
+          </button>
         </div>
         <div className="operational-map__zoom">Niveau {zoom}</div>
         <div className="operational-map__attribution">
           <span>{TILE_ATTRIBUTION}</span>
-          <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">Licence</a>
-          <a href="https://www.openstreetmap.org/fixthemap" target="_blank" rel="noreferrer">Signaler une erreur</a>
+          <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">
+            Licence
+          </a>
+          <a href="https://www.openstreetmap.org/fixthemap" target="_blank" rel="noreferrer">
+            Signaler une erreur
+          </a>
         </div>
       </div>
-      {tileError ? <p className="operational-map__tile-error">Certaines tuiles de fond ne sont pas disponibles. Les données métier restent consultables.</p> : null}
+      {tileError ? (
+        <p className="operational-map__tile-error">
+          Certaines tuiles de fond ne sont pas disponibles. Les données métier restent consultables.
+        </p>
+      ) : null}
     </div>
   );
 }

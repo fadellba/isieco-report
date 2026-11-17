@@ -21,10 +21,14 @@ export default function ChooseSpaceScreen() {
           onPress={() => router.replace('/(citizen)/home')}
           className="rounded-2xl bg-brand-forest p-5"
         >
-          <Text className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-brand-lime">Espace citoyen</Text>
+          <Text className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-brand-lime">
+            Espace citoyen
+          </Text>
           <Text className="mt-2 text-xl font-extrabold text-white">Signaler et suivre</Text>
-          <Text className="mt-2 text-xs leading-5 text-white/75">Déclarer un dépôt, consulter vos signalements et suivre leur traitement.</Text>
-          <Text className="mt-5 text-xs font-extrabold text-white">Ouvrir cet espace  →</Text>
+          <Text className="mt-2 text-xs leading-5 text-white/75">
+            Déclarer un dépôt, consulter vos signalements et suivre leur traitement.
+          </Text>
+          <Text className="mt-5 text-xs font-extrabold text-white">Ouvrir cet espace →</Text>
         </Pressable>
       ) : null}
 
@@ -34,10 +38,15 @@ export default function ChooseSpaceScreen() {
           onPress={() => router.replace('/(agent)/home')}
           className="mt-3 rounded-2xl border border-line-subtle bg-surface-base p-5"
         >
-          <Text className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-brand-petrol">Espace agent</Text>
+          <Text className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-brand-petrol">
+            Espace agent
+          </Text>
           <Text className="mt-2 text-xl font-extrabold text-ink-900">Mes missions terrain</Text>
-          <Text className="mt-2 text-xs leading-5 text-ink-500">Consulter les affectations, documenter les interventions et transmettre les comptes rendus.</Text>
-          <Text className="mt-5 text-xs font-extrabold text-brand-forest">Ouvrir cet espace  →</Text>
+          <Text className="mt-2 text-xs leading-5 text-ink-500">
+            Consulter les affectations, documenter les interventions et transmettre les comptes
+            rendus.
+          </Text>
+          <Text className="mt-5 text-xs font-extrabold text-brand-forest">Ouvrir cet espace →</Text>
         </Pressable>
       ) : null}
 

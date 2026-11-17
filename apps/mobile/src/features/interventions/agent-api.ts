@@ -48,7 +48,12 @@ export interface TeamIntervention {
   compteRendu: string | null;
   motifException: string | null;
   renseignePar: string;
-  verification: { dateVerification: string; resultatVerification: 'CONFORME' | 'A_REPRENDRE'; motif: string | null; etatVerification: 'VALIDEE' | 'REPRISE' } | null;
+  verification: {
+    dateVerification: string;
+    resultatVerification: 'CONFORME' | 'A_REPRENDRE';
+    motif: string | null;
+    etatVerification: 'VALIDEE' | 'REPRISE';
+  } | null;
   affectation: {
     idAffectation: string;
     idEquipe: string;
@@ -60,13 +65,13 @@ export interface TeamIntervention {
       etatContenuDossier: string;
       etatPriseEnCharge: string;
       dossier: {
-      referenceDossier: string;
-      statutDossier: string;
-      latitude: string | null;
-      longitude: string | null;
-      precisionLocalisation: string | null;
-      descriptionLocalisation: string | null;
-    };
+        referenceDossier: string;
+        statutDossier: string;
+        latitude: string | null;
+        longitude: string | null;
+        precisionLocalisation: string | null;
+        descriptionLocalisation: string | null;
+      };
       typeDechet: { codeType: string; libelle: string };
     };
   };
@@ -117,7 +122,11 @@ export async function startIntervention(assignmentId: string) {
 
 export async function submitIntervention(
   interventionId: string,
-  payload: { resultatIntervention: 'TERMINEE' | 'PARTIELLE' | 'IMPOSSIBLE'; compteRendu: string; motifException?: string },
+  payload: {
+    resultatIntervention: 'TERMINEE' | 'PARTIELLE' | 'IMPOSSIBLE';
+    compteRendu: string;
+    motifException?: string;
+  },
 ) {
   return api.request('/interventions/' + encodeURIComponent(interventionId) + '/submit', {
     method: 'POST',

@@ -1,11 +1,25 @@
 import { useCallback, useState } from 'react';
-import { Link, useFocusEffect } from 'expo-router';
-import { ActivityIndicator, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import {
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useMobileAuth } from '../../src/features/auth/mobile-auth-context';
-import { listMyTeams, listTeamAssignments, listTeamInterventions, type TeamAssignment, type TeamIntervention } from '../../src/features/interventions/agent-api';
+import {
+  listMyTeams,
+  listTeamAssignments,
+  listTeamInterventions,
+  type TeamAssignment,
+  type TeamIntervention,
+} from '../../src/features/interventions/agent-api';
 import { BrandMark } from '../../src/ui/BrandMark';
 
 export default function AgentHomeScreen() {
+  const router = useRouter();
   const { profile } = useMobileAuth();
   const [assignments, setAssignments] = useState<TeamAssignment[]>([]);
   const [interventions, setInterventions] = useState<TeamIntervention[]>([]);
@@ -35,114 +49,217 @@ export default function AgentHomeScreen() {
     }
   }, []);
 
-  useFocusEffect(useCallback(() => { void load(); }, [load]));
-
-  const pending = assignments.filter((item) => item.etatAffectation === 'ACTIVE' && item.decisionEquipe === 'EN_ATTENTE').length;
-  const accepted = assignments.filter((item) => item.etatAffectation === 'ACTIVE' && item.decisionEquipe === 'ACCEPTEE').length;
+  const pending = assignments.filter(
+    (item) => item.etatAffectation === 'ACTIVE' && item.decisionEquipe === 'EN_ATTENTE',
+  ).length;
   const inProgress = interventions.filter((item) => item.statutIntervention === 'EN_COURS').length;
-  const recent = assignments.filter((item) => item.etatAffectation === 'ACTIVE').slice(0, 3);
+  const completed = interventions.filter((item) => item.statutIntervention === 'SOUMISE').length;
+
+  const nextMission = assignments.find((item) => item.etatAffectation === 'ACTIVE');
+  const recentAssignments = assignments
+    .filter((item) => item.etatAffectation === 'ACTIVE')
+    .slice(0, 4);
+
+  const initials =
+    [profile?.prenom?.[0], profile?.nom?.[0]].filter(Boolean).join('').toUpperCase() || 'AG';
 
   return (
-    <ScrollView
-      className="flex-1 bg-surface-base"
-      contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 56, paddingBottom: 32 }}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} tintColor="#174C3D" />}
-    >
-      <View className="flex-row items-center justify-between">
-        <BrandMark />
-        <View className="rounded-full bg-brand-mist px-3 py-2">
-          <Text className="text-[10px] font-bold text-brand-forest">ESPACE AGENT</Text>
+    <View className="flex-1 bg-[#F8FAF9]">
+      {/* Top Header matching Screen 5 in ref */}
+      <View className="flex-row items-center justify-between border-b border-line-subtle bg-white px-5 pb-3.5 pt-12">
+        <View className="flex-row items-center gap-3">
+          <View className="h-10 w-10 items-center justify-center rounded-2xl bg-brand-forest shadow-sm">
+            <Text className="text-xs font-extrabold text-white">{initials}</Text>
+          </View>
+          <View>
+            <View className="flex-row items-center gap-2">
+              <Text className="text-sm font-extrabold text-ink-900">
+                Bonjour{profile?.prenom ? ` ${profile.prenom}` : ''}
+              </Text>
+              <View className="rounded-full bg-emerald-100 px-2 py-0.5">
+                <Text className="text-[9px] font-extrabold text-emerald-800">Agent terrain</Text>
+              </View>
+            </View>
+            <Text className="text-[11px] text-ink-400">Équipes de propreté urbaine</Text>
+          </View>
         </View>
-      </View>
-      <Text className="mt-9 text-sm font-medium text-ink-500">Bonjour{profile?.prenom ? ` ${profile.prenom}` : ''},</Text>
-      <Text className="mt-1 text-[30px] font-extrabold leading-9 tracking-tight text-ink-900">Vos missions, du terrain au compte rendu.</Text>
-      <Text className="mt-3 text-sm leading-6 text-ink-500">
-        Consultez les affectations de vos équipes, documentez les interventions et transmettez vos comptes rendus à la vérification.
-      </Text>
 
-      {error ? (
-        <View className="mt-5 rounded-2xl border border-status-danger/20 bg-status-danger/5 p-4">
-          <Text className="text-sm text-status-danger">{error}</Text>
-          <TouchableOpacity onPress={() => void load(true)} className="mt-3 self-start">
-            <Text className="text-xs font-bold text-status-danger">Réessayer</Text>
+        <TouchableOpacity
+          onPress={() => router.push('/(agent)/map')}
+          className="h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 border border-emerald-100"
+        >
+          <Text className="text-base">🧭</Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 60 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void load(true)}
+            tintColor="#174C3D"
+          />
+        }
+      >
+        {/* Section title & Counters matching Screen 5 */}
+        <View className="flex-row items-center justify-between">
+          <View>
+            <Text className="text-2xl font-extrabold tracking-tight text-ink-900">
+              Mes missions
+            </Text>
+            <Text className="mt-0.5 text-xs text-ink-500">
+              {assignments.length} mission(s) répertoriée(s)
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => router.push('/(agent)/missions')}
+            className="rounded-full bg-surface-base px-3 py-1.5 border border-line-subtle"
+          >
+            <Text className="text-xs font-bold text-brand-forest">Tout voir →</Text>
           </TouchableOpacity>
         </View>
-      ) : null}
 
-      <View className="mt-7 flex-row gap-2">
-        {[
-          { label: 'À accepter', value: pending },
-          { label: 'Acceptées', value: accepted },
-          { label: 'En cours', value: inProgress },
-        ].map((item) => (
-          <View key={item.label} className="flex-1 rounded-2xl border border-line-subtle bg-white p-3">
-            <Text className="text-2xl font-extrabold text-brand-forest">{item.value}</Text>
-            <Text className="mt-1 text-[10px] font-semibold text-ink-500">{item.label}</Text>
+        {/* 3 Metric Pills */}
+        <View className="mt-4 flex-row gap-2.5">
+          <View className="flex-1 rounded-2xl border border-line-subtle bg-white p-3.5 shadow-sm">
+            <Text className="text-2xl font-extrabold text-amber-600">{pending}</Text>
+            <Text className="mt-1 text-[11px] font-bold text-ink-600">À accepter</Text>
           </View>
-        ))}
-      </View>
+          <View className="flex-1 rounded-2xl border border-line-subtle bg-white p-3.5 shadow-sm">
+            <Text className="text-2xl font-extrabold text-emerald-700">{inProgress}</Text>
+            <Text className="mt-1 text-[11px] font-bold text-ink-600">En cours</Text>
+          </View>
+          <View className="flex-1 rounded-2xl border border-line-subtle bg-white p-3.5 shadow-sm">
+            <Text className="text-2xl font-extrabold text-slate-700">{completed}</Text>
+            <Text className="mt-1 text-[11px] font-bold text-ink-600">Terminées</Text>
+          </View>
+        </View>
 
-      <View className="mt-5 rounded-2xl border border-line-subtle bg-white p-4">
-        <Text className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-brand-petrol">Cycle d’une mission</Text>
-        <View className="mt-3 flex-row items-center justify-between">
-          {[
-            { number: '01', label: 'Affectation' },
-            { number: '02', label: 'Acceptation' },
-            { number: '03', label: 'Intervention' },
-            { number: '04', label: 'Compte rendu' },
-          ].map((item, index) => (
-            <View key={item.number} className="min-w-0 flex-1 items-center px-0.5">
-              <View className={index === 0 ? 'h-7 w-7 items-center justify-center rounded-full bg-brand-forest' : 'h-7 w-7 items-center justify-center rounded-full bg-brand-mist'}>
-                <Text className={index === 0 ? 'text-[9px] font-extrabold text-white' : 'text-[9px] font-extrabold text-brand-forest'}>{item.number}</Text>
-              </View>
-              <Text className="mt-2 text-center text-[9px] font-bold text-ink-500">{item.label}</Text>
-            </View>
-          ))}
-        </View>
-        <Text className="mt-3 text-[10px] leading-4 text-ink-400">La vérification de la clôture est réalisée séparément par le rôle habilité.</Text>
-      </View>
-
-      <View className="mt-8 flex-row items-end justify-between">
-        <View>
-          <Text className="text-lg font-extrabold text-ink-900">Vos missions</Text>
-          <Text className="mt-1 text-xs text-ink-500">{teamCount} équipe(s) active(s)</Text>
-        </View>
-        <Link href="/(agent)/missions" className="text-xs font-bold text-brand-forest">Tout voir →</Link>
-      </View>
-
-      {loading ? (
-        <View className="mt-7 items-center py-8"><ActivityIndicator color="#14532D" /><Text className="mt-3 text-xs text-ink-500">Chargement des affectations…</Text></View>
-      ) : null}
-      {!loading && teamCount === 0 ? (
-        <View className="mt-4 rounded-2xl border border-line-subtle bg-white p-5">
-          <Text className="text-sm font-bold text-ink-800">Aucune équipe active</Text>
-          <Text className="mt-2 text-xs leading-5 text-ink-500">Contactez le gestionnaire des référentiels pour vérifier vos appartenances.</Text>
-        </View>
-      ) : null}
-      {!loading && recent.length === 0 && teamCount > 0 ? (
-        <View className="mt-4 rounded-2xl border border-line-subtle bg-white p-5">
-          <Text className="text-sm font-bold text-ink-800">Aucune mission active</Text>
-          <Text className="mt-2 text-xs leading-5 text-ink-500">Les nouvelles affectations apparaîtront ici.</Text>
-        </View>
-      ) : null}
-      <View className="mt-4 gap-3">
-        {recent.map((item) => (
-          <Link key={item.idAffectation} href="/(agent)/missions" asChild>
-            <TouchableOpacity className="rounded-2xl border border-line-subtle bg-white p-4">
-              <View className="flex-row items-center justify-between gap-3">
-                <Text className="text-[10px] font-bold uppercase tracking-wide text-ink-400">
-                  {item.contenuDossier.dossier.referenceDossier}
+        {/* PROCHAINE MISSION HERO CARD (Matching Screen 5) */}
+        {nextMission ? (
+          <View className="mt-5 overflow-hidden rounded-3xl border border-line-subtle bg-white p-5 shadow-sm">
+            <View className="flex-row items-center justify-between">
+              <View className="rounded-full bg-emerald-100 px-3 py-1">
+                <Text className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-900">
+                  Prochaine intervention
                 </Text>
-                <View className="rounded-full bg-brand-mist px-3 py-1">
-                  <Text className="text-[9px] font-bold text-brand-forest">{item.decisionEquipe === 'EN_ATTENTE' ? 'À accepter' : 'Acceptée'}</Text>
+              </View>
+              <Text className="font-mono text-xs font-bold text-ink-400">
+                {nextMission.contenuDossier.dossier.referenceDossier}
+              </Text>
+            </View>
+
+            <View className="mt-4 flex-row items-center gap-4">
+              <View className="h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 border border-emerald-200">
+                <Text className="text-2xl">🚛</Text>
+              </View>
+              <View className="min-w-0 flex-1">
+                <Text className="text-base font-extrabold text-ink-900" numberOfLines={1}>
+                  {nextMission.contenuDossier.typeDechet.libelle}
+                </Text>
+                <Text className="mt-0.5 text-xs text-ink-500">
+                  Équipe : {nextMission.equipe.nomEquipe}
+                </Text>
+                <View className="mt-2 flex-row gap-2">
+                  <View className="rounded-full bg-surface-base px-2.5 py-0.5 border border-line-subtle">
+                    <Text className="text-[10px] font-bold text-ink-600">
+                      {nextMission.decisionEquipe === 'EN_ATTENTE' ? 'À valider' : 'Prêt'}
+                    </Text>
+                  </View>
                 </View>
               </View>
-              <Text className="mt-2 text-sm font-bold text-ink-900">{item.contenuDossier.typeDechet.libelle}</Text>
-              <Text className="mt-1 text-xs text-ink-500">{item.equipe.nomEquipe}</Text>
+            </View>
+
+            <View className="mt-4 flex-row gap-2.5 border-t border-line-subtle pt-3.5">
+              <TouchableOpacity
+                onPress={() =>
+                  router.push({
+                    pathname: '/(agent)/missions/[id]',
+                    params: { id: nextMission.idAffectation, teamId: nextMission.idEquipe },
+                  })
+                }
+                className="flex-1 rounded-2xl bg-brand-forest py-3 shadow-sm"
+              >
+                <Text className="text-center text-xs font-extrabold text-white">
+                  Ouvrir la mission
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.push('/(agent)/map')}
+                className="rounded-2xl border border-line-strong bg-white px-4 py-3"
+              >
+                <Text className="text-xs font-extrabold text-ink-800">🧭 Carte</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : null}
+
+        {/* RECENT MISSIONS LIST */}
+        <View className="mt-6 flex-row items-center justify-between">
+          <Text className="text-sm font-extrabold text-ink-900">Toutes les affectations</Text>
+          <Text className="text-xs text-ink-400">{teamCount} équipe(s)</Text>
+        </View>
+
+        {loading && (
+          <View className="mt-8 items-center py-6">
+            <ActivityIndicator size="small" color="#174C3D" />
+            <Text className="mt-3 text-xs text-ink-500">Chargement de vos missions...</Text>
+          </View>
+        )}
+
+        {!loading && recentAssignments.length === 0 && (
+          <View className="mt-4 rounded-3xl border border-line-subtle bg-white p-6 text-center">
+            <Text className="text-2xl">🌱</Text>
+            <Text className="mt-2 text-sm font-extrabold text-ink-900">
+              Aucune mission pour le moment
+            </Text>
+            <Text className="mt-1 text-xs text-ink-500">
+              Les affectations confiées à vos équipes s’afficheront dès leur attribution.
+            </Text>
+          </View>
+        )}
+
+        <View className="mt-3 gap-2.5">
+          {recentAssignments.map((item) => (
+            <TouchableOpacity
+              key={item.idAffectation}
+              onPress={() =>
+                router.push({
+                  pathname: '/(agent)/missions/[id]',
+                  params: { id: item.idAffectation, teamId: item.idEquipe },
+                })
+              }
+              className="rounded-2xl border border-line-subtle bg-white p-4 shadow-sm active:opacity-80"
+            >
+              <View className="flex-row items-center justify-between">
+                <Text className="font-mono text-xs font-bold text-ink-400">
+                  {item.contenuDossier.dossier.referenceDossier}
+                </Text>
+                <View
+                  className={`rounded-full px-2.5 py-0.5 ${
+                    item.decisionEquipe === 'EN_ATTENTE' ? 'bg-amber-100' : 'bg-emerald-100'
+                  }`}
+                >
+                  <Text
+                    className={`text-[10px] font-extrabold ${
+                      item.decisionEquipe === 'EN_ATTENTE' ? 'text-amber-900' : 'text-emerald-900'
+                    }`}
+                  >
+                    {item.decisionEquipe === 'EN_ATTENTE' ? 'À accepter' : 'Acceptée'}
+                  </Text>
+                </View>
+              </View>
+
+              <Text className="mt-1.5 text-sm font-extrabold text-ink-900">
+                {item.contenuDossier.typeDechet.libelle}
+              </Text>
+              <Text className="mt-0.5 text-xs text-ink-500">{item.equipe.nomEquipe}</Text>
             </TouchableOpacity>
-          </Link>
-        ))}
-      </View>
-    </ScrollView>
+          ))}
+        </View>
+      </ScrollView>
+    </View>
   );
 }

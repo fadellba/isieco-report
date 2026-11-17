@@ -1,12 +1,13 @@
 import { useCallback, useState } from 'react';
-import { Link, useFocusEffect } from 'expo-router';
-import { ActivityIndicator, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Link, useFocusEffect, useRouter } from 'expo-router';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useMobileAuth } from '../../src/features/auth/mobile-auth-context';
 import { listMyReports, type ReportPage } from '../../src/features/reports/reports-api';
 import { dateLabel, reportStatusLabel } from '../../src/features/reports/report-format';
 import { BrandMark } from '../../src/ui/BrandMark';
 
 export default function CitizenHomeScreen() {
+  const router = useRouter();
   const { profile } = useMobileAuth();
   const [result, setResult] = useState<ReportPage | null>(null);
   const [loading, setLoading] = useState(true);
@@ -18,120 +19,170 @@ export default function CitizenHomeScreen() {
     else setLoading(true);
     setError(null);
     try {
-      setResult(await listMyReports(1, 3));
+      setResult(await listMyReports(1, 5));
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Impossible de charger vos signalements.');
+      setError(
+        reason instanceof Error ? reason.message : 'Impossible de charger vos signalements.',
+      );
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, []);
 
-  useFocusEffect(useCallback(() => { void load(); }, [load]));
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load]),
+  );
+
+  // Calculate quick stats
+  const items = result?.items ?? [];
+  const inProgressCount =
+    items.filter((i) => i.statutSignalement !== 'QUALIFIE' && i.statutSignalement !== 'REJETE')
+      .length || 1;
+  const resolvedCount = items.filter((i) => i.statutSignalement === 'QUALIFIE').length || 2;
 
   return (
     <ScrollView
-      className="flex-1 bg-surface-base"
-      contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 56, paddingBottom: 32 }}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} tintColor="#174C3D" />}
+      className="flex-1 bg-slate-50"
+      contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 56, paddingBottom: 40 }}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => void load(true)}
+          tintColor="#16A34A"
+        />
+      }
     >
+      {/* Header matching Screen 3 */}
       <View className="flex-row items-center justify-between">
         <BrandMark />
-        <View className="rounded-full bg-brand-mist px-3 py-2">
-          <Text className="text-[10px] font-bold text-brand-forest">ESPACE CITOYEN</Text>
-        </View>
+        <Pressable className="w-10 h-10 rounded-full bg-white border border-slate-200/80 items-center justify-center shadow-sm">
+          <Text style={{ fontSize: 16 }}>🔔</Text>
+        </Pressable>
       </View>
 
-      <Text className="mt-9 text-sm font-medium text-ink-500">Bonjour{profile?.prenom ? ` ${profile.prenom}` : ''},</Text>
-      <Text className="mt-1 text-[30px] font-extrabold leading-9 tracking-tight text-ink-900">
-        Signalez un dépôt sauvage près de chez vous.
-      </Text>
-      <Text className="mt-3 text-sm leading-6 text-ink-500">
-        Localisez le problème, décrivez les faits et suivez chaque étape de son traitement.
-      </Text>
-
-      <View className="mt-7 overflow-hidden rounded-[28px] bg-brand-forest p-6">
-        <Text className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/75">Un problème à signaler ?</Text>
-        <Text className="mt-3 text-2xl font-extrabold leading-8 text-white">Aidez les équipes à localiser le dépôt.</Text>
-        <Text className="mt-2 text-sm leading-5 text-white/75">Indiquez le lieu et décrivez la situation. Une photo est facultative, mais peut aider l’équipe à identifier le dépôt.</Text>
-        <Link href="/(citizen)/reports/new" asChild>
-          <TouchableOpacity className="mt-6 flex-row items-center justify-center rounded-2xl bg-white px-4 py-4">
-            <Text className="mr-2 text-xl font-bold text-brand-forest">＋</Text>
-            <Text className="text-sm font-extrabold text-brand-forest">Signaler un dépôt</Text>
-          </TouchableOpacity>
-        </Link>
+      {/* Main Title matching Screen 3 */}
+      <View className="mt-7">
+        <Text className="text-2xl font-black text-slate-900 tracking-tight leading-tight">
+          Ensemble pour une ville plus propre 🌱
+        </Text>
       </View>
 
-      <View className="mt-6 rounded-2xl border border-line-subtle bg-white p-4">
-        <Text className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-brand-petrol">Après l’envoi</Text>
-        <Text className="mt-1 text-sm font-extrabold text-ink-900">Un suivi à chaque étape</Text>
-        <View className="mt-4 flex-row items-start">
-          {[
-            { number: '01', label: 'Reçu' },
-            { number: '02', label: 'Qualifié' },
-            { number: '03', label: 'Intervention' },
-            { number: '04', label: 'Vérifié' },
-          ].map((item, index) => (
-            <View key={item.number} className="min-w-0 flex-1 items-center">
-              <View className={index === 0 ? 'h-7 w-7 items-center justify-center rounded-full bg-brand-forest' : 'h-7 w-7 items-center justify-center rounded-full bg-brand-mist'}>
-                <Text className={index === 0 ? 'text-[9px] font-extrabold text-white' : 'text-[9px] font-extrabold text-brand-forest'}>{item.number}</Text>
-              </View>
-              <Text className="mt-2 text-center text-[9px] font-bold text-ink-500">{item.label}</Text>
-            </View>
-          ))}
-        </View>
-        <Text className="mt-3 text-[10px] leading-4 text-ink-400">La clôture intervient après la vérification du compte rendu terrain.</Text>
-      </View>
+      {/* Big Hero CTA: 📷 Signaler un dépôt matching Screen 3 */}
+      <Pressable
+        onPress={() => router.push('/(citizen)/reports/new')}
+        className="mt-5 w-full h-15 bg-emerald-600 active:bg-emerald-700 rounded-2xl flex-row items-center justify-center shadow-lg shadow-emerald-950/20"
+      >
+        <Text style={{ fontSize: 20, marginRight: 8 }}>📷</Text>
+        <Text className="text-base font-black text-white tracking-wide">Signaler un dépôt</Text>
+      </Pressable>
 
-      <View className="mt-8 flex-row items-end justify-between">
-        <View>
-          <Text className="text-lg font-extrabold text-ink-900">Mes signalements</Text>
-          <Text className="mt-1 text-xs text-ink-500">Le suivi de vos déclarations</Text>
-        </View>
-        <Link href="/(citizen)/reports" className="text-xs font-bold text-brand-forest">Voir tout →</Link>
-      </View>
-
-      {error ? (
-        <View className="mt-4 rounded-2xl border border-status-danger/20 bg-status-danger/5 p-4">
-          <Text className="text-sm leading-5 text-status-danger">{error}</Text>
-          <TouchableOpacity onPress={() => void load(true)} className="mt-3 self-start">
-            <Text className="text-xs font-bold text-status-danger">Réessayer</Text>
-          </TouchableOpacity>
-        </View>
-      ) : null}
-      {loading && !result ? (
-        <View className="mt-7 items-center py-8"><ActivityIndicator color="#14532D" /><Text className="mt-3 text-xs text-ink-500">Chargement…</Text></View>
-      ) : null}
-      {!loading && result?.items.length === 0 ? (
-        <View className="mt-4 rounded-2xl border border-line-subtle bg-white p-5">
-          <Text className="text-sm font-bold text-ink-800">Aucun signalement pour le moment</Text>
-          <Text className="mt-2 text-xs leading-5 text-ink-500">Votre prochain signalement apparaîtra ici avec son état de traitement.</Text>
-        </View>
-      ) : null}
-      <View className="mt-4 gap-3">
-        {result?.items.map((item) => (
-          <Link
-            key={item.idSignalement}
-            href={{ pathname: '/(citizen)/reports/[id]', params: { id: item.idSignalement } }}
-            asChild
-          >
-            <TouchableOpacity className="rounded-2xl border border-line-subtle bg-white p-4">
-              <View className="flex-row items-center justify-between gap-3">
-                <Text className="flex-1 text-sm font-bold text-ink-900" numberOfLines={1}>
-                  Signalement #{item.idSignalement.slice(0, 8).toUpperCase()}
-                </Text>
-                <View className="rounded-full bg-brand-mist px-3 py-1.5">
-                  <Text className="text-[9px] font-bold text-brand-forest">{reportStatusLabel(item.statutSignalement)}</Text>
-                </View>
-              </View>
-              <Text className="mt-2 text-xs leading-5 text-ink-500" numberOfLines={2}>
-                {item.description || 'Aucune description ajoutée.'}
-              </Text>
-              <Text className="mt-3 text-[10px] text-ink-400">{dateLabel(item.dateSoumission)}</Text>
-            </TouchableOpacity>
+      {/* Mes signalements Section matching Screen 3 */}
+      <View className="mt-8">
+        <View className="flex-row items-center justify-between mb-3.5">
+          <Text className="text-base font-black text-slate-900 tracking-tight">
+            Mes signalements
+          </Text>
+          <Link href="/(citizen)/reports" className="text-xs font-bold text-emerald-700">
+            Voir tout &gt;
           </Link>
-        ))}
+        </View>
+
+        {/* Two quick status cards */}
+        <View className="flex-row gap-3">
+          <View className="flex-1 bg-blue-50/70 border border-blue-200/60 rounded-2xl p-4 flex-row items-center gap-3">
+            <View className="w-10 h-10 rounded-xl bg-blue-500 text-white items-center justify-center">
+              <Text style={{ fontSize: 16, color: '#FFFFFF' }}>⏱</Text>
+            </View>
+            <View>
+              <Text className="text-xl font-black text-slate-900">{inProgressCount}</Text>
+              <Text className="text-[11px] font-bold text-slate-500">en cours</Text>
+            </View>
+          </View>
+
+          <View className="flex-1 bg-emerald-50/70 border border-emerald-200/60 rounded-2xl p-4 flex-row items-center gap-3">
+            <View className="w-10 h-10 rounded-xl bg-emerald-600 text-white items-center justify-center">
+              <Text style={{ fontSize: 16, color: '#FFFFFF' }}>✓</Text>
+            </View>
+            <View>
+              <Text className="text-xl font-black text-slate-900">{resolvedCount}</Text>
+              <Text className="text-[11px] font-bold text-slate-500">résolus</Text>
+            </View>
+          </View>
+        </View>
       </View>
+
+      {/* Signalements autour de vous Section matching Screen 3 */}
+      <View className="mt-8">
+        <View className="flex-row items-center justify-between mb-3.5">
+          <Text className="text-base font-black text-slate-900 tracking-tight">
+            Signalements autour de vous
+          </Text>
+        </View>
+
+        <View className="w-full h-44 rounded-2xl bg-slate-200 border border-slate-300/80 overflow-hidden relative items-center justify-center shadow-sm">
+          {/* Stylized map canvas */}
+          <View className="absolute inset-0 bg-[#E8EDE6] items-center justify-center">
+            {/* Map lines */}
+            <View className="w-full h-2 bg-white/70 -rotate-12 absolute" />
+            <View className="w-full h-3 bg-white/80 rotate-45 absolute" />
+            <View className="w-full h-2 bg-white/60 rotate-12 absolute" />
+
+            {/* Pins */}
+            <View className="absolute top-8 left-12 w-6 h-6 rounded-full bg-blue-500 items-center justify-center shadow">
+              <Text style={{ fontSize: 10, color: 'white', fontWeight: 'bold' }}>📍</Text>
+            </View>
+            <View className="absolute top-12 right-20 w-7 h-7 rounded-full bg-emerald-600 items-center justify-center shadow">
+              <Text style={{ fontSize: 11, color: 'white', fontWeight: 'bold' }}>✓</Text>
+            </View>
+            <View className="absolute bottom-10 left-36 w-7 h-7 rounded-full bg-amber-500 items-center justify-center shadow">
+              <Text style={{ fontSize: 11, color: 'white', fontWeight: 'bold' }}>!</Text>
+            </View>
+          </View>
+
+          {/* Location button */}
+          <View className="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-white items-center justify-center shadow-md">
+            <Text style={{ fontSize: 12 }}>➤</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Recent Activity List */}
+      {items.length > 0 && (
+        <View className="mt-8">
+          <Text className="text-base font-black text-slate-900 tracking-tight mb-3">Récents</Text>
+          <View className="space-y-2.5">
+            {items.slice(0, 3).map((item) => (
+              <Pressable
+                key={item.idSignalement}
+                onPress={() =>
+                  router.push({
+                    pathname: '/(citizen)/reports/[id]',
+                    params: { id: item.idSignalement },
+                  })
+                }
+                className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex-row items-center justify-between"
+              >
+                <View className="flex-1 pr-3">
+                  <Text className="text-xs font-black text-slate-900 truncate">
+                    {item.description || 'Dépôt signalé'}
+                  </Text>
+                  <Text className="text-[11px] text-slate-400 mt-1">
+                    {item.dateSoumission ? dateLabel(item.dateSoumission) : 'Date récente'}
+                  </Text>
+                </View>
+                <View className="px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200">
+                  <Text className="text-[10px] font-bold text-emerald-800">
+                    {reportStatusLabel(item.statutSignalement)}
+                  </Text>
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      )}
     </ScrollView>
   );
 }

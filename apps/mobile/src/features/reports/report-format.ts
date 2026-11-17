@@ -23,7 +23,11 @@ export function localDateTimeToIso(value: string): string {
   return date.toISOString();
 }
 
-export function parseOptionalCoordinate(value: string, min: number, max: number): number | undefined {
+export function parseOptionalCoordinate(
+  value: string,
+  min: number,
+  max: number,
+): number | undefined {
   if (!value.trim()) return undefined;
   const number = Number(value.trim().replace(',', '.'));
   if (!Number.isFinite(number) || number < min || number > max) {

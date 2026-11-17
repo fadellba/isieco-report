@@ -1,29 +1,43 @@
-import { Image, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 interface BrandMarkProps {
   compact?: boolean;
   inverted?: boolean;
+  size?: 'sm' | 'md' | 'lg';
 }
 
-export function BrandMark({ compact = false, inverted = false }: BrandMarkProps) {
+export function BrandMark({ compact = false, inverted = false, size = 'md' }: BrandMarkProps) {
+  const iconSize = size === 'lg' ? 48 : size === 'sm' ? 28 : 38;
+  const textSize = size === 'lg' ? 'text-2xl' : size === 'sm' ? 'text-sm' : 'text-lg';
+
   return (
     <View className="flex-row items-center">
-      <View className={`h-11 w-11 items-center justify-center rounded-2xl ${inverted ? 'bg-white' : 'bg-brand-forest'}`}>
-        <Image
-          source={require('../../assets/brand-mark.png')}
-          resizeMode="contain"
-          style={{ width: 28, height: 28, tintColor: inverted ? '#174C3D' : '#FFFFFF' }}
-          accessibilityIgnoresInvertColors
-        />
+      <View
+        style={{ width: iconSize, height: iconSize }}
+        className={`items-center justify-center rounded-2xl ${
+          inverted ? 'bg-white/20' : 'bg-emerald-600'
+        } shadow-sm`}
+      >
+        <Text style={{ fontSize: size === 'lg' ? 24 : size === 'sm' ? 14 : 18 }}>🌿</Text>
       </View>
-      {!compact ? (
-        <View className="ml-3">
-          <Text className={`text-base font-extrabold tracking-tight ${inverted ? 'text-white' : 'text-ink-900'}`}>ISIECO</Text>
-          <Text className={`mt-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${inverted ? 'text-white/70' : 'text-ink-500'}`}>
-            Propreté urbaine
+      {!compact && (
+        <View className="ml-2.5">
+          <Text
+            className={`${textSize} font-black tracking-tight ${
+              inverted ? 'text-white' : 'text-slate-900'
+            }`}
+          >
+            ISIECO
+          </Text>
+          <Text
+            className={`text-[9px] font-bold uppercase tracking-widest ${
+              inverted ? 'text-emerald-300' : 'text-emerald-700'
+            }`}
+          >
+            Eco Green City
           </Text>
         </View>
-      ) : null}
+      )}
     </View>
   );
 }

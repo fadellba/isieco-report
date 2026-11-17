@@ -59,7 +59,17 @@ function TabIcon({ name, color }: { name: RoleTabIconName; color: string }) {
             borderBottomRightRadius: 2,
           }}
         />
-        <View style={{ position: 'absolute', bottom: 2, width: 3, height: 6, backgroundColor: color, borderTopLeftRadius: 2, borderTopRightRadius: 2 }} />
+        <View
+          style={{
+            position: 'absolute',
+            bottom: 2,
+            width: 3,
+            height: 6,
+            backgroundColor: color,
+            borderTopLeftRadius: 2,
+            borderTopRightRadius: 2,
+          }}
+        />
       </View>
     );
   }
@@ -91,7 +101,17 @@ function TabIcon({ name, color }: { name: RoleTabIconName; color: string }) {
             transform: [{ rotate: '-45deg' }],
           }}
         >
-          <View style={{ position: 'absolute', top: 4, left: 4, width: 4, height: 4, borderRadius: 3, backgroundColor: color }} />
+          <View
+            style={{
+              position: 'absolute',
+              top: 4,
+              left: 4,
+              width: 4,
+              height: 4,
+              borderRadius: 3,
+              backgroundColor: color,
+            }}
+          />
         </View>
       </View>
     );
@@ -126,7 +146,7 @@ export function RoleTabBar({ state, navigation, items, action }: RoleTabBarProps
     if (!route) return null;
 
     const selected = routeIndex === state.index;
-    const color = selected ? '#174C3D' : '#8A968D';
+    const color = selected ? '#16A34A' : '#94A3B8';
 
     return (
       <Pressable
@@ -150,11 +170,11 @@ export function RoleTabBar({ state, navigation, items, action }: RoleTabBarProps
         </Text>
         <View
           style={{
-            marginTop: 4,
-            width: selected ? 19 : 4,
-            height: 3,
-            borderRadius: 3,
-            backgroundColor: selected ? '#174C3D' : 'transparent',
+            marginTop: 3,
+            width: selected ? 16 : 4,
+            height: 2.5,
+            borderRadius: 2,
+            backgroundColor: selected ? '#16A34A' : 'transparent',
           }}
         />
       </Pressable>
@@ -163,8 +183,8 @@ export function RoleTabBar({ state, navigation, items, action }: RoleTabBarProps
 
   return (
     <View
-      className="flex-row items-center border-t border-line-subtle bg-white px-3 pt-2"
-      style={{ paddingBottom: Math.max(insets.bottom, 8) }}
+      className="flex-row items-center border-t border-slate-100 bg-white px-3 pt-2 shadow-sm"
+      style={{ paddingBottom: Math.max(insets.bottom, 10) }}
     >
       {action && items.length > 1 ? (
         <>
@@ -173,14 +193,15 @@ export function RoleTabBar({ state, navigation, items, action }: RoleTabBarProps
             accessibilityRole="button"
             accessibilityLabel={action.label}
             onPress={action.onPress}
-            className="-mt-6 mx-2 h-[58px] min-w-[66px] items-center justify-center rounded-2xl bg-brand-forest px-3 shadow-lg"
+            className="-mt-7 mx-2 h-14 w-14 items-center justify-center rounded-full bg-emerald-600 border-4 border-white shadow-xl shadow-emerald-950/30"
           >
-            <Text className="text-2xl font-light text-white">+</Text>
-            <Text className="mt-0.5 text-[9px] font-extrabold text-white">{action.label}</Text>
+            <Text style={{ fontSize: 20 }}>📷</Text>
           </Pressable>
           {items.slice(1).map(renderItem)}
         </>
-      ) : items.map(renderItem)}
+      ) : (
+        items.map(renderItem)
+      )}
     </View>
   );
 }

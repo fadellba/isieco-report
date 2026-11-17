@@ -27,108 +27,128 @@ export function SignInPage() {
       }
       navigate('/', { replace: true });
     } catch {
-      setError('Le service de connexion est momentanément indisponible. Réessayez dans quelques instants.');
+      setError(
+        'Le service de connexion est momentanément indisponible. Réessayez dans quelques instants.',
+      );
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <main className="auth-page">
-      <div className="auth-layout">
-        <aside className="auth-story" aria-label="Présentation ISIECO">
-          <div className="auth-story__brand"><BrandMark /></div>
-          <div className="auth-story__content">
-            <span className="auth-story__eyebrow">PROPRETÉ URBAINE · ACTION PUBLIQUE</span>
-            <h1>Du signalement à la résolution, chaque étape compte.</h1>
-            <p>Une plateforme commune pour signaler, organiser les interventions de terrain et suivre leur vérification.</p>
-            <div className="auth-story__flow" aria-label="Parcours opérationnel">
-              <span>Signalement</span>
-              <i />
-              <span>Qualification</span>
-              <i />
-              <span>Intervention</span>
-              <i />
-              <span>Vérification</span>
-            </div>
-          </div>
-          <div className="auth-story__footer">
-            <span className="auth-story__orb auth-story__orb--one" />
-            <span className="auth-story__orb auth-story__orb--two" />
-            <span>ISIECO · PLATEFORME DE SUIVI OPÉRATIONNEL</span>
-          </div>
-        </aside>
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-4 sm:p-6 selection:bg-emerald-100 selection:text-emerald-900">
+      <div className="w-full max-w-[420px]">
+        {/* Logo Header */}
+        <div className="flex flex-col items-center mb-8">
+          <BrandMark size="lg" className="justify-center" />
+        </div>
 
-        <section className="auth-main" aria-labelledby="auth-title">
-          <div className="auth-main__top">
-            <span className="auth-main__secure"><span /> Connexion sécurisée</span>
-            <Link to="/telecharger">Application mobile</Link>
+        {/* Clean Center Card */}
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-[0_10px_30px_rgba(0,0,0,0.04)] p-7 sm:p-9">
+          <div className="mb-6">
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Connexion</h1>
+            <p className="text-sm text-slate-500 mt-1">Accédez à votre espace opérationnel</p>
           </div>
-          <div className="auth-card">
-            <div className="auth-card__heading">
-              <span className="auth-card__eyebrow">ESPACE PROFESSIONNEL</span>
-              <h2 id="auth-title">Bienvenue.</h2>
-              <p>Connectez-vous avec les identifiants fournis par votre organisation.</p>
+
+          {error && (
+            <div
+              className="mb-5 p-3.5 bg-red-50 border border-red-200/80 rounded-xl text-xs text-red-700 leading-relaxed flex items-start gap-2.5"
+              role="alert"
+            >
+              <span className="text-red-500 font-bold">✕</span>
+              <span>{error}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                Adresse e-mail
+              </label>
+              <input
+                type="email"
+                required
+                autoComplete="username"
+                autoCapitalize="none"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="nom@organisation.sn"
+                className="w-full h-11 px-3.5 bg-slate-50/50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all"
+              />
             </div>
 
-            <form className="auth-form" onSubmit={handleSubmit}>
-              <label className="auth-field">
-                <span>Adresse e-mail</span>
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  Mot de passe
+                </label>
+                <Link
+                  to="/mot-de-passe-oublie"
+                  className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:underline"
+                >
+                  Oublié ?
+                </Link>
+              </div>
+              <div className="relative">
                 <input
-                  autoComplete="username"
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  name="email"
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="nom@organisation.sn"
+                  type={showPassword ? 'text' : 'password'}
                   required
-                  type="email"
-                  value={email}
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full h-11 px-3.5 pr-11 bg-slate-50/50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all"
                 />
-              </label>
-
-              <label className="auth-field">
-                <span>Mot de passe</span>
-                <div className="auth-field__password">
-                  <input
-                    autoComplete="current-password"
-                    name="password"
-                    onChange={(event) => setPassword(event.target.value)}
-                    placeholder="Votre mot de passe"
-                    required
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                  />
-                  <button
-                    type="button"
-                    aria-pressed={showPassword}
-                    onClick={() => setShowPassword((visible) => !visible)}
-                  >
-                    {showPassword ? 'Masquer' : 'Afficher'}
-                  </button>
-                </div>
-              </label>
-              <Link className="auth-form__link auth-form__link--align-end" to="/mot-de-passe-oublie">Mot de passe oublié ?</Link>
-
-              {error ? <p className="auth-form__error" role="alert">{error}</p> : null}
-
-              <button className="auth-form__submit" disabled={busy || !email.trim() || !password} type="submit">
-                <span>{busy ? 'Connexion en cours…' : 'Se connecter'}</span>
-                <span aria-hidden="true">→</span>
-              </button>
-            </form>
-
-            <div className="auth-card__note">
-              <span className="auth-card__note-icon" aria-hidden="true">i</span>
-              <p>Les habilitations et les espaces disponibles dépendent de votre compte. Les droits sont vérifiés par le serveur.</p>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400 hover:text-slate-600 p-1"
+                >
+                  {showPassword ? 'Masquer' : 'Afficher'}
+                </button>
+              </div>
             </div>
-          </div>
-          <footer className="auth-main__footer">
-            <span>© ISIECO · Propreté urbaine</span>
-            <span>Accès réservé aux comptes habilités</span>
-          </footer>
-        </section>
+
+            <button
+              type="submit"
+              disabled={busy}
+              className="w-full h-11 mt-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:opacity-50 text-white font-bold text-sm rounded-xl shadow-sm shadow-emerald-700/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              {busy ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Connexion en cours…</span>
+                </>
+              ) : (
+                'Se connecter'
+              )}
+            </button>
+          </form>
+        </div>
+
+        {/* Subtle footer */}
+        <div className="mt-8 text-center">
+          <Link
+            to="/telecharger"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-emerald-700 transition"
+          >
+            <svg
+              className="w-4 h-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <rect x="5" y="2" width="14" height="20" rx="3" />
+              <line x1="12" y1="18" x2="12.01" y2="18" />
+            </svg>
+            <span>Télécharger l'application mobile ISIECO</span>
+          </Link>
+          <p className="text-[11px] text-slate-400 mt-2 font-medium">
+            Plateforme sécurisée de propreté urbaine · ISIECO
+          </p>
+        </div>
       </div>
-    </main>
+    </div>
   );
 }

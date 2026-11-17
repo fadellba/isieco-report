@@ -43,7 +43,12 @@ interface Intervention {
   compteRendu: string | null;
   motifException: string | null;
   renseignePar: string;
-  verification: { dateVerification: string; resultatVerification: 'CONFORME' | 'A_REPRENDRE'; motif: string | null; etatVerification: 'VALIDEE' | 'REPRISE' } | null;
+  verification: {
+    dateVerification: string;
+    resultatVerification: 'CONFORME' | 'A_REPRENDRE';
+    motif: string | null;
+    etatVerification: 'VALIDEE' | 'REPRISE';
+  } | null;
   affectation: {
     idAffectation: string;
     idEquipe: string;
@@ -89,9 +94,12 @@ function dateLabel(value: string | null): string {
 }
 
 const labelClass = 'block text-xs font-semibold text-ink-500';
-const inputClass = 'mt-1 w-full rounded-lg border border-line-strong bg-white px-3 py-2 text-sm text-ink-800 outline-none transition focus:border-eco-500 focus:ring-2 focus:ring-eco-100';
-const buttonClass = 'rounded-lg bg-brand-forest px-4 py-2.5 text-xs font-bold text-white transition hover:bg-eco-600 disabled:cursor-not-allowed disabled:opacity-50';
-const secondaryClass = 'rounded-lg border border-line-strong bg-white px-3 py-2 text-xs font-semibold text-ink-500 transition hover:bg-surface-base disabled:cursor-not-allowed disabled:opacity-50';
+const inputClass =
+  'mt-1 w-full rounded-lg border border-line-strong bg-white px-3 py-2 text-sm text-ink-800 outline-none transition focus:border-eco-500 focus:ring-2 focus:ring-eco-100';
+const buttonClass =
+  'rounded-lg bg-brand-forest px-4 py-2.5 text-xs font-bold text-white transition hover:bg-eco-600 disabled:cursor-not-allowed disabled:opacity-50';
+const secondaryClass =
+  'rounded-lg border border-line-strong bg-white px-3 py-2 text-xs font-semibold text-ink-500 transition hover:bg-surface-base disabled:cursor-not-allowed disabled:opacity-50';
 
 export function InterventionsPage() {
   const { profile } = useAuth();
@@ -126,19 +134,28 @@ export function InterventionsPage() {
   const visibleAssignments = useMemo(() => {
     const query = search.trim().toLocaleLowerCase('fr-FR');
     if (!query) return assignments;
-    return assignments.filter((assignment) => [
-      assignment.contenuDossier.dossier.referenceDossier,
-      assignment.contenuDossier.typeDechet.libelle,
-      assignment.equipe.nomEquipe,
-      assignment.motif ?? '',
-      assignment.motifRefusEquipe ?? '',
-    ].join(' ').toLocaleLowerCase('fr-FR').includes(query));
+    return assignments.filter((assignment) =>
+      [
+        assignment.contenuDossier.dossier.referenceDossier,
+        assignment.contenuDossier.typeDechet.libelle,
+        assignment.equipe.nomEquipe,
+        assignment.motif ?? '',
+        assignment.motifRefusEquipe ?? '',
+      ]
+        .join(' ')
+        .toLocaleLowerCase('fr-FR')
+        .includes(query),
+    );
   }, [assignments, search]);
 
   const pendingCount = assignments.filter((item) => item.decisionEquipe === 'EN_ATTENTE').length;
   const acceptedCount = assignments.filter((item) => item.decisionEquipe === 'ACCEPTEE').length;
-  const inProgressCount = interventions.filter((item) => item.statutIntervention === 'EN_COURS').length;
-  const verificationCount = interventions.filter((item) => item.statutIntervention === 'SOUMISE' && !item.verification).length;
+  const inProgressCount = interventions.filter(
+    (item) => item.statutIntervention === 'EN_COURS',
+  ).length;
+  const verificationCount = interventions.filter(
+    (item) => item.statutIntervention === 'SOUMISE' && !item.verification,
+  ).length;
 
   const loadTeams = useCallback(async () => {
     setLoadingTeams(true);
@@ -146,9 +163,9 @@ export function InterventionsPage() {
     try {
       const result = await api.request<AgentTeam[]>('/interventions/my-teams');
       setTeams(result);
-      setSelectedTeamId((current) => result.some((team) => team.idEquipe === current)
-        ? current
-        : result[0]?.idEquipe ?? '');
+      setSelectedTeamId((current) =>
+        result.some((team) => team.idEquipe === current) ? current : (result[0]?.idEquipe ?? ''),
+      );
     } catch (reason) {
       setError(errorMessage(reason));
     } finally {
@@ -211,7 +228,9 @@ export function InterventionsPage() {
         }),
       });
       await refreshAfterMutation(
-        decisionEquipe === 'ACCEPTEE' ? 'Mission acceptée par votre équipe.' : 'Mission refusée avec motif.',
+        decisionEquipe === 'ACCEPTEE'
+          ? 'Mission acceptée par votre équipe.'
+          : 'Mission refusée avec motif.',
       );
     } catch (reason) {
       const message = errorMessage(reason);
@@ -230,7 +249,9 @@ export function InterventionsPage() {
       await api.request('/interventions/assignments/' + assignment.idAffectation + '/start', {
         method: 'POST',
       });
-      await refreshAfterMutation('Intervention démarrée. Vous pouvez joindre des preuves et préparer le compte rendu.');
+      await refreshAfterMutation(
+        'Intervention démarrée. Vous pouvez joindre des preuves et préparer le compte rendu.',
+      );
     } catch (reason) {
       const message = errorMessage(reason);
       await loadWork();
@@ -326,20 +347,48 @@ export function InterventionsPage() {
         <div>
           <span className="interventions-workspace__eyebrow">OPÉRATIONS DE TERRAIN</span>
           <h1>Interventions</h1>
-          <p>Acceptez les missions, documentez vos actions et transmettez vos comptes rendus. Les habilitations et l’auteur sont vérifiés à chaque opération.</p>
+          <p>
+            Acceptez les missions, documentez vos actions et transmettez vos comptes rendus. Les
+            habilitations et l’auteur sont vérifiés à chaque opération.
+          </p>
         </div>
         <div className="interventions-workspace__team-count">
-          <strong>{teams.length}</strong><span>Équipe(s)<br />active(s)</span>
+          <strong>{teams.length}</strong>
+          <span>
+            Équipe(s)
+            <br />
+            active(s)
+          </span>
         </div>
       </header>
 
-      {notice ? <div role="status" className="rounded-xl border border-line-strong bg-surface-base px-4 py-3 text-sm text-ink-900">{notice}</div> : null}
-      {error ? <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div> : null}
+      {notice ? (
+        <div
+          role="status"
+          className="rounded-xl border border-line-strong bg-surface-base px-4 py-3 text-sm text-ink-900"
+        >
+          {notice}
+        </div>
+      ) : null}
+      {error ? (
+        <div
+          role="alert"
+          className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+        >
+          {error}
+        </div>
+      ) : null}
 
       <section className="interventions-team-panel">
         <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-          <label className={labelClass}>Équipe active
-            <select value={selectedTeamId} onChange={(event) => setSelectedTeamId(event.target.value)} disabled={loadingTeams || teams.length === 0} className={inputClass}>
+          <label className={labelClass}>
+            Équipe active
+            <select
+              value={selectedTeamId}
+              onChange={(event) => setSelectedTeamId(event.target.value)}
+              disabled={loadingTeams || teams.length === 0}
+              className={inputClass}
+            >
               <option value="">Sélectionner une équipe</option>
               {teams.map((team) => (
                 <option key={team.idEquipe} value={team.idEquipe}>
@@ -348,165 +397,378 @@ export function InterventionsPage() {
               ))}
             </select>
           </label>
-          <button type="button" onClick={() => void loadTeams()} disabled={loadingTeams} className={secondaryClass}>
+          <button
+            type="button"
+            onClick={() => void loadTeams()}
+            disabled={loadingTeams}
+            className={secondaryClass}
+          >
             {loadingTeams ? 'Actualisation…' : 'Actualiser mes équipes'}
           </button>
         </div>
-        {selectedTeam ? <p className="mt-3 text-xs text-ink-500">Membre depuis le {dateLabel(selectedTeam.dateDebut)} · {selectedTeam.fonction}</p> : null}
+        {selectedTeam ? (
+          <p className="mt-3 text-xs text-ink-500">
+            Membre depuis le {dateLabel(selectedTeam.dateDebut)} · {selectedTeam.fonction}
+          </p>
+        ) : null}
       </section>
 
       {!loadingTeams && teams.length === 0 ? (
         <p className="rounded-xl border border-line-strong bg-white p-5 text-sm text-ink-500">
-          Aucune appartenance active à une équipe. Contactez le gestionnaire des référentiels si cela ne correspond pas à votre affectation.
+          Aucune appartenance active à une équipe. Contactez le gestionnaire des référentiels si
+          cela ne correspond pas à votre affectation.
         </p>
       ) : null}
 
       {selectedTeam ? (
         <>
           <section className="interventions-summary" aria-label="Synthèse de l’équipe sélectionnée">
-            <article><span>À accepter</span><strong>{pendingCount}</strong><small>Réponse attendue</small></article>
-            <article><span>Acceptées</span><strong>{acceptedCount}</strong><small>Missions confiées</small></article>
-            <article><span>En cours</span><strong>{inProgressCount}</strong><small>Interventions démarrées</small></article>
-            <article><span>À vérifier</span><strong>{verificationCount}</strong><small>Comptes rendus transmis</small></article>
+            <article>
+              <span>À accepter</span>
+              <strong>{pendingCount}</strong>
+              <small>Réponse attendue</small>
+            </article>
+            <article>
+              <span>Acceptées</span>
+              <strong>{acceptedCount}</strong>
+              <small>Missions confiées</small>
+            </article>
+            <article>
+              <span>En cours</span>
+              <strong>{inProgressCount}</strong>
+              <small>Interventions démarrées</small>
+            </article>
+            <article>
+              <span>À vérifier</span>
+              <strong>{verificationCount}</strong>
+              <small>Comptes rendus transmis</small>
+            </article>
           </section>
 
           <section className="interventions-panel">
-          <div className="interventions-panel__header">
-            <div>
-              <span className="interventions-workspace__eyebrow">VOTRE ÉQUIPE</span>
-              <h2>Missions de {selectedTeam.nomEquipe}</h2>
-              <p>{assignments.length} affectation(s) active(s) · {visibleAssignments.length} résultat(s)</p>
+            <div className="interventions-panel__header">
+              <div>
+                <span className="interventions-workspace__eyebrow">VOTRE ÉQUIPE</span>
+                <h2>Missions de {selectedTeam.nomEquipe}</h2>
+                <p>
+                  {assignments.length} affectation(s) active(s) · {visibleAssignments.length}{' '}
+                  résultat(s)
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void loadWork()}
+                disabled={loadingWork}
+                className={secondaryClass}
+              >
+                {loadingWork ? 'Actualisation…' : 'Actualiser les missions'}
+              </button>
             </div>
-            <button type="button" onClick={() => void loadWork()} disabled={loadingWork} className={secondaryClass}>
-              {loadingWork ? 'Actualisation…' : 'Actualiser les missions'}
-            </button>
-          </div>
-          <div className="interventions-panel__toolbar">
-            <label className="interventions-search">
-              <span>Rechercher dans les missions</span>
-              <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Référence, type de déchet, équipe ou motif…" />
-            </label>
-            <span>{visibleAssignments.length} résultat(s)</span>
-          </div>
-          {loadingWork && !assignments.length ? <p className="p-5 text-sm text-ink-500">Chargement des missions…</p> : null}
-          {!loadingWork && assignments.length === 0 ? <p className="p-5 text-sm text-ink-500">Aucune affectation active pour cette équipe.</p> : null}
-          {!loadingWork && assignments.length > 0 && visibleAssignments.length === 0 ? <div className="interventions-panel__empty"><strong>Aucune mission ne correspond à cette recherche.</strong><button type="button" onClick={() => setSearch('')}>Effacer la recherche</button></div> : null}
-          <div className="interventions-panel__list">
-            {visibleAssignments.map((assignment) => {
-              const latest = latestByAssignment.get(assignment.idAffectation);
-              const latestVerification = latest?.verification ?? null;
-              const isAuthor = latest?.renseignePar === profile?.utilisateurId;
-              const canStart = assignment.decisionEquipe === 'ACCEPTEE' && (
-                !latest ||
-                (latest.statutIntervention === 'SOUMISE' &&
-                  latestVerification?.etatVerification === 'REPRISE' &&
-                  new Date(latestVerification.dateVerification).getTime() >=
-                    new Date(latest.dateSoumissionCompteRendu ?? 0).getTime())
-              );
-              return (
-                <article key={assignment.idAffectation} className="space-y-4 p-5">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <h3 className="font-bold text-ink-900">{assignment.contenuDossier.dossier.referenceDossier} · {assignment.contenuDossier.typeDechet.libelle}</h3>
-                      <p className="mt-1 text-xs text-ink-500">{assignment.equipe.nomEquipe} · affectée le {dateLabel(assignment.dateHeureAffectation)}</p>
-                      <p className="mt-1 text-xs text-ink-500">{assignment.motif || 'Aucun motif renseigné.'}</p>
-                      {assignment.contenuDossier.dossier.statutDossier ? <p className="mt-1 text-[11px] text-ink-400">Dossier : {assignment.contenuDossier.dossier.statutDossier} · contenu : {assignment.contenuDossier.etatPriseEnCharge}</p> : null}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <StatusBadge label={'Affectation ' + displayStatus(assignment.etatAffectation)} tone={assignmentTone(assignment.etatAffectation)} />
-                      <StatusBadge label={'Équipe ' + displayStatus(assignment.decisionEquipe)} tone={decisionTone(assignment.decisionEquipe)} />
-                    </div>
-                  </div>
-
-                  {assignment.decisionEquipe === 'EN_ATTENTE' ? (
-                    <div className="grid gap-3 rounded-xl bg-surface-base p-4">
-                      <label className={labelClass}>Observation (facultative)
-                        <input value={observations[assignment.idAffectation] ?? ''} onChange={(event) => setObservations((current) => ({ ...current, [assignment.idAffectation]: event.target.value }))} maxLength={2000} className={inputClass} />
-                      </label>
-                      <label className={labelClass}>Motif du refus (obligatoire en cas de refus)
-                        <textarea value={refusalReasons[assignment.idAffectation] ?? ''} onChange={(event) => setRefusalReasons((current) => ({ ...current, [assignment.idAffectation]: event.target.value }))} minLength={5} maxLength={2000} rows={2} className={inputClass} />
-                      </label>
-                      <div className="flex flex-wrap justify-end gap-2">
-                        <button type="button" onClick={() => void respond(assignment, 'REFUSEE')} disabled={busyKey === assignment.idAffectation} className={secondaryClass}>Refuser</button>
-                        <button type="button" onClick={() => void respond(assignment, 'ACCEPTEE')} disabled={busyKey === assignment.idAffectation} className={buttonClass}>Accepter la mission</button>
+            <div className="interventions-panel__toolbar">
+              <label className="interventions-search">
+                <span>Rechercher dans les missions</span>
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Référence, type de déchet, équipe ou motif…"
+                />
+              </label>
+              <span>{visibleAssignments.length} résultat(s)</span>
+            </div>
+            {loadingWork && !assignments.length ? (
+              <p className="p-5 text-sm text-ink-500">Chargement des missions…</p>
+            ) : null}
+            {!loadingWork && assignments.length === 0 ? (
+              <p className="p-5 text-sm text-ink-500">
+                Aucune affectation active pour cette équipe.
+              </p>
+            ) : null}
+            {!loadingWork && assignments.length > 0 && visibleAssignments.length === 0 ? (
+              <div className="interventions-panel__empty">
+                <strong>Aucune mission ne correspond à cette recherche.</strong>
+                <button type="button" onClick={() => setSearch('')}>
+                  Effacer la recherche
+                </button>
+              </div>
+            ) : null}
+            <div className="interventions-panel__list">
+              {visibleAssignments.map((assignment) => {
+                const latest = latestByAssignment.get(assignment.idAffectation);
+                const latestVerification = latest?.verification ?? null;
+                const isAuthor = latest?.renseignePar === profile?.utilisateurId;
+                const canStart =
+                  assignment.decisionEquipe === 'ACCEPTEE' &&
+                  (!latest ||
+                    (latest.statutIntervention === 'SOUMISE' &&
+                      latestVerification?.etatVerification === 'REPRISE' &&
+                      new Date(latestVerification.dateVerification).getTime() >=
+                        new Date(latest.dateSoumissionCompteRendu ?? 0).getTime()));
+                return (
+                  <article key={assignment.idAffectation} className="space-y-4 p-5">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <h3 className="font-bold text-ink-900">
+                          {assignment.contenuDossier.dossier.referenceDossier} ·{' '}
+                          {assignment.contenuDossier.typeDechet.libelle}
+                        </h3>
+                        <p className="mt-1 text-xs text-ink-500">
+                          {assignment.equipe.nomEquipe} · affectée le{' '}
+                          {dateLabel(assignment.dateHeureAffectation)}
+                        </p>
+                        <p className="mt-1 text-xs text-ink-500">
+                          {assignment.motif || 'Aucun motif renseigné.'}
+                        </p>
+                        {assignment.contenuDossier.dossier.statutDossier ? (
+                          <p className="mt-1 text-[11px] text-ink-400">
+                            Dossier : {assignment.contenuDossier.dossier.statutDossier} · contenu :{' '}
+                            {assignment.contenuDossier.etatPriseEnCharge}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <StatusBadge
+                          label={'Affectation ' + displayStatus(assignment.etatAffectation)}
+                          tone={assignmentTone(assignment.etatAffectation)}
+                        />
+                        <StatusBadge
+                          label={'Équipe ' + displayStatus(assignment.decisionEquipe)}
+                          tone={decisionTone(assignment.decisionEquipe)}
+                        />
                       </div>
                     </div>
-                  ) : null}
 
-                  {latest ? (
-                    <div className="rounded-xl border border-line-strong p-4">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div>
-                          <h4 className="text-sm font-bold text-ink-800">Dernière intervention</h4>
-                          <p className="mt-1 text-xs text-ink-500">Démarrée le {dateLabel(latest.dateHeureDebut)} · {latest.statutIntervention}</p>
+                    {assignment.decisionEquipe === 'EN_ATTENTE' ? (
+                      <div className="grid gap-3 rounded-xl bg-surface-base p-4">
+                        <label className={labelClass}>
+                          Observation (facultative)
+                          <input
+                            value={observations[assignment.idAffectation] ?? ''}
+                            onChange={(event) =>
+                              setObservations((current) => ({
+                                ...current,
+                                [assignment.idAffectation]: event.target.value,
+                              }))
+                            }
+                            maxLength={2000}
+                            className={inputClass}
+                          />
+                        </label>
+                        <label className={labelClass}>
+                          Motif du refus (obligatoire en cas de refus)
+                          <textarea
+                            value={refusalReasons[assignment.idAffectation] ?? ''}
+                            onChange={(event) =>
+                              setRefusalReasons((current) => ({
+                                ...current,
+                                [assignment.idAffectation]: event.target.value,
+                              }))
+                            }
+                            minLength={5}
+                            maxLength={2000}
+                            rows={2}
+                            className={inputClass}
+                          />
+                        </label>
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => void respond(assignment, 'REFUSEE')}
+                            disabled={busyKey === assignment.idAffectation}
+                            className={secondaryClass}
+                          >
+                            Refuser
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void respond(assignment, 'ACCEPTEE')}
+                            disabled={busyKey === assignment.idAffectation}
+                            className={buttonClass}
+                          >
+                            Accepter la mission
+                          </button>
                         </div>
-                        {latest.resultatIntervention ? <span className="rounded-full bg-surface-soft px-2.5 py-1 text-[10px] font-bold">{latest.resultatIntervention}</span> : null}
                       </div>
-                      {latest.statutIntervention === 'SOUMISE' ? (
-                        <div className="mt-3 rounded-lg bg-surface-base p-3 text-xs text-ink-500">
-                          <p>Compte rendu soumis le {dateLabel(latest.dateSoumissionCompteRendu)}.</p>
-                          {latestVerification?.etatVerification === 'REPRISE'
-                            ? <p className="mt-1 font-semibold text-amber-800">Le vérificateur a demandé une reprise. Une nouvelle intervention peut être démarrée.</p>
-                            : latestVerification?.etatVerification === 'VALIDEE'
-                              ? <p className="mt-1 font-semibold text-ink-800">L’intervention a été validée.</p>
-                              : <p className="mt-1">En attente d’une décision de vérification.</p>}
-                          {latest.compteRendu ? <p className="mt-2 whitespace-pre-wrap">{latest.compteRendu}</p> : null}
-                          {latest.motifException ? <p className="mt-1">Motif : {latest.motifException}</p> : null}
-                        </div>
-                      ) : null}
-                      {latest.statutIntervention === 'EN_COURS' && isAuthor ? (
-                        <div className="mt-4 space-y-4">
-                          <form onSubmit={(event) => void addPhoto(event, latest)} className="grid gap-3 rounded-lg bg-surface-base p-3">
-                            <h5 className="text-xs font-bold text-ink-700">Ajouter une preuve photo</h5>
-                            <label className={labelClass}>Photo (JPEG, PNG ou WebP, 10 MiB maximum)
-                              <input name="file" type="file" accept="image/jpeg,image/png,image/webp" required className={inputClass} />
-                            </label>
-                            <label className={labelClass}>Contexte de la photo
-                              <input name="contextePhoto" required minLength={3} maxLength={100} className={inputClass} placeholder="Avant collecte, après intervention…" />
-                            </label>
-                            <label className={labelClass}>Description (facultative)
-                              <input name="description" maxLength={500} className={inputClass} />
-                            </label>
-                            <div className="flex justify-end"><button type="submit" disabled={busyKey === 'photo-' + latest.idIntervention} className={buttonClass}>{busyKey === 'photo-' + latest.idIntervention ? 'Envoi…' : 'Ajouter la preuve'}</button></div>
-                          </form>
+                    ) : null}
 
-                          <form onSubmit={(event) => void submitReport(event, latest)} className="grid gap-3 rounded-lg border border-line-strong p-3">
-                            <h5 className="text-xs font-bold text-ink-700">Soumettre le compte rendu</h5>
-                            <label className={labelClass}>Résultat
-                              <select name="resultatIntervention" defaultValue="TERMINEE" className={inputClass}>
-                                <option value="TERMINEE">Terminée</option>
-                                <option value="PARTIELLE">Partielle</option>
-                                <option value="IMPOSSIBLE">Impossible</option>
-                              </select>
-                            </label>
-                            <label className={labelClass}>Compte rendu (20 caractères minimum)
-                              <textarea name="compteRendu" required minLength={20} maxLength={10000} rows={4} className={inputClass} />
-                            </label>
-                            <label className={labelClass}>Motif d’exception (obligatoire si résultat partiel ou impossible)
-                              <textarea name="motifException" minLength={5} maxLength={2000} rows={2} className={inputClass} />
-                            </label>
-                            <div className="flex justify-end"><button type="submit" disabled={busyKey === 'submit-' + latest.idIntervention} className={buttonClass}>{busyKey === 'submit-' + latest.idIntervention ? 'Soumission…' : 'Soumettre le compte rendu'}</button></div>
-                          </form>
+                    {latest ? (
+                      <div className="rounded-xl border border-line-strong p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <h4 className="text-sm font-bold text-ink-800">
+                              Dernière intervention
+                            </h4>
+                            <p className="mt-1 text-xs text-ink-500">
+                              Démarrée le {dateLabel(latest.dateHeureDebut)} ·{' '}
+                              {latest.statutIntervention}
+                            </p>
+                          </div>
+                          {latest.resultatIntervention ? (
+                            <span className="rounded-full bg-surface-soft px-2.5 py-1 text-[10px] font-bold">
+                              {latest.resultatIntervention}
+                            </span>
+                          ) : null}
                         </div>
-                      ) : null}
-                      {latest.statutIntervention === 'EN_COURS' && !isAuthor ? (
-                        <p className="mt-3 text-xs text-ink-500">Cette intervention a été démarrée par un autre agent de l’équipe. Seul son auteur peut ajouter des preuves ou soumettre le compte rendu.</p>
-                      ) : null}
-                    </div>
-                  ) : null}
+                        {latest.statutIntervention === 'SOUMISE' ? (
+                          <div className="mt-3 rounded-lg bg-surface-base p-3 text-xs text-ink-500">
+                            <p>
+                              Compte rendu soumis le {dateLabel(latest.dateSoumissionCompteRendu)}.
+                            </p>
+                            {latestVerification?.etatVerification === 'REPRISE' ? (
+                              <p className="mt-1 font-semibold text-amber-800">
+                                Le vérificateur a demandé une reprise. Une nouvelle intervention
+                                peut être démarrée.
+                              </p>
+                            ) : latestVerification?.etatVerification === 'VALIDEE' ? (
+                              <p className="mt-1 font-semibold text-ink-800">
+                                L’intervention a été validée.
+                              </p>
+                            ) : (
+                              <p className="mt-1">En attente d’une décision de vérification.</p>
+                            )}
+                            {latest.compteRendu ? (
+                              <p className="mt-2 whitespace-pre-wrap">{latest.compteRendu}</p>
+                            ) : null}
+                            {latest.motifException ? (
+                              <p className="mt-1">Motif : {latest.motifException}</p>
+                            ) : null}
+                          </div>
+                        ) : null}
+                        {latest.statutIntervention === 'EN_COURS' && isAuthor ? (
+                          <div className="mt-4 space-y-4">
+                            <form
+                              onSubmit={(event) => void addPhoto(event, latest)}
+                              className="grid gap-3 rounded-lg bg-surface-base p-3"
+                            >
+                              <h5 className="text-xs font-bold text-ink-700">
+                                Ajouter une preuve photo
+                              </h5>
+                              <label className={labelClass}>
+                                Photo (JPEG, PNG ou WebP, 10 MiB maximum)
+                                <input
+                                  name="file"
+                                  type="file"
+                                  accept="image/jpeg,image/png,image/webp"
+                                  required
+                                  className={inputClass}
+                                />
+                              </label>
+                              <label className={labelClass}>
+                                Contexte de la photo
+                                <input
+                                  name="contextePhoto"
+                                  required
+                                  minLength={3}
+                                  maxLength={100}
+                                  className={inputClass}
+                                  placeholder="Avant collecte, après intervention…"
+                                />
+                              </label>
+                              <label className={labelClass}>
+                                Description (facultative)
+                                <input name="description" maxLength={500} className={inputClass} />
+                              </label>
+                              <div className="flex justify-end">
+                                <button
+                                  type="submit"
+                                  disabled={busyKey === 'photo-' + latest.idIntervention}
+                                  className={buttonClass}
+                                >
+                                  {busyKey === 'photo-' + latest.idIntervention
+                                    ? 'Envoi…'
+                                    : 'Ajouter la preuve'}
+                                </button>
+                              </div>
+                            </form>
 
-                  {canStart ? (
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <p className="text-xs text-ink-500">{latest ? 'Une reprise a été demandée par le vérificateur.' : 'L’équipe a accepté cette mission.'}</p>
-                      <button type="button" onClick={() => void start(assignment)} disabled={busyKey === assignment.idAffectation} className={buttonClass}>
-                        {busyKey === assignment.idAffectation ? 'Démarrage…' : latest ? 'Démarrer la reprise' : 'Démarrer l’intervention'}
-                      </button>
-                    </div>
-                  ) : null}
-                </article>
-              );
-            })}
-          </div>
+                            <form
+                              onSubmit={(event) => void submitReport(event, latest)}
+                              className="grid gap-3 rounded-lg border border-line-strong p-3"
+                            >
+                              <h5 className="text-xs font-bold text-ink-700">
+                                Soumettre le compte rendu
+                              </h5>
+                              <label className={labelClass}>
+                                Résultat
+                                <select
+                                  name="resultatIntervention"
+                                  defaultValue="TERMINEE"
+                                  className={inputClass}
+                                >
+                                  <option value="TERMINEE">Terminée</option>
+                                  <option value="PARTIELLE">Partielle</option>
+                                  <option value="IMPOSSIBLE">Impossible</option>
+                                </select>
+                              </label>
+                              <label className={labelClass}>
+                                Compte rendu (20 caractères minimum)
+                                <textarea
+                                  name="compteRendu"
+                                  required
+                                  minLength={20}
+                                  maxLength={10000}
+                                  rows={4}
+                                  className={inputClass}
+                                />
+                              </label>
+                              <label className={labelClass}>
+                                Motif d’exception (obligatoire si résultat partiel ou impossible)
+                                <textarea
+                                  name="motifException"
+                                  minLength={5}
+                                  maxLength={2000}
+                                  rows={2}
+                                  className={inputClass}
+                                />
+                              </label>
+                              <div className="flex justify-end">
+                                <button
+                                  type="submit"
+                                  disabled={busyKey === 'submit-' + latest.idIntervention}
+                                  className={buttonClass}
+                                >
+                                  {busyKey === 'submit-' + latest.idIntervention
+                                    ? 'Soumission…'
+                                    : 'Soumettre le compte rendu'}
+                                </button>
+                              </div>
+                            </form>
+                          </div>
+                        ) : null}
+                        {latest.statutIntervention === 'EN_COURS' && !isAuthor ? (
+                          <p className="mt-3 text-xs text-ink-500">
+                            Cette intervention a été démarrée par un autre agent de l’équipe. Seul
+                            son auteur peut ajouter des preuves ou soumettre le compte rendu.
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    {canStart ? (
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-xs text-ink-500">
+                          {latest
+                            ? 'Une reprise a été demandée par le vérificateur.'
+                            : 'L’équipe a accepté cette mission.'}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => void start(assignment)}
+                          disabled={busyKey === assignment.idAffectation}
+                          className={buttonClass}
+                        >
+                          {busyKey === assignment.idAffectation
+                            ? 'Démarrage…'
+                            : latest
+                              ? 'Démarrer la reprise'
+                              : 'Démarrer l’intervention'}
+                        </button>
+                      </div>
+                    ) : null}
+                  </article>
+                );
+              })}
+            </div>
           </section>
         </>
       ) : null}

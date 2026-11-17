@@ -16,9 +16,15 @@ export default function IndexScreen() {
   useEffect(() => {
     let active = true;
     AsyncStorage.getItem(ONBOARDING_KEY)
-      .then((value) => { if (active) setOnboardingComplete(value === 'true'); })
-      .catch(() => { if (active) setOnboardingComplete(false); });
-    return () => { active = false; };
+      .then((value) => {
+        if (active) setOnboardingComplete(value === 'true');
+      })
+      .catch(() => {
+        if (active) setOnboardingComplete(false);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {

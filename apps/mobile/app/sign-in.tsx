@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Link, useRouter } from 'expo-router';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 import { supabase } from '../src/lib/supabase';
 import { AuthScreenFrame } from '../src/ui/AuthScreenFrame';
 
-const inputClass = 'mt-2 min-h-[52px] rounded-2xl border border-line-strong bg-surface-base px-4 py-3.5 text-sm text-ink-900';
+const inputClass =
+  'mt-1.5 min-h-[48px] rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3 text-sm text-slate-900';
 
 export default function SignInScreen() {
   const router = useRouter();
@@ -24,7 +25,9 @@ export default function SignInScreen() {
         password,
       });
       if (authError) {
-        setError('Connexion impossible. Vérifiez vos identifiants ou confirmez votre adresse e-mail.');
+        setError(
+          'Connexion impossible. Vérifiez vos identifiants ou confirmez votre adresse e-mail.',
+        );
         return;
       }
       router.replace('/');
@@ -37,12 +40,13 @@ export default function SignInScreen() {
 
   return (
     <AuthScreenFrame
-      eyebrow="Votre espace ISIECO"
-      title="Heureux de vous retrouver."
-      description="Connectez-vous pour signaler un dépôt, suivre son traitement ou retrouver vos missions de terrain."
+      title="Connexion"
+      description="Connectez-vous pour signaler un dépôt ou retrouver vos missions de terrain."
     >
       <View>
-        <Text className="text-xs font-extrabold text-ink-700">Adresse e-mail</Text>
+        <Text className="text-xs font-bold uppercase tracking-wider text-slate-700">
+          Adresse e-mail
+        </Text>
         <TextInput
           accessibilityLabel="Adresse e-mail"
           autoCapitalize="none"
@@ -52,23 +56,29 @@ export default function SignInScreen() {
           keyboardType="email-address"
           onChangeText={setEmail}
           placeholder="nom@exemple.com"
-          placeholderTextColor="#8A968D"
+          placeholderTextColor="#94A3B8"
           returnKeyType="next"
           textContentType="emailAddress"
           value={email}
         />
       </View>
 
-      <View className="mt-5">
+      <View className="mt-4">
         <View className="flex-row items-center justify-between">
-          <Text className="text-xs font-extrabold text-ink-700">Mot de passe</Text>
+          <Text className="text-xs font-bold uppercase tracking-wider text-slate-700">
+            Mot de passe
+          </Text>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+            accessibilityLabel={
+              showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'
+            }
             onPress={() => setShowPassword((visible) => !visible)}
             hitSlop={8}
           >
-            <Text className="text-[10px] font-extrabold text-brand-petrol">{showPassword ? 'Masquer' : 'Afficher'}</Text>
+            <Text className="text-xs font-bold text-emerald-600">
+              {showPassword ? 'Masquer' : 'Afficher'}
+            </Text>
           </Pressable>
         </View>
         <TextInput
@@ -79,40 +89,47 @@ export default function SignInScreen() {
           onChangeText={setPassword}
           onSubmitEditing={() => void handleSubmit()}
           placeholder="Votre mot de passe"
-          placeholderTextColor="#8A968D"
+          placeholderTextColor="#94A3B8"
           returnKeyType="go"
           secureTextEntry={!showPassword}
           textContentType="password"
           value={password}
         />
-        <View className="mt-3 items-end">
-          <Link className="text-[10px] font-extrabold text-brand-forest" href="/forgot-password">Mot de passe oublié ?</Link>
+        <View className="mt-2 items-end">
+          <Link className="text-xs font-bold text-emerald-600" href="/forgot-password">
+            Mot de passe oublié ?
+          </Link>
         </View>
       </View>
 
       {error ? (
-        <View className="mt-5 rounded-2xl border border-status-danger/20 bg-status-danger/5 p-4">
-          <Text accessibilityRole="alert" className="text-xs leading-5 text-status-danger">{error}</Text>
+        <View className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3.5">
+          <Text accessibilityRole="alert" className="text-xs leading-5 text-red-700">
+            {error}
+          </Text>
         </View>
       ) : null}
 
       <Pressable
         accessibilityRole="button"
-        accessibilityState={{ disabled: busy || !email.trim() || !password }}
-        className="mt-6 min-h-[52px] items-center justify-center rounded-2xl bg-brand-forest px-5 py-4 disabled:opacity-50"
-        disabled={busy || !email.trim() || !password}
+        accessibilityLabel="Se connecter"
+        disabled={busy}
         onPress={() => void handleSubmit()}
+        className="mt-6 min-h-[50px] items-center justify-center rounded-xl bg-emerald-600 active:bg-emerald-700 shadow-sm shadow-emerald-950/20"
       >
-        <Text className="text-sm font-extrabold text-white">{busy ? 'Connexion en cours…' : 'Se connecter'}</Text>
+        {busy ? (
+          <ActivityIndicator color="#FFFFFF" size="small" />
+        ) : (
+          <Text className="text-sm font-extrabold text-white">Se connecter</Text>
+        )}
       </Pressable>
 
-      <View className="mt-6 border-t border-line-subtle pt-5">
-        <View className="flex-row flex-wrap items-center justify-center">
-          <Text className="text-xs text-ink-500">Pas encore de compte ? </Text>
-          <Link className="text-xs font-extrabold text-brand-forest" href="/sign-up">Créer un compte citoyen</Link>
-        </View>
-        <Text className="mt-4 text-center text-[10px] leading-4 text-ink-400">
-          Les accès agents et administrateurs sont attribués par leur organisation.
+      <View className="mt-6 items-center border-t border-slate-100 pt-5">
+        <Text className="text-xs text-slate-500">
+          Vous n’avez pas encore de compte ?{' '}
+          <Link className="font-bold text-emerald-700" href="/sign-up">
+            Créer un compte citoyen
+          </Link>
         </Text>
       </View>
     </AuthScreenFrame>

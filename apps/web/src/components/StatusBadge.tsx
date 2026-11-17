@@ -14,7 +14,10 @@ export function FeedbackBanner({
   tone: 'success' | 'error' | 'warning' | 'info';
 }) {
   return (
-    <div className={`feedback-banner feedback-banner--${tone}`} role={tone === 'error' ? 'alert' : 'status'}>
+    <div
+      className={`feedback-banner feedback-banner--${tone}`}
+      role={tone === 'error' ? 'alert' : 'status'}
+    >
       {children}
     </div>
   );

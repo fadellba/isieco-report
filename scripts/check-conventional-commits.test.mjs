@@ -5,18 +5,24 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
-const checkerPath = new URL('./check-conventional-commits.mjs', import.meta.url);
+import { fileURLToPath } from 'node:url';
+
+const checkerPath = fileURLToPath(new URL('./check-conventional-commits.mjs', import.meta.url));
 
 test('accepts Conventional Commit subjects', () => {
   const directory = mkdtempSync(join(tmpdir(), 'isieco-commits-'));
   const subjectsPath = join(directory, 'subjects.txt');
   writeFileSync(
     subjectsPath,
-    ['feat(reports): create report', 'fix(auth): reject expired tokens', 'chore!: remove legacy config'].join('\n'),
+    [
+      'feat(reports): create report',
+      'fix(auth): reject expired tokens',
+      'chore!: remove legacy config',
+    ].join('\n'),
   );
 
   try {
-    const result = spawnSync(process.execPath, [checkerPath.pathname, subjectsPath], {
+    const result = spawnSync(process.execPath, [checkerPath, subjectsPath], {
       encoding: 'utf8',
     });
     assert.equal(result.status, 0, result.stderr);
@@ -32,7 +38,7 @@ test('rejects commit subjects without a Conventional Commit type', () => {
   writeFileSync(subjectsPath, 'initial commit\n');
 
   try {
-    const result = spawnSync(process.execPath, [checkerPath.pathname, subjectsPath], {
+    const result = spawnSync(process.execPath, [checkerPath, subjectsPath], {
       encoding: 'utf8',
     });
     assert.equal(result.status, 1);

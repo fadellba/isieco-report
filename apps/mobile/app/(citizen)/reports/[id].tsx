@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import {
+  ActivityIndicator,
+  Image,
+  Linking,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import {
   answerSupplement,
   getMyReport,
@@ -13,41 +22,47 @@ import {
   type Supplement,
 } from '../../../src/features/reports/reports-api';
 import { dateLabel, reportStatusLabel } from '../../../src/features/reports/report-format';
-import { StatusBadge, type StatusTone } from '../../../src/ui/StatusBadge';
 import { FeedbackBanner } from '../../../src/ui/FeedbackBanner';
-import { BrandMark } from '../../../src/ui/BrandMark';
-import { captureMobilePhoto, pickMobilePhotos, type PreparedMobilePhoto } from '../../../src/features/media/mobile-media';
+import {
+  captureMobilePhoto,
+  pickMobilePhotos,
+  type PreparedMobilePhoto,
+} from '../../../src/features/media/mobile-media';
 
-const inputClass = 'mt-2 min-h-[100px] rounded-xl border border-line-strong bg-white px-4 py-3 text-sm text-ink-900';
-
-function reportTone(status: string): StatusTone {
-  if (status === 'REJETE') return 'danger';
-  if (status === 'EN_ATTENTE_COMPLEMENT') return 'warning';
-  if (status === 'QUALIFIE') return 'success';
-  if (status === 'COMPLEMENT_REPONDU') return 'info';
-  return 'brand';
-}
-
-function nextStepLabel(status: string): string | null {
-  const labels: Record<string, string> = {
-    SOUMIS: 'Votre signalement a été reçu. Le service doit maintenant examiner les informations transmises.',
-    EN_ATTENTE_COMPLEMENT: 'Une réponse de votre part est attendue pour permettre au service de poursuivre le traitement.',
-    COMPLEMENT_REPONDU: 'Votre complément a été transmis. Le service peut reprendre l’examen du signalement.',
-    QUALIFIE: 'Les informations ont été qualifiées. Consultez la chronologie pour suivre la suite de la prise en charge.',
-    REJETE: 'Le signalement n’a pas été retenu. Consultez le motif de décision affiché dans son détail.',
-  };
-  return labels[status] ?? null;
+function reportBadgeInfo(status: string): { label: string; bg: string; text: string } {
+  switch (status) {
+    case 'SOUMIS':
+      return { label: 'Reçu / En attente', bg: 'bg-amber-100', text: 'text-amber-800' };
+    case 'EN_ATTENTE_COMPLEMENT':
+      return { label: 'Complément demandé', bg: 'bg-orange-100', text: 'text-orange-800' };
+    case 'COMPLEMENT_REPONDU':
+      return { label: 'Complément transmis', bg: 'bg-blue-100', text: 'text-blue-800' };
+    case 'QUALIFIE':
+      return { label: 'Validé par les services', bg: 'bg-emerald-100', text: 'text-emerald-800' };
+    case 'AFFECTE':
+    case 'INTERVENTION_EN_COURS':
+      return { label: 'Intervention en cours', bg: 'bg-emerald-600', text: 'text-white' };
+    case 'RESOLU':
+    case 'CLOTURE':
+      return { label: 'Dépôt nettoyé', bg: 'bg-emerald-800', text: 'text-white' };
+    case 'REJETE':
+      return { label: 'Non retenu', bg: 'bg-rose-100', text: 'text-rose-800' };
+    default:
+      return { label: reportStatusLabel(status), bg: 'bg-slate-100', text: 'text-slate-800' };
+  }
 }
 
 export default function CitizenReportDetailScreen() {
+  const router = useRouter();
   const params = useLocalSearchParams<{ id: string; photosFailed?: string }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const [report, setReport] = useState<Report | null>(null);
   const [supplements, setSupplements] = useState<Supplement[]>([]);
   const [history, setHistory] = useState<ReportHistory | null>(null);
-  const [historyError, setHistoryError] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [photoLinks, setPhotoLinks] = useState<Record<string, { url: string; expiresAt: number }>>({});
+  const [photoLinks, setPhotoLinks] = useState<Record<string, { url: string; expiresAt: number }>>(
+    {},
+  );
   const [photoBusy, setPhotoBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -56,7 +71,7 @@ export default function CitizenReportDetailScreen() {
 
   const load = useCallback(async () => {
     if (!id) {
-      setError('Identifiant de signalement manquant. Revenez à votre liste pour sélectionner un signalement.');
+      setError('Identifiant de signalement manquant.');
       setLoading(false);
       return;
     }
@@ -69,12 +84,29 @@ export default function CitizenReportDetailScreen() {
       ]);
       setReport(reportData);
       setSupplements(supplementData.demandes);
+
+      // Auto-fetch photo URLs if available
+      if (reportData.photos.length > 0) {
+        for (const p of reportData.photos) {
+          try {
+            const result = await getReportPhotoUrl(id, p.idPhotoSignalement);
+            setPhotoLinks((curr) => ({
+              ...curr,
+              [p.idPhotoSignalement]: {
+                url: result.signedUrl,
+                expiresAt: Date.now() + result.expiresInSeconds * 1000,
+              },
+            }));
+          } catch {
+            // Photo link will load on demand
+          }
+        }
+      }
+
       try {
         setHistory(await getMyReportHistory(id));
-        setHistoryError(null);
       } catch {
-        setHistory(null);
-        setHistoryError('La chronologie détaillée est momentanément indisponible.');
+        // Timeline fallback
       }
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Impossible de charger ce signalement.');
@@ -83,71 +115,61 @@ export default function CitizenReportDetailScreen() {
     }
   }, [id]);
 
-  useEffect(() => { void load(); }, [load]);
-
   useEffect(() => {
-    const failed = Number(params.photosFailed ?? 0);
-    if (Number.isFinite(failed) && failed > 0) {
-      setNotice(failed + ' photo(s) n’ont pas pu être envoyées. Vous pouvez réessayer depuis cette page.');
-    }
-  }, [params.photosFailed]);
+    void load();
+  }, [load]);
 
   async function uploadSelectedPhotos(photos: PreparedMobilePhoto[]) {
-    if (!id || !photos.length) {
-      setPhotoBusy(false);
-      return;
-    }
+    if (!id || !photos.length) return;
     setPhotoBusy(true);
     setError(null);
     setNotice(null);
     let failed = 0;
-    for (const photo of photos) {
+    for (const p of photos) {
       try {
-        await uploadReportPhoto(id, photo);
+        await uploadReportPhoto(id, p);
       } catch {
         failed += 1;
       }
     }
     await load();
     setPhotoBusy(false);
-    setNotice(failed
-      ? failed + ' photo(s) n’ont pas été envoyées. Vérifiez le réseau et réessayez.'
-      : photos.length + ' photo(s) ajoutée(s) au signalement.');
+    setNotice(
+      failed
+        ? `${failed} photo(s) n’ont pas été envoyées.`
+        : `${photos.length} photo(s) ajoutée(s) avec succès.`,
+    );
   }
 
   async function choosePhotoGallery() {
     setPhotoBusy(true);
-    setError(null);
     try {
       const remaining = Math.max(0, 3 - (report?.photos.length ?? 0));
-      if (remaining === 0) {
-        setError('Un signalement peut contenir au maximum 3 photos.');
-        setPhotoBusy(false);
+      if (remaining <= 0) {
+        setError('Maximum 3 photos par signalement.');
         return;
       }
       const photos = await pickMobilePhotos(remaining);
       if (photos.length) await uploadSelectedPhotos(photos);
-      else setPhotoBusy(false);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Impossible de sélectionner les photos.');
+      setError(reason instanceof Error ? reason.message : 'Erreur lors du choix de photos.');
+    } finally {
       setPhotoBusy(false);
     }
   }
 
-  async function takeReportPhoto() {
+  async function takePhoto() {
     setPhotoBusy(true);
-    setError(null);
     try {
       if ((report?.photos.length ?? 0) >= 3) {
-        setError('Un signalement peut contenir au maximum 3 photos.');
-        setPhotoBusy(false);
+        setError('Maximum 3 photos par signalement.');
         return;
       }
       const photo = await captureMobilePhoto();
       if (photo) await uploadSelectedPhotos([photo]);
-      else setPhotoBusy(false);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Impossible de prendre une photo.');
+      setError(reason instanceof Error ? reason.message : 'Erreur lors de la capture.');
+    } finally {
       setPhotoBusy(false);
     }
   }
@@ -155,15 +177,17 @@ export default function CitizenReportDetailScreen() {
   async function openPrivatePhoto(photoId: string) {
     if (!id) return;
     setPhotoBusy(true);
-    setError(null);
     try {
       const result = await getReportPhotoUrl(id, photoId);
       setPhotoLinks((current) => ({
         ...current,
-        [photoId]: { url: result.signedUrl, expiresAt: Date.now() + result.expiresInSeconds * 1000 },
+        [photoId]: {
+          url: result.signedUrl,
+          expiresAt: Date.now() + result.expiresInSeconds * 1000,
+        },
       }));
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Impossible de charger cette photo.');
+      setError(reason instanceof Error ? reason.message : 'Photo inaccessible.');
     } finally {
       setPhotoBusy(false);
     }
@@ -172,186 +196,410 @@ export default function CitizenReportDetailScreen() {
   async function sendAnswer(demand: Supplement) {
     const contenu = answers[demand.idDemande]?.trim() ?? '';
     if (contenu.length < 10 || contenu.length > 4000) {
-      setError('La réponse doit contenir entre 10 et 4000 caractères.');
+      setError('La réponse doit comporter entre 10 et 4000 caractères.');
       return;
     }
     setBusyId(demand.idDemande);
     setError(null);
-    setNotice(null);
     try {
       await answerSupplement(id!, demand.idDemande, contenu);
-      setAnswers((current) => ({ ...current, [demand.idDemande]: '' }));
-      setNotice('Votre complément a été transmis.');
+      setAnswers((c) => ({ ...c, [demand.idDemande]: '' }));
+      setNotice('Votre réponse a été transmise au service.');
       await load();
     } catch (reason) {
-      const message = reason instanceof Error ? reason.message : 'Impossible de transmettre votre réponse.';
-      await load();
-      setError(message);
+      setError(reason instanceof Error ? reason.message : 'Erreur de transmission.');
     } finally {
       setBusyId(null);
     }
   }
 
   if (loading && !report) {
-    return <View className="flex-1 items-center justify-center bg-surface-base"><ActivityIndicator color="#174C3D" /><Text className="mt-3 text-sm text-ink-500">Chargement…</Text></View>;
-  }
-
-  if (!report) {
     return (
-      <View className="flex-1 justify-center bg-surface-base px-6 py-10">
-        <Text className="text-xs font-extrabold uppercase tracking-[0.16em] text-brand-petrol">Suivi citoyen</Text>
-        <Text className="mt-3 text-2xl font-extrabold text-ink-900">Signalement indisponible</Text>
-        <View className="mt-4">
-          <FeedbackBanner tone="error" message={error ?? 'Ce signalement ne peut pas être affiché pour le moment.'} />
-        </View>
-        <TouchableOpacity onPress={() => void load()} className="mt-5 rounded-xl bg-brand-forest px-4 py-3">
-          <Text className="text-center text-sm font-extrabold text-white">Réessayer</Text>
-        </TouchableOpacity>
-        <Link href="/(citizen)/reports" className="mt-4 text-center text-sm font-bold text-brand-forest">Retour à mes signalements</Link>
+      <View className="flex-1 items-center justify-center bg-[#F8FAF9]">
+        <ActivityIndicator size="large" color="#174C3D" />
+        <Text className="mt-4 text-sm font-semibold text-ink-500">
+          Chargement du signalement...
+        </Text>
       </View>
     );
   }
 
-  return (
-    <ScrollView className="flex-1 bg-surface-base" contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 28, paddingBottom: 40 }}>
-      <View className="flex-row items-center justify-between">
-        <BrandMark />
-        <View className="rounded-full bg-brand-mist px-3 py-2"><Text className="text-[10px] font-extrabold text-brand-forest">ESPACE CITOYEN</Text></View>
+  if (!report) {
+    return (
+      <View className="flex-1 justify-center bg-[#F8FAF9] px-6 py-10">
+        <Text className="text-xl font-extrabold text-ink-900">Signalement introuvable</Text>
+        <Text className="mt-2 text-sm text-ink-500">
+          {error ?? 'Ce signalement est inaccessible.'}
+        </Text>
+        <TouchableOpacity
+          onPress={() => router.replace('/(citizen)/reports')}
+          className="mt-6 rounded-2xl bg-brand-forest py-4"
+        >
+          <Text className="text-center font-extrabold text-white">Retour à mes signalements</Text>
+        </TouchableOpacity>
       </View>
-      <Text className="mt-8 text-[10px] font-extrabold uppercase tracking-[0.16em] text-brand-petrol">VOTRE SUIVI</Text>
-      <Text className="mt-2 text-2xl font-extrabold tracking-tight text-ink-900">Détail du signalement</Text>
-      {error ? <View className="mt-4"><FeedbackBanner tone="error" message={error} /></View> : null}
-      {notice ? <View className="mt-4"><FeedbackBanner tone="success" message={notice} /></View> : null}
-      {report ? (
-        <>
-          <View className="mt-5 rounded-2xl border border-line-subtle bg-white p-5">
-            <View className="flex-row flex-wrap items-center justify-between gap-3">
-              <Text className="font-mono text-xs text-ink-500">#{report.idSignalement.slice(0, 8).toUpperCase()}</Text>
-              <StatusBadge label={reportStatusLabel(report.statutSignalement)} tone={reportTone(report.statutSignalement)} />
+    );
+  }
+
+  const badge = reportBadgeInfo(report.statutSignalement);
+  const firstPhoto = report.photos[0];
+  const firstPhotoUrl = firstPhoto ? photoLinks[firstPhoto.idPhotoSignalement]?.url : null;
+  const displayTitle = report.contenus[0]?.typeDechet.libelle ?? 'Dépôt sauvage';
+  const hasCoordinates = report.latitude !== null && report.longitude !== null;
+
+  // Determine stage progression for stepper (matching mobile-screen.PNG)
+  // Stage 1: Soumis (always completed if report exists)
+  // Stage 2: Qualifié / Validé (completed if QUALIFIE, AFFECTE, RESOLU, CLOTURE)
+  // Stage 3: Intervention en cours (active if AFFECTE, INTERVENTION_EN_COURS; completed if RESOLU)
+  // Stage 4: Dépôt nettoyé (completed if RESOLU or CLOTURE)
+  const isStage1Done = true;
+  const isStage2Done = [
+    'QUALIFIE',
+    'AFFECTE',
+    'INTERVENTION_EN_COURS',
+    'RESOLU',
+    'CLOTURE',
+  ].includes(report.statutSignalement);
+  const isStage3Active = ['AFFECTE', 'INTERVENTION_EN_COURS'].includes(report.statutSignalement);
+  const isStage3Done = ['RESOLU', 'CLOTURE'].includes(report.statutSignalement);
+  const isStage4Done = ['RESOLU', 'CLOTURE'].includes(report.statutSignalement);
+
+  return (
+    <View className="flex-1 bg-[#F8FAF9]">
+      {/* Top Bar matching mobile-screen.PNG */}
+      <View className="flex-row items-center justify-between border-b border-line-subtle bg-white px-5 pb-3.5 pt-12">
+        <TouchableOpacity
+          onPress={() =>
+            router.canGoBack() ? router.back() : router.replace('/(citizen)/reports')
+          }
+          className="flex-row items-center gap-2"
+        >
+          <Text className="text-lg font-bold text-ink-700">←</Text>
+          <Text className="text-base font-extrabold text-ink-900">Mon signalement</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => void load()}
+          className="h-9 w-9 items-center justify-center rounded-full bg-surface-base"
+        >
+          <Text className="text-xs">🔄</Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 50 }}
+      >
+        {notice && (
+          <View className="mb-4">
+            <FeedbackBanner tone="success" message={notice} />
+          </View>
+        )}
+        {error && (
+          <View className="mb-4">
+            <FeedbackBanner tone="error" message={error} />
+          </View>
+        )}
+
+        {/* HERO REPORT CARD (Matching mobile-screen.PNG) */}
+        <View className="overflow-hidden rounded-3xl border border-line-subtle bg-white p-4 shadow-sm">
+          <View className="flex-row items-center gap-3.5">
+            {firstPhotoUrl ? (
+              <Image
+                source={{ uri: firstPhotoUrl }}
+                resizeMode="cover"
+                style={{ width: 84, height: 84, borderRadius: 18 }}
+              />
+            ) : (
+              <View className="h-[84px] w-[84px] items-center justify-center rounded-2xl bg-emerald-50 border border-emerald-100">
+                <Text className="text-3xl">🗑️</Text>
+              </View>
+            )}
+            <View className="min-w-0 flex-1">
+              <View className="flex-row items-center justify-between">
+                <Text className="font-mono text-[11px] font-bold text-ink-400">
+                  #IS-{report.idSignalement.slice(0, 8).toUpperCase()}
+                </Text>
+              </View>
+              <Text className="mt-0.5 text-base font-extrabold text-ink-900" numberOfLines={1}>
+                {displayTitle}
+              </Text>
+              <Text className="mt-1 text-xs text-ink-500" numberOfLines={1}>
+                {report.descriptionLocalisation ||
+                  (hasCoordinates ? 'Position GPS confirmée' : 'Signalé récemment')}
+              </Text>
+              <View className="mt-2.5 self-start">
+                <View className={`rounded-full px-3 py-1 ${badge.bg}`}>
+                  <Text className={`text-[11px] font-extrabold ${badge.text}`}>{badge.label}</Text>
+                </View>
+              </View>
             </View>
-            {nextStepLabel(report.statutSignalement) ? (
-              <View className="mt-4">
-                <FeedbackBanner
-                  tone={report.statutSignalement === 'EN_ATTENTE_COMPLEMENT' ? 'warning' : 'info'}
-                  title="Prochaine étape"
-                  message={nextStepLabel(report.statutSignalement)!}
+          </View>
+        </View>
+
+        {/* VERTICAL STEPPER (Matching mobile-screen.PNG & Screen 4) */}
+        <View className="mt-5 rounded-3xl border border-line-subtle bg-white p-5 shadow-sm">
+          <Text className="text-sm font-extrabold text-ink-900">Évolution du signalement</Text>
+
+          <View className="mt-5">
+            {/* Step 1: Signalement envoyé */}
+            <View className="flex-row">
+              <View className="mr-3.5 items-center">
+                <View className="h-7 w-7 items-center justify-center rounded-full bg-emerald-700 shadow-sm">
+                  <Text className="text-xs font-bold text-white">✓</Text>
+                </View>
+                <View
+                  className={`w-0.5 flex-1 min-h-[32px] ${isStage2Done ? 'bg-emerald-700' : 'bg-slate-200'}`}
                 />
               </View>
-            ) : null}
-            <Text className="mt-4 text-base font-bold text-ink-900">Description</Text>
-            <Text className="mt-2 text-sm leading-6 text-ink-700">{report.description || 'Aucune description.'}</Text>
-            <Text className="mt-4 text-xs text-ink-500">Soumis le {dateLabel(report.dateSoumission)}</Text>
-            {report.dateConstat ? <Text className="mt-1 text-xs text-ink-500">Constaté le {dateLabel(report.dateConstat)}</Text> : null}
-            {report.descriptionLocalisation ? <Text className="mt-3 text-sm text-ink-500">Lieu : {report.descriptionLocalisation}</Text> : null}
-            {report.latitude && report.longitude ? <Text className="mt-1 text-xs text-ink-500">Coordonnées : {report.latitude}, {report.longitude}</Text> : null}
-            {report.motifDecision ? <Text className="mt-4 rounded-lg bg-status-warning/5 p-3 text-sm text-amber-900">Motif de décision : {report.motifDecision}</Text> : null}
-            {report.contenus.length ? (
-              <View className="mt-5 border-t border-line-subtle pt-4">
-                <Text className="text-sm font-bold text-ink-800">Catégories qualifiées</Text>
-                {report.contenus.map((item) => <Text key={item.idTypeDechet} className="mt-2 text-sm text-ink-500">• {item.typeDechet.libelle}</Text>)}
+              <View className="flex-1 pb-4">
+                <Text className="text-sm font-bold text-ink-900">Signalement envoyé</Text>
+                <Text className="mt-0.5 text-xs text-ink-400">
+                  {dateLabel(report.dateSoumission)}
+                </Text>
               </View>
-            ) : null}
-          </View>
+            </View>
 
-
-          <View className="mt-6 rounded-2xl border border-line-subtle bg-white p-5">
-            <Text className="text-base font-extrabold text-ink-900">Chronologie du traitement</Text>
-            <Text className="mt-1 text-xs leading-5 text-ink-500">Les étapes confirmées par la plateforme, dans l’ordre.</Text>
-            {historyError ? <Text className="mt-3 text-xs text-ink-500">{historyError}</Text> : null}
-            {!historyError && history?.events.length === 0 ? (
-              <Text className="mt-3 text-xs text-ink-500">Aucune étape supplémentaire enregistrée pour le moment.</Text>
-            ) : null}
-            <View className="mt-4">
-              {history?.events.map((event, index) => (
-                <View key={event.id} className="flex-row">
-                  <View className="mr-3 items-center">
-                    <View className={event.type === 'STATUT' ? 'mt-1 h-3 w-3 rounded-full bg-brand-forest' : 'mt-1 h-3 w-3 rounded-full border-2 border-brand-petrol bg-white'} />
-                    {index < (history?.events.length ?? 0) - 1 ? <View className="my-1 min-h-[28px] w-px flex-1 bg-line-strong" /> : null}
-                  </View>
-                  <View className="flex-1 pb-5">
-                    <Text className="text-sm font-bold text-ink-800">{event.title}</Text>
-                    <Text className="mt-1 text-[10px] text-ink-400">{dateLabel(event.occurredAt)}</Text>
-                  </View>
+            {/* Step 2: Validé par les services */}
+            <View className="flex-row">
+              <View className="mr-3.5 items-center">
+                <View
+                  className={`h-7 w-7 items-center justify-center rounded-full shadow-sm ${
+                    isStage2Done ? 'bg-emerald-700' : 'bg-slate-100 border border-slate-300'
+                  }`}
+                >
+                  <Text
+                    className={`text-xs font-bold ${isStage2Done ? 'text-white' : 'text-slate-400'}`}
+                  >
+                    {isStage2Done ? '✓' : '2'}
+                  </Text>
                 </View>
-              ))}
+                <View
+                  className={`w-0.5 flex-1 min-h-[32px] ${
+                    isStage3Done || isStage3Active ? 'bg-emerald-700' : 'bg-slate-200'
+                  }`}
+                />
+              </View>
+              <View className="flex-1 pb-4">
+                <Text
+                  className={`text-sm font-bold ${isStage2Done ? 'text-ink-900' : 'text-ink-400'}`}
+                >
+                  Validé par les services
+                </Text>
+                <Text className="mt-0.5 text-xs text-ink-400">
+                  {isStage2Done
+                    ? 'Catégorisation et vérification approuvées'
+                    : 'En attente de revue administrative'}
+                </Text>
+              </View>
+            </View>
+
+            {/* Step 3: Intervention en cours */}
+            <View className="flex-row">
+              <View className="mr-3.5 items-center">
+                <View
+                  className={`h-8 w-8 items-center justify-center rounded-full shadow-sm ${
+                    isStage3Done
+                      ? 'bg-emerald-700'
+                      : isStage3Active
+                        ? 'bg-emerald-600 ring-4 ring-emerald-100'
+                        : 'bg-slate-100 border border-slate-300'
+                  }`}
+                >
+                  <Text className="text-xs">{isStage3Done ? '✓' : '🚚'}</Text>
+                </View>
+                <View
+                  className={`w-0.5 flex-1 min-h-[32px] ${isStage4Done ? 'bg-emerald-700' : 'bg-slate-200'}`}
+                />
+              </View>
+              <View className="flex-1 pb-4">
+                <Text
+                  className={`text-sm font-bold ${
+                    isStage3Active
+                      ? 'text-emerald-900'
+                      : isStage3Done
+                        ? 'text-ink-900'
+                        : 'text-ink-400'
+                  }`}
+                >
+                  Intervention en cours
+                </Text>
+                <Text className="mt-0.5 text-xs text-ink-400">
+                  {isStage3Active
+                    ? 'Équipe de propreté mobilisée sur zone'
+                    : isStage3Done
+                      ? 'Intervention réalisée'
+                      : 'Planification par le centre opérationnel'}
+                </Text>
+              </View>
+            </View>
+
+            {/* Step 4: Dépôt nettoyé */}
+            <View className="flex-row">
+              <View className="mr-3.5 items-center">
+                <View
+                  className={`h-7 w-7 items-center justify-center rounded-full shadow-sm ${
+                    isStage4Done ? 'bg-emerald-700' : 'bg-slate-100 border border-slate-300'
+                  }`}
+                >
+                  <Text
+                    className={`text-xs font-bold ${isStage4Done ? 'text-white' : 'text-slate-400'}`}
+                  >
+                    {isStage4Done ? '✓' : '4'}
+                  </Text>
+                </View>
+              </View>
+              <View className="flex-1">
+                <Text
+                  className={`text-sm font-bold ${isStage4Done ? 'text-ink-900' : 'text-ink-400'}`}
+                >
+                  Dépôt nettoyé
+                </Text>
+                <Text className="mt-0.5 text-xs text-ink-400">
+                  {isStage4Done ? 'Espace public remis en état' : 'En attente de clôture'}
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* LOCATION & MINI MAP CARD */}
+        <View className="mt-4 rounded-3xl border border-line-subtle bg-white p-5 shadow-sm">
+          <View className="flex-row items-center justify-between">
+            <Text className="text-sm font-extrabold text-ink-900">Localisation</Text>
+            {hasCoordinates && (
+              <View className="rounded-full bg-emerald-50 px-2.5 py-1">
+                <Text className="text-[10px] font-bold text-emerald-800">GPS actif</Text>
+              </View>
+            )}
+          </View>
+
+          <View className="mt-3 flex-row items-start gap-3">
+            <View className="h-9 w-9 items-center justify-center rounded-xl bg-emerald-50">
+              <Text className="text-base">📍</Text>
+            </View>
+            <View className="min-w-0 flex-1">
+              <Text className="text-xs font-bold text-ink-800">
+                {report.descriptionLocalisation || 'Adresse repérée'}
+              </Text>
+              {hasCoordinates && (
+                <Text className="mt-0.5 font-mono text-[11px] text-ink-400">
+                  {report.latitude}, {report.longitude}
+                </Text>
+              )}
             </View>
           </View>
 
-          <View className="mt-6 rounded-2xl border border-line-subtle bg-white p-5">
-            <View className="flex-row items-center justify-between gap-3">
-              <Text className="text-base font-bold text-ink-900">Photos du signalement</Text>
-              <Text className="text-xs text-ink-500">{report.photos.length}</Text>
-            </View>
-            <Text className="mt-1 text-xs leading-5 text-ink-500">Les photos sont privées. Un lien temporaire est obtenu uniquement lorsque vous demandez à les afficher.</Text>
-            <View className="mt-3 flex-row gap-2">
-              <TouchableOpacity onPress={() => void choosePhotoGallery()} disabled={photoBusy} className="flex-1 rounded-lg border border-eco-200 bg-white px-3 py-3 disabled:opacity-50">
-                <Text className="text-center text-xs font-bold text-ink-800">Ajouter depuis la galerie</Text>
+          {hasCoordinates && (
+            <TouchableOpacity
+              onPress={() => {
+                const url = `https://www.google.com/maps/search/?api=1&query=${report.latitude},${report.longitude}`;
+                void Linking.openURL(url);
+              }}
+              className="mt-4 flex-row items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50/70 py-3"
+            >
+              <Text className="text-xs font-extrabold text-brand-forest">🧭 Voir sur la carte</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* PHOTOS DU SIGNALEMENT */}
+        <View className="mt-4 rounded-3xl border border-line-subtle bg-white p-5 shadow-sm">
+          <View className="flex-row items-center justify-between">
+            <Text className="text-sm font-extrabold text-ink-900">
+              Photos du signalement ({report.photos.length}/3)
+            </Text>
+            {report.photos.length < 3 && (
+              <TouchableOpacity
+                onPress={() => void takePhoto()}
+                disabled={photoBusy}
+                className="rounded-full bg-brand-forest px-3 py-1"
+              >
+                <Text className="text-[10px] font-bold text-white">+ Ajouter</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => void takeReportPhoto()} disabled={photoBusy} className="flex-1 rounded-lg bg-brand-forest px-3 py-3 disabled:opacity-50">
-                <Text className="text-center text-xs font-bold text-white">Prendre une photo</Text>
-              </TouchableOpacity>
-            </View>
-            {photoBusy ? <Text className="mt-2 text-xs text-ink-500">Traitement…</Text> : null}
-            <View className="mt-3 gap-3">
-              {report.photos.map((photo) => {
-                const link = photoLinks[photo.idPhotoSignalement];
-                const active = link && link.expiresAt > Date.now() ? link : null;
-                return (
-                  <View key={photo.idPhotoSignalement} className="rounded-xl border border-line-subtle p-3">
-                    {active ? (
-                      <Image source={{ uri: active.url }} resizeMode="contain" style={{ width: '100%', height: 180, borderRadius: 8 }} />
-                    ) : null}
-                    <Text className="mt-2 text-xs text-ink-500">{photo.description || 'Photo du signalement'}</Text>
-                    <Text className="mt-1 text-[10px] text-ink-400">Ajoutée le {dateLabel(photo.dateAjout)} · {photo.etatPublication}</Text>
-                    <TouchableOpacity onPress={() => void openPrivatePhoto(photo.idPhotoSignalement)} disabled={photoBusy} className="mt-2 self-start">
-                      <Text className="text-xs font-bold text-brand-forest">{active ? 'Renouveler le lien privé (60 s)' : 'Afficher la photo (60 s)'}</Text>
-                    </TouchableOpacity>
-                  </View>
-                );
-              })}
-              {!report.photos.length ? <Text className="text-xs text-ink-500">Aucune photo jointe pour le moment.</Text> : null}
-            </View>
+            )}
           </View>
 
-          <Text className="mt-7 text-lg font-extrabold text-ink-900">Demandes de complément</Text>
-          {!supplements.length ? <Text className="mt-2 text-sm text-ink-500">Aucune demande de complément.</Text> : null}
-          <View className="mt-3 gap-3">
+          <View className="mt-3.5 gap-3">
+            {report.photos.map((p) => {
+              const link = photoLinks[p.idPhotoSignalement];
+              const active = link && link.expiresAt > Date.now() ? link : null;
+              return (
+                <View
+                  key={p.idPhotoSignalement}
+                  className="overflow-hidden rounded-2xl border border-line-subtle bg-[#F8FAF9] p-3"
+                >
+                  {active ? (
+                    <Image
+                      source={{ uri: active.url }}
+                      resizeMode="cover"
+                      style={{ width: '100%', height: 180, borderRadius: 12 }}
+                    />
+                  ) : (
+                    <View className="h-28 items-center justify-center rounded-xl bg-slate-100">
+                      <TouchableOpacity
+                        onPress={() => void openPrivatePhoto(p.idPhotoSignalement)}
+                        className="rounded-xl bg-brand-forest px-3.5 py-2"
+                      >
+                        <Text className="text-xs font-bold text-white">Afficher la photo</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                  <Text className="mt-2 text-xs font-medium text-ink-500">
+                    {p.description || 'Photo jointe'} • {dateLabel(p.dateAjout)}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* DEMANDES DE COMPLÉMENT (SI DISPONIBLES) */}
+        {supplements.length > 0 && (
+          <View className="mt-4 rounded-3xl border border-amber-200 bg-amber-50/40 p-5 shadow-sm">
+            <Text className="text-sm font-extrabold text-amber-950">
+              Demande de précision des services
+            </Text>
             {supplements.map((demand) => (
-              <View key={demand.idDemande} className="rounded-2xl border border-line-subtle bg-white p-5">
-                <View className="flex-row items-center justify-between gap-3">
-                  <Text className="text-xs font-bold text-ink-500">Demandé le {dateLabel(demand.dateDemande)}</Text>
-                  <Text className="text-[10px] font-bold text-status-warning">{demand.etatDemande}</Text>
-                </View>
-                <Text className="mt-3 text-sm leading-6 text-ink-800">{demand.motif}</Text>
+              <View
+                key={demand.idDemande}
+                className="mt-3 rounded-2xl bg-white p-4 border border-amber-200"
+              >
+                <Text className="text-xs font-bold text-ink-900">{demand.motif}</Text>
+                <Text className="mt-1 text-[10px] text-ink-400">
+                  Demandé le {dateLabel(demand.dateDemande)}
+                </Text>
+
                 {demand.reponse ? (
-                  <View className="mt-4 rounded-lg bg-surface-base p-3">
-                    <Text className="text-xs font-bold text-ink-800">Votre réponse · {dateLabel(demand.reponse.dateReponse)}</Text>
-                    <Text className="mt-2 text-sm leading-6 text-ink-700">{demand.reponse.contenu}</Text>
+                  <View className="mt-3 rounded-xl bg-emerald-50 p-3">
+                    <Text className="text-[11px] font-bold text-emerald-950">Votre réponse :</Text>
+                    <Text className="mt-1 text-xs text-emerald-900">{demand.reponse.contenu}</Text>
                   </View>
-                ) : null}
-                {demand.etatDemande === 'OUVERTE' ? (
-                  <View className="mt-4">
-                    <Text className="text-xs font-bold text-ink-700">Votre réponse (10 à 4000 caractères)</Text>
+                ) : (
+                  <View className="mt-3">
                     <TextInput
                       multiline
-                      textAlignVertical="top"
                       value={answers[demand.idDemande] ?? ''}
-                      onChangeText={(value) => setAnswers((current) => ({ ...current, [demand.idDemande]: value }))}
-                      maxLength={4000}
-                      className={inputClass}
-                      placeholder="Précisez les informations demandées…"
+                      onChangeText={(val) => setAnswers((c) => ({ ...c, [demand.idDemande]: val }))}
+                      placeholder="Précisez les informations demandées..."
+                      placeholderTextColor="#94A3B8"
+                      className="rounded-xl border border-line-strong bg-white p-3 text-xs text-ink-900"
                     />
-                    <TouchableOpacity onPress={() => void sendAnswer(demand)} disabled={busyId === demand.idDemande} className="mt-3 rounded-xl bg-brand-forest px-4 py-3 disabled:opacity-50">
-                      <Text className="text-center text-sm font-bold text-white">{busyId === demand.idDemande ? 'Envoi…' : 'Transmettre la réponse'}</Text>
+                    <TouchableOpacity
+                      onPress={() => void sendAnswer(demand)}
+                      disabled={busyId === demand.idDemande}
+                      className="mt-2 rounded-xl bg-brand-forest py-2.5"
+                    >
+                      <Text className="text-center text-xs font-extrabold text-white">
+                        {busyId === demand.idDemande ? 'Envoi...' : 'Transmettre ma réponse'}
+                      </Text>
                     </TouchableOpacity>
                   </View>
-                ) : null}
+                )}
               </View>
             ))}
           </View>
-        </>
-      ) : null}
-      <Link href="/(citizen)/reports" className="mt-8 text-center text-sm font-semibold text-brand-forest">Retour à mes signalements</Link>
-    </ScrollView>
+        )}
+      </ScrollView>
+    </View>
   );
 }

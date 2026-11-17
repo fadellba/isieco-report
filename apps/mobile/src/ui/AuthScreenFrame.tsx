@@ -4,41 +4,52 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BrandMark } from './BrandMark';
 
 interface AuthScreenFrameProps extends PropsWithChildren {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
-  description: string;
+  description?: string;
 }
 
-export function AuthScreenFrame({ eyebrow, title, description, children }: AuthScreenFrameProps) {
+export function AuthScreenFrame({ title, description, children }: AuthScreenFrameProps) {
   return (
-    <SafeAreaView className="flex-1 bg-surface-base" edges={['top', 'bottom']}>
-      <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <SafeAreaView className="flex-1 bg-slate-50" edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        className="flex-1"
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <ScrollView
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 22, paddingTop: 24, paddingBottom: 28 }}
+          contentContainerStyle={{
+            flexGrow: 1,
+            justifyContent: 'center',
+            paddingHorizontal: 24,
+            paddingVertical: 32,
+          }}
           showsVerticalScrollIndicator={false}
         >
-          <View className="flex-row items-center justify-between">
-            <BrandMark />
-            <View className="rounded-full border border-line-subtle bg-white px-3 py-2">
-              <Text className="text-[9px] font-extrabold uppercase tracking-[0.12em] text-brand-petrol">Espace sécurisé</Text>
+          {/* Top Brand Logo Centered */}
+          <View className="items-center mb-8">
+            <BrandMark size="lg" />
+          </View>
+
+          {/* Clean Elevated White Card */}
+          <View className="rounded-3xl border border-slate-200/90 bg-white p-7 shadow-sm">
+            <View className="mb-6">
+              <Text
+                accessibilityRole="header"
+                className="text-2xl font-black text-slate-900 tracking-tight"
+              >
+                {title}
+              </Text>
+              {description ? (
+                <Text className="mt-1.5 text-xs text-slate-500 leading-relaxed">{description}</Text>
+              ) : null}
             </View>
-          </View>
 
-          <View className="mt-10 overflow-hidden rounded-[28px] bg-brand-forest px-5 py-6">
-            <View className="absolute -right-7 -top-8 h-36 w-36 rounded-full border-[22px] border-white/5" />
-            <View className="absolute -bottom-14 right-20 h-32 w-32 rounded-full border-[18px] border-brand-lime/10" />
-            <Text className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-brand-lime">{eyebrow}</Text>
-            <Text accessibilityRole="header" className="mt-3 text-[30px] font-extrabold leading-9 tracking-tight text-white">{title}</Text>
-            <Text className="mt-3 text-sm leading-6 text-white/75">{description}</Text>
-          </View>
-
-          <View className="mt-5 rounded-3xl border border-line-subtle bg-white p-5" style={{ shadowColor: '#103B31', shadowOpacity: 0.05, shadowRadius: 18, shadowOffset: { width: 0, height: 7 }, elevation: 2 }}>
             {children}
           </View>
 
-          <Text className="mt-6 text-center text-[9px] font-bold uppercase tracking-[0.15em] text-ink-400">
-            ISIECO · Propreté urbaine · Du signalement à la résolution
+          <Text className="mt-8 text-center text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            ISIECO · Ensemble pour une ville plus propre
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>

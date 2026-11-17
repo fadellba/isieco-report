@@ -1,6 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useRouter } from 'expo-router';
-import { Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import {
+  ActivityIndicator,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import {
   createReportIdempotencyKey,
   listAvailableWasteTypes,
@@ -17,15 +27,12 @@ import {
   type PreparedMobilePhoto,
 } from '../../../src/features/media/mobile-media';
 
-const inputClass = 'mt-1 rounded-xl border border-line-strong bg-white px-4 py-3 text-base text-ink-900';
-
 export default function NewCitizenReportScreen() {
   const router = useRouter();
   const [photo, setPhoto] = useState<PreparedMobilePhoto | null>(null);
   const [description, setDescription] = useState('');
   const [wasteTypes, setWasteTypes] = useState<WasteTypeOption[]>([]);
   const [selectedWasteTypeIds, setSelectedWasteTypeIds] = useState<string[]>([]);
-  const [wasteTypesError, setWasteTypesError] = useState<string | null>(null);
   const [locationDescription, setLocationDescription] = useState('');
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
@@ -36,14 +43,39 @@ export default function NewCitizenReportScreen() {
   const [error, setError] = useState<string | null>(null);
   const idempotencyRef = useRef<{ fingerprint: string; key: string } | null>(null);
 
+  // Auto-load waste types and auto-detect GPS location
   useEffect(() => {
     let active = true;
     listAvailableWasteTypes()
-      .then((items) => { if (active) setWasteTypes(items); })
+      .then((items) => {
+        if (active) setWasteTypes(items);
+      })
       .catch(() => {
-        if (active) setWasteTypesError('Les catégories ne sont pas disponibles pour le moment. Vous pouvez tout de même envoyer votre signalement.');
+        // Categories optional
       });
-    return () => { active = false; };
+
+    // Auto-detect location on screen open
+    void (async () => {
+      try {
+        setGettingLocation(true);
+        const coordinates = await requestCurrentForegroundCoordinates();
+        if (active) {
+          setLatitude(coordinates.latitude.toFixed(6));
+          setLongitude(coordinates.longitude.toFixed(6));
+          if (coordinates.precisionLocalisation !== undefined) {
+            setPrecision(String(coordinates.precisionLocalisation));
+          }
+        }
+      } catch {
+        // Location will remain manual/optional if permission refused
+      } finally {
+        if (active) setGettingLocation(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   async function chooseGallery() {
@@ -72,16 +104,22 @@ export default function NewCitizenReportScreen() {
     }
   }
 
-  async function useCurrentLocation() {
+  async function refreshLocation() {
     setGettingLocation(true);
     setError(null);
     try {
       const coordinates = await requestCurrentForegroundCoordinates();
       setLatitude(coordinates.latitude.toFixed(6));
       setLongitude(coordinates.longitude.toFixed(6));
-      setPrecision(coordinates.precisionLocalisation === undefined ? '' : String(coordinates.precisionLocalisation));
+      setPrecision(
+        coordinates.precisionLocalisation === undefined
+          ? ''
+          : String(coordinates.precisionLocalisation),
+      );
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'La position actuelle est indisponible. Vous pouvez saisir les coordonnées manuellement.');
+      setError(
+        reason instanceof Error ? reason.message : 'Position GPS indisponible pour le moment.',
+      );
     } finally {
       setGettingLocation(false);
     }
@@ -89,23 +127,24 @@ export default function NewCitizenReportScreen() {
 
   async function handleSubmit() {
     setError(null);
-    if (!photo && !description.trim() && selectedWasteTypeIds.length === 0 && !locationDescription.trim() && !latitude.trim()) {
-      setError('Ajoutez au moins une photo, une description, une catégorie ou une localisation.');
+
+    // Mandatory photo check as required by user
+    if (!photo) {
+      setError('La photo du dépôt est obligatoire pour enregistrer votre signalement.');
       return;
     }
 
     try {
       const lat = parseOptionalCoordinate(latitude, -90, 90);
       const lon = parseOptionalCoordinate(longitude, -180, 180);
-      const precisionNumber = precision.trim() ? Number(precision.trim().replace(',', '.')) : undefined;
+      const precisionNumber = precision.trim()
+        ? Number(precision.trim().replace(',', '.'))
+        : undefined;
+
       if ((lat === undefined) !== (lon === undefined)) {
-        throw new Error('Renseignez la latitude et la longitude ensemble, ou laissez les deux vides.');
-      }
-      if (precisionNumber !== undefined && lat === undefined) {
-        throw new Error('La précision ne peut être renseignée que si les coordonnées sont fournies.');
-      }
-      if (precisionNumber !== undefined && (!Number.isFinite(precisionNumber) || precisionNumber < 0 || precisionNumber > 100000)) {
-        throw new Error('La précision doit être comprise entre 0 et 100000 mètres.');
+        throw new Error(
+          'Renseignez la latitude et la longitude ensemble, ou laissez les deux vides.',
+        );
       }
 
       const payload: CreateReportPayload = {
@@ -113,7 +152,9 @@ export default function NewCitizenReportScreen() {
         ...(selectedWasteTypeIds.length
           ? { contenus: selectedWasteTypeIds.map((idTypeDechet) => ({ idTypeDechet })) }
           : {}),
-        ...(locationDescription.trim() ? { descriptionLocalisation: locationDescription.trim() } : {}),
+        ...(locationDescription.trim()
+          ? { descriptionLocalisation: locationDescription.trim() }
+          : {}),
         ...(lat !== undefined && lon !== undefined
           ? {
               latitude: lat,
@@ -122,151 +163,290 @@ export default function NewCitizenReportScreen() {
             }
           : {}),
       };
-      const fingerprint = JSON.stringify({ payload, photoUri: photo?.uri ?? null });
+
+      const fingerprint = JSON.stringify({ payload, photoUri: photo.uri });
       if (!idempotencyRef.current || idempotencyRef.current.fingerprint !== fingerprint) {
         idempotencyRef.current = { fingerprint, key: createReportIdempotencyKey() };
       }
 
       setBusy(true);
-      const result = await submitReportWithPhoto(payload, idempotencyRef.current.key, photo ?? undefined);
+      const result = await submitReportWithPhoto(payload, idempotencyRef.current.key, photo);
       idempotencyRef.current = null;
       router.replace({
         pathname: '/(citizen)/reports/[id]',
         params: { id: result.idSignalement },
       });
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Impossible d’enregistrer le signalement.');
+      setError(
+        reason instanceof Error ? reason.message : 'Impossible d’enregistrer le signalement.',
+      );
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <ScrollView
-      className="flex-1 bg-surface-base"
-      contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 48, paddingBottom: 40 }}
-      keyboardShouldPersistTaps="handled"
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      className="flex-1 bg-[#F8FAF9]"
     >
-      <Text className="text-xs font-extrabold uppercase tracking-[0.18em] text-brand-forest">Espace citoyen</Text>
-      <Text className="mt-3 text-3xl font-extrabold text-ink-900">Signaler un dépôt</Text>
-      <Text className="mt-2 text-sm leading-6 text-ink-500">
-        Ajoutez au moins une information utile : une photo, un lieu, une description ou un type de déchet. La photo et le GPS ne sont pas obligatoires.
-      </Text>
-
-      <View className="mt-5 rounded-2xl border border-brand-mist bg-brand-mist/70 p-4">
-        <Text className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-brand-petrol">Comment signaler ?</Text>
-        <View className="mt-3 flex-row items-center">
-          {[
-            { number: '01', label: 'Décrire' },
-            { number: '02', label: 'Localiser' },
-            { number: '03', label: 'Transmettre' },
-          ].map((item, index) => (
-            <View key={item.number} className="min-w-0 flex-1 items-center">
-              <View className="h-7 w-7 items-center justify-center rounded-full bg-white">
-                <Text className="text-[9px] font-extrabold text-brand-forest">{item.number}</Text>
-              </View>
-              <Text className="mt-2 text-[10px] font-bold text-ink-700">{item.label}</Text>
-            </View>
-          ))}
-        </View>
-        <Text className="mt-3 text-[10px] leading-4 text-ink-500">La photo est facultative. Ajoutez au moins une information utile pour que le service puisse examiner votre signalement.</Text>
+      {/* Top Header bar */}
+      <View className="flex-row items-center justify-between border-b border-line-subtle bg-white px-5 pb-3.5 pt-12">
+        <TouchableOpacity
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(citizen)/home'))}
+          className="h-9 w-9 items-center justify-center rounded-full bg-surface-base"
+        >
+          <Text className="text-base font-bold text-ink-700">←</Text>
+        </TouchableOpacity>
+        <Text className="text-base font-extrabold text-ink-900">Nouveau signalement</Text>
+        <TouchableOpacity
+          onPress={() => router.replace('/(citizen)/home')}
+          className="h-9 w-9 items-center justify-center rounded-full bg-surface-base"
+        >
+          <Text className="text-sm font-bold text-ink-500">✕</Text>
+        </TouchableOpacity>
       </View>
 
-      <View className="mt-5 gap-4">
-        <View className="rounded-3xl border border-line-subtle bg-white p-4">
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 50 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* 1. PHOTO DU DÉPÔT (OBLIGATOIRE) */}
+        <View className="rounded-3xl border border-line-subtle bg-white p-5 shadow-sm">
           <View className="flex-row items-center justify-between">
             <Text className="text-sm font-extrabold text-ink-900">1. Photo du dépôt</Text>
-            <Text className="text-[10px] font-bold uppercase text-ink-400">Facultative</Text>
+            <View className="rounded-full bg-emerald-50 px-2.5 py-1">
+              <Text className="text-[10px] font-extrabold uppercase text-emerald-800">
+                Obligatoire
+              </Text>
+            </View>
           </View>
+
           {photo ? (
-            <View className="mt-3">
-              <Image source={{ uri: photo.uri }} resizeMode="cover" style={{ width: '100%', height: 220, borderRadius: 16 }} />
-              <TouchableOpacity onPress={() => setPhoto(null)} className="mt-2 self-end px-2 py-2">
-                <Text className="text-xs font-bold text-ink-500">Retirer la photo</Text>
-              </TouchableOpacity>
+            <View className="mt-4">
+              <View className="relative overflow-hidden rounded-2xl border border-line-subtle">
+                <Image
+                  source={{ uri: photo.uri }}
+                  resizeMode="cover"
+                  style={{ width: '100%', height: 220 }}
+                />
+                <TouchableOpacity
+                  onPress={() => setPhoto(null)}
+                  className="absolute right-3 top-3 h-8 w-8 items-center justify-center rounded-full bg-ink-900/70"
+                >
+                  <Text className="text-xs font-bold text-white">✕</Text>
+                </TouchableOpacity>
+              </View>
+              <View className="mt-3 flex-row items-center justify-between">
+                <View className="flex-row items-center gap-1.5">
+                  <View className="h-2 w-2 rounded-full bg-emerald-600" />
+                  <Text className="text-xs font-semibold text-emerald-800">Photo enregistrée</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => void takePhoto()}
+                  disabled={mediaBusy}
+                  className="rounded-full border border-line-strong bg-white px-3 py-1.5"
+                >
+                  <Text className="text-xs font-bold text-ink-700">Changer la photo</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ) : (
-            <View className="mt-3 min-h-[180px] items-center justify-center rounded-2xl border border-dashed border-line-strong bg-surface-base px-5 py-6">
-              <Text className="text-4xl text-brand-forest">＋</Text>
-              <Text className="mt-2 text-sm font-bold text-ink-800">Photographiez le dépôt</Text>
-              <Text className="mt-1 text-center text-xs leading-5 text-ink-500">Ajoutez une photo si elle aide à reconnaître le dépôt. Elle reste facultative.</Text>
+            <View className="mt-4">
+              <View className="min-h-[160px] items-center justify-center rounded-2xl border-2 border-dashed border-emerald-300 bg-emerald-50/40 p-6 text-center">
+                <View className="h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
+                  <Text className="text-2xl">📷</Text>
+                </View>
+                <Text className="mt-3 text-sm font-extrabold text-ink-900">
+                  Photographiez le dépôt
+                </Text>
+                <Text className="mt-1 text-center text-xs leading-5 text-ink-500">
+                  Prenez une photo claire pour que nos équipes puissent intervenir rapidement.
+                </Text>
+              </View>
+
+              <View className="mt-3.5 flex-row gap-2.5">
+                <TouchableOpacity
+                  onPress={() => void takePhoto()}
+                  disabled={mediaBusy || busy}
+                  className="flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-brand-forest py-3.5 shadow-sm disabled:opacity-50"
+                >
+                  <Text className="text-sm">📷</Text>
+                  <Text className="text-xs font-extrabold text-white">Prendre une photo</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => void chooseGallery()}
+                  disabled={mediaBusy || busy}
+                  className="flex-1 flex-row items-center justify-center gap-2 rounded-2xl border border-line-strong bg-white py-3.5 disabled:opacity-50"
+                >
+                  <Text className="text-sm">🖼️</Text>
+                  <Text className="text-xs font-extrabold text-ink-800">Galerie</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           )}
-          <View className="mt-3 flex-row gap-2">
-            <TouchableOpacity onPress={() => void takePhoto()} disabled={mediaBusy || busy} className="flex-1 rounded-xl bg-brand-forest px-3 py-3 disabled:opacity-50">
-              <Text className="text-center text-xs font-bold text-white">Appareil photo</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => void chooseGallery()} disabled={mediaBusy || busy} className="flex-1 rounded-xl border border-line-strong bg-white px-3 py-3 disabled:opacity-50">
-              <Text className="text-center text-xs font-bold text-ink-800">Galerie</Text>
-            </TouchableOpacity>
-          </View>
-          {mediaBusy ? <Text className="mt-2 text-xs text-ink-500">Préparation de la photo…</Text> : null}
+
+          {mediaBusy && (
+            <View className="mt-3 flex-row items-center gap-2">
+              <ActivityIndicator size="small" color="#174C3D" />
+              <Text className="text-xs text-ink-500">Préparation de l’image...</Text>
+            </View>
+          )}
         </View>
 
-        <View className="rounded-3xl border border-line-subtle bg-white p-4">
-          <Text className="text-sm font-extrabold text-ink-900">2. Localisation</Text>
-          <Text className="mt-1 text-xs leading-5 text-ink-500">Autorisez la localisation ponctuelle ou indiquez un repère. Vous pouvez aussi envoyer sans GPS.</Text>
-          <TouchableOpacity onPress={() => void useCurrentLocation()} disabled={gettingLocation || busy} className="mt-3 rounded-xl bg-brand-mist px-4 py-3 disabled:opacity-50">
-            <Text className="text-center text-xs font-extrabold text-brand-forest">{gettingLocation ? 'Localisation…' : 'Ajouter ma position GPS'}</Text>
-          </TouchableOpacity>
+        {/* 2. LOCALISATION */}
+        <View className="mt-4 rounded-3xl border border-line-subtle bg-white p-5 shadow-sm">
+          <View className="flex-row items-center justify-between">
+            <Text className="text-sm font-extrabold text-ink-900">2. Localisation</Text>
+            {latitude && longitude ? (
+              <View className="rounded-full bg-emerald-50 px-2.5 py-1">
+                <Text className="text-[10px] font-extrabold text-emerald-800">
+                  📍 Position détectée
+                </Text>
+              </View>
+            ) : (
+              <Text className="text-[10px] font-bold uppercase text-ink-400">Automatique</Text>
+            )}
+          </View>
+
+          {latitude && longitude ? (
+            <View className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50/50 p-3.5">
+              <View className="flex-row items-center justify-between">
+                <View className="min-w-0 flex-1 pr-2">
+                  <Text className="text-xs font-bold text-emerald-950">
+                    Coordonnées GPS enregistrées
+                  </Text>
+                  <Text className="mt-0.5 text-[11px] text-emerald-800">
+                    {latitude}, {longitude}{' '}
+                    {precision ? `(±${Math.round(Number(precision))}m)` : ''}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => void refreshLocation()}
+                  disabled={gettingLocation}
+                  className="rounded-lg bg-white px-2.5 py-1.5 border border-emerald-200"
+                >
+                  <Text className="text-[10px] font-bold text-emerald-900">
+                    {gettingLocation ? '...' : 'Actualiser'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity
+              onPress={() => void refreshLocation()}
+              disabled={gettingLocation || busy}
+              className="mt-3 flex-row items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50/60 py-3 disabled:opacity-50"
+            >
+              {gettingLocation ? (
+                <ActivityIndicator size="small" color="#174C3D" />
+              ) : (
+                <Text className="text-xs font-bold text-brand-forest">
+                  📍 Détecter ma position GPS
+                </Text>
+              )}
+            </TouchableOpacity>
+          )}
+
           <TextInput
             value={locationDescription}
             onChangeText={setLocationDescription}
             maxLength={1000}
-            placeholder="Repère, rue ou quartier (facultatif)"
-            placeholderTextColor="#8A948C"
-            className={inputClass + ' mt-3'}
+            placeholder="Précision d'adresse, n° de rue ou repère visuel..."
+            placeholderTextColor="#94A3B8"
+            className="mt-3 rounded-xl border border-line-strong bg-white px-4 py-3 text-sm text-ink-900"
           />
-          {latitude && longitude ? <Text className="mt-2 text-[10px] text-status-success">Position enregistrée dans le signalement.</Text> : null}
         </View>
 
-        <View className="rounded-3xl border border-line-subtle bg-white p-4">
-          <Text className="text-sm font-extrabold text-ink-900">3. Description <Text className="font-medium text-ink-400">(facultative)</Text></Text>
+        {/* 3. DESCRIPTION (FACULTATIF) */}
+        <View className="mt-4 rounded-3xl border border-line-subtle bg-white p-5 shadow-sm">
+          <View className="flex-row items-center justify-between">
+            <Text className="text-sm font-extrabold text-ink-900">3. Description</Text>
+            <Text className="text-[10px] font-bold uppercase text-ink-400">Facultatif</Text>
+          </View>
           <TextInput
             value={description}
             onChangeText={setDescription}
             multiline
             maxLength={5000}
             textAlignVertical="top"
-            placeholder="Ajoutez une précision utile sur la situation…"
-            placeholderTextColor="#8A948C"
-            className={inputClass + ' mt-3 min-h-[100px]'}
+            placeholder="Décrivez brièvement le problème (ex: matelas et décombres abandonnés sur le trottoir)..."
+            placeholderTextColor="#94A3B8"
+            className="mt-3 min-h-[90px] rounded-xl border border-line-strong bg-white px-4 py-3 text-sm text-ink-900"
           />
         </View>
 
-        <View className="rounded-3xl border border-line-subtle bg-white p-4">
-          <Text className="text-sm font-extrabold text-ink-900">4. Type de déchets <Text className="font-medium text-ink-400">(facultatif)</Text></Text>
-          <Text className="mt-1 text-xs leading-5 text-ink-500">Vous pouvez laisser la qualification à l’équipe chargée du traitement.</Text>
-          {wasteTypesError ? <Text className="mt-2 text-xs text-ink-500">{wasteTypesError}</Text> : null}
+        {/* 4. TYPE DE DÉCHETS (FACULTATIF) */}
+        <View className="mt-4 rounded-3xl border border-line-subtle bg-white p-5 shadow-sm">
+          <View className="flex-row items-center justify-between">
+            <Text className="text-sm font-extrabold text-ink-900">4. Type de déchets</Text>
+            <Text className="text-[10px] font-bold uppercase text-ink-400">Facultatif</Text>
+          </View>
+          <Text className="mt-1 text-xs text-ink-500">
+            Sélectionnez les catégories si vous les identifiez.
+          </Text>
+
           <View className="mt-3 flex-row flex-wrap gap-2">
             {wasteTypes.map((item) => {
               const selected = selectedWasteTypeIds.includes(item.idTypeDechet);
               return (
                 <TouchableOpacity
                   key={item.idTypeDechet}
-                  onPress={() => setSelectedWasteTypeIds((current) =>
-                    selected ? current.filter((id) => id !== item.idTypeDechet) : [...current, item.idTypeDechet],
-                  )}
-                  className={selected ? 'rounded-full bg-brand-forest px-3 py-2.5' : 'rounded-full border border-line-strong bg-white px-3 py-2.5'}
+                  onPress={() =>
+                    setSelectedWasteTypeIds((current) =>
+                      selected
+                        ? current.filter((id) => id !== item.idTypeDechet)
+                        : [...current, item.idTypeDechet],
+                    )
+                  }
+                  className={`rounded-full px-3.5 py-2 transition-all ${
+                    selected ? 'bg-brand-forest shadow-sm' : 'border border-line-strong bg-white'
+                  }`}
                 >
-                  <Text className={selected ? 'text-xs font-bold text-white' : 'text-xs font-semibold text-ink-700'}>{item.libelle}</Text>
+                  <Text
+                    className={`text-xs font-semibold ${
+                      selected ? 'font-bold text-white' : 'text-ink-700'
+                    }`}
+                  >
+                    {item.libelle}
+                  </Text>
                 </TouchableOpacity>
               );
             })}
           </View>
-          {wasteTypes.length ? <Text className="mt-2 text-[10px] text-ink-400">{selectedWasteTypeIds.length} catégorie(s) sélectionnée(s).</Text> : null}
         </View>
-      </View>
 
-      {error ? <View className="mt-5"><FeedbackBanner tone="error" message={error} /></View> : null}
-      <TouchableOpacity
-        onPress={() => void handleSubmit()}
-        disabled={busy || mediaBusy || gettingLocation}
-        className="mt-7 rounded-2xl bg-brand-forest px-5 py-4 disabled:opacity-50"
-      >
-        <Text className="text-center font-extrabold text-white">{busy ? 'Envoi du signalement…' : 'Envoyer le signalement'}</Text>
-      </TouchableOpacity>
-      <Link href="/(citizen)/reports" className="mt-5 text-center text-sm font-semibold text-brand-forest">Annuler</Link>
-    </ScrollView>
+        {/* Errors banner */}
+        {error && (
+          <View className="mt-4">
+            <FeedbackBanner tone="error" message={error} />
+          </View>
+        )}
+
+        {/* Submit button */}
+        <TouchableOpacity
+          onPress={() => void handleSubmit()}
+          disabled={busy || mediaBusy}
+          className={`mt-6 flex-row items-center justify-center gap-2 rounded-2xl py-4 shadow-sm ${
+            !photo ? 'bg-brand-forest/60' : 'bg-brand-forest'
+          } disabled:opacity-50`}
+        >
+          {busy ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <>
+              <Text className="text-center font-extrabold text-white text-base">
+                {photo ? 'Envoyer le signalement' : 'Prendre une photo pour envoyer'}
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => router.replace('/(citizen)/home')} className="mt-4 py-2">
+          <Text className="text-center text-xs font-bold text-ink-500">Annuler</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
