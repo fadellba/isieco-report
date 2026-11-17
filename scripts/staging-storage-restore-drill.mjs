@@ -11,7 +11,10 @@ const PROJECT_REF = 'mlhbdautaxufubaybzyt';
 const SOURCE_BUCKET = 'isieco-private-media';
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://' + PROJECT_REF + '.supabase.co';
 const SECRET_KEY = process.env.STAGING_SUPABASE_SECRET_KEY || '';
-const RUN_ID = (process.env.GITHUB_RUN_ID || 'manual-' + Date.now()).replace(/[^A-Za-z0-9-]/gu, '-');
+const RUN_ID = (process.env.GITHUB_RUN_ID || 'manual-' + Date.now()).replace(
+  /[^A-Za-z0-9-]/gu,
+  '-',
+);
 const RESTORE_BUCKET = ('restore-check-' + RUN_ID).slice(0, 63);
 const BACKUP_DIR = join(process.env.RUNNER_TEMP || tmpdir(), 'isieco-storage-restore-' + RUN_ID);
 const PAGE_SIZE = 100;
@@ -57,7 +60,8 @@ async function enumerateObjects(storage) {
         } else {
           files.push({
             path: objectPath,
-            contentType: entry.metadata?.mimetype || entry.metadata?.contentType || 'application/octet-stream',
+            contentType:
+              entry.metadata?.mimetype || entry.metadata?.contentType || 'application/octet-stream',
           });
           if (files.length > MAX_OBJECTS) {
             throw new Error('Storage restore drill is limited to ' + MAX_OBJECTS + ' objects.');
@@ -76,7 +80,9 @@ async function removeObjectPaths(storage, paths) {
   for (let offset = 0; offset < paths.length; offset += 1000) {
     const result = await storage.remove(paths.slice(offset, offset + 1000));
     if (result.error) {
-      throw new Error('Unable to remove residual temporary Storage objects: ' + result.error.message);
+      throw new Error(
+        'Unable to remove residual temporary Storage objects: ' + result.error.message,
+      );
     }
   }
 }
@@ -96,7 +102,10 @@ async function cleanupTemporaryBucket(supabase, bucketId) {
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const remaining = await enumerateObjects(storage);
     if (remaining.length > 0) {
-      await removeObjectPaths(storage, remaining.map((file) => file.path));
+      await removeObjectPaths(
+        storage,
+        remaining.map((file) => file.path),
+      );
     }
 
     const deleted = await supabase.storage.deleteBucket(bucketId);
@@ -115,7 +124,7 @@ async function cleanupTemporaryBucket(supabase, bucketId) {
 
   throw new Error(
     'Temporary restore bucket cleanup did not converge: ' +
-    (lastDeleteError?.message || 'bucket still exists'),
+      (lastDeleteError?.message || 'bucket still exists'),
   );
 }
 
@@ -142,9 +151,11 @@ async function run() {
   }
   if (!SECRET_KEY.startsWith('sb_secret_')) {
     const parts = SECRET_KEY.split('.');
-    if (parts.length !== 3) throw new Error('The Storage key is not a recognized service-role credential.');
+    if (parts.length !== 3)
+      throw new Error('The Storage key is not a recognized service-role credential.');
     const claims = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
-    if (claims.role !== 'service_role') throw new Error('The Storage key is not a service-role credential.');
+    if (claims.role !== 'service_role')
+      throw new Error('The Storage key is not a service-role credential.');
   }
 
   const sourceUrl = new URL(SUPABASE_URL);
@@ -167,14 +178,18 @@ async function run() {
     await cleanupStaleRestoreBuckets(supabase);
 
     const listedBuckets = await supabase.storage.listBuckets();
-    if (listedBuckets.error) throw new Error('Unable to inspect Storage buckets: ' + listedBuckets.error.message);
+    if (listedBuckets.error)
+      throw new Error('Unable to inspect Storage buckets: ' + listedBuckets.error.message);
     const sourceBucket = (listedBuckets.data || []).find((bucket) => bucket.id === SOURCE_BUCKET);
     if (!sourceBucket) throw new Error('The approved source Storage bucket does not exist.');
-    if (sourceBucket.public !== false) throw new Error('The source Storage bucket must remain private.');
+    if (sourceBucket.public !== false)
+      throw new Error('The source Storage bucket must remain private.');
 
     const files = await enumerateObjects(supabase.storage.from(SOURCE_BUCKET));
     if (files.length === 0) {
-      throw new Error('No source Storage objects exist; an actual object restoration cannot be verified.');
+      throw new Error(
+        'No source Storage objects exist; an actual object restoration cannot be verified.',
+      );
     }
 
     await fs.rm(BACKUP_DIR, { recursive: true, force: true });
@@ -185,7 +200,9 @@ async function run() {
       const file = files[index];
       const downloaded = await supabase.storage.from(SOURCE_BUCKET).download(file.path);
       if (downloaded.error || !downloaded.data) {
-        throw new Error('Unable to download a source object: ' + (downloaded.error?.message || 'empty response'));
+        throw new Error(
+          'Unable to download a source object: ' + (downloaded.error?.message || 'empty response'),
+        );
       }
       const bytes = Buffer.from(await downloaded.data.arrayBuffer());
       if (bytes.length > MAX_OBJECT_BYTES) {
@@ -215,30 +232,44 @@ async function run() {
       public: false,
       fileSizeLimit: MAX_OBJECT_BYTES,
     });
-    if (created.error) throw new Error('Unable to create the isolated private restore bucket: ' + created.error.message);
+    if (created.error)
+      throw new Error(
+        'Unable to create the isolated private restore bucket: ' + created.error.message,
+      );
     temporaryBucketCreated = true;
 
     const verifyBucketList = await supabase.storage.listBuckets();
-    if (verifyBucketList.error) throw new Error('Unable to verify temporary restore bucket: ' + verifyBucketList.error.message);
-    const verifyBucket = (verifyBucketList.data || []).find((bucket) => bucket.id === RESTORE_BUCKET);
+    if (verifyBucketList.error)
+      throw new Error(
+        'Unable to verify temporary restore bucket: ' + verifyBucketList.error.message,
+      );
+    const verifyBucket = (verifyBucketList.data || []).find(
+      (bucket) => bucket.id === RESTORE_BUCKET,
+    );
     if (!verifyBucket || verifyBucket.public !== false) {
       throw new Error('The temporary restore bucket is missing or is not private.');
     }
 
     for (const file of manifest) {
       const bytes = await fs.readFile(join(BACKUP_DIR, file.backupFile));
-      if (sha256(bytes) !== file.sha256) throw new Error('A local backup object failed SHA-256 verification.');
+      if (sha256(bytes) !== file.sha256)
+        throw new Error('A local backup object failed SHA-256 verification.');
 
       const uploaded = await supabase.storage.from(RESTORE_BUCKET).upload(file.path, bytes, {
         contentType: file.contentType,
         cacheControl: '60',
         upsert: false,
       });
-      if (uploaded.error) throw new Error('Unable to upload object into isolated restore bucket: ' + uploaded.error.message);
+      if (uploaded.error)
+        throw new Error(
+          'Unable to upload object into isolated restore bucket: ' + uploaded.error.message,
+        );
 
       const downloaded = await supabase.storage.from(RESTORE_BUCKET).download(file.path);
       if (downloaded.error || !downloaded.data) {
-        throw new Error('Unable to read back restored object: ' + (downloaded.error?.message || 'empty response'));
+        throw new Error(
+          'Unable to read back restored object: ' + (downloaded.error?.message || 'empty response'),
+        );
       }
       const restoredBytes = Buffer.from(await downloaded.data.arrayBuffer());
       if (restoredBytes.length !== file.bytes || sha256(restoredBytes) !== file.sha256) {
@@ -253,7 +284,10 @@ async function run() {
         await cleanupTemporaryBucket(supabase, RESTORE_BUCKET);
       } catch (cleanupError) {
         if (!primaryError) primaryError = cleanupError;
-        else process.stderr.write('Temporary bucket cleanup warning: ' + safeError(cleanupError) + '\n');
+        else
+          process.stderr.write(
+            'Temporary bucket cleanup warning: ' + safeError(cleanupError) + '\n',
+          );
       }
     }
     await fs.rm(BACKUP_DIR, { recursive: true, force: true }).catch(() => undefined);
@@ -261,8 +295,11 @@ async function run() {
 
   if (primaryError) throw primaryError;
   process.stdout.write(
-    'STORAGE_RESTORE_DRILL=SUCCESS objects=' + objectCount +
-    ' bytes=' + totalBytes + '; isolated private bucket removed.\n',
+    'STORAGE_RESTORE_DRILL=SUCCESS objects=' +
+      objectCount +
+      ' bytes=' +
+      totalBytes +
+      '; isolated private bucket removed.\n',
   );
 }
 

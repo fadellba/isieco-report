@@ -9,7 +9,8 @@ export default function CitizenLayout() {
 
   if (loading) return <LoadingScreen />;
   if (!profile) return <Redirect href="/sign-in" />;
-  if (!profile.roles.some((role) => role.code === 'CITOYEN')) return <Redirect href="/no-mobile-access" />;
+  if (!profile.roles.some((role) => role.code === 'CITOYEN'))
+    return <Redirect href="/no-mobile-access" />;
 
   return (
     <Tabs

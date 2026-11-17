@@ -1,151 +1,139 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, type FormEvent } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { BrandMark } from '../components/BrandMark';
 import { supabase } from '../lib/supabase';
 
 export function ResetPasswordPage() {
-  const [checking, setChecking] = useState(true);
-  const [recoveryAvailable, setRecoveryAvailable] = useState(false);
-  const [complete, setComplete] = useState(false);
+  const navigate = useNavigate();
   const [password, setPassword] = useState('');
-  const [confirmation, setConfirmation] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
   const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    const { data } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!active) return;
-      if (event === 'PASSWORD_RECOVERY' && session) {
-        setRecoveryAvailable(true);
-        setChecking(false);
-      }
-    });
-
-    void supabase.auth.getSession().then(({ data: sessionData, error: sessionError }) => {
-      if (!active) return;
-      if (sessionError) {
-        setError("Le lien ne peut pas être vérifié. Demandez-en un nouveau.");
-      } else if (sessionData.session) {
-        setRecoveryAvailable(true);
-      }
-      setChecking(false);
-    });
-
-    return () => {
-      active = false;
-      data.subscription.unsubscribe();
-    };
-  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy || !recoveryAvailable || password.length < 12 || password !== confirmation) return;
+    if (busy || !password) return;
+
+    if (password.length < 8) {
+      setError('Le mot de passe doit comporter au moins 8 caractères.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('Les deux mots de passe ne correspondent pas.');
+      return;
+    }
 
     setBusy(true);
     setError(null);
     try {
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) throw updateError;
-      setComplete(true);
-      await supabase.auth.signOut();
+      setSuccess(true);
+      setTimeout(() => navigate('/connexion', { replace: true }), 2500);
     } catch {
-      setError("Le mot de passe n'a pas pu être modifié. Le lien a peut-être expiré ; demandez-en un nouveau.");
+      setError('Impossible de mettre à jour le mot de passe. Le lien a peut-être expiré.');
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <main className="auth-page">
-      <div className="auth-layout">
-        <aside className="auth-story" aria-label="Présentation ISIECO">
-          <div className="auth-story__brand"><BrandMark /></div>
-          <div className="auth-story__content">
-            <span className="auth-story__eyebrow">SÉCURITÉ DU COMPTE</span>
-            <h1>Un nouvel accès, sous votre contrôle.</h1>
-            <p>Choisissez un mot de passe robuste. Votre compte retrouvera ensuite son parcours de connexion habituel.</p>
-          </div>
-          <div className="auth-story__footer">ISIECO · PLATEFORME DE SUIVI OPÉRATIONNEL</div>
-        </aside>
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-4 sm:p-6 selection:bg-emerald-100 selection:text-emerald-900">
+      <div className="w-full max-w-[420px]">
+        <div className="flex flex-col items-center mb-8">
+          <BrandMark size="lg" className="justify-center" />
+        </div>
 
-        <section className="auth-main" aria-labelledby="auth-title">
-          <div className="auth-main__top">
-            <span className="auth-main__secure"><span /> Lien de récupération</span>
-            <Link to="/connexion">Retour à la connexion</Link>
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-[0_10px_30px_rgba(0,0,0,0.04)] p-7 sm:p-9">
+          <div className="mb-6">
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+              Nouveau mot de passe
+            </h1>
+            <p className="text-sm text-slate-500 mt-1">Définissez un mot de passe robuste</p>
           </div>
-          <div className="auth-card">
-            <div className="auth-card__heading">
-              <span className="auth-card__eyebrow">NOUVEAU MOT DE PASSE</span>
-              <h2 id="auth-title">{complete ? 'Mot de passe modifié.' : 'Définir un mot de passe.'}</h2>
-              <p>{complete
-                ? 'Votre mot de passe a été mis à jour. Vous pouvez vous connecter avec vos nouveaux identifiants.'
-                : 'Utilisez au moins 12 caractères et confirmez votre saisie.'}</p>
+
+          {error && (
+            <div
+              className="mb-5 p-3.5 bg-red-50 border border-red-200/80 rounded-xl text-xs text-red-700 leading-relaxed flex items-start gap-2.5"
+              role="alert"
+            >
+              <span className="text-red-500 font-bold">✕</span>
+              <span>{error}</span>
             </div>
+          )}
 
-            {checking ? (
-              <div className="auth-form__notice" role="status">Vérification du lien de récupération…</div>
-            ) : complete ? (
-              <div className="auth-form__success" role="status">
-                <strong>Votre compte est prêt.</strong>
-                <p>La session de récupération a été fermée après la modification du mot de passe.</p>
-                <Link className="auth-form__link" to="/connexion">Se connecter</Link>
+          {success ? (
+            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-center">
+              <div className="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto mb-3 font-bold text-lg">
+                ✓
               </div>
-            ) : !recoveryAvailable ? (
-              <div className="auth-form__error" role="alert">
-                {error ?? 'Ce lien est invalide ou a expiré. Demandez un nouveau lien de réinitialisation.'}
-                <Link className="auth-form__link" to="/mot-de-passe-oublie">Demander un nouveau lien</Link>
-              </div>
-            ) : (
-              <form className="auth-form" onSubmit={handleSubmit}>
-                <label className="auth-field">
-                  <span>Nouveau mot de passe</span>
-                  <div className="auth-field__password">
-                    <input
-                      autoComplete="new-password"
-                      name="new-password"
-                      onChange={(event) => setPassword(event.target.value)}
-                      placeholder="12 caractères minimum"
-                      required
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                    />
-                    <button type="button" aria-pressed={showPassword} onClick={() => setShowPassword((visible) => !visible)}>
-                      {showPassword ? 'Masquer' : 'Afficher'}
-                    </button>
-                  </div>
+              <h2 className="text-sm font-bold text-slate-900 mb-1">Mot de passe mis à jour !</h2>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Redirection automatique vers la connexion…
+              </p>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                  Nouveau mot de passe
                 </label>
-                <label className="auth-field">
-                  <span>Confirmer le mot de passe</span>
+                <div className="relative">
                   <input
-                    autoComplete="new-password"
-                    name="confirm-password"
-                    onChange={(event) => setConfirmation(event.target.value)}
-                    placeholder="Saisissez-le à nouveau"
-                    required
                     type={showPassword ? 'text' : 'password'}
-                    value={confirmation}
+                    required
+                    minLength={8}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="8 caractères minimum"
+                    className="w-full h-11 px-3.5 pr-11 bg-slate-50/50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400 hover:text-slate-600 p-1"
+                  >
+                    {showPassword ? 'Masquer' : 'Afficher'}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                  Confirmer le mot de passe
                 </label>
-                <p className="auth-form__hint">Le mot de passe doit contenir au moins 12 caractères.</p>
-                {password && confirmation && password !== confirmation
-                  ? <p className="auth-form__error" role="alert">Les deux mots de passe ne correspondent pas.</p>
-                  : null}
-                {error ? <p className="auth-form__error" role="alert">{error}</p> : null}
-                <button className="auth-form__submit" disabled={busy || password.length < 12 || password !== confirmation} type="submit">
-                  <span>{busy ? 'Mise à jour…' : 'Enregistrer le mot de passe'}</span>
-                  <span aria-hidden="true">→</span>
-                </button>
-              </form>
-            )}
-          </div>
-          <footer className="auth-main__footer">
-            <span>© ISIECO · Propreté urbaine</span>
-            <span>Ne partagez jamais ce lien de récupération</span>
-          </footer>
-        </section>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Répétez le mot de passe"
+                  className="w-full h-11 px-3.5 bg-slate-50/50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={busy}
+                className="w-full h-11 mt-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:opacity-50 text-white font-bold text-sm rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {busy ? 'Enregistrement…' : 'Enregistrer le mot de passe'}
+              </button>
+
+              <div className="pt-2 text-center">
+                <Link
+                  to="/connexion"
+                  className="text-xs font-semibold text-slate-500 hover:text-slate-800"
+                >
+                  ← Annuler et retourner à la connexion
+                </Link>
+              </div>
+            </form>
+          )}
+        </div>
       </div>
-    </main>
+    </div>
   );
 }

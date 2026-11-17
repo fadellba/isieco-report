@@ -66,9 +66,21 @@ function displayStatus(status: string) {
 }
 
 const actions: Array<{ value: QualificationAction; label: string; description: string }> = [
-  { value: 'accept', label: 'Qualifier', description: 'Retenir les catégories confirmées et transmettre le dossier au traitement.' },
-  { value: 'supplement', label: 'Demander un complément', description: 'Demander au citoyen les informations nécessaires avant de poursuivre.' },
-  { value: 'reject', label: 'Rejeter', description: 'Clore l’examen par une décision motivée de rejet.' },
+  {
+    value: 'accept',
+    label: 'Qualifier',
+    description: 'Retenir les catégories confirmées et transmettre le dossier au traitement.',
+  },
+  {
+    value: 'supplement',
+    label: 'Demander un complément',
+    description: 'Demander au citoyen les informations nécessaires avant de poursuivre.',
+  },
+  {
+    value: 'reject',
+    label: 'Rejeter',
+    description: 'Clore l’examen par une décision motivée de rejet.',
+  },
 ];
 
 export function QualificationDetailPage() {
@@ -94,23 +106,27 @@ export function QualificationDetailPage() {
     try {
       const data = await api.request<ReportDetail>(`/qualification/${idSignalement}`);
       setReport(data);
-      setContents(data.contenus.map((item) => ({
-        idTypeDechet: item.idTypeDechet,
-        selected: true,
-        quantiteEstimee: item.quantiteEstimee ?? '',
-        volumeEstime: item.volumeEstime ?? '',
-        remarque: item.remarque ?? '',
-      })));
-      const signedUrls = await Promise.all(data.photos.map(async (photo) => {
-        try {
-          const result = await api.request<{ signedUrl: string }>(
-            `/qualification/${idSignalement}/photos/${photo.idPhotoSignalement}/url`,
-          );
-          return [photo.idPhotoSignalement, result.signedUrl] as const;
-        } catch {
-          return [photo.idPhotoSignalement, ''] as const;
-        }
-      }));
+      setContents(
+        data.contenus.map((item) => ({
+          idTypeDechet: item.idTypeDechet,
+          selected: true,
+          quantiteEstimee: item.quantiteEstimee ?? '',
+          volumeEstime: item.volumeEstime ?? '',
+          remarque: item.remarque ?? '',
+        })),
+      );
+      const signedUrls = await Promise.all(
+        data.photos.map(async (photo) => {
+          try {
+            const result = await api.request<{ signedUrl: string }>(
+              `/qualification/${idSignalement}/photos/${photo.idPhotoSignalement}/url`,
+            );
+            return [photo.idPhotoSignalement, result.signedUrl] as const;
+          } catch {
+            return [photo.idPhotoSignalement, ''] as const;
+          }
+        }),
+      );
       setPhotoUrls(Object.fromEntries(signedUrls.filter(([, url]) => Boolean(url))));
     } catch (reason) {
       setReport(null);
@@ -120,10 +136,12 @@ export function QualificationDetailPage() {
     }
   }, [idSignalement]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   function patchContent(index: number, patch: Partial<ContentForm>) {
-    setContents((items) => items.map((item, i) => i === index ? { ...item, ...patch } : item));
+    setContents((items) => items.map((item, i) => (i === index ? { ...item, ...patch } : item)));
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -144,7 +162,12 @@ export function QualificationDetailPage() {
         });
         navigate('/qualification', {
           replace: true,
-          state: { notice: action === 'reject' ? 'Le signalement a été rejeté.' : 'La demande de complément a été envoyée.' },
+          state: {
+            notice:
+              action === 'reject'
+                ? 'Le signalement a été rejeté.'
+                : 'La demande de complément a été envoyée.',
+          },
         });
         return;
       }
@@ -160,10 +183,15 @@ export function QualificationDetailPage() {
         ...(item.volumeEstime.trim() ? { volumeEstime: Number(item.volumeEstime) } : {}),
         ...(item.remarque.trim() ? { remarque: item.remarque.trim() } : {}),
       }));
-      if (payload.some((item) =>
-        ('quantiteEstimee' in item && (!Number.isFinite(item.quantiteEstimee) || item.quantiteEstimee < 0)) ||
-        ('volumeEstime' in item && (!Number.isFinite(item.volumeEstime) || item.volumeEstime < 0))
-      )) {
+      if (
+        payload.some(
+          (item) =>
+            ('quantiteEstimee' in item &&
+              (!Number.isFinite(item.quantiteEstimee) || item.quantiteEstimee < 0)) ||
+            ('volumeEstime' in item &&
+              (!Number.isFinite(item.volumeEstime) || item.volumeEstime < 0)),
+        )
+      ) {
         setError('Les quantités et volumes doivent être des nombres positifs ou nuls.');
         return;
       }
@@ -176,7 +204,8 @@ export function QualificationDetailPage() {
         state: { notice: 'Le signalement a été qualifié et transmis au traitement.' },
       });
     } catch (reason) {
-      const message = reason instanceof Error ? reason.message : 'La décision n’a pas pu être enregistrée.';
+      const message =
+        reason instanceof Error ? reason.message : 'La décision n’a pas pu être enregistrée.';
       await load();
       setError(message);
     } finally {
@@ -197,12 +226,22 @@ export function QualificationDetailPage() {
   if (!report) {
     return (
       <section className="workflow-state workflow-state--error">
-        <span className="workflow-state__icon" aria-hidden="true">!</span>
+        <span className="workflow-state__icon" aria-hidden="true">
+          !
+        </span>
         <h1>Signalement indisponible</h1>
         <p>{error || 'Ce signalement est introuvable ou ne peut plus être examiné.'}</p>
         <div className="workflow-state__actions">
-          <button type="button" onClick={() => void load()} className="workflow-button workflow-button--primary">Réessayer</button>
-          <Link to="/qualification" className="workflow-button workflow-button--secondary">Retour à la file</Link>
+          <button
+            type="button"
+            onClick={() => void load()}
+            className="workflow-button workflow-button--primary"
+          >
+            Réessayer
+          </button>
+          <Link to="/qualification" className="workflow-button workflow-button--secondary">
+            Retour à la file
+          </Link>
         </div>
       </section>
     );
@@ -216,7 +255,9 @@ export function QualificationDetailPage() {
   return (
     <div className="qualification-detail">
       <div className="qualification-detail__topline">
-        <Link to="/qualification" className="workflow-back-link"><span aria-hidden="true">←</span> File de qualification</Link>
+        <Link to="/qualification" className="workflow-back-link">
+          <span aria-hidden="true">←</span> File de qualification
+        </Link>
         <span className="qualification-detail__step">EXAMEN · DÉCISION</span>
       </div>
 
@@ -227,8 +268,13 @@ export function QualificationDetailPage() {
           <p>Déposé le {dateLabel(report.dateSoumission)}</p>
         </div>
         <div className="qualification-detail__status">
-          <StatusBadge label={displayStatus(report.statutSignalement)} tone={statusTone(report.statutSignalement)} />
-          <span>Référence <code>{report.idSignalement.slice(0, 8).toUpperCase()}</code></span>
+          <StatusBadge
+            label={displayStatus(report.statutSignalement)}
+            tone={statusTone(report.statutSignalement)}
+          />
+          <span>
+            Référence <code>{report.idSignalement.slice(0, 8).toUpperCase()}</code>
+          </span>
         </div>
       </header>
 
@@ -248,7 +294,9 @@ export function QualificationDetailPage() {
               {report.description || 'Le citoyen n’a pas ajouté de description.'}
             </p>
             <div className="qualification-location">
-              <div className="qualification-location__icon" aria-hidden="true">⌖</div>
+              <div className="qualification-location__icon" aria-hidden="true">
+                ⌖
+              </div>
               <div>
                 <span>LOCALISATION</span>
                 <strong>{report.descriptionLocalisation || 'Repère non renseigné'}</strong>
@@ -289,16 +337,28 @@ export function QualificationDetailPage() {
                 {report.photos.map((photo, index) => (
                   <article key={photo.idPhotoSignalement} className="qualification-photo">
                     {photoUrls[photo.idPhotoSignalement] ? (
-                      <a href={photoUrls[photo.idPhotoSignalement]} target="_blank" rel="noreferrer" className="qualification-photo__image-link">
-                        <img src={photoUrls[photo.idPhotoSignalement]} alt={photo.description || 'Photo du dépôt signalé'} />
+                      <a
+                        href={photoUrls[photo.idPhotoSignalement]}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="qualification-photo__image-link"
+                      >
+                        <img
+                          src={photoUrls[photo.idPhotoSignalement]}
+                          alt={photo.description || 'Photo du dépôt signalé'}
+                        />
                         <span>Ouvrir ↗</span>
                       </a>
                     ) : (
-                      <div className="qualification-photo__unavailable">Photo expirée ou inaccessible</div>
+                      <div className="qualification-photo__unavailable">
+                        Photo expirée ou inaccessible
+                      </div>
                     )}
                     <div className="qualification-photo__caption">
                       <strong>Photo {index + 1}</strong>
-                      <span>{photo.description || 'Sans description'} · {dateLabel(photo.dateAjout)}</span>
+                      <span>
+                        {photo.description || 'Sans description'} · {dateLabel(photo.dateAjout)}
+                      </span>
                     </div>
                   </article>
                 ))}
@@ -313,19 +373,26 @@ export function QualificationDetailPage() {
                   <span className="qualification-panel__eyebrow">03 · HISTORIQUE</span>
                   <h2>Demandes de complément</h2>
                 </div>
-                <span className="qualification-panel__count">{report.demandesComplement.length}</span>
+                <span className="qualification-panel__count">
+                  {report.demandesComplement.length}
+                </span>
               </div>
               <div className="qualification-history">
                 {report.demandesComplement.map((request) => (
                   <article key={request.idDemande} className="qualification-history__item">
                     <div className="qualification-history__meta">
-                      <StatusBadge label={displayStatus(request.etatDemande)} tone={request.etatDemande === 'OUVERTE' ? 'warning' : 'success'} />
+                      <StatusBadge
+                        label={displayStatus(request.etatDemande)}
+                        tone={request.etatDemande === 'OUVERTE' ? 'warning' : 'success'}
+                      />
                       <time>{dateLabel(request.dateDemande)}</time>
                     </div>
                     <p>{request.motif}</p>
                     {request.reponse ? (
                       <div className="qualification-history__reply">
-                        <strong>Réponse du citoyen · {dateLabel(request.reponse.dateReponse)}</strong>
+                        <strong>
+                          Réponse du citoyen · {dateLabel(request.reponse.dateReponse)}
+                        </strong>
                         <p>{request.reponse.contenu}</p>
                       </div>
                     ) : null}
@@ -351,7 +418,10 @@ export function QualificationDetailPage() {
                     key={item.value}
                     type="button"
                     aria-pressed={action === item.value}
-                    onClick={() => { setAction(item.value); setError(null); }}
+                    onClick={() => {
+                      setAction(item.value);
+                      setError(null);
+                    }}
                     className={`qualification-action${action === item.value ? ' is-active' : ''}${item.value === 'reject' ? ' is-danger' : ''}`}
                   >
                     <span className="qualification-action__radio" aria-hidden="true" />
@@ -367,31 +437,78 @@ export function QualificationDetailPage() {
                 <div className="qualification-decision__fields">
                   <div className="qualification-decision__intro">
                     <strong>Catégories à retenir</strong>
-                    <span>{selectedCount} / {contents.length} sélectionnée(s)</span>
+                    <span>
+                      {selectedCount} / {contents.length} sélectionnée(s)
+                    </span>
                   </div>
-                  <p className="qualification-decision__hint">Conservez les catégories confirmées et complétez les estimations utiles au traitement.</p>
+                  <p className="qualification-decision__hint">
+                    Conservez les catégories confirmées et complétez les estimations utiles au
+                    traitement.
+                  </p>
                   {contents.map((item, index) => {
-                    const declared = report.contenus.find((content) => content.idTypeDechet === item.idTypeDechet);
+                    const declared = report.contenus.find(
+                      (content) => content.idTypeDechet === item.idTypeDechet,
+                    );
                     return (
-                      <article key={item.idTypeDechet} className={`qualification-category${item.selected ? ' is-selected' : ''}`}>
+                      <article
+                        key={item.idTypeDechet}
+                        className={`qualification-category${item.selected ? ' is-selected' : ''}`}
+                      >
                         <label className="qualification-category__toggle">
                           <input
                             type="checkbox"
                             checked={item.selected}
-                            onChange={(event) => patchContent(index, { selected: event.target.checked })}
+                            onChange={(event) =>
+                              patchContent(index, { selected: event.target.checked })
+                            }
                           />
-                          <span><strong>{declared?.typeDechet.libelle || declared?.typeDechet.codeType}</strong><small>{declared?.typeDechet.codeType}</small></span>
+                          <span>
+                            <strong>
+                              {declared?.typeDechet.libelle || declared?.typeDechet.codeType}
+                            </strong>
+                            <small>{declared?.typeDechet.codeType}</small>
+                          </span>
                         </label>
                         {item.selected ? (
                           <div className="qualification-category__fields">
-                            <label>Quantité estimée
-                              <input type="number" min="0" step="0.001" inputMode="decimal" value={item.quantiteEstimee} onChange={(event) => patchContent(index, { quantiteEstimee: event.target.value })} placeholder="Non renseignée" />
+                            <label>
+                              Quantité estimée
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.001"
+                                inputMode="decimal"
+                                value={item.quantiteEstimee}
+                                onChange={(event) =>
+                                  patchContent(index, { quantiteEstimee: event.target.value })
+                                }
+                                placeholder="Non renseignée"
+                              />
                             </label>
-                            <label>Volume estimé
-                              <input type="number" min="0" step="0.001" inputMode="decimal" value={item.volumeEstime} onChange={(event) => patchContent(index, { volumeEstime: event.target.value })} placeholder="Non renseigné" />
+                            <label>
+                              Volume estimé
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.001"
+                                inputMode="decimal"
+                                value={item.volumeEstime}
+                                onChange={(event) =>
+                                  patchContent(index, { volumeEstime: event.target.value })
+                                }
+                                placeholder="Non renseigné"
+                              />
                             </label>
-                            <label className="qualification-category__remark">Remarque
-                              <input maxLength={1000} value={item.remarque} onChange={(event) => patchContent(index, { remarque: event.target.value })} placeholder="Précision facultative" />
+                            <label className="qualification-category__remark">
+                              Remarque
+                              <input
+                                maxLength={1000}
+                                value={item.remarque}
+                                onChange={(event) =>
+                                  patchContent(index, { remarque: event.target.value })
+                                }
+                                placeholder="Précision facultative"
+                              />
                             </label>
                           </div>
                         ) : null}
@@ -400,14 +517,19 @@ export function QualificationDetailPage() {
                   })}
                   {!contents.length ? (
                     <div className="qualification-warning">
-                      Aucune catégorie n’a été déclarée. Une catégorie doit être disponible avant de pouvoir qualifier ce signalement.
+                      Aucune catégorie n’a été déclarée. Une catégorie doit être disponible avant de
+                      pouvoir qualifier ce signalement.
                     </div>
                   ) : null}
                 </div>
               ) : (
                 <label className="qualification-motive">
                   <span>{action === 'reject' ? 'Motif du rejet' : 'Informations à demander'}</span>
-                  <small>{action === 'reject' ? 'Expliquez clairement la raison de la décision.' : 'Indiquez les éléments nécessaires pour poursuivre l’examen.'}</small>
+                  <small>
+                    {action === 'reject'
+                      ? 'Expliquez clairement la raison de la décision.'
+                      : 'Indiquez les éléments nécessaires pour poursuivre l’examen.'}
+                  </small>
                   <textarea
                     required
                     minLength={5}
@@ -415,9 +537,15 @@ export function QualificationDetailPage() {
                     rows={5}
                     value={motif}
                     onChange={(event) => setMotif(event.target.value)}
-                    placeholder={action === 'reject' ? 'Expliquez le motif du rejet…' : 'Précisez les informations à compléter…'}
+                    placeholder={
+                      action === 'reject'
+                        ? 'Expliquez le motif du rejet…'
+                        : 'Précisez les informations à compléter…'
+                    }
                   />
-                  <span className="qualification-motive__count">{motif.trim().length} / 2000 caractères · 5 minimum</span>
+                  <span className="qualification-motive__count">
+                    {motif.trim().length} / 2000 caractères · 5 minimum
+                  </span>
                 </label>
               )}
 
@@ -425,7 +553,11 @@ export function QualificationDetailPage() {
                 <p>Votre décision sera enregistrée dans l’historique du signalement.</p>
                 <button
                   type="submit"
-                  disabled={busy || (action === 'accept' && (!contents.some((item) => item.selected) || !contents.length))}
+                  disabled={
+                    busy ||
+                    (action === 'accept' &&
+                      (!contents.some((item) => item.selected) || !contents.length))
+                  }
                   className={`workflow-button workflow-button--primary qualification-submit${action === 'reject' ? ' is-danger' : ''}`}
                 >
                   {busy
@@ -436,7 +568,9 @@ export function QualificationDetailPage() {
                         ? 'Confirmer le rejet'
                         : 'Envoyer la demande'}
                 </button>
-                <Link to="/qualification" className="qualification-decision__cancel">Annuler et revenir à la file</Link>
+                <Link to="/qualification" className="qualification-decision__cancel">
+                  Annuler et revenir à la file
+                </Link>
               </div>
             </form>
           </section>

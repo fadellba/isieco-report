@@ -2,22 +2,36 @@ import { ActivityIndicator, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { BrandMark } from './BrandMark';
 
-export function LoadingScreen({ label = 'Préparation de votre espace…' }: { label?: string }) {
+export function LoadingScreen({
+  label = 'Ensemble pour une ville plus propre',
+}: {
+  label?: string;
+}) {
   return (
-    <View className="flex-1 items-center justify-center bg-[#123B33] px-8">
+    <View className="flex-1 items-center justify-between bg-[#0A261E] px-8 pt-24 pb-12">
       <StatusBar style="light" />
+
+      {/* Decorative top space */}
+      <View className="h-4" />
+
+      {/* Center Brand Identity matching splash.PNG */}
       <View className="w-full max-w-[320px] items-center">
-        <BrandMark inverted />
-        <View className="mt-12 h-px w-16 bg-[#D7E6A5]" />
-        <Text className="mt-6 text-center text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#D7E6A5]">
-          Signalement · Intervention · Suivi
+        <View className="w-20 h-20 rounded-3xl bg-emerald-500/20 border border-emerald-400/30 items-center justify-center mb-6 shadow-2xl">
+          <Text style={{ fontSize: 40 }}>🌿</Text>
+        </View>
+
+        <Text className="text-4xl font-black text-white tracking-tight text-center">ISIECO</Text>
+
+        <Text className="mt-3 text-sm font-medium text-emerald-100/90 text-center leading-relaxed">
+          Ensemble pour une ville plus propre
         </Text>
-        <ActivityIndicator className="mt-10" color="#D7E6A5" size="large" />
-        <Text accessibilityLiveRegion="polite" className="mt-5 text-center text-sm font-medium text-white/80">
+      </View>
+
+      {/* Bottom organic curve accent and spinner matching splash.PNG */}
+      <View className="w-full items-center pb-4">
+        <ActivityIndicator color="#4ADE80" size="small" />
+        <Text className="mt-3 text-[11px] font-medium text-emerald-300/60 text-center tracking-wide">
           {label}
-        </Text>
-        <Text className="mt-3 text-center text-[10px] font-semibold tracking-[0.08em] text-white/45">
-          PLATEFORME DE PROPRETÉ URBAINE
         </Text>
       </View>
     </View>

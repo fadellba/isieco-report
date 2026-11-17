@@ -107,7 +107,7 @@ export function CaseDetailPage() {
       setSelectedReport((current) =>
         reports.items.some((report) => report.idSignalement === current)
           ? current
-          : reports.items[0]?.idSignalement ?? '',
+          : (reports.items[0]?.idSignalement ?? ''),
       );
     } catch (reason) {
       setItem(null);
@@ -117,7 +117,9 @@ export function CaseDetailPage() {
     }
   }, [idDossier]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   async function mutate(success: string, operation: () => Promise<unknown>) {
     if (busy) return;
@@ -166,8 +168,13 @@ export function CaseDetailPage() {
       setError('La longitude doit être comprise entre -180 et 180.');
       return;
     }
-    if (accuracy !== null && (lat === null || !Number.isFinite(accuracy) || accuracy < 0 || accuracy > 100000)) {
-      setError('La précision doit être comprise entre 0 et 100000 mètres et nécessite des coordonnées.');
+    if (
+      accuracy !== null &&
+      (lat === null || !Number.isFinite(accuracy) || accuracy < 0 || accuracy > 100000)
+    ) {
+      setError(
+        'La précision doit être comprise entre 0 et 100000 mètres et nécessite des coordonnées.',
+      );
       return;
     }
     await mutate('Localisation du dossier mise à jour.', () =>
@@ -227,26 +234,39 @@ export function CaseDetailPage() {
   if (!item) {
     return (
       <section className="workflow-state workflow-state--error">
-        <span className="workflow-state__icon" aria-hidden="true">!</span>
+        <span className="workflow-state__icon" aria-hidden="true">
+          !
+        </span>
         <h1>Dossier indisponible</h1>
         <p>{error || 'Ce dossier est introuvable ou ne peut pas être affiché.'}</p>
         <div className="workflow-state__actions">
-          <button type="button" onClick={() => void load()} className="workflow-button workflow-button--primary">Réessayer</button>
-          <Link to="/dossiers" className="workflow-button workflow-button--secondary">Retour aux dossiers</Link>
+          <button
+            type="button"
+            onClick={() => void load()}
+            className="workflow-button workflow-button--primary"
+          >
+            Réessayer
+          </button>
+          <Link to="/dossiers" className="workflow-button workflow-button--secondary">
+            Retour aux dossiers
+          </Link>
         </div>
       </section>
     );
   }
 
   const editable = item.statutDossier !== 'CLOTURE';
-  const mapUrl = item.latitude && item.longitude
-    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.latitude + ',' + item.longitude)}`
-    : null;
+  const mapUrl =
+    item.latitude && item.longitude
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.latitude + ',' + item.longitude)}`
+      : null;
 
   return (
     <div className="case-detail">
       <div className="case-detail__topline">
-        <Link to="/dossiers" className="workflow-back-link"><span aria-hidden="true">←</span> Tous les dossiers</Link>
+        <Link to="/dossiers" className="workflow-back-link">
+          <span aria-hidden="true">←</span> Tous les dossiers
+        </Link>
         <span className="case-detail__topline-note">DOSSIER OPÉRATIONNEL</span>
       </div>
 
@@ -264,42 +284,82 @@ export function CaseDetailPage() {
           </div>
         </div>
         <div className="case-detail__hero-status">
-          <StatusBadge label={stateLabel(item.statutDossier)} tone={statusTone(item.statutDossier)} />
-          <span className={`case-detail__priority is-${item.priorite.toLowerCase()}`}>Priorité {stateLabel(item.priorite)}</span>
+          <StatusBadge
+            label={stateLabel(item.statutDossier)}
+            tone={statusTone(item.statutDossier)}
+          />
+          <span className={`case-detail__priority is-${item.priorite.toLowerCase()}`}>
+            Priorité {stateLabel(item.priorite)}
+          </span>
         </div>
       </header>
 
       <section className="case-detail__metrics" aria-label="Résumé du dossier">
-        <article><span>Contenus</span><strong>{item.contenus.length}</strong><small>Types de déchets suivis</small></article>
-        <article><span>Signalements</span><strong>{item.signalements.length}</strong><small>Déclarations rattachées</small></article>
-        <article><span>Localisation</span><strong>{mapUrl ? 'GPS' : 'À préciser'}</strong><small>{item.descriptionLocalisation || 'Aucun repère renseigné'}</small></article>
+        <article>
+          <span>Contenus</span>
+          <strong>{item.contenus.length}</strong>
+          <small>Types de déchets suivis</small>
+        </article>
+        <article>
+          <span>Signalements</span>
+          <strong>{item.signalements.length}</strong>
+          <small>Déclarations rattachées</small>
+        </article>
+        <article>
+          <span>Localisation</span>
+          <strong>{mapUrl ? 'GPS' : 'À préciser'}</strong>
+          <small>{item.descriptionLocalisation || 'Aucun repère renseigné'}</small>
+        </article>
       </section>
 
       <div className="case-detail__columns">
         <div className="case-detail__main">
           <section className="case-detail-panel">
             <div className="case-detail-panel__heading">
-              <div><span>01 · PÉRIMÈTRE DU DOSSIER</span><h2>Contenus à traiter</h2></div>
+              <div>
+                <span>01 · PÉRIMÈTRE DU DOSSIER</span>
+                <h2>Contenus à traiter</h2>
+              </div>
               <span className="case-detail-panel__count">{item.contenus.length}</span>
             </div>
             {!item.contenus.length ? (
-              <div className="case-detail-empty">Aucun contenu n’est enregistré dans ce dossier.</div>
+              <div className="case-detail-empty">
+                Aucun contenu n’est enregistré dans ce dossier.
+              </div>
             ) : (
               <div className="case-detail-contents">
                 {item.contenus.map((content) => (
                   <article key={content.idContenuDossier} className="case-detail-content">
                     <div className="case-detail-content__top">
-                      <div><strong>{content.typeDechet.libelle}</strong><span>{content.typeDechet.codeType}</span></div>
-                      <StatusBadge label={stateLabel(content.etatContenuDossier)} tone={statusTone(content.etatContenuDossier)} />
+                      <div>
+                        <strong>{content.typeDechet.libelle}</strong>
+                        <span>{content.typeDechet.codeType}</span>
+                      </div>
+                      <StatusBadge
+                        label={stateLabel(content.etatContenuDossier)}
+                        tone={statusTone(content.etatContenuDossier)}
+                      />
                     </div>
                     <div className="case-detail-content__metrics">
-                      <div><span>Quantité estimée</span><strong>{content.quantiteEstimee ?? 'Non renseignée'}</strong></div>
-                      <div><span>Volume estimé</span><strong>{content.volumeEstime ?? 'Non renseigné'}</strong></div>
+                      <div>
+                        <span>Quantité estimée</span>
+                        <strong>{content.quantiteEstimee ?? 'Non renseignée'}</strong>
+                      </div>
+                      <div>
+                        <span>Volume estimé</span>
+                        <strong>{content.volumeEstime ?? 'Non renseigné'}</strong>
+                      </div>
                     </div>
                     <div className="case-detail-content__footer">
-                      <span>Prise en charge</span><StatusBadge label={stateLabel(content.etatPriseEnCharge)} tone={statusTone(content.etatPriseEnCharge)} />
+                      <span>Prise en charge</span>
+                      <StatusBadge
+                        label={stateLabel(content.etatPriseEnCharge)}
+                        tone={statusTone(content.etatPriseEnCharge)}
+                      />
                     </div>
-                    {content.remarque ? <p className="case-detail-content__remark">{content.remarque}</p> : null}
+                    {content.remarque ? (
+                      <p className="case-detail-content__remark">{content.remarque}</p>
+                    ) : null}
                   </article>
                 ))}
               </div>
@@ -308,7 +368,10 @@ export function CaseDetailPage() {
 
           <section className="case-detail-panel">
             <div className="case-detail-panel__heading">
-              <div><span>02 · ORIGINE DU DOSSIER</span><h2>Signalements associés</h2></div>
+              <div>
+                <span>02 · ORIGINE DU DOSSIER</span>
+                <h2>Signalements associés</h2>
+              </div>
               <span className="case-detail-panel__count">{item.signalements.length}</span>
             </div>
 
@@ -318,7 +381,10 @@ export function CaseDetailPage() {
                   <article key={report.idSignalement} className="case-detail-report">
                     <div className="case-detail-report__top">
                       <code>#{report.idSignalement.slice(0, 8).toUpperCase()}</code>
-                      <StatusBadge label={stateLabel(report.statutSignalement)} tone={statusTone(report.statutSignalement)} />
+                      <StatusBadge
+                        label={stateLabel(report.statutSignalement)}
+                        tone={statusTone(report.statutSignalement)}
+                      />
                     </div>
                     <p>{report.description || 'Aucune description fournie.'}</p>
                     <div className="case-detail-report__meta">
@@ -339,7 +405,9 @@ export function CaseDetailPage() {
                 ))}
               </div>
             ) : (
-              <div className="case-detail-empty">Aucun signalement n’est actuellement rattaché.</div>
+              <div className="case-detail-empty">
+                Aucun signalement n’est actuellement rattaché.
+              </div>
             )}
 
             {editable ? (
@@ -360,10 +428,18 @@ export function CaseDetailPage() {
                   />
                   <small>{associationMotif.trim().length} / 500 caractères · 5 minimum</small>
                 </label>
-                <form onSubmit={(event) => void attach(event)} className="case-detail-association__form">
+                <form
+                  onSubmit={(event) => void attach(event)}
+                  className="case-detail-association__form"
+                >
                   <label className="case-detail-label">
                     Ajouter un signalement qualifié
-                    <select value={selectedReport} onChange={(event) => setSelectedReport(event.target.value)} required disabled={!available.length}>
+                    <select
+                      value={selectedReport}
+                      onChange={(event) => setSelectedReport(event.target.value)}
+                      required
+                      disabled={!available.length}
+                    >
                       <option value="">Sélectionner un signalement</option>
                       {available.map((report) => (
                         <option key={report.idSignalement} value={report.idSignalement}>
@@ -371,9 +447,19 @@ export function CaseDetailPage() {
                         </option>
                       ))}
                     </select>
-                    {available.length ? <small>{available.length} signalement(s) qualifié(s) disponible(s)</small> : <small>Aucun signalement qualifié non associé n’est disponible.</small>}
+                    {available.length ? (
+                      <small>{available.length} signalement(s) qualifié(s) disponible(s)</small>
+                    ) : (
+                      <small>Aucun signalement qualifié non associé n’est disponible.</small>
+                    )}
                   </label>
-                  <button type="submit" disabled={!selectedReport || busy || associationMotif.trim().length < 5} className="workflow-button workflow-button--primary">Associer au dossier</button>
+                  <button
+                    type="submit"
+                    disabled={!selectedReport || busy || associationMotif.trim().length < 5}
+                    className="workflow-button workflow-button--primary"
+                  >
+                    Associer au dossier
+                  </button>
                 </form>
               </div>
             ) : null}
@@ -383,55 +469,145 @@ export function CaseDetailPage() {
         <aside className="case-detail-sidebar">
           <section className="case-detail-panel case-detail-location">
             <div className="case-detail-panel__heading">
-              <div><span>03 · TERRITOIRE</span><h2>Localisation</h2></div>
+              <div>
+                <span>03 · TERRITOIRE</span>
+                <h2>Localisation</h2>
+              </div>
             </div>
             <div className="case-detail-location__value">
               <span aria-hidden="true">⌖</span>
               <div>
                 <strong>{item.descriptionLocalisation || 'Repère non renseigné'}</strong>
-                <p>{mapUrl ? `${item.latitude}, ${item.longitude}` : 'Coordonnées GPS non renseignées'}</p>
-                {item.precisionLocalisation ? <small>Précision ±{item.precisionLocalisation} m</small> : null}
+                <p>
+                  {mapUrl
+                    ? `${item.latitude}, ${item.longitude}`
+                    : 'Coordonnées GPS non renseignées'}
+                </p>
+                {item.precisionLocalisation ? (
+                  <small>Précision ±{item.precisionLocalisation} m</small>
+                ) : null}
               </div>
             </div>
-            {mapUrl ? <a className="case-detail-location__map" href={mapUrl} target="_blank" rel="noreferrer">Ouvrir dans la carte ↗</a> : null}
+            {mapUrl ? (
+              <a
+                className="case-detail-location__map"
+                href={mapUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Ouvrir dans la carte ↗
+              </a>
+            ) : null}
           </section>
 
           <section className="case-detail-panel case-detail-priority">
             <div className="case-detail-panel__heading">
-              <div><span>04 · SUIVI</span><h2>Priorité</h2></div>
+              <div>
+                <span>04 · SUIVI</span>
+                <h2>Priorité</h2>
+              </div>
             </div>
-            <StatusBadge label={stateLabel(item.priorite)} tone={item.priorite === 'CRITIQUE' || item.priorite === 'HAUTE' ? 'warning' : 'neutral'} />
+            <StatusBadge
+              label={stateLabel(item.priorite)}
+              tone={
+                item.priorite === 'CRITIQUE' || item.priorite === 'HAUTE' ? 'warning' : 'neutral'
+              }
+            />
             {editable ? (
               <form onSubmit={(event) => void changePriority(event)} className="case-detail-form">
-                <label className="case-detail-label">Niveau de priorité
+                <label className="case-detail-label">
+                  Niveau de priorité
                   <select value={priority} onChange={(event) => setPriority(event.target.value)}>
-                    {['BASSE', 'NORMALE', 'HAUTE', 'CRITIQUE'].map((value) => <option key={value} value={value}>{stateLabel(value)}</option>)}
+                    {['BASSE', 'NORMALE', 'HAUTE', 'CRITIQUE'].map((value) => (
+                      <option key={value} value={value}>
+                        {stateLabel(value)}
+                      </option>
+                    ))}
                   </select>
                 </label>
-                <button type="submit" disabled={busy || priority === item.priorite} className="workflow-button workflow-button--primary">Mettre à jour</button>
+                <button
+                  type="submit"
+                  disabled={busy || priority === item.priorite}
+                  className="workflow-button workflow-button--primary"
+                >
+                  Mettre à jour
+                </button>
               </form>
-            ) : <p className="case-detail-readonly">Le dossier est clôturé. La priorité est consultable en lecture seule.</p>}
+            ) : (
+              <p className="case-detail-readonly">
+                Le dossier est clôturé. La priorité est consultable en lecture seule.
+              </p>
+            )}
           </section>
 
           {editable ? (
-            <details className="case-detail-panel case-detail-settings" open={settingsOpen} onToggle={(event) => setSettingsOpen(event.currentTarget.open)}>
-              <summary><span><small>PARAMÈTRES AVANCÉS</small><strong>Modifier la localisation</strong></span><span aria-hidden="true">⌄</span></summary>
+            <details
+              className="case-detail-panel case-detail-settings"
+              open={settingsOpen}
+              onToggle={(event) => setSettingsOpen(event.currentTarget.open)}
+            >
+              <summary>
+                <span>
+                  <small>PARAMÈTRES AVANCÉS</small>
+                  <strong>Modifier la localisation</strong>
+                </span>
+                <span aria-hidden="true">⌄</span>
+              </summary>
               <form onSubmit={(event) => void changeLocation(event)} className="case-detail-form">
-                <label className="case-detail-label">Description du lieu
-                  <input maxLength={1000} value={locationDescription} onChange={(event) => setLocationDescription(event.target.value)} placeholder="Rue, quartier, repère…" />
+                <label className="case-detail-label">
+                  Description du lieu
+                  <input
+                    maxLength={1000}
+                    value={locationDescription}
+                    onChange={(event) => setLocationDescription(event.target.value)}
+                    placeholder="Rue, quartier, repère…"
+                  />
                 </label>
                 <div className="case-detail-coordinate-grid">
-                  <label className="case-detail-label">Latitude
-                    <input type="number" min="-90" max="90" step="0.000001" value={latitude} onChange={(event) => setLatitude(event.target.value)} placeholder="-90 à 90" />
+                  <label className="case-detail-label">
+                    Latitude
+                    <input
+                      type="number"
+                      min="-90"
+                      max="90"
+                      step="0.000001"
+                      value={latitude}
+                      onChange={(event) => setLatitude(event.target.value)}
+                      placeholder="-90 à 90"
+                    />
                   </label>
-                  <label className="case-detail-label">Longitude
-                    <input type="number" min="-180" max="180" step="0.000001" value={longitude} onChange={(event) => setLongitude(event.target.value)} placeholder="-180 à 180" />
+                  <label className="case-detail-label">
+                    Longitude
+                    <input
+                      type="number"
+                      min="-180"
+                      max="180"
+                      step="0.000001"
+                      value={longitude}
+                      onChange={(event) => setLongitude(event.target.value)}
+                      placeholder="-180 à 180"
+                    />
                   </label>
                 </div>
-                <label className="case-detail-label">Précision (m)
-                  <input type="number" min="0" max="100000" step="0.01" value={precision} onChange={(event) => setPrecision(event.target.value)} placeholder="Facultatif" />
+                <label className="case-detail-label">
+                  Précision (m)
+                  <input
+                    type="number"
+                    min="0"
+                    max="100000"
+                    step="0.01"
+                    value={precision}
+                    onChange={(event) => setPrecision(event.target.value)}
+                    placeholder="Facultatif"
+                  />
                 </label>
-                <button type="submit" disabled={busy} className="workflow-button workflow-button--primary">Enregistrer la localisation</button>
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="workflow-button workflow-button--primary"
+                >
+                  Enregistrer la localisation
+                </button>
               </form>
             </details>
           ) : null}
@@ -439,7 +615,10 @@ export function CaseDetailPage() {
           {!editable ? (
             <div className="case-detail-closed">
               <StatusBadge label="Dossier clôturé" tone="success" />
-              <p>Ce dossier est consultable en lecture seule. Les paramètres et rattachements ne peuvent plus être modifiés.</p>
+              <p>
+                Ce dossier est consultable en lecture seule. Les paramètres et rattachements ne
+                peuvent plus être modifiés.
+              </p>
             </div>
           ) : null}
         </aside>

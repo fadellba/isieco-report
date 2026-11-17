@@ -107,7 +107,10 @@ export async function listReportSupplements(id: string): Promise<SupplementList>
   return api.request<SupplementList>('/reports/' + encodeURIComponent(id) + '/supplements');
 }
 
-export async function submitReport(payload: CreateReportPayload, idempotencyKey: string): Promise<Report> {
+export async function submitReport(
+  payload: CreateReportPayload,
+  idempotencyKey: string,
+): Promise<Report> {
   return api.request<Report>('/reports', {
     method: 'POST',
     headers: { 'Idempotency-Key': idempotencyKey },
@@ -130,8 +133,10 @@ export async function submitReportWithPhoto(
   if (payload.dateConstat) body.append('dateConstat', payload.dateConstat);
   if (payload.latitude !== undefined) body.append('latitude', String(payload.latitude));
   if (payload.longitude !== undefined) body.append('longitude', String(payload.longitude));
-  if (payload.precisionLocalisation !== undefined) body.append('precisionLocalisation', String(payload.precisionLocalisation));
-  if (payload.descriptionLocalisation?.trim()) body.append('descriptionLocalisation', payload.descriptionLocalisation.trim());
+  if (payload.precisionLocalisation !== undefined)
+    body.append('precisionLocalisation', String(payload.precisionLocalisation));
+  if (payload.descriptionLocalisation?.trim())
+    body.append('descriptionLocalisation', payload.descriptionLocalisation.trim());
   if (payload.contenus?.length) body.append('contenus', JSON.stringify(payload.contenus));
 
   return api.request<Report>('/reports/with-photo', {
@@ -142,8 +147,17 @@ export async function submitReportWithPhoto(
 }
 
 export async function answerSupplement(id: string, demandId: string, contenu: string) {
-  return api.request<{ idReponse: string; idDemande: string; dateReponse: string; contenu: string }>(
-    '/reports/' + encodeURIComponent(id) + '/supplements/' + encodeURIComponent(demandId) + '/responses',
+  return api.request<{
+    idReponse: string;
+    idDemande: string;
+    dateReponse: string;
+    contenu: string;
+  }>(
+    '/reports/' +
+      encodeURIComponent(id) +
+      '/supplements/' +
+      encodeURIComponent(demandId) +
+      '/responses',
     { method: 'POST', body: JSON.stringify({ contenu }) },
   );
 }

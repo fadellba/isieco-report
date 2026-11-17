@@ -5,7 +5,8 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 import { supabase } from '../src/lib/supabase';
 import { AuthScreenFrame } from '../src/ui/AuthScreenFrame';
 
-const inputClass = 'mt-2 min-h-[52px] rounded-2xl border border-line-strong bg-surface-base px-4 py-3.5 text-sm text-ink-900';
+const inputClass =
+  'mt-2 min-h-[52px] rounded-2xl border border-line-strong bg-surface-base px-4 py-3.5 text-sm text-ink-900';
 
 export default function ResetPasswordScreen() {
   const incomingUrl = Linking.useLinkingURL();
@@ -31,7 +32,8 @@ export default function ResetPasswordScreen() {
           const hash = new URLSearchParams(parsed.hash.replace(/^#/, ''));
           const param = (key: string) => query.get(key) ?? hash.get(key);
           const callbackError = param('error_description') ?? param('error');
-          if (callbackError) throw new Error('Le lien est invalide ou a expiré. Demandez-en un nouveau.');
+          if (callbackError)
+            throw new Error('Le lien est invalide ou a expiré. Demandez-en un nouveau.');
 
           const code = param('code');
           const tokenHash = param('token_hash');
@@ -43,7 +45,10 @@ export default function ResetPasswordScreen() {
             const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
             if (exchangeError) throw exchangeError;
           } else if (tokenHash && flowType === 'recovery') {
-            const { error: verifyError } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'recovery' });
+            const { error: verifyError } = await supabase.auth.verifyOtp({
+              token_hash: tokenHash,
+              type: 'recovery',
+            });
             if (verifyError) throw verifyError;
           } else if (accessToken && refreshToken) {
             const { error: sessionError } = await supabase.auth.setSession({
@@ -56,12 +61,19 @@ export default function ResetPasswordScreen() {
 
         const { data, error: sessionError } = await supabase.auth.getSession();
         if (sessionError) throw sessionError;
-        if (!data.session) throw new Error('Aucune session de récupération valide. Demandez un nouveau lien depuis la connexion.');
+        if (!data.session)
+          throw new Error(
+            'Aucune session de récupération valide. Demandez un nouveau lien depuis la connexion.',
+          );
         if (active) setRecoveryAvailable(true);
       } catch (reason) {
         if (active) {
           setRecoveryAvailable(false);
-          setError(reason instanceof Error ? reason.message : 'Le lien de récupération est invalide ou a expiré.');
+          setError(
+            reason instanceof Error
+              ? reason.message
+              : 'Le lien de récupération est invalide ou a expiré.',
+          );
         }
       } finally {
         if (active) setChecking(false);
@@ -69,7 +81,9 @@ export default function ResetPasswordScreen() {
     }
 
     void prepareRecovery();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [incomingUrl]);
 
   async function handleSubmit() {
@@ -82,7 +96,9 @@ export default function ResetPasswordScreen() {
       setComplete(true);
       await supabase.auth.signOut();
     } catch {
-      setError("Le mot de passe n'a pas pu être modifié. Le lien a peut-être expiré ; demandez-en un nouveau.");
+      setError(
+        "Le mot de passe n'a pas pu être modifié. Le lien a peut-être expiré ; demandez-en un nouveau.",
+      );
     } finally {
       setBusy(false);
     }
@@ -91,25 +107,38 @@ export default function ResetPasswordScreen() {
   return (
     <AuthScreenFrame
       eyebrow="Sécurité du compte"
-      title={complete ? "Mot de passe modifié." : "Définir un mot de passe."}
-      description={complete
-        ? "Votre mot de passe a été mis à jour. Vous pouvez revenir à la connexion."
-        : "Choisissez au moins 12 caractères et confirmez votre saisie."}
+      title={complete ? 'Mot de passe modifié.' : 'Définir un mot de passe.'}
+      description={
+        complete
+          ? 'Votre mot de passe a été mis à jour. Vous pouvez revenir à la connexion.'
+          : 'Choisissez au moins 12 caractères et confirmez votre saisie.'
+      }
     >
       {checking ? (
-        <Text className="py-3 text-center text-xs font-semibold text-ink-500">Vérification du lien…</Text>
+        <Text className="py-3 text-center text-xs font-semibold text-ink-500">
+          Vérification du lien…
+        </Text>
       ) : complete ? (
         <View className="rounded-2xl border border-status-success/20 bg-status-success/5 p-4">
-          <Text accessibilityRole="alert" className="text-sm font-extrabold text-status-success">Votre compte est prêt.</Text>
-          <Text className="mt-2 text-xs leading-5 text-ink-600">La session de récupération a été fermée après la modification du mot de passe.</Text>
-          <Link className="mt-4 text-xs font-extrabold text-brand-forest" href="/sign-in">Se connecter</Link>
+          <Text accessibilityRole="alert" className="text-sm font-extrabold text-status-success">
+            Votre compte est prêt.
+          </Text>
+          <Text className="mt-2 text-xs leading-5 text-ink-600">
+            La session de récupération a été fermée après la modification du mot de passe.
+          </Text>
+          <Link className="mt-4 text-xs font-extrabold text-brand-forest" href="/sign-in">
+            Se connecter
+          </Link>
         </View>
       ) : !recoveryAvailable ? (
         <View className="rounded-2xl border border-status-danger/20 bg-status-danger/5 p-4">
           <Text accessibilityRole="alert" className="text-xs leading-5 text-status-danger">
-            {error ?? 'Ce lien est invalide ou a expiré. Demandez un nouveau lien de réinitialisation.'}
+            {error ??
+              'Ce lien est invalide ou a expiré. Demandez un nouveau lien de réinitialisation.'}
           </Text>
-          <Link className="mt-4 text-xs font-extrabold text-brand-forest" href="/forgot-password">Demander un nouveau lien</Link>
+          <Link className="mt-4 text-xs font-extrabold text-brand-forest" href="/forgot-password">
+            Demander un nouveau lien
+          </Link>
         </View>
       ) : (
         <>
@@ -127,11 +156,19 @@ export default function ResetPasswordScreen() {
               textContentType="newPassword"
               value={password}
             />
-            <Pressable accessibilityRole="button" onPress={() => setShowPassword((visible) => !visible)} className="px-3 py-3">
-              <Text className="text-[10px] font-extrabold text-brand-petrol">{showPassword ? 'Masquer' : 'Afficher'}</Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setShowPassword((visible) => !visible)}
+              className="px-3 py-3"
+            >
+              <Text className="text-[10px] font-extrabold text-brand-petrol">
+                {showPassword ? 'Masquer' : 'Afficher'}
+              </Text>
             </Pressable>
           </View>
-          <Text className="mt-5 text-xs font-extrabold text-ink-700">Confirmer le mot de passe</Text>
+          <Text className="mt-5 text-xs font-extrabold text-ink-700">
+            Confirmer le mot de passe
+          </Text>
           <TextInput
             accessibilityLabel="Confirmer le nouveau mot de passe"
             autoCapitalize="none"
@@ -145,26 +182,36 @@ export default function ResetPasswordScreen() {
             value={confirmation}
           />
           {password && confirmation && password !== confirmation ? (
-            <Text accessibilityRole="alert" className="mt-3 text-xs text-status-danger">Les deux mots de passe ne correspondent pas.</Text>
+            <Text accessibilityRole="alert" className="mt-3 text-xs text-status-danger">
+              Les deux mots de passe ne correspondent pas.
+            </Text>
           ) : null}
           {error ? (
             <View className="mt-4 rounded-2xl border border-status-danger/20 bg-status-danger/5 p-4">
-              <Text accessibilityRole="alert" className="text-xs leading-5 text-status-danger">{error}</Text>
+              <Text accessibilityRole="alert" className="text-xs leading-5 text-status-danger">
+                {error}
+              </Text>
             </View>
           ) : null}
           <Pressable
             accessibilityRole="button"
-            accessibilityState={{ disabled: busy || password.length < 12 || password !== confirmation }}
+            accessibilityState={{
+              disabled: busy || password.length < 12 || password !== confirmation,
+            }}
             className="mt-6 min-h-[52px] items-center justify-center rounded-2xl bg-brand-forest px-5 py-4 disabled:opacity-50"
             disabled={busy || password.length < 12 || password !== confirmation}
             onPress={() => void handleSubmit()}
           >
-            <Text className="text-sm font-extrabold text-white">{busy ? 'Mise à jour…' : 'Enregistrer le mot de passe'}</Text>
+            <Text className="text-sm font-extrabold text-white">
+              {busy ? 'Mise à jour…' : 'Enregistrer le mot de passe'}
+            </Text>
           </Pressable>
         </>
       )}
       <View className="mt-6 flex-row justify-center border-t border-line-subtle pt-5">
-        <Link className="text-xs font-extrabold text-brand-forest" href="/sign-in">Retour à la connexion</Link>
+        <Link className="text-xs font-extrabold text-brand-forest" href="/sign-in">
+          Retour à la connexion
+        </Link>
       </View>
     </AuthScreenFrame>
   );

@@ -28,11 +28,17 @@ export function ProtectedRoute({ children, roles }: ProtectedRouteProps) {
     return (
       <main className="app-state-screen">
         <section className="app-state-screen__card app-state-screen__card--error">
-          <span className="app-state-screen__icon" aria-hidden="true">!</span>
+          <span className="app-state-screen__icon" aria-hidden="true">
+            !
+          </span>
           <span className="app-state-screen__eyebrow">SESSION</span>
           <h1>Espace temporairement indisponible</h1>
           <p>{error}</p>
-          <button type="button" onClick={() => void refreshProfile()} className="page-state-card__primary">
+          <button
+            type="button"
+            onClick={() => void refreshProfile()}
+            className="page-state-card__primary"
+          >
             Réessayer
           </button>
         </section>

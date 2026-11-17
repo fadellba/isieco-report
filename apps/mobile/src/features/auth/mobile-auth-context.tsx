@@ -40,7 +40,7 @@ export function MobileAuthProvider({ children }: PropsWithChildren) {
       setProfile(result);
     } catch {
       setProfile(null);
-      setError("Impossible de charger votre profil. Vérifiez votre connexion et réessayez.");
+      setError('Impossible de charger votre profil. Vérifiez votre connexion et réessayez.');
     } finally {
       setLoading(false);
     }
@@ -71,7 +71,7 @@ export function MobileAuthProvider({ children }: PropsWithChildren) {
       } catch {
         if (active) {
           setProfile(null);
-          setError("Impossible de charger votre profil. Vérifiez votre connexion et réessayez.");
+          setError('Impossible de charger votre profil. Vérifiez votre connexion et réessayez.');
         }
       } finally {
         if (active) setLoading(false);

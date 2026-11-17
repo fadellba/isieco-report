@@ -26,7 +26,9 @@ const conventionalCommitPattern =
 const invalidSubjects = subjects.filter((subject) => !conventionalCommitPattern.test(subject));
 
 if (invalidSubjects.length > 0) {
-  console.error('Invalid commit subject(s). Expected Conventional Commits: type(scope): description');
+  console.error(
+    'Invalid commit subject(s). Expected Conventional Commits: type(scope): description',
+  );
   for (const subject of invalidSubjects) {
     console.error(`  - ${subject}`);
   }

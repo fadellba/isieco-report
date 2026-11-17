@@ -5,7 +5,8 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 import { supabase } from '../src/lib/supabase';
 import { AuthScreenFrame } from '../src/ui/AuthScreenFrame';
 
-const inputClass = 'mt-2 min-h-[52px] rounded-2xl border border-line-strong bg-surface-base px-4 py-3.5 text-sm text-ink-900';
+const inputClass =
+  'mt-2 min-h-[52px] rounded-2xl border border-line-strong bg-surface-base px-4 py-3.5 text-sm text-ink-900';
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
@@ -19,11 +20,15 @@ export default function ForgotPasswordScreen() {
     setError(null);
     try {
       const redirectTo = Linking.createURL('reset-password');
-      const { error: requestError } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
+      const { error: requestError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo,
+      });
       if (requestError) throw requestError;
       setSent(true);
     } catch {
-      setError("La demande ne peut pas être envoyée pour le moment. Vérifiez l'adresse saisie et réessayez.");
+      setError(
+        "La demande ne peut pas être envoyée pour le moment. Vérifiez l'adresse saisie et réessayez.",
+      );
     } finally {
       setBusy(false);
     }
@@ -37,11 +42,16 @@ export default function ForgotPasswordScreen() {
     >
       {sent ? (
         <View className="rounded-2xl border border-status-success/20 bg-status-success/5 p-4">
-          <Text accessibilityRole="alert" className="text-sm font-extrabold text-status-success">Vérifiez votre boîte e-mail.</Text>
-          <Text className="mt-2 text-xs leading-5 text-ink-600">
-            Si cette adresse correspond à un compte, un message contenant un lien de réinitialisation vient d’être envoyé. Consultez aussi vos courriers indésirables.
+          <Text accessibilityRole="alert" className="text-sm font-extrabold text-status-success">
+            Vérifiez votre boîte e-mail.
           </Text>
-          <Link className="mt-4 text-xs font-extrabold text-brand-forest" href="/sign-in">Retour à la connexion</Link>
+          <Text className="mt-2 text-xs leading-5 text-ink-600">
+            Si cette adresse correspond à un compte, un message contenant un lien de
+            réinitialisation vient d’être envoyé. Consultez aussi vos courriers indésirables.
+          </Text>
+          <Link className="mt-4 text-xs font-extrabold text-brand-forest" href="/sign-in">
+            Retour à la connexion
+          </Link>
         </View>
       ) : (
         <>
@@ -62,7 +72,9 @@ export default function ForgotPasswordScreen() {
           />
           {error ? (
             <View className="mt-4 rounded-2xl border border-status-danger/20 bg-status-danger/5 p-4">
-              <Text accessibilityRole="alert" className="text-xs leading-5 text-status-danger">{error}</Text>
+              <Text accessibilityRole="alert" className="text-xs leading-5 text-status-danger">
+                {error}
+              </Text>
             </View>
           ) : null}
           <Pressable
@@ -72,12 +84,16 @@ export default function ForgotPasswordScreen() {
             disabled={busy || !email.trim()}
             onPress={() => void handleSubmit()}
           >
-            <Text className="text-sm font-extrabold text-white">{busy ? 'Envoi en cours…' : 'Envoyer le lien'}</Text>
+            <Text className="text-sm font-extrabold text-white">
+              {busy ? 'Envoi en cours…' : 'Envoyer le lien'}
+            </Text>
           </Pressable>
         </>
       )}
       <View className="mt-6 flex-row flex-wrap items-center justify-center border-t border-line-subtle pt-5">
-        <Link className="text-xs font-extrabold text-brand-forest" href="/sign-in">Retour à la connexion</Link>
+        <Link className="text-xs font-extrabold text-brand-forest" href="/sign-in">
+          Retour à la connexion
+        </Link>
       </View>
     </AuthScreenFrame>
   );

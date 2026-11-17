@@ -46,15 +46,21 @@ export default function NoMobileAccessScreen() {
       description="Votre compte est authentifié, mais aucune habilitation citoyen ou agent de terrain active ne permet d’ouvrir les parcours mobiles."
     >
       <View className="rounded-2xl border border-status-warning/20 bg-status-warning/5 p-4">
-        <Text className="text-xs font-extrabold text-ink-900">Pourquoi cet écran apparaît-il ?</Text>
+        <Text className="text-xs font-extrabold text-ink-900">
+          Pourquoi cet écran apparaît-il ?
+        </Text>
         <Text className="mt-2 text-xs leading-5 text-ink-600">
-          Les habilitations de gestion et de supervision sont accessibles depuis le back-office Web. Pour les parcours mobiles, contactez votre organisation afin de vérifier les rôles associés à votre compte.
+          Les habilitations de gestion et de supervision sont accessibles depuis le back-office Web.
+          Pour les parcours mobiles, contactez votre organisation afin de vérifier les rôles
+          associés à votre compte.
         </Text>
       </View>
 
       {error ? (
         <View className="mt-4 rounded-xl border border-status-danger/20 bg-status-danger/5 p-3">
-          <Text accessibilityRole="alert" className="text-xs leading-5 text-status-danger">{error}</Text>
+          <Text accessibilityRole="alert" className="text-xs leading-5 text-status-danger">
+            {error}
+          </Text>
         </View>
       ) : null}
 
@@ -64,7 +70,9 @@ export default function NoMobileAccessScreen() {
         onPress={() => void retryAccess()}
         className="mt-5 min-h-[50px] items-center justify-center rounded-xl bg-brand-forest px-4 py-3 disabled:opacity-50"
       >
-        <Text className="text-xs font-extrabold text-white">{refreshing ? 'Vérification…' : 'Vérifier mes accès'}</Text>
+        <Text className="text-xs font-extrabold text-white">
+          {refreshing ? 'Vérification…' : 'Vérifier mes accès'}
+        </Text>
       </Pressable>
       <Pressable
         accessibilityRole="button"
@@ -72,7 +80,9 @@ export default function NoMobileAccessScreen() {
         onPress={() => void handleSignOut()}
         className="mt-3 min-h-[50px] items-center justify-center rounded-xl border border-line-strong bg-white px-4 py-3 disabled:opacity-50"
       >
-        <Text className="text-xs font-extrabold text-ink-700">{signingOut ? 'Déconnexion…' : 'Se déconnecter'}</Text>
+        <Text className="text-xs font-extrabold text-ink-700">
+          {signingOut ? 'Déconnexion…' : 'Se déconnecter'}
+        </Text>
       </Pressable>
     </AuthScreenFrame>
   );

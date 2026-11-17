@@ -8,7 +8,8 @@ export default function AgentLayout() {
 
   if (loading) return <LoadingScreen />;
   if (!profile) return <Redirect href="/sign-in" />;
-  if (!profile.roles.some((role) => role.code === 'AGENT_TERRAIN')) return <Redirect href="/no-mobile-access" />;
+  if (!profile.roles.some((role) => role.code === 'AGENT_TERRAIN'))
+    return <Redirect href="/no-mobile-access" />;
 
   return (
     <Tabs

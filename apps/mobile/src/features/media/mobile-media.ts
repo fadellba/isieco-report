@@ -17,25 +17,27 @@ export async function prepareMobilePhoto(
   asset: ImagePicker.ImagePickerAsset,
 ): Promise<PreparedMobilePhoto> {
   const longestEdge = Math.max(asset.width, asset.height);
-  const resize = asset.width >= asset.height
-    ? {
-        width: 1600,
-        height: Math.max(1, Math.round(asset.height * 1600 / asset.width)),
-      }
-    : {
-        width: Math.max(1, Math.round(asset.width * 1600 / asset.height)),
-        height: 1600,
-      };
+  const resize =
+    asset.width >= asset.height
+      ? {
+          width: 1600,
+          height: Math.max(1, Math.round((asset.height * 1600) / asset.width)),
+        }
+      : {
+          width: Math.max(1, Math.round((asset.width * 1600) / asset.height)),
+          height: 1600,
+        };
   const actions = longestEdge > 1600 ? [{ resize }] : [];
   const saved = await ImageManipulator.manipulateAsync(asset.uri, actions, {
     format: ImageManipulator.SaveFormat.JPEG,
     compress: 0.82,
   });
 
-  const baseName = (asset.fileName ?? 'isieco-photo')
-    .replace(/\.[^/.]+$/, '')
-    .replace(/[^a-zA-Z0-9_-]/g, '-')
-    .slice(0, 60) || 'isieco-photo';
+  const baseName =
+    (asset.fileName ?? 'isieco-photo')
+      .replace(/\.[^/.]+$/, '')
+      .replace(/[^a-zA-Z0-9_-]/g, '-')
+      .slice(0, 60) || 'isieco-photo';
 
   return {
     uri: saved.uri,
@@ -58,7 +60,9 @@ export async function pickMobilePhotos(selectionLimit = 3): Promise<PreparedMobi
 export async function captureMobilePhoto(): Promise<PreparedMobilePhoto | null> {
   const permission = await ImagePicker.requestCameraPermissionsAsync();
   if (!permission.granted) {
-    throw new Error('L’autorisation caméra est nécessaire pour prendre une photo. Vous pouvez aussi choisir une image dans la galerie.');
+    throw new Error(
+      'L’autorisation caméra est nécessaire pour prendre une photo. Vous pouvez aussi choisir une image dans la galerie.',
+    );
   }
 
   const result = await ImagePicker.launchCameraAsync({
@@ -78,7 +82,9 @@ export interface ForegroundCoordinates {
 export async function requestCurrentForegroundCoordinates(): Promise<ForegroundCoordinates> {
   const permission = await Location.requestForegroundPermissionsAsync();
   if (permission.status !== 'granted') {
-    throw new Error('L’autorisation de localisation a été refusée. Vous pouvez toujours saisir les coordonnées manuellement.');
+    throw new Error(
+      'L’autorisation de localisation a été refusée. Vous pouvez toujours saisir les coordonnées manuellement.',
+    );
   }
 
   const current = await Location.getCurrentPositionAsync({
