@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: isieco-web-staging
+    runtime: static
+    buildCommand: pnpm build:packages && pnpm --filter @isieco/web build
+    staticPublishPath: ./apps/web/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://isieco-api-staging.onrender.com/api/v1
+      - key: VITE_SUPABASE_URL
+        value: https://mlhbdautaxufubaybzyt.supabase.co
+      - key: VITE_SUPABASE_ANON_KEY
+        value: sb_publishable_wFFes4eCYuJ9bEOMXAWxjg_ecOsYWZS
