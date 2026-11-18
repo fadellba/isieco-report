@@ -9,16 +9,34 @@ const STAGING_SUPABASE_URL = `https://${STAGING_PROJECT_REF}.supabase.co`;
 const SEED_MARKER = 'isieco-staging-e2e-v1';
 const PAGE_SIZE = 1000;
 
+const ALL_FUNCTIONAL_ROLES = [
+  'CITOYEN',
+  'AGENT_QUALIFICATION',
+  'RESPONSABLE_TRAITEMENT',
+  'RESPONSABLE_AFFECTATION',
+  'AGENT_TERRAIN',
+  'VERIFICATEUR_CLOTURE',
+  'GESTIONNAIRE_REFERENTIEL',
+  'ADMINISTRATEUR_COMPTES',
+];
+
 const accounts = [
-  { slug: 'citoyen', email: 'e2e.citoyen@staging.isieco.test', label: 'Citoyen', role: 'CITOYEN' },
-  { slug: 'citoyen-secondaire', email: 'e2e.citoyen-secondaire@staging.isieco.test', label: 'Citoyen secondaire', role: 'CITOYEN', passwordKey: 'CITOYEN_SECONDARY' },
-  { slug: 'agent-qualification', email: 'e2e.agent-qualification@staging.isieco.test', label: 'Agent qualification', role: 'AGENT_QUALIFICATION' },
-  { slug: 'responsable-traitement', email: 'e2e.responsable-traitement@staging.isieco.test', label: 'Responsable traitement', role: 'RESPONSABLE_TRAITEMENT' },
-  { slug: 'responsable-affectation', email: 'e2e.responsable-affectation@staging.isieco.test', label: 'Responsable affectation', role: 'RESPONSABLE_AFFECTATION' },
-  { slug: 'agent-terrain', email: 'e2e.agent-terrain@staging.isieco.test', label: 'Agent terrain', role: 'AGENT_TERRAIN' },
-  { slug: 'verificateur-cloture', email: 'e2e.verificateur-cloture@staging.isieco.test', label: 'Vérificateur clôture', role: 'VERIFICATEUR_CLOTURE' },
-  { slug: 'gestionnaire-referentiel', email: 'e2e.gestionnaire-referentiel@staging.isieco.test', label: 'Gestionnaire référentiel', role: 'GESTIONNAIRE_REFERENTIEL' },
-  { slug: 'administrateur-comptes', email: 'e2e.administrateur-comptes@staging.isieco.test', label: 'Administrateur comptes', role: 'ADMINISTRATEUR_COMPTES' },
+  { slug: 'citoyen', email: 'e2e.citoyen@staging.isieco.test', label: 'Citoyen', roles: ['CITOYEN'] },
+  { slug: 'citoyen-secondaire', email: 'e2e.citoyen-secondaire@staging.isieco.test', label: 'Citoyen secondaire', roles: ['CITOYEN'], passwordKey: 'CITOYEN_SECONDARY' },
+  { slug: 'agent-qualification', email: 'e2e.agent-qualification@staging.isieco.test', label: 'Agent qualification', roles: ['AGENT_QUALIFICATION'] },
+  { slug: 'responsable-traitement', email: 'e2e.responsable-traitement@staging.isieco.test', label: 'Responsable traitement', roles: ['RESPONSABLE_TRAITEMENT'] },
+  { slug: 'responsable-affectation', email: 'e2e.responsable-affectation@staging.isieco.test', label: 'Responsable affectation', roles: ['RESPONSABLE_AFFECTATION'] },
+  { slug: 'agent-terrain', email: 'e2e.agent-terrain@staging.isieco.test', label: 'Agent terrain', roles: ['AGENT_TERRAIN'] },
+  { slug: 'verificateur-cloture', email: 'e2e.verificateur-cloture@staging.isieco.test', label: 'Vérificateur clôture', roles: ['VERIFICATEUR_CLOTURE'] },
+  { slug: 'gestionnaire-referentiel', email: 'e2e.gestionnaire-referentiel@staging.isieco.test', label: 'Gestionnaire référentiel', roles: ['GESTIONNAIRE_REFERENTIEL'] },
+  { slug: 'administrateur-comptes', email: 'e2e.administrateur-comptes@staging.isieco.test', label: 'Administrateur comptes', roles: ['ADMINISTRATEUR_COMPTES'] },
+  {
+    slug: 'superadmin',
+    email: 'e2e.superadmin@staging.isieco.test',
+    label: 'Super Administrateur Global',
+    roles: ALL_FUNCTIONAL_ROLES,
+    isSuperadmin: true,
+  },
 ];
 
 function requiredEnv(name) {
@@ -87,10 +105,11 @@ function assertStagingTargets() {
 }
 
 function accountKey(account) {
-  return account.passwordKey ?? account.role;
+  return account.passwordKey ?? account.slug;
 }
 
-function passwordForAccount(account, seed) {
+function passwordForAccount(account, seed, commonPassword) {
+  if (commonPassword) return commonPassword;
   return createHmac('sha256', seed)
     .update(`isieco-staging-e2e:${accountKey(account)}`)
     .digest('base64url') + 'A1!';
@@ -147,9 +166,12 @@ async function ensureAuthUser(admin, account, password, usersByEmail) {
 async function main() {
   assertStagingTargets();
 
-  const passwordSeed = requiredEnv('STAGING_E2E_PASSWORD_SEED');
-  if (Buffer.byteLength(passwordSeed, 'utf8') < 32) {
-    throw new Error('STAGING_E2E_PASSWORD_SEED must contain at least 32 bytes.');
+  const commonPassword = process.env.STAGING_COMMON_PASSWORD?.trim() || null;
+  const passwordSeed = process.env.STAGING_E2E_PASSWORD_SEED?.trim() || null;
+  if (!commonPassword) {
+    if (!passwordSeed || Buffer.byteLength(passwordSeed, 'utf8') < 32) {
+      throw new Error('STAGING_E2E_PASSWORD_SEED must contain at least 32 bytes when STAGING_COMMON_PASSWORD is not provided.');
+    }
   }
 
   const caCertificate = requiredEnv('STAGING_SUPABASE_CA_CERT').trim();
@@ -187,13 +209,13 @@ async function main() {
   try {
     const db = await pool.connect();
     try {
-      const roleCodes = accounts.map((account) => account.role);
+      const allDistinctRoles = Array.from(new Set(accounts.flatMap((a) => a.roles)));
       const roleResult = await db.query(
         'SELECT id_role, code_role FROM public.role WHERE code_role = ANY($1::text[])',
-        [roleCodes],
+        [allDistinctRoles],
       );
       const roleIds = new Map(roleResult.rows.map((row) => [row.code_role, row.id_role]));
-      const missingRoles = roleCodes.filter((code) => !roleIds.has(code));
+      const missingRoles = allDistinctRoles.filter((code) => !roleIds.has(code));
       if (missingRoles.length > 0) {
         throw new Error(`Missing role catalog entries: ${missingRoles.join(', ')}`);
       }
@@ -213,7 +235,7 @@ async function main() {
       const user = await ensureAuthUser(
         admin,
         account,
-        passwordForAccount(account, passwordSeed),
+        passwordForAccount(account, passwordSeed, commonPassword),
         usersByEmail,
       );
       provisioned.push({ account, authUserId: user.id });
@@ -222,6 +244,11 @@ async function main() {
     const profileDb = await pool.connect();
     try {
       await profileDb.query('BEGIN');
+
+      const roleCatalogResult = await profileDb.query(
+        'SELECT id_role, code_role FROM public.role',
+      );
+      const roleCatalog = new Map(roleCatalogResult.rows.map((row) => [row.code_role, row.id_role]));
 
       for (const { account, authUserId } of provisioned) {
         const conflictingProfile = await profileDb.query(
@@ -254,66 +281,98 @@ async function main() {
           throw new Error(`Could not create or resolve the business profile for ${account.email}.`);
         }
 
-        const roleIdResult = await profileDb.query(
-          'SELECT id_role FROM public.role WHERE code_role = $1',
-          [account.role],
-        );
-        const roleId = roleIdResult.rows[0]?.id_role;
-        if (!roleId) throw new Error(`Role disappeared during seed: ${account.role}`);
+        const targetRoleIds = account.roles.map((code) => {
+          const id = roleCatalog.get(code);
+          if (!id) throw new Error(`Role missing from catalog: ${code}`);
+          return id;
+        });
 
+        // Terminate any active roles not in the target role list
         await profileDb.query(
           `UPDATE public.utilisateur_role
               SET date_fin = CURRENT_TIMESTAMP
             WHERE id_utilisateur = $1::uuid
               AND date_fin IS NULL
-              AND id_role <> $2::uuid`,
-          [userProfileId, roleId],
+              AND NOT (id_role = ANY($2::uuid[]))`,
+          [userProfileId, targetRoleIds],
         );
 
-        await profileDb.query(
-          `INSERT INTO public.utilisateur_role (id_utilisateur, id_role, motif)
-           SELECT $1::uuid, $2::uuid, 'Compte E2E staging provisionné par CI'
-           WHERE NOT EXISTS (
-             SELECT 1
-               FROM public.utilisateur_role
-              WHERE id_utilisateur = $1::uuid
-                AND id_role = $2::uuid
-                AND date_fin IS NULL
-           )`,
-          [userProfileId, roleId],
-        );
+        // Assign all target roles if not already active
+        for (const roleId of targetRoleIds) {
+          await profileDb.query(
+            `INSERT INTO public.utilisateur_role (id_utilisateur, id_role, motif)
+             SELECT $1::uuid, $2::uuid, 'Compte E2E staging provisionné par CI'
+             WHERE NOT EXISTS (
+               SELECT 1
+                 FROM public.utilisateur_role
+                WHERE id_utilisateur = $1::uuid
+                  AND id_role = $2::uuid
+                  AND date_fin IS NULL
+             )`,
+            [userProfileId, roleId],
+          );
+        }
+
+        // For AGENT_TERRAIN or SUPERADMIN, ensure active membership in a staging intervention team
+        if (account.roles.includes('AGENT_TERRAIN')) {
+          const teamResult = await profileDb.query(
+            `SELECT id_equipe FROM public.equipe WHERE etat_equipe = 'ACTIF' LIMIT 1`,
+          );
+          if (teamResult.rowCount > 0) {
+            const teamId = teamResult.rows[0].id_equipe;
+            await profileDb.query(
+              `INSERT INTO public.appartenance_equipe (id_utilisateur, id_equipe, date_debut, fonction)
+               SELECT $1::uuid, $2::uuid, CURRENT_TIMESTAMP, 'Agent d''intervention E2E'
+               WHERE NOT EXISTS (
+                 SELECT 1
+                   FROM public.appartenance_equipe
+                  WHERE id_utilisateur = $1::uuid
+                    AND id_equipe = $2::uuid
+                    AND date_fin IS NULL
+               )`,
+              [userProfileId, teamId],
+            );
+          }
+        }
       }
 
       const verification = await profileDb.query(
-        `SELECT u.email, r.code_role, COUNT(*) OVER (PARTITION BY u.id_utilisateur) AS active_role_count
+        `SELECT u.email, array_agg(r.code_role ORDER BY r.code_role) AS roles, COUNT(*) AS active_role_count
            FROM public.utilisateur u
            JOIN public.utilisateur_role ur
              ON ur.id_utilisateur = u.id_utilisateur
             AND ur.date_fin IS NULL
            JOIN public.role r ON r.id_role = ur.id_role
           WHERE u.auth_user_id = ANY($1::uuid[])
+          GROUP BY u.email
           ORDER BY u.email`,
         [provisioned.map((entry) => entry.authUserId)],
       );
 
       if (verification.rowCount !== accounts.length) {
-        throw new Error(`Expected ${accounts.length} active role assignments, got ${verification.rowCount ?? 0}.`);
+        throw new Error(`Expected ${accounts.length} verified accounts, got ${verification.rowCount ?? 0}.`);
       }
 
       const verifiedByEmail = new Map(verification.rows.map((row) => [row.email, row]));
       for (const account of accounts) {
         const row = verifiedByEmail.get(account.email);
-        if (!row || row.code_role !== account.role || Number(row.active_role_count) !== 1) {
-          throw new Error(`Role verification failed for ${account.email}; expected exactly one active role: ${account.role}.`);
+        if (!row || Number(row.active_role_count) !== account.roles.length) {
+          throw new Error(
+            `Role verification failed for ${account.email}; expected ${account.roles.length} roles, got ${row?.active_role_count ?? 0}.`,
+          );
         }
       }
 
       await profileDb.query('COMMIT');
       console.log(`Provisioned and verified ${accounts.length} isolated staging E2E Auth users and profiles.`);
       for (const account of accounts) {
-        console.log(`- ${account.role}: ${account.email}`);
+        console.log(`- ${account.roles.join(', ')}: ${account.email}`);
       }
-      console.log('Passwords were not printed. They are derived per account key from STAGING_E2E_PASSWORD_SEED.');
+      if (commonPassword) {
+        console.log('Applied uniform password from STAGING_COMMON_PASSWORD across all accounts.');
+      } else {
+        console.log('Passwords were not printed. They are derived per account key from STAGING_E2E_PASSWORD_SEED.');
+      }
     } catch (error) {
       await profileDb.query('ROLLBACK');
       throw error;

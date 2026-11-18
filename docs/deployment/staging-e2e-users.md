@@ -39,8 +39,10 @@ Le second compte citoyen sert exclusivement aux tests d'isolation inter-comptes.
 | `e2e.verificateur-cloture@staging.isieco.test` | `VERIFICATEUR_CLOTURE` |
 | `e2e.gestionnaire-referentiel@staging.isieco.test` | `GESTIONNAIRE_REFERENTIEL` |
 | `e2e.administrateur-comptes@staging.isieco.test` | `ADMINISTRATEUR_COMPTES` |
+| `e2e.superadmin@staging.isieco.test` | **Tous les 8 rôles métier** (Superadmin global & membre équipe terrain) |
 
-Chaque mot de passe est dérivé dans le job par HMAC-SHA256 à partir du secret `STAGING_E2E_PASSWORD_SEED` et du rôle ou de la clé de compte. Les deux comptes citoyens utilisent des clés distinctes. Le mot de passe ne s'affiche jamais dans les logs. Un futur runner E2E peut recalculer le mot de passe du rôle à partir du même secret sans le stocker dans le dépôt.
+### Mot de passe commun ou dérivé
+Le workflow accepte un paramètre optionnel `common_password` (ou la variable secrète d'environnement `STAGING_COMMON_PASSWORD`) permettant d'assigner un mot de passe unique (par ex. `IsiEco2026!Test`) à l'ensemble des comptes de test pour simplifier les tests manuels et les démos sans avoir à recalculer des clés HMAC individuelles. Si aucun mot de passe commun n'est fourni, la dérivation HMAC standard par rôle est appliquée.
 
 ## Exécuter le parcours métier et la matrice d'accès
 

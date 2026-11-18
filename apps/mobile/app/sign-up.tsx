@@ -37,7 +37,24 @@ export default function SignUpScreen() {
         options: { data: { nom: nom.trim(), prenom: prenom.trim() } },
       });
       if (authError) {
-        setError('La création du compte est impossible. Vérifiez les informations ou réessayez.');
+        if (
+          authError.message?.toLowerCase().includes('rate limit') ||
+          (authError as { code?: string }).code === 'over_email_send_rate_limit'
+        ) {
+          setError(
+            "Limite d'envoi d'e-mails atteinte sur le serveur Supabase. Veuillez patienter quelques instants ou utiliser un compte de test.",
+          );
+        } else if (
+          authError.message?.toLowerCase().includes('already registered') ||
+          (authError as { code?: string }).code === 'user_already_exists'
+        ) {
+          setError('Un compte existe déjà avec cette adresse e-mail. Veuillez vous connecter.');
+        } else {
+          setError(
+            authError.message ||
+              'La création du compte est impossible. Vérifiez les informations ou réessayez.',
+          );
+        }
         return;
       }
       if (data.session) {

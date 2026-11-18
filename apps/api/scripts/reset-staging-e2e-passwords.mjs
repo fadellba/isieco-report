@@ -17,6 +17,7 @@ const accounts = [
   { email: 'e2e.verificateur-cloture@staging.isieco.test', role: 'VERIFICATEUR_CLOTURE' },
   { email: 'e2e.gestionnaire-referentiel@staging.isieco.test', role: 'GESTIONNAIRE_REFERENTIEL' },
   { email: 'e2e.administrateur-comptes@staging.isieco.test', role: 'ADMINISTRATEUR_COMPTES' },
+  { email: 'e2e.superadmin@staging.isieco.test', role: 'SUPERADMIN' },
 ];
 
 function requiredEnv(name) {
@@ -62,19 +63,29 @@ function validateTargets() {
     assert.notEqual(claims.role, 'service_role', 'The verification key must not be service_role.');
   }
 
-  const passwordSeed = requiredEnv('STAGING_E2E_PASSWORD_SEED');
-  assert.ok(
-    Buffer.byteLength(passwordSeed, 'utf8') >= 32,
-    'STAGING_E2E_PASSWORD_SEED must contain at least 32 bytes.',
-  );
-  return { secretKey, publicKey, passwordSeed };
+  const commonPassword = process.env.STAGING_COMMON_PASSWORD?.trim() || null;
+  const passwordSeed = process.env.STAGING_E2E_PASSWORD_SEED?.trim() || null;
+
+  if (commonPassword) {
+    assert.ok(
+      commonPassword.length >= 8,
+      'STAGING_COMMON_PASSWORD must contain at least 8 characters.',
+    );
+  } else {
+    assert.ok(
+      passwordSeed && Buffer.byteLength(passwordSeed, 'utf8') >= 32,
+      'STAGING_E2E_PASSWORD_SEED must contain at least 32 bytes when STAGING_COMMON_PASSWORD is not set.',
+    );
+  }
+  return { secretKey, publicKey, passwordSeed, commonPassword };
 }
 
 function accountKey(account) {
   return account.passwordKey ?? account.role;
 }
 
-function passwordForAccount(account, seed) {
+function passwordForAccount(account, seed, commonPassword) {
+  if (commonPassword) return commonPassword;
   return createHmac('sha256', seed)
     .update('isieco-staging-e2e:' + accountKey(account))
     .digest('base64url') + 'A1!';
@@ -95,7 +106,7 @@ async function listAllUsers(admin) {
 }
 
 async function main() {
-  const { secretKey, publicKey, passwordSeed } = validateTargets();
+  const { secretKey, publicKey, passwordSeed, commonPassword } = validateTargets();
 
   const admin = createClient(SUPABASE_URL, secretKey, {
     auth: {
@@ -113,18 +124,25 @@ async function main() {
   );
 
   // Validate the full allow-list before changing any password.
-  const targets = accounts.map((account) => {
+  const targets = accounts.flatMap((account) => {
     const user = byEmail.get(account.email);
-    if (!user) throw new Error('Missing expected staging E2E account: ' + account.email);
+    if (!user) {
+      if (account.role === 'SUPERADMIN') {
+        // Superadmin account might need to be created first via seed script
+        console.warn('Notice: Superadmin account not yet provisioned: ' + account.email);
+        return [];
+      }
+      throw new Error('Missing expected staging E2E account: ' + account.email);
+    }
     if (user.app_metadata?.isieco_seed !== SEED_MARKER) {
       throw new Error('Refusing to modify an account without the E2E ownership marker: ' + account.email);
     }
-    return { ...account, userId: user.id };
+    return [{ ...account, userId: user.id }];
   });
 
   for (const account of targets) {
     const { data, error } = await admin.auth.admin.updateUserById(account.userId, {
-      password: passwordForAccount(account, passwordSeed),
+      password: passwordForAccount(account, passwordSeed, commonPassword),
     });
     if (error || !data.user) {
       throw new Error(
@@ -150,7 +168,7 @@ async function main() {
     });
     const { data, error } = await verifier.auth.signInWithPassword({
       email: account.email,
-      password: passwordForAccount(account, passwordSeed),
+      password: passwordForAccount(account, passwordSeed, commonPassword),
     });
     if (error || !data.session) {
       throw new Error(
@@ -160,11 +178,15 @@ async function main() {
     await verifier.auth.signOut({ scope: 'local' });
   }
 
-  console.log('PASS: all 9 isolated staging E2E accounts have account-specific derived passwords and login was verified.');
+  console.log(`PASS: all ${targets.length} staging E2E accounts were updated and login was verified.`);
   for (const account of targets) {
     console.log(account.role + ': ' + account.email);
   }
-  console.log('Derived passwords were not printed.');
+  if (commonPassword) {
+    console.log('Applied uniform password from STAGING_COMMON_PASSWORD across all targets.');
+  } else {
+    console.log('Derived passwords were not printed.');
+  }
 }
 
 main().catch((error) => {

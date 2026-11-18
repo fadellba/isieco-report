@@ -4,13 +4,18 @@ on:
   workflow_dispatch:
     inputs:
       seed_staging_test_users:
-        description: "Select CREATE to provision the nine isolated role accounts in staging."
+        description: "Select CREATE to provision the isolated role accounts (including superadmin) in staging."
         required: true
         type: choice
         options:
           - NO
           - CREATE
         default: NO
+      common_password:
+        description: "Optional: Define a uniform password for all staging accounts (min 8 chars). If empty, derived passwords are used."
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -32,6 +37,7 @@ jobs:
       DIRECT_URL: ${{ secrets.STAGING_PRISMA_URL }}
       STAGING_SUPABASE_CA_CERT: ${{ secrets.STAGING_SUPABASE_CA_CERT }}
       STAGING_E2E_PASSWORD_SEED: ${{ secrets.STAGING_E2E_PASSWORD_SEED }}
+      STAGING_COMMON_PASSWORD: ${{ inputs.common_password || secrets.STAGING_COMMON_PASSWORD }}
     steps:
       - name: Validate staging-only credentials
         shell: bash
@@ -49,10 +55,12 @@ jobs:
             echo "Missing staging environment secret: STAGING_SUPABASE_CA_CERT"
             exit 1
           }
-          test -n "${STAGING_E2E_PASSWORD_SEED:-}" || {
-            echo "Missing staging environment secret: STAGING_E2E_PASSWORD_SEED"
-            exit 1
-          }
+          if [ -z "${STAGING_COMMON_PASSWORD:-}" ]; then
+            test -n "${STAGING_E2E_PASSWORD_SEED:-}" || {
+              echo "Missing staging environment secret: STAGING_E2E_PASSWORD_SEED"
+              exit 1
+            }
+          fi
           echo "Staging seed credentials are configured. Secret values were not printed."
 
       - name: Checkout source
@@ -78,5 +86,5 @@ jobs:
       - name: Validate seed script syntax
         run: node --check apps/api/scripts/seed-staging-e2e-users.mjs
 
-      - name: Provision and verify nine isolated test users
+      - name: Provision and verify test users (including superadmin)
         run: pnpm --filter @isieco/api seed:staging:e2e-users
