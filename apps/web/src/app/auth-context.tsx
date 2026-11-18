@@ -81,7 +81,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       } catch {
         if (active && currentRequest === requestVersion) {
           setProfile(null);
-          setError('Impossible de charger le profil. Vérifiez l'API et la session.');
+          setError("Impossible de charger le profil. Vérifiez l'API et la session.");
         }
       } finally {
         if (active && currentRequest === requestVersion) setLoading(false);
