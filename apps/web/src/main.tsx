@@ -24,11 +24,11 @@ class RootErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('RootErrorBoundary caught an error:', error, errorInfo);
   }
 
-  render() {
+  override render() {
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-[#F8FAF9] flex items-center justify-center p-6 text-center font-sans">
