@@ -72,7 +72,7 @@ Le modèle simplifié ne comporte plus de référentiels région/département/co
 | Méthode | Route | Accès |
 |---|---|---|
 | POST | `/reports` | `CITOYEN` ; dépôt JSON idempotent avec l'en-tête `Idempotency-Key`. |
-| POST | `/reports/with-photo` | `CITOYEN` ; dépôt multipart avec photo facultative et métadonnées facultatives, sous réserve d'au moins une information utile. |
+| POST | `/reports/with-photo` | `CITOYEN` ; dépôt multipart avec photo obligatoire et métadonnées facultatives. |
 | GET | `/reports/waste-types` | `CITOYEN` ; types de déchets actifs pour la déclaration. |
 | GET | `/reports` | `CITOYEN` ; liste paginée appartenant au compte connecté. |
 | GET | `/reports/:id` | `CITOYEN` propriétaire ; détail du signalement. |

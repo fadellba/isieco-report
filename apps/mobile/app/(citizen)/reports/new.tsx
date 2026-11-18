@@ -43,7 +43,7 @@ export default function NewCitizenReportScreen() {
   const [error, setError] = useState<string | null>(null);
   const idempotencyRef = useRef<{ fingerprint: string; key: string } | null>(null);
 
-  // Auto-load waste types and auto-detect GPS location
+  // Load optional waste categories. GPS remains opt-in.
   useEffect(() => {
     let active = true;
     listAvailableWasteTypes()
@@ -54,24 +54,7 @@ export default function NewCitizenReportScreen() {
         // Categories optional
       });
 
-    // Auto-detect location on screen open
-    void (async () => {
-      try {
-        setGettingLocation(true);
-        const coordinates = await requestCurrentForegroundCoordinates();
-        if (active) {
-          setLatitude(coordinates.latitude.toFixed(6));
-          setLongitude(coordinates.longitude.toFixed(6));
-          if (coordinates.precisionLocalisation !== undefined) {
-            setPrecision(String(coordinates.precisionLocalisation));
-          }
-        }
-      } catch {
-        // Location will remain manual/optional if permission refused
-      } finally {
-        if (active) setGettingLocation(false);
-      }
-    })();
+    // GPS permission is requested only from the explicit location button.
 
     return () => {
       active = false;
@@ -306,7 +289,7 @@ export default function NewCitizenReportScreen() {
                 </Text>
               </View>
             ) : (
-              <Text className="text-[10px] font-bold uppercase text-ink-400">Automatique</Text>
+              <Text className="text-[10px] font-bold uppercase text-ink-400">Au choix</Text>
             )}
           </View>
 

@@ -111,7 +111,10 @@ export class ReportsService {
       throw new BadRequestException('La précision exige une latitude et une longitude.');
     }
 
-    const file = incomingFile === undefined ? null : validateImageFile(incomingFile);
+    if (incomingFile === undefined || incomingFile === null) {
+      throw new BadRequestException('Une photo du dépôt est obligatoire pour soumettre un signalement.');
+    }
+    const file = validateImageFile(incomingFile);
     const contents = dto.contenus ?? [];
     if (contents.length) {
       const typeIds = [...new Set(contents.map((item) => item.idTypeDechet))];

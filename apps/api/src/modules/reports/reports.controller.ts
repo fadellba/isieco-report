@@ -60,8 +60,8 @@ export class ReportsController {
   @ApiRateLimit({ limit: 5, windowMs: 60_000 })
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_IMAGE_SIZE_BYTES, files: 1 } }))
   @ApiOperation({
-    summary: 'Crée un signalement citoyen avec une première photo facultative',
-    description: 'Le signalement et, si elle est fournie, sa première photo sont enregistrés comme une seule opération métier. La photo, la description, les catégories et la localisation sont facultatives séparément ; au moins une information utile doit être fournie. La clé idempotente inclut le contenu de la photo lorsqu’elle est présente.',
+    summary: 'Crée un signalement citoyen avec une photo obligatoire',
+    description: 'Le signalement et sa photo initiale sont enregistrés comme une seule opération métier. Une photo JPEG, PNG ou WebP valide est obligatoire. La description, les catégories et la localisation restent facultatives. La clé idempotente inclut l’empreinte de la photo.',
   })
   @ApiHeader({
     name: 'Idempotency-Key',
@@ -82,10 +82,11 @@ export class ReportsController {
         dateConstat: { type: 'string', format: 'date-time' },
         contenus: { type: 'string', description: 'Tableau JSON optionnel des catégories de déchets.' },
       },
+      required: ['file'],
     },
   })
   @ApiCreatedResponse({ type: ReportResponseDto })
-  @ApiBadRequestResponse({ description: 'Photo éventuelle, localisation ou métadonnées invalides, ou signalement entièrement vide.' })
+  @ApiBadRequestResponse({ description: 'Photo obligatoire absente ou invalide, localisation ou métadonnées invalides.' })
   @ApiConflictResponse({ description: 'Clé idempotente réutilisée avec un autre contenu.' })
   createWithPhoto(
     @Body() dto: CreateReportWithPhotoDto,
@@ -109,7 +110,7 @@ export class ReportsController {
     description: 'Clé opaque de 8 à 128 caractères générée par le client et conservée en cas de retry.',
   })
   @ApiCreatedResponse({ type: ReportResponseDto, description: 'Signalement créé avec ses contenus et son historique initial de statut.' })
-  @ApiBadRequestResponse({ description: 'Données invalides ou localisation incohérente. Un signalement doit contenir au moins une photo, une description, une catégorie ou une indication de localisation.' })
+  @ApiBadRequestResponse({ description: 'Photo du dépôt obligatoire. Données invalides ou localisation incohérente.' })
   @ApiConflictResponse({ description: 'Clé idempotente réutilisée avec un autre contenu ou conflit concurrent.' })
   @ApiUnauthorizedResponse({ description: 'Jeton Supabase absent ou invalide.' })
   @ApiForbiddenResponse({ description: 'Un compte citoyen actif est requis.' })

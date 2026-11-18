@@ -76,8 +76,8 @@ test('rejects an entirely empty report when no initial photo is provided', async
   assert.equal(writes, 0);
 });
 
-test('creates a signalement, qualification content and initial status history atomically', async () => {
-  const calls = { report: null, contents: null, status: null, isolation: null, audit: 0 };
+test('creates a signalement, its mandatory photo, qualification content and initial status atomically', async () => {
+  const calls = { report: null, contents: null, photo: null, status: null, isolation: null, audit: 0, uploaded: null };
   const prisma = basePrisma();
   const tx = {
     $executeRaw: async () => { calls.audit += 1; return 1; },
@@ -90,6 +90,9 @@ test('creates a signalement, qualification content and initial status history at
     contenuSignalement: {
       createMany: async ({ data }) => { calls.contents = data; return { count: data.length }; },
     },
+    photoSignalement: {
+      create: async ({ data }) => { calls.photo = data; return data; },
+    },
     historiqueStatutSignalement: {
       create: async ({ data }) => { calls.status = data; return data; },
     },
@@ -101,23 +104,34 @@ test('creates a signalement, qualification content and initial status history at
   prisma.signalement.findFirst = async ({ where } = {}) => where?.cleIdempotence
     ? null
     : reportRow({ contenus: [{ idTypeDechet: typeId, quantiteEstimee: '2.5', volumeEstime: null, remarque: null, typeDechet: { codeType: 'PLASTIQUE', libelle: 'Plastique' } }] });
-  const storage = {};
+  const storage = {
+    upload: async (path) => { calls.uploaded = path; },
+    remove: async () => undefined,
+    getExpirationDate: () => new Date('2026-12-01T00:00:00.000Z'),
+  };
   const service = new ReportsService(prisma, storage);
+  const file = {
+    buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    mimetype: 'image/png',
+    size: 8,
+  };
 
   const result = await service.createReport({
     description: 'Un dépôt de déchets est visible près du marché.',
     contenus: [{ idTypeDechet: typeId, quantiteEstimee: 2.5 }],
-  }, authId, 'report-idem-0001');
+  }, authId, 'report-idem-0001', file);
 
   assert.equal(calls.report.idUtilisateur, userId);
   assert.equal(calls.report.statutSignalement, 'SOUMIS');
   assert.equal(calls.report.cleIdempotence, 'report-idem-0001');
   assert.equal(calls.contents[0].idTypeDechet, typeId);
   assert.equal(calls.contents[0].etatQualification, 'EN_ATTENTE');
+  assert.equal(calls.photo.idSignalement, calls.report.idSignalement);
+  assert.match(calls.uploaded, new RegExp(calls.report.idSignalement));
   assert.equal(calls.status.nouveauStatut, 'SOUMIS');
   assert.equal(calls.isolation, 'Serializable');
   assert.equal(result.idSignalement, reportId);
-  assert.equal(calls.audit, 1);
+  assert.equal(calls.audit, 2);
 });
 
 test('replays an existing idempotent request without creating a second signalement', async () => {
@@ -184,36 +198,19 @@ test('does not reveal a report owned by another citizen', async () => {
 });
 
 
-test('creates a citizen report without a photo when optional metadata is provided', async () => {
-  const calls = { report: null, history: null, audit: 0 };
+test('rejects a citizen report without a photo even when optional metadata is provided', async () => {
+  let writes = 0;
   const prisma = basePrisma();
-  const tx = {
-    $executeRaw: async () => { calls.audit += 1; return 1; },
-    signalement: {
-      create: async ({ data }) => {
-        calls.report = data;
-        return { idSignalement: data.idSignalement };
-      },
-    },
-    historiqueStatutSignalement: {
-      create: async ({ data }) => { calls.history = data; return data; },
-    },
-  };
-  prisma.$transaction = async (operation, options) => {
-    assert.equal(options.isolationLevel, 'Serializable');
-    return operation(tx);
-  };
+  prisma.$transaction = async () => { writes += 1; };
   const service = new ReportsService(prisma, {});
 
-  const result = await service.createReport({
-    description: 'Un dépôt est situé près de l’entrée du marché.',
-  }, authId, 'report-no-photo-0001');
-
-  assert.equal(calls.report.description, 'Un dépôt est situé près de l’entrée du marché.');
-  assert.equal(calls.report.statutSignalement, 'SOUMIS');
-  assert.equal(calls.history.nouveauStatut, 'SOUMIS');
-  assert.equal(calls.audit, 1);
-  assert.equal(result.idSignalement, reportId);
+  await assert.rejects(
+    service.createReport({
+      description: 'Un dépôt est situé près de l’entrée du marché.',
+    }, authId, 'report-no-photo-0001'),
+    BadRequestException,
+  );
+  assert.equal(writes, 0);
 });
 
 test('creates a photo-first report without description or waste categories in one transaction', async () => {

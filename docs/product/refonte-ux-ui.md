@@ -67,13 +67,13 @@ Les icônes doivent partager une même grille, un même poids de trait et un voc
 2. Onboarding uniquement lors de la première découverte de la version de l'expérience.
 3. Connexion ou création d'un compte citoyen.
 4. Accueil citoyen : action principale « Signaler un dépôt », puis accès aux signalements et à leur suivi.
-5. Création du signalement : décrire le dépôt, renseigner le lieu, ajouter une photo facultative et choisir les catégories si elles sont proposées.
+5. Création du signalement : décrire le dépôt, renseigner le lieu, ajouter une photo obligatoire et choisir les catégories si elles sont proposées.
 6. Vérification des informations avant envoi, avec indication claire des données manquantes.
 7. Confirmation de réception avec référence et prochaine étape attendue.
 8. Détail du signalement : statut actuel, chronologie, pièces jointes et demandes de complément éventuelles.
 9. Réponse à une demande de complément, puis suivi jusqu'à la clôture.
 
-La photo est facultative dans le parcours actuel. La localisation GPS est demandée uniquement après une action explicite ; une saisie manuelle doit rester possible. Ne jamais présenter un signalement comme traité simplement parce qu'il a été envoyé.
+Une photo du dépôt est obligatoire pour soumettre un signalement. La localisation GPS ne doit jamais être demandée à l'ouverture de l'écran : elle est sollicitée uniquement après activation explicite du bouton « Détecter ma position GPS ». Une saisie manuelle doit toujours rester possible, y compris lorsque l'autorisation de localisation est refusée. Ne jamais présenter un signalement comme traité simplement parce qu'il a été envoyé.
 
 ### Agent de terrain
 
@@ -125,7 +125,7 @@ Le splash natif Expo existe déjà. Il doit être traité comme une signature de
 
 L'onboarding est une introduction, pas une formation exhaustive :
 - Écran 1 : pourquoi ISIECO existe et quels acteurs elle relie.
-- Écran 2 : le parcours citoyen, dont la photo facultative et le suivi.
+- Écran 2 : le parcours citoyen, dont la photo obligatoire et le suivi.
 - Écran 3 : le parcours agent, de l'affectation à l'intervention puis à la vérification indépendante.
 - Un indicateur de progression, un bouton Continuer, une action Passer et une sortie claire vers la connexion.
 - Le texte précise que le compte citoyen peut être créé depuis l'application, tandis que l'agent utilise les identifiants fournis par son organisation.
