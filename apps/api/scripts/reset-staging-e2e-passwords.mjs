@@ -8,16 +8,28 @@ const SEED_MARKER = 'isieco-staging-e2e-v1';
 const PAGE_SIZE = 1000;
 
 const accounts = [
-  { email: 'e2e.citoyen@staging.isieco.test', role: 'CITOYEN' },
-  { email: 'e2e.citoyen-secondaire@staging.isieco.test', role: 'CITOYEN', passwordKey: 'CITOYEN_SECONDARY' },
-  { email: 'e2e.agent-qualification@staging.isieco.test', role: 'AGENT_QUALIFICATION' },
-  { email: 'e2e.responsable-traitement@staging.isieco.test', role: 'RESPONSABLE_TRAITEMENT' },
-  { email: 'e2e.responsable-affectation@staging.isieco.test', role: 'RESPONSABLE_AFFECTATION' },
-  { email: 'e2e.agent-terrain@staging.isieco.test', role: 'AGENT_TERRAIN' },
-  { email: 'e2e.verificateur-cloture@staging.isieco.test', role: 'VERIFICATEUR_CLOTURE' },
-  { email: 'e2e.gestionnaire-referentiel@staging.isieco.test', role: 'GESTIONNAIRE_REFERENTIEL' },
-  { email: 'e2e.administrateur-comptes@staging.isieco.test', role: 'ADMINISTRATEUR_COMPTES' },
-  { email: 'e2e.superadmin@staging.isieco.test', role: 'SUPERADMIN' },
+  // Noms d'utilisateurs réalistes
+  { email: 'admin.global@isieco.sn', role: 'SUPERADMIN', slug: 'superadmin' },
+  { email: 'fatou.diallo@gmail.com', role: 'CITOYEN', slug: 'citoyen' },
+  { email: 'moussa.ba@outlook.com', role: 'CITOYEN', slug: 'citoyen-secondaire', passwordKey: 'CITOYEN_SECONDARY' },
+  { email: 'mariama.sow@isieco.sn', role: 'AGENT_QUALIFICATION', slug: 'agent-qualification' },
+  { email: 'amadou.fall@isieco.sn', role: 'RESPONSABLE_TRAITEMENT', slug: 'responsable-traitement' },
+  { email: 'awa.ndiaye@isieco.sn', role: 'RESPONSABLE_AFFECTATION', slug: 'responsable-affectation' },
+  { email: 'cheikh.diop@isieco.sn', role: 'AGENT_TERRAIN', slug: 'agent-terrain' },
+  { email: 'oumy.traore@isieco.sn', role: 'VERIFICATEUR_CLOTURE', slug: 'verificateur-cloture' },
+  { email: 'ibrahima.kane@isieco.sn', role: 'GESTIONNAIRE_REFERENTIEL', slug: 'gestionnaire-referentiel' },
+  { email: 'aminata.gueye@isieco.sn', role: 'ADMINISTRATEUR_COMPTES', slug: 'administrateur-comptes' },
+  // Compatibilité avec les identifiants techniques e2e antérieurs si encore présents
+  { email: 'e2e.superadmin@staging.isieco.test', role: 'SUPERADMIN', slug: 'superadmin-legacy', optional: true },
+  { email: 'e2e.citoyen@staging.isieco.test', role: 'CITOYEN', slug: 'citoyen-legacy', optional: true },
+  { email: 'e2e.citoyen-secondaire@staging.isieco.test', role: 'CITOYEN', slug: 'citoyen-secondaire-legacy', passwordKey: 'CITOYEN_SECONDARY', optional: true },
+  { email: 'e2e.agent-qualification@staging.isieco.test', role: 'AGENT_QUALIFICATION', slug: 'agent-qualification-legacy', optional: true },
+  { email: 'e2e.responsable-traitement@staging.isieco.test', role: 'RESPONSABLE_TRAITEMENT', slug: 'responsable-traitement-legacy', optional: true },
+  { email: 'e2e.responsable-affectation@staging.isieco.test', role: 'RESPONSABLE_AFFECTATION', slug: 'responsable-affectation-legacy', optional: true },
+  { email: 'e2e.agent-terrain@staging.isieco.test', role: 'AGENT_TERRAIN', slug: 'agent-terrain-legacy', optional: true },
+  { email: 'e2e.verificateur-cloture@staging.isieco.test', role: 'VERIFICATEUR_CLOTURE', slug: 'verificateur-cloture-legacy', optional: true },
+  { email: 'e2e.gestionnaire-referentiel@staging.isieco.test', role: 'GESTIONNAIRE_REFERENTIEL', slug: 'gestionnaire-referentiel-legacy', optional: true },
+  { email: 'e2e.administrateur-comptes@staging.isieco.test', role: 'ADMINISTRATEUR_COMPTES', slug: 'administrateur-comptes-legacy', optional: true },
 ];
 
 function requiredEnv(name) {
@@ -127,12 +139,10 @@ async function main() {
   const targets = accounts.flatMap((account) => {
     const user = byEmail.get(account.email);
     if (!user) {
-      if (account.role === 'SUPERADMIN') {
-        // Superadmin account might need to be created first via seed script
-        console.warn('Notice: Superadmin account not yet provisioned: ' + account.email);
+      if (account.optional || account.role === 'SUPERADMIN') {
         return [];
       }
-      throw new Error('Missing expected staging E2E account: ' + account.email);
+      throw new Error('Missing expected staging account: ' + account.email);
     }
     if (user.app_metadata?.isieco_seed !== SEED_MARKER) {
       throw new Error('Refusing to modify an account without the E2E ownership marker: ' + account.email);
