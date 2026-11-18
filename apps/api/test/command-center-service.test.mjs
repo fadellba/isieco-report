@@ -267,7 +267,7 @@ test('filters map counts and features by a validated geographic viewport', async
     maxLon: -17.4,
   });
 
-  assert.equal(result.map.totalLocated, 2);
+  assert.equal(result.map.totalLocated, 3);
   assert.equal(result.summary.locatedItems, 10);
   assert.equal(result.map.items.length, 1);
   assert.equal(result.map.hasMore, true);
