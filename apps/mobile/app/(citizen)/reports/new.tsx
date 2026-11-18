@@ -190,7 +190,7 @@ export default function NewCitizenReportScreen() {
         }
 
         await queueOfflineReport({
-          ownerId: profile.idUtilisateur,
+          ownerId: profile.utilisateurId,
           idempotencyKey,
           payload,
           photo,

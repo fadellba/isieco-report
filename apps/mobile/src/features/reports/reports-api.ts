@@ -175,7 +175,7 @@ export async function submitReportWithPhoto(
     method: 'POST',
     headers: { 'Idempotency-Key': idempotencyKey },
     body,
-    signal,
+    ...(signal ? { signal } : {}),
   });
 }
 
