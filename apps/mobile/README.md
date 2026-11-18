@@ -27,10 +27,10 @@ L'application présente un splash natif Expo assorti à l'identité ISIECO, puis
 ## Parcours citoyen — Phase 18 intégrée
 
 - `/(citizen)/reports` : liste paginée et suivi des seuls signalements du compte connecté ;
-- `/(citizen)/reports/new` : signalement avec photo obligatoire, localisation GPS déclenchée à la demande ou saisie manuelle, description et catégories facultatives ;
+- `/(citizen)/reports/new` : signalement avec photo obligatoire, localisation ponctuelle ou manuelle, description et catégories facultatives ;
 - `/(citizen)/reports/[id]` : détail propriétaire, chronologie des statuts et jalons opérationnels, photos privées, catégories qualifiées et demandes de complément.
 
-La soumission utilise `POST /api/v1/reports/with-photo` et l'en-tête `Idempotency-Key`. Le signalement et sa première photo privée obligatoire sont créés ensemble ; la clé est conservée lors d'une nouvelle tentative avec les mêmes métadonnées et la même photo, et renouvelée lorsque le formulaire change. La chronologie provient de `GET /api/v1/reports/:id/history`. Les demandes et réponses réutilisent les endpoints Reports existants. Aucun endpoint de référentiel réservé au gestionnaire n'est appelé par le citoyen.
+La soumission utilise `POST /api/v1/reports/with-photo` et l'en-tête `Idempotency-Key`. Le signalement et, lorsqu’elle est fournie, sa première photo privée sont créés ensemble ; la clé est conservée lors d'une nouvelle tentative avec les mêmes métadonnées et la même photo, et renouvelée lorsque le formulaire change. La chronologie provient de `GET /api/v1/reports/:id/history`. Les demandes et réponses réutilisent les endpoints Reports existants. Aucun endpoint de référentiel réservé au gestionnaire n'est appelé par le citoyen.
 
 ## Parcours Agent terrain — Phase 19 intégrée
 
@@ -59,7 +59,7 @@ La PR #26 a intégré :
 - conversion en JPEG, limitation du bord long à 1600 px et envoi multipart vers les endpoints API privés déjà existants ;
 - aperçu des photos du signalement avec URL signée de courte durée, obtenue uniquement à la demande ;
 - limite de trois photos par signalement dans l'interface citoyenne, appliquée aussi côté API sous verrou SQL du signalement pour résister aux dépôts concurrents ;
-- localisation ponctuelle au premier plan, uniquement après activation du bouton « Détecter ma position GPS », avec précision estimée ; la saisie manuelle reste disponible ;
+- localisation ponctuelle au premier plan, uniquement après action explicite, avec précision estimée ; la saisie manuelle reste disponible ;
 - plugins Expo et permissions Android/iOS limités aux usages nécessaires.
 
 L'API reste l'autorité : elle vérifie le propriétaire du signalement ou l'auteur de l'intervention, les appartenances, les états métier, le type réel de l'image et la taille maximale de 10 MiB. Les ajouts de preuves sont auditables, sans conserver de chemin Storage dans l'événement. Aucun chemin Storage ni clé privilégiée n'est exposé au Mobile. Les permissions peuvent être refusées sans bloquer le dépôt manuel d'un signalement. La CI complète est verte, et le staging vérifie désormais le parcours API complet jusqu'à la clôture. La recette native sur appareils réels reste à effectuer.

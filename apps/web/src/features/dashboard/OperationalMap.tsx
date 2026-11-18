@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react';
 
 interface MapFeature {
-  kind: 'DOSSIER' | 'SIGNALEMENT';
+  kind: 'DOSSIER' | 'SIGNALEMENT' | 'INTERVENTION';
   id: string;
   title: string;
   status: string;
@@ -412,6 +412,7 @@ export function OperationalMap({
                   marker.features.length > 1 ? 'is-cluster' : '',
                   singleFeature?.kind === 'DOSSIER' ? 'is-case' : '',
                   singleFeature?.kind === 'SIGNALEMENT' ? 'is-report' : '',
+                  singleFeature?.kind === 'INTERVENTION' ? 'is-intervention' : '',
                   singleFeature?.priority === 'CRITIQUE' ? 'is-critical' : '',
                   containsSelection ? 'is-selected' : '',
                 ]
@@ -427,7 +428,7 @@ export function OperationalMap({
                 aria-label={
                   marker.features.length > 1
                     ? `${marker.features.length} éléments regroupés. Cliquez pour zoomer.`
-                    : `${singleFeature?.kind === 'DOSSIER' ? 'Dossier' : 'Signalement'} : ${singleFeature?.title ?? ''}`
+                    : `${singleFeature?.kind === 'INTERVENTION' ? 'Intervention' : singleFeature?.kind === 'DOSSIER' ? 'Dossier' : 'Signalement'} : ${singleFeature?.title ?? ''}`
                 }
                 aria-expanded={marker.features.length > 1 && expandedClusterKey === marker.key}
               >
@@ -448,7 +449,7 @@ export function OperationalMap({
                         setExpandedClusterKey(null);
                       }}
                     >
-                      <span>{feature.kind === 'DOSSIER' ? 'Dossier' : 'Signalement'}</span>
+                      <span>{feature.kind === 'INTERVENTION' ? 'Intervention' : feature.kind === 'DOSSIER' ? 'Dossier' : 'Signalement'}</span>
                       <b>{feature.title}</b>
                     </button>
                   ))}

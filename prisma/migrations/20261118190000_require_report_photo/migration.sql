@@ -25,7 +25,7 @@ END;
 $$;
 
 CREATE CONSTRAINT TRIGGER signalement_photo_required
-AFTER INSERT OR UPDATE ON public.signalement
+AFTER INSERT ON public.signalement
 DEFERRABLE INITIALLY DEFERRED
 FOR EACH ROW
 EXECUTE FUNCTION public.assert_signalement_has_photo();
@@ -37,6 +37,12 @@ RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 BEGIN
+  IF TG_OP = 'UPDATE' AND NEW.id_signalement <> OLD.id_signalement THEN
+    RAISE EXCEPTION 'Une photo de signalement ne peut pas être déplacée vers un autre signalement.'
+      USING ERRCODE = '23514',
+            CONSTRAINT = 'photo_signalement_owner_immutable';
+  END IF;
+
   PERFORM 1
   FROM public.signalement
   WHERE id_signalement = OLD.id_signalement

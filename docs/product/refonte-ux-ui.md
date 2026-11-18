@@ -67,13 +67,13 @@ Les icônes doivent partager une même grille, un même poids de trait et un voc
 2. Onboarding uniquement lors de la première découverte de la version de l'expérience.
 3. Connexion ou création d'un compte citoyen.
 4. Accueil citoyen : action principale « Signaler un dépôt », puis accès aux signalements et à leur suivi.
-5. Création du signalement : décrire le dépôt, renseigner le lieu, ajouter une photo obligatoire et choisir les catégories si elles sont proposées.
+5. Création du signalement : décrire le dépôt, renseigner le lieu, ajouter une photo facultative et choisir les catégories si elles sont proposées.
 6. Vérification des informations avant envoi, avec indication claire des données manquantes.
 7. Confirmation de réception avec référence et prochaine étape attendue.
 8. Détail du signalement : statut actuel, chronologie, pièces jointes et demandes de complément éventuelles.
 9. Réponse à une demande de complément, puis suivi jusqu'à la clôture.
 
-Une photo du dépôt est obligatoire pour soumettre un signalement. La localisation GPS ne doit jamais être demandée à l'ouverture de l'écran : elle est sollicitée uniquement après activation explicite du bouton « Détecter ma position GPS ». Une saisie manuelle doit toujours rester possible, y compris lorsque l'autorisation de localisation est refusée. Ne jamais présenter un signalement comme traité simplement parce qu'il a été envoyé.
+La photo est facultative dans le parcours actuel. La localisation GPS est demandée uniquement après une action explicite ; une saisie manuelle doit rester possible. Ne jamais présenter un signalement comme traité simplement parce qu'il a été envoyé.
 
 ### Agent de terrain
 
@@ -125,7 +125,7 @@ Le splash natif Expo existe déjà. Il doit être traité comme une signature de
 
 L'onboarding est une introduction, pas une formation exhaustive :
 - Écran 1 : pourquoi ISIECO existe et quels acteurs elle relie.
-- Écran 2 : le parcours citoyen, dont la photo obligatoire et le suivi.
+- Écran 2 : le parcours citoyen, dont la photo facultative et le suivi.
 - Écran 3 : le parcours agent, de l'affectation à l'intervention puis à la vérification indépendante.
 - Un indicateur de progression, un bouton Continuer, une action Passer et une sortie claire vers la connexion.
 - Le texte précise que le compte citoyen peut être créé depuis l'application, tandis que l'agent utilise les identifiants fournis par son organisation.
@@ -210,3 +210,22 @@ Cette livraison couvre maintenant une première reprise des routes applicatives 
 - Carte Mobile agent : les coordonnées réelles ouvrent l’emplacement correspondant sur OpenStreetMap ; aucune position fictive n’est ajoutée. Les missions dépourvues de coordonnées restent accessibles dans leur section dédiée.
 - Cartographie Mobile : OpenStreetMap est ouvert via le navigateur système. Aucune clé API ou variable EAS n’est à configurer.
 - Assets natifs : `icon.png` (1024×1024), `adaptive-icon.png` (1024×1024 transparent), `splash.png` (1024×1024 transparent) et `brand-mark.png` (512×512 transparent) sont maintenant committés dans `apps/mobile/assets/`.
+
+
+## Décisions UX ajoutées — novembre 2026
+
+- La photo du dépôt est obligatoire dans l’interface, l’API et les contraintes différées PostgreSQL.
+- Le GPS n’est sollicité qu’après activation explicite d’un bouton. La saisie manuelle des coordonnées reste possible.
+- L’accueil citoyen affiche une carte OpenStreetMap des signalements qualifiés dans un rayon de 3 km. Les coordonnées retournées sont arrondies et les données du déclarant restent privées.
+- Les preuves photo d’intervention sont visibles après authentification et appartenance active à l’équipe ; le stockage reste privé et les URL signées expirent après 60 secondes.
+- Les KPI back-office sont compacts et ordonnés : signalements, dossiers, affectations, interventions. Les chiffres fictifs ont été supprimés.
+- La carte opérationnelle distingue les signalements des interventions en cours ; les dossiers ne sont plus des marqueurs.
+- La bannière alterne trois paysages illustrés avec fondu progressif et respecte la préférence de réduction des animations.
+- La typographie utilise une pile système et les icônes du menu utilisent des émojis.
+- Le tableau de bord n’affiche plus de cartes d’accès opérationnel en doublon ; les modules restent dans la navigation latérale.
+- La page Statistiques propose des périodes journalière, hebdomadaire, mensuelle, semestrielle et annuelle, ainsi qu’un export CSV.
+- Les notifications métier sont filtrées par propriétaire, rôles actifs et appartenance à une équipe.
+
+## Périmètre hors ligne
+
+La file locale persistante couvre le dépôt citoyen avec sa photo et une synchronisation idempotente. Les actions d’affectation, les interventions, les vérifications et les autres décisions métier ne sont pas disponibles hors ligne.

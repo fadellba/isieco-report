@@ -37,6 +37,14 @@ export interface TeamAssignment {
   };
 }
 
+export interface TeamInterventionPhoto {
+  idPhotoIntervention: string;
+  contextePhoto: string;
+  description: string | null;
+  dateAjout: string;
+  etatPublication: 'PRIVEE';
+}
+
 export interface TeamIntervention {
   idIntervention: string;
   idAffectation: string;
@@ -48,6 +56,7 @@ export interface TeamIntervention {
   compteRendu: string | null;
   motifException: string | null;
   renseignePar: string;
+  photos: TeamInterventionPhoto[];
   verification: {
     dateVerification: string;
     resultatVerification: 'CONFORME' | 'A_REPRENDRE';
@@ -96,6 +105,24 @@ export async function listTeamAssignments(teamId: string): Promise<TeamAssignmen
 
 export async function listTeamInterventions(teamId: string): Promise<TeamIntervention[]> {
   return api.request<TeamIntervention[]>('/interventions/team/' + encodeURIComponent(teamId));
+}
+
+export interface SignedInterventionPhotoUrl {
+  signedUrl: string;
+  expiresInSeconds: number;
+}
+
+export async function getInterventionPhotoUrl(
+  interventionId: string,
+  photoId: string,
+): Promise<SignedInterventionPhotoUrl> {
+  return api.request<SignedInterventionPhotoUrl>(
+    '/interventions/' +
+      encodeURIComponent(interventionId) +
+      '/photos/' +
+      encodeURIComponent(photoId) +
+      '/url',
+  );
 }
 
 export async function respondToAssignment(

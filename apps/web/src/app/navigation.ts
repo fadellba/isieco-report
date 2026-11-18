@@ -14,6 +14,21 @@ export interface NavigationItem {
 
 export const navigationItems: NavigationItem[] = [
   {
+    to: '/statistiques',
+    label: 'Statistiques',
+    description: 'Analyser l’activité et exporter les rapports périodiques',
+    group: 'Opérations',
+    icon: 'stats',
+    roles: [
+      'AGENT_QUALIFICATION',
+      'RESPONSABLE_TRAITEMENT',
+      'RESPONSABLE_AFFECTATION',
+      'VERIFICATEUR_CLOTURE',
+      'GESTIONNAIRE_REFERENTIEL',
+      'ADMINISTRATEUR_COMPTES',
+    ],
+  },
+  {
     to: '/qualification',
     label: 'Qualification',
     description: 'Examiner les signalements reçus',

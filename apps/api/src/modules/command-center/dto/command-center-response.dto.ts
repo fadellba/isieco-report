@@ -13,8 +13,8 @@ export class CommandCenterSummaryDto {
 }
 
 export class CommandCenterFeatureDto {
-  @ApiProperty({ enum: ['DOSSIER', 'SIGNALEMENT'] })
-  kind!: 'DOSSIER' | 'SIGNALEMENT';
+  @ApiProperty({ enum: ['DOSSIER', 'SIGNALEMENT', 'INTERVENTION'] })
+  kind!: 'DOSSIER' | 'SIGNALEMENT' | 'INTERVENTION';
 
   @ApiProperty({ format: 'uuid' })
   id!: string;
@@ -53,6 +53,9 @@ export class CommandCenterFeatureDto {
 export class CommandCenterMapDto {
   @ApiProperty({ type: [CommandCenterFeatureDto] })
   items!: CommandCenterFeatureDto[];
+
+  @ApiProperty({ type: [CommandCenterFeatureDto], description: 'Interventions actives géolocalisées, présentées comme une couche distincte.' })
+  interventions!: CommandCenterFeatureDto[];
 
   @ApiProperty({ minimum: 0 })
   totalLocated!: number;

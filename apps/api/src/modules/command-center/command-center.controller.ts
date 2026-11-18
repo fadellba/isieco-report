@@ -18,6 +18,8 @@ import { SupabaseAuthGuard } from '../../auth/supabase-auth.guard.js';
 import type { User } from '@supabase/supabase-js';
 import { CommandCenterQueryDto } from './dto/command-center-query.dto.js';
 import { CommandCenterOverviewResponseDto } from './dto/command-center-response.dto.js';
+import { StatisticsQueryDto } from './dto/statistics-query.dto.js';
+import { StatisticsResponseDto } from './dto/statistics-response.dto.js';
 import { CommandCenterEventsService } from './command-center-events.service.js';
 import { CommandCenterService } from './command-center.service.js';
 
@@ -52,6 +54,19 @@ export class CommandCenterController {
   @ApiForbiddenResponse({ description: 'Un rôle back-office autorisé est requis.' })
   streamEvents(): Observable<MessageEvent> {
     return this.commandCenterEvents.stream();
+  }
+
+  @Get('statistics')
+  @ApiOperation({
+    summary: 'Fournit les statistiques et agrégats du pilotage opérationnel',
+    description: 'Périodes disponibles : jour, semaine, mois, semestre et année. Les séries agrègent les dates de création des signalements, dossiers, affectations et interventions ; les vérifications conformes sont comptées séparément.',
+  })
+  @ApiOkResponse({ type: StatisticsResponseDto })
+  @ApiBadRequestResponse({ description: 'Périodicité non prise en charge.' })
+  @ApiUnauthorizedResponse({ description: 'Jeton Supabase absent ou invalide.' })
+  @ApiForbiddenResponse({ description: 'Un rôle back-office autorisé est requis.' })
+  getStatistics(@Query() query: StatisticsQueryDto, @CurrentAuthUser() _user: User) {
+    return this.commandCenter.getStatistics(query.period);
   }
 
   @Get('overview')

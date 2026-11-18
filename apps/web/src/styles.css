@@ -4,12 +4,12 @@
 
 :root {
   font-family:
-    Inter,
-    ui-sans-serif,
+    "Segoe UI Variable",
     system-ui,
+    "Aptos",
+    Inter,
     -apple-system,
     BlinkMacSystemFont,
-    'Segoe UI',
     sans-serif;
   color: #0f172a;
   background: #f8fafc;
@@ -58,6 +58,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
+  line-height: 1.45;
   background: var(--surface-base);
   color: var(--ink-900);
 }
@@ -77,6 +78,33 @@ button {
 ::selection {
   background: #d9eee2;
   color: var(--brand-forest-dark);
+}
+
+.eco-banner {
+  overflow: hidden;
+  opacity: 0.42;
+  mask-image: linear-gradient(to left, #000 68%, transparent 100%);
+}
+.eco-banner__scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  animation: eco-banner-crossfade 15s infinite;
+}
+.eco-banner__scene--one { animation-delay: 0s; }
+.eco-banner__scene--two { animation-delay: 5s; }
+.eco-banner__scene--three { animation-delay: 10s; }
+@keyframes eco-banner-crossfade {
+  0%, 3% { opacity: 0; transform: translateX(12px) scale(1.02); }
+  8%, 28% { opacity: 1; transform: translateX(0) scale(1); }
+  34%, 100% { opacity: 0; transform: translateX(-10px) scale(.99); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .eco-banner__scene { animation: none; opacity: 0; }
+  .eco-banner__scene--one { opacity: 1; }
 }
 
 /* Application frame */
@@ -964,7 +992,7 @@ button {
 }
 .operational-map__viewport {
   position: relative;
-  height: 490px;
+  height: 360px;
   overflow: hidden;
   background: #eaf0e8;
   cursor: grab;
@@ -1020,6 +1048,15 @@ button {
   color: white;
   font-size: 13px;
   font-weight: 900;
+}
+.operational-map__marker.is-intervention {
+  background: #0f766e;
+}
+.operational-map__marker.is-intervention::before {
+  content: '🚚';
+  color: white;
+  font-size: 12px;
+  line-height: 1;
 }
 .operational-map__marker.is-critical {
   background: #ef4444;

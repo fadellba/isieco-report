@@ -7,7 +7,7 @@ import { OperationalMap } from './OperationalMap';
 import { EcoSkylineBanner } from '../../components/EcoSkylineBanner';
 
 interface CommandCenterFeature {
-  kind: 'DOSSIER' | 'SIGNALEMENT';
+  kind: 'DOSSIER' | 'SIGNALEMENT' | 'INTERVENTION';
   id: string;
   title: string;
   status: string;
@@ -35,6 +35,7 @@ interface CommandCenterOverview {
   };
   map: {
     items: CommandCenterFeature[];
+    interventions: CommandCenterFeature[];
     totalLocated: number;
     truncated: boolean;
     limit: number;
@@ -63,10 +64,10 @@ function dateTimeLabel(value: string | null) {
 }
 
 function timeOnly(value: string | null) {
-  if (!value) return '14:32';
+  if (!value) return '—';
   const date = new Date(value);
   return Number.isNaN(date.getTime())
-    ? '14:32'
+    ? '—'
     : new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' }).format(date);
 }
 
@@ -91,7 +92,7 @@ export function OperationalCommandCenter() {
   const [viewportBounds, setViewportBounds] = useState<MapViewportBounds | null>(null);
   const requestVersion = useRef(0);
   const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(null);
-  const [kindFilter, setKindFilter] = useState<'TOUS' | 'DOSSIER' | 'SIGNALEMENT'>('TOUS');
+  const [kindFilter, setKindFilter] = useState<'TOUS' | 'SIGNALEMENT' | 'INTERVENTION'>('TOUS');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('TOUS');
   const [loading, setLoading] = useState(true);
@@ -119,7 +120,7 @@ export function OperationalCommandCenter() {
         setData(response);
         setError(null);
         setSelectedFeatureId((current) =>
-          current && response.map.items.some((item) => item.id === current) ? current : null,
+          current && [...response.map.items, ...response.map.interventions].some((item) => item.id === current) ? current : null,
         );
       } catch (reason) {
         if (currentRequest !== requestVersion.current) return;
@@ -265,13 +266,14 @@ export function OperationalCommandCenter() {
       );
       setData((prev) => {
         if (!prev) return response;
-        const seenIds = new Set(prev.map.items.map((i) => i.id));
-        const newItems = response.map.items.filter((i) => !seenIds.has(i.id));
+        const seenIds = new Set(prev.map.items.map((i) => i.kind + ':' + i.id));
+        const newItems = response.map.items.filter((i) => !seenIds.has(i.kind + ':' + i.id));
         return {
           ...response,
           map: {
             ...response.map,
             items: [...prev.map.items, ...newItems],
+            interventions: response.map.interventions,
           },
         };
       });
@@ -286,7 +288,11 @@ export function OperationalCommandCenter() {
 
   const filteredFeatures = useMemo(() => {
     if (!data) return [];
-    return data.map.items.filter((item) => {
+    const visibleFeatures = [
+      ...data.map.items.filter((item) => item.kind === 'SIGNALEMENT'),
+      ...data.map.interventions,
+    ];
+    return visibleFeatures.filter((item) => {
       if (kindFilter !== 'TOUS' && item.kind !== kindFilter) return false;
       if (statusFilter !== 'TOUS' && item.status !== statusFilter) return false;
       if (!searchTerm.trim()) return true;
@@ -318,6 +324,11 @@ export function OperationalCommandCenter() {
         ? [{ to: `/qualification/${selectedFeature.id}`, label: 'Ouvrir la qualification' }]
         : [];
     }
+    if (selectedFeature.kind === 'INTERVENTION') {
+      return roles.has('VERIFICATEUR_CLOTURE')
+        ? [{ to: '/verification', label: 'Ouvrir les vérifications' }]
+        : [];
+    }
     const actions: Array<{ to: string; label: string }> = [];
     if (roles.has('RESPONSABLE_TRAITEMENT')) {
       actions.push({ to: `/dossiers/${selectedFeature.id}`, label: 'Ouvrir le dossier' });
@@ -331,17 +342,15 @@ export function OperationalCommandCenter() {
     return actions;
   }, [selectedFeature, roles]);
 
-  // Derived KPI metrics matching web.PNG
-  const totalReportsToday =
-    (data?.summary.reportsAwaitingQualification ?? 0) + (data?.summary.openCases ?? 0) + 12;
-  const activeInterventionsCount = data?.summary.activeInterventions ?? 86;
-  const resolutionRate = '72%';
-  const avgDelay = '24 min';
+  const reportsToProcess =
+    (data?.summary.reportsAwaitingQualification ?? 0) +
+    (data?.summary.reportsAwaitingCitizen ?? 0);
+
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header with Skyline Banner matching web.PNG */}
-      <div className="relative overflow-hidden bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-7 shadow-sm">
+      <div className="relative overflow-hidden bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-sm">
         <EcoSkylineBanner className="hidden md:block" />
 
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -386,64 +395,57 @@ export function OperationalCommandCenter() {
         </div>
       )}
 
-      {/* 4 Hero KPI Cards matching web.PNG */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Signalements */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 text-xl font-bold">
-            🍃
+      <section aria-label="Indicateurs opérationnels" className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+        <article className="min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
+          <div className="flex items-center gap-2">
+            <span className="text-lg" aria-hidden="true">📍</span>
+            <span className="text-xs font-semibold text-slate-600">Signalements</span>
           </div>
-          <div className="min-w-0 flex-1">
-            <span className="text-2xl font-black text-slate-900 tracking-tight block">
-              {loading && !data ? '—' : totalReportsToday}
-            </span>
-            <span className="text-xs font-bold text-slate-600 block">Signalements aujourd'hui</span>
-            <span className="text-[11px] font-bold text-emerald-600">↗ +12%</span>
-          </div>
-        </div>
+          <p className="mt-1 text-xl font-extrabold tracking-tight text-slate-900">
+            {loading && !data ? '—' : numberFormat.format(reportsToProcess)}
+          </p>
+          <p className="text-[10px] leading-4 text-slate-500">
+            {numberFormat.format(data?.summary.reportsAwaitingQualification ?? 0)} à qualifier · {numberFormat.format(data?.summary.reportsAwaitingCitizen ?? 0)} en attente citoyen
+          </p>
+        </article>
 
-        {/* Card 2: Interventions en cours */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 text-xl font-bold">
-            🚚
+        <article className="min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
+          <div className="flex items-center gap-2">
+            <span className="text-lg" aria-hidden="true">🗂️</span>
+            <span className="text-xs font-semibold text-slate-600">Dossiers ouverts</span>
           </div>
-          <div className="min-w-0 flex-1">
-            <span className="text-2xl font-black text-slate-900 tracking-tight block">
-              {loading && !data ? '—' : activeInterventionsCount}
-            </span>
-            <span className="text-xs font-bold text-slate-600 block">Interventions en cours</span>
-            <span className="text-[11px] font-bold text-emerald-600">↗ +8%</span>
-          </div>
-        </div>
+          <p className="mt-1 text-xl font-extrabold tracking-tight text-slate-900">
+            {loading && !data ? '—' : numberFormat.format(data?.summary.openCases ?? 0)}
+          </p>
+          <p className="text-[10px] leading-4 text-slate-500">
+            {numberFormat.format(data?.summary.urgentCases ?? 0)} prioritaires
+          </p>
+        </article>
 
-        {/* Card 3: Taux de résolution */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 text-xl font-bold">
-            🛡
+        <article className="min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
+          <div className="flex items-center gap-2">
+            <span className="text-lg" aria-hidden="true">🧭</span>
+            <span className="text-xs font-semibold text-slate-600">Affectations actives</span>
           </div>
-          <div className="min-w-0 flex-1">
-            <span className="text-2xl font-black text-slate-900 tracking-tight block">
-              {resolutionRate}
-            </span>
-            <span className="text-xs font-bold text-slate-600 block">Taux de résolution</span>
-            <span className="text-[11px] font-bold text-emerald-600">↗ +5%</span>
-          </div>
-        </div>
+          <p className="mt-1 text-xl font-extrabold tracking-tight text-slate-900">
+            {loading && !data ? '—' : numberFormat.format(data?.summary.activeAssignments ?? 0)}
+          </p>
+          <p className="text-[10px] leading-4 text-slate-500">Missions attribuées aux équipes</p>
+        </article>
 
-        {/* Card 4: Délai moyen */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0 text-xl font-bold">
-            ⏱
+        <article className="min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
+          <div className="flex items-center gap-2">
+            <span className="text-lg" aria-hidden="true">🚚</span>
+            <span className="text-xs font-semibold text-slate-600">Interventions en cours</span>
           </div>
-          <div className="min-w-0 flex-1">
-            <span className="text-2xl font-black text-slate-900 tracking-tight block">
-              {avgDelay}
-            </span>
-            <span className="text-xs font-bold text-slate-600 block">Délai moyen</span>
-            <span className="text-[11px] font-bold text-emerald-600">↘ -15%</span>
-          </div>
-        </div>
-      </div>
+          <p className="mt-1 text-xl font-extrabold tracking-tight text-slate-900">
+            {loading && !data ? '—' : numberFormat.format(data?.summary.activeInterventions ?? 0)}
+          </p>
+          <p className="text-[10px] leading-4 text-slate-500">
+            {numberFormat.format(data?.summary.pendingVerifications ?? 0)} à vérifier
+          </p>
+        </article>
+      </section>
 
       {/* Main Operational Layout: 2/3 Map + 1/3 Right Column matching web.PNG */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -460,7 +462,7 @@ export function OperationalCommandCenter() {
 
             {/* Quick Kind Filter Pills */}
             <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs">
-              {(['TOUS', 'DOSSIER', 'SIGNALEMENT'] as const).map((kind) => (
+              {(['TOUS', 'SIGNALEMENT', 'INTERVENTION'] as const).map((kind) => (
                 <button
                   key={kind}
                   type="button"
@@ -474,14 +476,14 @@ export function OperationalCommandCenter() {
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  {kind === 'TOUS' ? 'Tous' : kind === 'DOSSIER' ? 'Dossiers' : 'Signalements'}
+                  {kind === 'TOUS' ? 'Tous' : kind === 'SIGNALEMENT' ? 'Signalements' : 'Interventions'}
                 </button>
               ))}
             </div>
           </div>
 
           {/* Map Canvas */}
-          <div className="relative h-[480px] w-full bg-slate-100">
+          <div className="relative h-[360px] w-full bg-slate-100">
             {data ? (
               <OperationalMap
                 features={filteredFeatures}
@@ -501,7 +503,7 @@ export function OperationalCommandCenter() {
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                      {selectedFeature.kind === 'DOSSIER' ? 'Dossier' : 'Signalement'}
+                      {selectedFeature.kind === 'INTERVENTION' ? 'Intervention' : 'Signalement'}
                     </span>
                     <span className="text-xs font-bold text-slate-900">
                       #{selectedFeature.id.slice(0, 8).toUpperCase()}
@@ -553,50 +555,8 @@ export function OperationalCommandCenter() {
 
         {/* Right Column (1/3): Activité Récente & Filtres matching web.PNG */}
         <div className="space-y-6">
-          {/* Card: Activité récente */}
-          <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-black text-slate-900 tracking-tight">Activité récente</h2>
-              <span className="text-xs font-bold text-emerald-600 hover:underline cursor-pointer">
-                Voir tout →
-              </span>
-            </div>
-
-            <div className="space-y-3.5">
-              <div className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-slate-50 transition">
-                <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 text-sm">
-                  🚚
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-bold text-slate-900 truncate">Équipe sur site</p>
-                  <p className="text-[11px] text-slate-500">14:28 — 12 Rue des Lilas</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-slate-50 transition">
-                <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 text-sm">
-                  ✓
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-bold text-slate-900 truncate">Signalement traité</p>
-                  <p className="text-[11px] text-slate-500">14:20 — Avenue Verte</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-slate-50 transition">
-                <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0 text-sm">
-                  📋
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-bold text-slate-900 truncate">Nouvelle affectation</p>
-                  <p className="text-[11px] text-slate-500">14:15 — Rue des Acacias</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Card: Filtres matching web.PNG */}
-          <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-5">
+          <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4">
             <h2 className="text-sm font-black text-slate-900 tracking-tight mb-3">
               Filtres opérationnels
             </h2>
@@ -614,17 +574,12 @@ export function OperationalCommandCenter() {
                   <option value="TOUS">Tous statuts</option>
                   <option value="SOUMIS">À qualifier</option>
                   <option value="EN_COURS">En cours d'intervention</option>
-                  <option value="CLOTURE">Clôturé</option>
+                  <option value="QUALIFIE">Qualifié</option>
+                  <option value="EN_ATTENTE_COMPLEMENT">En attente du citoyen</option>
                 </select>
               </div>
 
-              <div className="pt-2 flex items-center justify-between text-xs">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  Aujourd'hui
-                </span>
-                <span className="text-slate-400 text-[11px]">Filtre actif</span>
-              </div>
+              <p className="pt-1 text-[11px] text-slate-500">Les points de la carte sont limités aux signalements et interventions géolocalisés.</p>
             </div>
           </div>
         </div>

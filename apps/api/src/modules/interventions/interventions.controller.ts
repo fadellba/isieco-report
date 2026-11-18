@@ -27,7 +27,7 @@ import {
 import type { User } from '@supabase/supabase-js';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { MAX_IMAGE_SIZE_BYTES } from '../../infrastructure/storage/media-file.js';
-import { InterventionPhotoUploadResponseDto } from '../../infrastructure/storage/dto/media-response.dto.js';
+import { InterventionPhotoUploadResponseDto, SignedMediaUrlResponseDto } from '../../infrastructure/storage/dto/media-response.dto.js';
 import { ApiRateLimit } from '../../common/rate-limit/rate-limit.decorator.js';
 import { ApiRateLimitGuard } from '../../common/rate-limit/api-rate-limit.guard.js';
 import { CurrentAuthUser } from '../../auth/current-auth-user.decorator.js';
@@ -123,6 +123,24 @@ export class InterventionsController {
     @CurrentAuthUser() user: User,
   ) {
     return this.interventions.addPhoto(idIntervention, dto, file, user.id);
+  }
+
+  @Get(':idIntervention/photos/:photoId/url')
+  @ApiOperation({
+    summary: 'Obtient une URL temporaire pour consulter une preuve photo de son équipe',
+    description: 'Une appartenance active à l’équipe de l’intervention est vérifiée avant de créer une URL signée valable 60 secondes.',
+  })
+  @ApiParam({ name: 'idIntervention', format: 'uuid' })
+  @ApiParam({ name: 'photoId', format: 'uuid' })
+  @ApiOkResponse({ type: SignedMediaUrlResponseDto })
+  @ApiNotFoundResponse({ description: 'Preuve photo introuvable.' })
+  @ApiForbiddenResponse({ description: 'Une appartenance active à l’équipe est requise.' })
+  createPhotoUrl(
+    @Param('idIntervention', ParseUUIDPipe) idIntervention: string,
+    @Param('photoId', ParseUUIDPipe) photoId: string,
+    @CurrentAuthUser() user: User,
+  ) {
+    return this.interventions.createPhotoUrl(idIntervention, photoId, user.id);
   }
 
   @Post(':idIntervention/submit')

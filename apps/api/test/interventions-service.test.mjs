@@ -121,6 +121,64 @@ test('submits the intervention report and records a business audit event', async
   assert.equal(calls.audit, 1);
 });
 
+test('creates a temporary photo URL only for an active member of the intervention team', async () => {
+  const photoId = '99999999-9999-4999-8999-999999999999';
+  let storagePath = null;
+  const prisma = actorPrisma();
+  prisma.photoIntervention = {
+    findFirst: async ({ where }) => {
+      assert.deepEqual(where, { idIntervention: interventionId, idPhotoIntervention: photoId });
+      return {
+        referencePhoto: 'interventions/' + interventionId + '/' + photoId + '.jpg',
+        intervention: { affectation: { idEquipe: teamId } },
+      };
+    },
+  };
+  prisma.appartenanceEquipe = {
+    findFirst: async ({ where }) => {
+      assert.equal(where.idUtilisateur, actorId);
+      assert.equal(where.idEquipe, teamId);
+      return { idEquipe: teamId };
+    },
+  };
+  const service = new InterventionsService(prisma, {
+    createSignedUrl: async (path) => {
+      storagePath = path;
+      return { signedUrl: 'https://storage.example/signed-proof', expiresInSeconds: 60 };
+    },
+  });
+
+  const result = await service.createPhotoUrl(interventionId, photoId, authId);
+
+  assert.equal(storagePath, 'interventions/' + interventionId + '/' + photoId + '.jpg');
+  assert.deepEqual(result, {
+    signedUrl: 'https://storage.example/signed-proof',
+    expiresInSeconds: 60,
+  });
+});
+
+test('does not create a proof URL for a former team member', async () => {
+  const photoId = '99999999-9999-4999-8999-999999999999';
+  let signedUrlCalls = 0;
+  const prisma = actorPrisma();
+  prisma.photoIntervention = {
+    findFirst: async () => ({
+      referencePhoto: 'private/proof.jpg',
+      intervention: { affectation: { idEquipe: teamId } },
+    }),
+  };
+  prisma.appartenanceEquipe = { findFirst: async () => null };
+  const service = new InterventionsService(prisma, {
+    createSignedUrl: async () => {
+      signedUrlCalls += 1;
+      return { signedUrl: 'https://storage.example/signed-proof', expiresInSeconds: 60 };
+    },
+  });
+
+  await assert.rejects(service.createPhotoUrl(interventionId, photoId, authId), ForbiddenException);
+  assert.equal(signedUrlCalls, 0);
+});
+
 test('requires an explicit Verification A_REPRENDRE before starting a new intervention', async () => {
   const now = new Date('2026-11-01T10:00:00.000Z');
   const tx = {

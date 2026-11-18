@@ -272,6 +272,80 @@ export class ReportsService {
     return this.getMine(idSignalement, authUserId);
   }
 
+  async listNearby(
+    latitude: number,
+    longitude: number,
+    radiusMeters: number,
+    authUserId: string,
+  ) {
+    await this.citizenId(authUserId);
+    const radius = Math.min(5_000, Math.max(250, radiusMeters));
+    const latitudeDelta = radius / 111_320;
+    const longitudeDelta = Math.min(
+      180,
+      radius / (111_320 * Math.max(0.01, Math.cos((latitude * Math.PI) / 180))),
+    );
+    const south = Math.max(-90, latitude - latitudeDelta);
+    const north = Math.min(90, latitude + latitudeDelta);
+    const west = ((longitude - longitudeDelta + 540) % 360) - 180;
+    const east = ((longitude + longitudeDelta + 540) % 360) - 180;
+
+    const rows = await this.prisma.$queryRaw<Array<{
+      idSignalement: string;
+      dateSoumission: Date | null;
+      latitude: number;
+      longitude: number;
+      statutSignalement: 'QUALIFIE';
+    }>>`
+      SELECT
+        id_signalement AS "idSignalement",
+        date_soumission AS "dateSoumission",
+        latitude::double precision AS latitude,
+        longitude::double precision AS longitude,
+        statut_signalement AS "statutSignalement"
+      FROM public.signalement
+      WHERE statut_signalement = 'QUALIFIE'
+        AND latitude IS NOT NULL
+        AND longitude IS NOT NULL
+        AND latitude BETWEEN ${south} AND ${north}
+        AND (
+          (${west} <= ${east} AND longitude BETWEEN ${west} AND ${east})
+          OR
+          (${west} > ${east} AND (longitude >= ${west} OR longitude <= ${east}))
+        )
+      ORDER BY date_soumission DESC NULLS LAST, id_signalement ASC
+      LIMIT 250
+    `;
+
+    const radians = (degrees: number) => (degrees * Math.PI) / 180;
+    const distanceBetween = (lat: number, lon: number) => {
+      const dLat = radians(lat - latitude);
+      const dLon = radians(lon - longitude);
+      const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(radians(latitude)) *
+          Math.cos(radians(lat)) *
+          Math.sin(dLon / 2) ** 2;
+      return 6_371_000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    };
+    const rounded = (value: number) => Number(value.toFixed(3));
+
+    return {
+      radiusMeters: radius,
+      items: rows
+        .map((row) => ({ ...row, distanceMeters: distanceBetween(row.latitude, row.longitude) }))
+        .filter((row) => row.distanceMeters <= radius)
+        .map((row) => ({
+          idSignalement: row.idSignalement,
+          latitude: rounded(row.latitude),
+          longitude: rounded(row.longitude),
+          statutSignalement: row.statutSignalement,
+          dateSoumission: row.dateSoumission,
+          distanceMeters: Math.round(row.distanceMeters),
+        })),
+    };
+  }
+
   async listMine(authUserId: string, query: ListReportsQueryDto) {
     const userId = await this.citizenId(authUserId);
     const page = Math.max(1, query.page ?? 1);

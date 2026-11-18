@@ -79,6 +79,106 @@ test('returns operational counts and only real, geolocated active entities', asy
   assert.equal(result.map.truncated, false);
 });
 
+test('builds daily, weekly, monthly, semiannual and annual statistics buckets', async () => {
+  for (const period of ['DAILY', 'WEEKLY', 'MONTHLY', 'SEMIANNUAL', 'ANNUAL']) {
+    let capturedQuery;
+    let verificationWhere;
+    const prisma = {
+      $queryRaw: async (query) => {
+        capturedQuery = query;
+        return [
+          {
+            bucketStart: new Date('2026-11-01T00:00:00.000Z'),
+            signalements: 3,
+            dossiers: 2,
+            affectations: 1,
+            interventions: 4,
+          },
+          {
+            bucketStart: new Date('2026-11-02T00:00:00.000Z'),
+            signalements: 1,
+            dossiers: 0,
+            affectations: 2,
+            interventions: 1,
+          },
+        ];
+      },
+      verification: {
+        count: async ({ where }) => {
+          verificationWhere = where;
+          return 2;
+        },
+      },
+    };
+
+    const result = await new CommandCenterService(prisma).getStatistics(period);
+    const start = new Date(result.from);
+
+    assert.equal(result.period, period);
+    assert.equal(result.series.length, 2);
+    assert.deepEqual(result.totals, {
+      signalements: 4,
+      dossiers: 2,
+      affectations: 3,
+      interventions: 5,
+      verificationsConformes: 2,
+    });
+    assert.ok(capturedQuery.sql.includes('generate_series'));
+    assert.deepEqual(verificationWhere.resultatVerification, 'CONFORME');
+    assert.equal(verificationWhere.dateVerification.gte.getTime(), start.getTime());
+
+    if (period === 'DAILY') {
+      assert.equal(start.getUTCHours(), 0);
+      assert.equal(start.getUTCMinutes(), 0);
+    } else if (period === 'WEEKLY') {
+      assert.equal(start.getUTCDay(), 1);
+      assert.equal(start.getUTCHours(), 0);
+    } else if (period === 'MONTHLY') {
+      assert.equal(start.getUTCDate(), 1);
+    } else if (period === 'SEMIANNUAL') {
+      assert.ok([0, 6].includes(start.getUTCMonth()));
+      assert.equal(start.getUTCDate(), 1);
+    } else {
+      assert.equal(start.getUTCMonth(), 0);
+      assert.equal(start.getUTCDate(), 1);
+    }
+  }
+});
+
+test('returns active geolocated interventions as a separate map layer', async () => {
+  let rawQueryCount = 0;
+  const prisma = {
+    signalement: { count: async () => 0, findMany: async () => [] },
+    dossierTraitement: { count: async () => 0, findMany: async () => [] },
+    affectation: { count: async () => 0 },
+    intervention: { count: async () => 2 },
+    $queryRaw: async () => {
+      rawQueryCount += 1;
+      return rawQueryCount === 1
+        ? [{
+            id: '55555555-5555-4555-8555-555555555555',
+            occurredAt: new Date('2026-11-18T10:00:00.000Z'),
+            referenceDossier: 'DOS-INTERVENTION-1',
+            latitude: '14.716700',
+            longitude: '-17.467700',
+            locationLabel: 'Près du marché',
+            teamName: 'Équipe Nord',
+            wasteType: 'Plastique',
+          }]
+        : [{ total: 1 }];
+    },
+  };
+
+  const result = await new CommandCenterService(prisma).getOverview({ limit: 100 });
+
+  assert.equal(rawQueryCount, 2);
+  assert.equal(result.map.items.some((item) => item.kind === 'DOSSIER'), false);
+  assert.equal(result.map.interventions.length, 1);
+  assert.equal(result.map.interventions[0].kind, 'INTERVENTION');
+  assert.equal(result.map.interventions[0].teamNames[0], 'Équipe Nord');
+  assert.equal(result.map.totalLocated, 1);
+});
+
 test('caps map retrieval and keeps the response within the requested item limit', async () => {
   const prisma = {
     signalement: { count: async () => 0, findMany: async () => [] },
@@ -167,7 +267,7 @@ test('filters map counts and features by a validated geographic viewport', async
     maxLon: -17.4,
   });
 
-  assert.equal(result.map.totalLocated, 5);
+  assert.equal(result.map.totalLocated, 2);
   assert.equal(result.summary.locatedItems, 10);
   assert.equal(result.map.items.length, 1);
   assert.equal(result.map.hasMore, true);
@@ -301,7 +401,7 @@ test('paginates the combined dossier and report stream with a stable keyset curs
     cursor: firstPage.map.nextCursor,
     ...viewport,
   });
-  assert.equal(secondPage.map.totalLocated, 2);
+  assert.equal(secondPage.map.totalLocated, 1);
   assert.equal(secondPage.map.items.length, 1);
   assert.equal(secondPage.map.items[0].kind, 'SIGNALEMENT');
   assert.equal(secondPage.map.hasMore, false);
@@ -432,7 +532,7 @@ test('paginates null-dated reports after dated dossiers without losing the rows'
     limit: 1,
     cursor: firstPage.map.nextCursor,
   });
-  assert.equal(secondPage.map.totalLocated, 2);
+  assert.equal(secondPage.map.totalLocated, 1);
   assert.equal(secondPage.map.items.length, 1);
   assert.equal(secondPage.map.items[0].kind, 'SIGNALEMENT');
   assert.equal(secondPage.map.items[0].occurredAt, null);

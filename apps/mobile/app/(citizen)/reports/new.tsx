@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
+import { ApiRequestError } from '@isieco/api-client';
+import { useMobileAuth } from '../../../src/features/auth/mobile-auth-context';
+import { queueOfflineReport } from '../../../src/features/reports/offline-report-outbox';
 import {
   ActivityIndicator,
   Image,
@@ -29,6 +32,7 @@ import {
 
 export default function NewCitizenReportScreen() {
   const router = useRouter();
+  const { profile } = useMobileAuth();
   const [photo, setPhoto] = useState<PreparedMobilePhoto | null>(null);
   const [description, setDescription] = useState('');
   const [wasteTypes, setWasteTypes] = useState<WasteTypeOption[]>([]);
@@ -153,12 +157,49 @@ export default function NewCitizenReportScreen() {
       }
 
       setBusy(true);
-      const result = await submitReportWithPhoto(payload, idempotencyRef.current.key, photo);
-      idempotencyRef.current = null;
-      router.replace({
-        pathname: '/(citizen)/reports/[id]',
-        params: { id: result.idSignalement },
-      });
+      const idempotencyKey = idempotencyRef.current.key;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15_000);
+      try {
+        const result = await submitReportWithPhoto(
+          payload,
+          idempotencyKey,
+          photo,
+          controller.signal,
+        );
+        idempotencyRef.current = null;
+        router.replace({
+          pathname: '/(citizen)/reports/[id]',
+          params: { id: result.idSignalement },
+        });
+      } catch (submissionError) {
+        const networkFailure =
+          submissionError instanceof TypeError ||
+          submissionError instanceof ApiRequestError &&
+            (submissionError.status === 408 ||
+              submissionError.status === 429 ||
+              submissionError.status >= 500) ||
+          typeof submissionError === 'object' &&
+            submissionError !== null &&
+            'name' in submissionError &&
+            (submissionError.name === 'AbortError' || submissionError.name === 'NetworkError');
+
+        if (!networkFailure) throw submissionError;
+        if (!profile?.utilisateurId) {
+          throw new Error('Votre profil doit être chargé avant de conserver un signalement hors ligne.');
+        }
+
+        await queueOfflineReport({
+          ownerId: profile.idUtilisateur,
+          idempotencyKey,
+          payload,
+          photo,
+        });
+        idempotencyRef.current = null;
+        router.replace('/(citizen)/home');
+      } finally {
+        clearTimeout(timeout);
+      }
     } catch (reason) {
       setError(
         reason instanceof Error ? reason.message : 'Impossible d’enregistrer le signalement.',

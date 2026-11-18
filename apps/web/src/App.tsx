@@ -3,6 +3,7 @@ import { AppShell } from './app/AppShell';
 import { ProtectedRoute } from './app/ProtectedRoute';
 import { AccountsPage } from './features/accounts/AccountsPage';
 import { DashboardPage } from './features/dashboard/DashboardPage';
+import { StatisticsPage } from './features/statistics/StatisticsPage';
 import { QualificationQueuePage } from './features/qualification/QualificationQueuePage';
 import { QualificationDetailPage } from './features/qualification/QualificationDetailPage';
 import { CasesPage } from './features/cases/CasesPage';
@@ -33,6 +34,23 @@ export function App() {
         }
       >
         <Route index element={<DashboardPage />} />
+        <Route
+          path="statistiques"
+          element={
+            <ProtectedRoute
+              roles={[
+                'AGENT_QUALIFICATION',
+                'RESPONSABLE_TRAITEMENT',
+                'RESPONSABLE_AFFECTATION',
+                'VERIFICATEUR_CLOTURE',
+                'GESTIONNAIRE_REFERENTIEL',
+                'ADMINISTRATEUR_COMPTES',
+              ]}
+            >
+              <StatisticsPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="administration/comptes"
           element={

@@ -63,6 +63,42 @@ test('lists only active waste types for a citizen', async () => {
   assert.deepEqual(result, [{ idTypeDechet: typeId, codeType: 'PLASTIQUE', libelle: 'Plastique' }]);
 });
 
+test('returns anonymized, rounded markers for qualified nearby reports only', async () => {
+  const prisma = basePrisma();
+  prisma.$queryRaw = async () => [
+    {
+      idSignalement: reportId,
+      dateSoumission: new Date('2026-11-15T10:00:00.000Z'),
+      latitude: 14.71672,
+      longitude: -17.46761,
+      statutSignalement: 'QUALIFIE',
+    },
+    {
+      idSignalement: '66666666-6666-4666-8666-666666666666',
+      dateSoumission: new Date('2026-11-14T10:00:00.000Z'),
+      latitude: 14.742,
+      longitude: -17.444,
+      statutSignalement: 'QUALIFIE',
+    },
+  ];
+  const service = new ReportsService(prisma, {});
+  const result = await service.listNearby(14.7167, -17.4677, 3000, authId);
+
+  assert.equal(result.radiusMeters, 3000);
+  assert.equal(result.items.length, 1);
+  assert.deepEqual(result.items[0], {
+    idSignalement: reportId,
+    latitude: 14.717,
+    longitude: -17.468,
+    statutSignalement: 'QUALIFIE',
+    dateSoumission: new Date('2026-11-15T10:00:00.000Z'),
+    distanceMeters: result.items[0].distanceMeters,
+  });
+  assert.ok(result.items[0].distanceMeters < 100);
+  assert.equal('description' in result.items[0], false);
+  assert.equal('idUtilisateur' in result.items[0], false);
+});
+
 test('rejects an entirely empty report when no initial photo is provided', async () => {
   let writes = 0;
   const prisma = basePrisma();
@@ -149,8 +185,13 @@ test('replays an existing idempotent request without creating a second signaleme
   };
   prisma.$transaction = async () => { transactions += 1; };
   const service = new ReportsService(prisma, {});
+  const file = {
+    buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    mimetype: 'image/png',
+    size: 8,
+  };
   await assert.rejects(
-    service.createReport({ description: 'Un dépôt de déchets est visible près du marché.', contenus: [{ idTypeDechet: typeId }] }, authId, 'report-idem-0002'),
+    service.createReport({ description: 'Un dépôt de déchets est visible près du marché.', contenus: [{ idTypeDechet: typeId }] }, authId, 'report-idem-0002', file),
     ConflictException,
   );
   assert.equal(transactions, 0);
