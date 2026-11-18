@@ -311,6 +311,14 @@ export function OperationalCommandCenter() {
     [filteredFeatures, selectedFeatureId],
   );
 
+  const recentFeatures = useMemo(
+    () => [...(data?.map.items ?? [])]
+      .filter((item) => item.occurredAt)
+      .sort((left, right) => new Date(right.occurredAt ?? 0).getTime() - new Date(left.occurredAt ?? 0).getTime())
+      .slice(0, 4),
+    [data],
+  );
+
   const selectedActions = useMemo(() => {
     if (!selectedFeature) return [];
     if (selectedFeature.kind === 'SIGNALEMENT') {

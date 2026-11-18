@@ -23,6 +23,7 @@ import {
 import { dateLabel } from '../../src/features/reports/report-format';
 import { FeedbackBanner } from '../../src/ui/FeedbackBanner';
 import { StatusBadge, type StatusTone } from '../../src/ui/StatusBadge';
+import NativeMapCanvas, { type NativeMapMarker } from '../../src/ui/NativeMapCanvas';
 
 type MissionState =
   | 'TO_ACCEPT'

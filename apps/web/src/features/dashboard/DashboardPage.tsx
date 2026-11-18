@@ -20,6 +20,7 @@ export function DashboardPage() {
     item.roles.some((role) => roles.some((active) => active.code === role)),
   );
   const canViewCommandCenter = roles.some((role) => COMMAND_CENTER_ROLES.includes(role.code));
+  const displayName = [profile?.prenom, profile?.nom].filter(Boolean).join(' ');
 
   return (
     <div className="space-y-8">

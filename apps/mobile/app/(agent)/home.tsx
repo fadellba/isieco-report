@@ -17,6 +17,21 @@ import {
   type TeamIntervention,
 } from '../../src/features/interventions/agent-api';
 import { BrandMark } from '../../src/ui/BrandMark';
+import NativeMapCanvas, { type NativeMapMarker } from '../../src/ui/NativeMapCanvas';
+
+const MAP_USER_AGENT = 'ISIECO/0.1.0 (+https://github.com/fadellba/isieco-report)';
+
+function coordinatesFor(assignment: TeamAssignment) {
+  const latitude = assignment.contenuDossier.dossier.latitude === null
+    ? Number.NaN
+    : Number(assignment.contenuDossier.dossier.latitude);
+  const longitude = assignment.contenuDossier.dossier.longitude === null
+    ? Number.NaN
+    : Number(assignment.contenuDossier.dossier.longitude);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return null;
+  return { latitude, longitude };
+}
 
 export default function AgentHomeScreen() {
   const router = useRouter();

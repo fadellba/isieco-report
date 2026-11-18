@@ -15,8 +15,8 @@ export interface NavigationItem {
 export const navigationItems: NavigationItem[] = [
   {
     to: '/qualification',
-    label: 'Qualification',
-    description: 'Examiner les signalements reçus',
+    label: 'Signalements',
+    description: 'Traiter les signalements reçus',
     group: 'Opérations',
     icon: 'qualification',
     roles: ['AGENT_QUALIFICATION'],

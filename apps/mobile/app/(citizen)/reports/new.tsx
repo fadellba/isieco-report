@@ -26,6 +26,7 @@ import {
   requestCurrentForegroundCoordinates,
   type PreparedMobilePhoto,
 } from '../../../src/features/media/mobile-media';
+import NativeMapCanvas, { type NativeMapMarker } from '../../../src/ui/NativeMapCanvas';
 
 export default function NewCitizenReportScreen() {
   const router = useRouter();
@@ -124,6 +125,23 @@ export default function NewCitizenReportScreen() {
       setGettingLocation(false);
     }
   }
+
+  async function chooseMapCenter(coordinates: { latitude: number; longitude: number }) {
+    setLatitude(coordinates.latitude.toFixed(6));
+    setLongitude(coordinates.longitude.toFixed(6));
+    setPrecision('');
+  }
+
+  const mapMarkers: NativeMapMarker[] = latitude.trim() && longitude.trim()
+    ? [{
+        id: 'new-report-location',
+        title: 'Lieu du signalement',
+        subtitle: locationDescription || 'Emplacement choisi',
+        latitude: Number(latitude),
+        longitude: Number(longitude),
+        tone: 'success',
+      }]
+    : [];
 
   async function handleSubmit() {
     setError(null);

@@ -5,6 +5,9 @@ import { useMobileAuth } from '../../src/features/auth/mobile-auth-context';
 import { listMyReports, type ReportPage } from '../../src/features/reports/reports-api';
 import { dateLabel, reportStatusLabel } from '../../src/features/reports/report-format';
 import { BrandMark } from '../../src/ui/BrandMark';
+import NativeMapCanvas, { type NativeMapMarker } from '../../src/ui/NativeMapCanvas';
+
+const MAP_USER_AGENT = 'ISIECO/0.1.0 (+https://github.com/fadellba/isieco-report)';
 
 export default function CitizenHomeScreen() {
   const router = useRouter();
@@ -42,6 +45,32 @@ export default function CitizenHomeScreen() {
     items.filter((i) => i.statutSignalement !== 'QUALIFIE' && i.statutSignalement !== 'REJETE')
       .length || 1;
   const resolvedCount = items.filter((i) => i.statutSignalement === 'QUALIFIE').length || 2;
+
+  const locatedReports = useMemo(
+    () => (result?.items ?? []).filter((item) => {
+      const latitude = item.latitude === null ? Number.NaN : Number(item.latitude);
+      const longitude = item.longitude === null ? Number.NaN : Number(item.longitude);
+      return Number.isFinite(latitude) && Number.isFinite(longitude) &&
+        latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180;
+    }),
+    [result],
+  );
+
+  const mapMarkers = useMemo<NativeMapMarker[]>(
+    () => locatedReports.map((item) => ({
+      id: item.idSignalement,
+      title: 'Signalement #' + item.idSignalement.slice(0, 8).toUpperCase(),
+      subtitle: item.descriptionLocalisation || item.description || reportStatusLabel(item.statutSignalement),
+      latitude: Number(item.latitude),
+      longitude: Number(item.longitude),
+      tone: item.statutSignalement === 'REJETE' ? 'danger' : item.statutSignalement === 'EN_ATTENTE_COMPLEMENT' ? 'warning' : 'success',
+    })),
+    [locatedReports],
+  );
+
+  const openReport = useCallback(async (id: string) => {
+    router.push({ pathname: '/(citizen)/reports/[id]', params: { id } });
+  }, [router]);
 
   return (
     <ScrollView
