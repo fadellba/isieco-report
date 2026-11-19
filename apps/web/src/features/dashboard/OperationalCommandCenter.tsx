@@ -95,13 +95,17 @@ function normalizeCommandCenterOverview(response: CommandCenterOverview): Comman
     throw new Error('L’API a renvoyé une réponse invalide pour le centre de commandement.');
   }
 
-  const map = response.map;
+  const map = response.map && typeof response.map === 'object' ? response.map : null;
   return {
     ...response,
     map: {
-      ...(map && typeof map === 'object' ? map : {}),
       items: Array.isArray(map?.items) ? map.items : [],
       interventions: Array.isArray(map?.interventions) ? map.interventions : [],
+      totalLocated: typeof map?.totalLocated === 'number' ? map.totalLocated : 0,
+      truncated: map?.truncated === true,
+      limit: typeof map?.limit === 'number' ? map.limit : 200,
+      hasMore: map?.hasMore === true,
+      nextCursor: typeof map?.nextCursor === 'string' ? map.nextCursor : null,
     },
   };
 }
