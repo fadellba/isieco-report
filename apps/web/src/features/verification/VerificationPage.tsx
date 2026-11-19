@@ -405,18 +405,57 @@ export function VerificationPage() {
           </div>
         ) : null}
 
-        <div className="divide-y divide-slate-100">
-          {orderedItems.map((queueItem) => {
-            const id = queueItem.affectation.idAffectation;
-            const item = details[id] ?? queueItem;
-            const isOpen = expandedId === id;
-            const ownIntervention = item.intervention.renseignePar === profile?.utilisateurId;
-            const canValidate =
-              item.intervention.resultatIntervention === 'TERMINEE' && !ownIntervention;
-
-            return (
-              <article key={id} className="verification-queue-item space-y-4 p-5">
-                <div className="flex flex-wrap items-start justify-between gap-3">
+        <ManagementTable
+          label="File de vérification des interventions"
+          rows={orderedItems}
+          rowKey={(queueItem) => queueItem.affectation.idAffectation}
+          emptyMessage="Aucun compte rendu ne nécessite de vérification."
+          columns={[
+            {
+              key: 'case',
+              label: 'Dossier',
+              render: (queueItem) => (
+                <span className="management-table__primary">
+                  {queueItem.affectation.contenuDossier.referenceDossier}
+                </span>
+              ),
+            },
+            {
+              key: 'submitted',
+              label: 'Compte rendu soumis',
+              render: (queueItem) => dateLabel(queueItem.intervention.dateSoumissionCompteRendu),
+            },
+            {
+              key: 'result',
+              label: 'Résultat terrain',
+              render: (queueItem) => (
+                <StatusBadge
+                  label={interventionResultLabel(queueItem.intervention.resultatIntervention)}
+                  tone={interventionResultTone(queueItem.intervention.resultatIntervention)}
+                />
+              ),
+            },
+            {
+              key: 'proofs',
+              label: 'Preuves',
+              render: (queueItem) => queueItem.intervention.photos.length + ' photo(s)',
+            },
+            {
+              key: 'actions',
+              label: 'Actions',
+              render: (queueItem) => {
+                const id = queueItem.affectation.idAffectation;
+                const item = details[id] ?? queueItem;
+                const isOpen = expandedId === id;
+                const ownIntervention = item.intervention.renseignePar === profile?.utilisateurId;
+                const canValidate =
+                  item.intervention.resultatIntervention === 'TERMINEE' && !ownIntervention;
+                return (
+                  <details>
+                    <summary>Examiner le compte rendu</summary>
+                    <div className="management-table__details">
+                      <div className="space-y-3">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <h3 className="font-bold text-ink-900">
                       {item.affectation.contenuDossier.referenceDossier}
@@ -609,11 +648,14 @@ export function VerificationPage() {
                     )}
                   </div>
                 ) : null}
-              </article>
-            );
-          })}
-        </div>
-
+                      </div>
+                    </div>
+                  </details>
+                );
+              },
+            },
+          ]}
+        />
         <div className="flex items-center justify-between border-t border-line-subtle px-5 py-4">
           <p className="text-xs text-ink-500">
             Page {page} sur {totalPages} · {result?.total ?? 0} élément(s) en attente au total
