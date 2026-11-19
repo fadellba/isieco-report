@@ -40,9 +40,9 @@ export function AppShell() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row text-slate-900 selection:bg-emerald-100 selection:text-emerald-900">
+    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row md:h-dvh md:min-h-0 md:overflow-hidden text-slate-900 selection:bg-emerald-100 selection:text-emerald-900">
       {/* Dark Forest Green Sidebar matching web.PNG */}
-      <aside className="w-full md:w-64 bg-[#0A261E] border-r border-[#13382D] flex-shrink-0 flex flex-col justify-between z-30">
+      <aside className="w-full md:w-64 bg-[#0A261E] border-r border-[#13382D] flex-shrink-0 flex flex-col justify-between z-30 md:h-dvh md:max-h-dvh md:overflow-y-auto">
         <div>
           {/* Logo brand */}
           <div className="h-20 flex items-center px-6 border-b border-[#13382D]">
@@ -52,7 +52,7 @@ export function AppShell() {
           </div>
 
           {/* Navigation items */}
-          <nav className="p-4 space-y-6">
+          <nav className="p-3 space-y-4">
             <div>
               <p className="px-3 text-[10px] font-black uppercase tracking-widest text-emerald-400/60 mb-2">
                 Espace Principal
@@ -122,9 +122,9 @@ export function AppShell() {
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 md:h-dvh md:min-h-0 md:overflow-hidden">
         {/* Top Header Bar matching web.PNG */}
-        <header className="h-16 bg-white border-b border-slate-200/80 px-6 sm:px-8 flex items-center justify-between gap-4 sticky top-0 z-20 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+        <header className="h-16 shrink-0 bg-white border-b border-slate-200/80 px-6 sm:px-8 flex items-center justify-between gap-4 sticky top-0 z-20 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
           {/* Search bar */}
           <div className="relative max-w-md w-full">
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
@@ -174,7 +174,7 @@ export function AppShell() {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-4 sm:p-5 relative">
+        <main className="relative flex-1 min-h-0 p-3 sm:p-4 lg:p-4 md:overflow-y-auto md:overscroll-contain">
           <Outlet />
         </main>
       </div>
