@@ -42,8 +42,8 @@ export function AppShell() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row md:h-dvh md:min-h-0 md:overflow-hidden text-slate-900 selection:bg-emerald-100 selection:text-emerald-900">
       {/* Dark Forest Green Sidebar matching web.PNG */}
-      <aside className="w-full md:w-64 bg-[#0A261E] border-r border-[#13382D] flex-shrink-0 flex flex-col justify-between z-30 md:h-dvh md:max-h-dvh md:overflow-y-auto">
-        <div>
+      <aside className="w-full md:w-64 bg-[#0A261E] border-r border-[#13382D] flex-shrink-0 flex flex-col justify-between z-30 md:h-dvh md:max-h-dvh md:overflow-hidden">
+        <div className="flex min-h-0 flex-1 flex-col">
           {/* Logo brand */}
           <div className="h-20 flex items-center px-6 border-b border-[#13382D]">
             <Link to="/" className="flex items-center gap-3" aria-label="ISIECO Accueil">
@@ -52,7 +52,7 @@ export function AppShell() {
           </div>
 
           {/* Navigation items */}
-          <nav className="p-3 space-y-4">
+          <nav className="min-h-0 flex-1 overflow-y-auto p-3 space-y-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <div>
               <p className="px-3 text-[10px] font-black uppercase tracking-widest text-emerald-400/60 mb-2">
                 Espace Principal
@@ -110,7 +110,7 @@ export function AppShell() {
           <button
             type="button"
             onClick={() => void handleSignOut()}
-            className="flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-300 transition hover:bg-red-950/20 hover:text-red-200"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-300/30 bg-red-950/30 px-3 py-2.5 text-xs font-bold text-red-100 transition hover:border-red-300/50 hover:bg-red-900/50 hover:text-white focus-visible:outline-red-300"
           >
             <AppIcon name="logout" size={15} />
             <span>Déconnexion</span>
