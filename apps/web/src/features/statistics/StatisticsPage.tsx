@@ -119,7 +119,7 @@ export function StatisticsPage() {
   }, [data]);
 
   return (
-    <div className="space-y-4">
+    <div className="management-page statistics-page space-y-3">
       <header className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-lg font-extrabold tracking-tight text-slate-900">Statistiques</h1>
