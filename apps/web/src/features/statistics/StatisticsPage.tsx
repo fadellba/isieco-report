@@ -97,7 +97,7 @@ export function StatisticsPage() {
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : 'Impossible de charger les statistiques.';
       setError(
-        /Cannot GET .*\\/command-center\\/statistics|404/i.test(message)
+        /Cannot GET .*\/command-center\/statistics|404/i.test(message)
           ? 'La route Statistiques est absente de l’API actuellement configurée. Vérifiez VITE_API_BASE_URL et déployez la version de l’API qui contient le module Centre de commandement.'
           : message,
       );
