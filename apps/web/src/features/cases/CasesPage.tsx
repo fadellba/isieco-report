@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { FeedbackBanner, StatusBadge, type StatusTone } from '../../components/StatusBadge';
+import { ManagementTable } from '../../components/ManagementTable';
 
 interface CaseContent {
   idTypeDechet: string;
@@ -369,51 +370,78 @@ export function CasesPage() {
           </div>
         ) : null}
 
-        <div className="case-workspace__items">
-          {filteredCases.map((item) => (
-            <Link
-              key={item.idDossier}
-              to={`/dossiers/${item.idDossier}`}
-              className="case-workspace-card"
-            >
-              <div className="case-workspace-card__top">
-                <div>
-                  <span className="case-workspace-card__reference">DOSSIER</span>
-                  <h3>{item.referenceDossier}</h3>
-                </div>
-                <div className="case-workspace-card__badges">
-                  <StatusBadge
-                    label={stateLabel(item.statutDossier)}
-                    tone={caseStatusTone(item.statutDossier)}
-                  />
-                  <StatusBadge
-                    label={'Priorité ' + stateLabel(item.priorite)}
-                    tone={priorityTone(item.priorite)}
-                  />
-                </div>
-              </div>
-              <p className="case-workspace-card__summary">
-                {item.descriptionSynthese || 'Aucune synthèse renseignée.'}
-              </p>
-              <div className="case-workspace-card__footer">
-                <span>{formatDate(item.dateCreationDossier)}</span>
-                <span>{item.nombreSignalements} signalement(s)</span>
-                <span>{item.contenus.length} contenu(s)</span>
-                <span className="case-workspace-card__open">
-                  Ouvrir le dossier <b aria-hidden="true">→</b>
-                </span>
-              </div>
-              {item.contenus.length ? (
-                <div className="case-workspace-card__tags">
-                  {item.contenus.slice(0, 4).map((content) => (
-                    <span key={content.idTypeDechet}>{content.typeDechet.libelle}</span>
-                  ))}
-                  {item.contenus.length > 4 ? <span>+{item.contenus.length - 4}</span> : null}
-                </div>
-              ) : null}
-            </Link>
-          ))}
-        </div>
+        {filteredCases.length ? (
+          <ManagementTable
+            label="Dossiers de traitement"
+            rows={filteredCases}
+            rowKey={(item) => item.idDossier}
+            emptyMessage="Aucun dossier pour cette sélection."
+            columns={[
+              {
+                key: 'reference',
+                label: 'Dossier',
+                render: (item) => (
+                  <span>
+                    <span className="management-table__primary">{item.referenceDossier}</span>
+                    <span className="management-table__secondary">Créé le {formatDate(item.dateCreationDossier)}</span>
+                  </span>
+                ),
+              },
+              {
+                key: 'summary',
+                label: 'Synthèse',
+                render: (item) => (
+                  <span className="management-table__secondary">
+                    {item.descriptionSynthese || 'Aucune synthèse renseignée.'}
+                  </span>
+                ),
+              },
+              {
+                key: 'priority',
+                label: 'Priorité',
+                render: (item) => (
+                  <StatusBadge label={stateLabel(item.priorite)} tone={priorityTone(item.priorite)} />
+                ),
+              },
+              {
+                key: 'status',
+                label: 'État',
+                render: (item) => (
+                  <StatusBadge label={stateLabel(item.statutDossier)} tone={caseStatusTone(item.statutDossier)} />
+                ),
+              },
+              {
+                key: 'reports',
+                label: 'Signalements',
+                render: (item) => item.nombreSignalements,
+              },
+              {
+                key: 'contents',
+                label: 'Contenus',
+                render: (item) => (
+                  <span className="management-table__secondary">
+                    {item.contenus.length
+                      ? item.contenus.map((content) => content.typeDechet.libelle).join(', ')
+                      : 'Aucun contenu'}
+                  </span>
+                ),
+              },
+              {
+                key: 'actions',
+                label: 'Action',
+                className: 'text-right',
+                render: (item) => (
+                  <Link
+                    to={`/dossiers/${item.idDossier}`}
+                    className="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-bold text-emerald-800 transition hover:bg-emerald-100"
+                  >
+                    Ouvrir le dossier
+                  </Link>
+                ),
+              },
+            ]}
+          />
+        ) : null}
 
         {data && data.total > data.pageSize ? (
           <div className="case-workspace__pagination">

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import { useAuth } from '../../app/auth-context';
 import { api } from '../../lib/api';
 import { StatusBadge, type StatusTone } from '../../components/StatusBadge';
+import { ManagementTable } from '../../components/ManagementTable';
 
 interface AgentTeam {
   idEquipe: string;
@@ -492,21 +493,88 @@ export function InterventionsPage() {
                 </button>
               </div>
             ) : null}
-            <div className="interventions-panel__list">
-              {visibleAssignments.map((assignment) => {
-                const latest = latestByAssignment.get(assignment.idAffectation);
-                const latestVerification = latest?.verification ?? null;
-                const isAuthor = latest?.renseignePar === profile?.utilisateurId;
-                const canStart =
-                  assignment.decisionEquipe === 'ACCEPTEE' &&
-                  (!latest ||
-                    (latest.statutIntervention === 'SOUMISE' &&
-                      latestVerification?.etatVerification === 'REPRISE' &&
-                      new Date(latestVerification.dateVerification).getTime() >=
-                        new Date(latest.dateSoumissionCompteRendu ?? 0).getTime()));
-                return (
-                  <article key={assignment.idAffectation} className="space-y-4 p-5">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
+            {visibleAssignments.length ? (
+          <ManagementTable
+            label="Missions de l’équipe"
+            rows={visibleAssignments}
+            rowKey={(assignment) => assignment.idAffectation}
+            emptyMessage="Aucune mission ne correspond à la recherche."
+            columns={[
+              {
+                key: 'case',
+                label: 'Dossier',
+                render: (assignment) => (
+                  <span>
+                    <span className="management-table__primary">
+                      {assignment.contenuDossier.dossier.referenceDossier}
+                    </span>
+                    <span className="management-table__secondary">
+                      {assignment.contenuDossier.typeDechet.libelle}
+                    </span>
+                  </span>
+                ),
+              },
+              {
+                key: 'team',
+                label: 'Équipe',
+                render: (assignment) => assignment.equipe.nomEquipe,
+              },
+              {
+                key: 'date',
+                label: 'Affectée le',
+                render: (assignment) => dateLabel(assignment.dateHeureAffectation),
+              },
+              {
+                key: 'status',
+                label: 'État',
+                render: (assignment) => (
+                  <div className="flex flex-col items-start gap-1">
+                    <StatusBadge
+                      label={displayStatus(assignment.etatAffectation)}
+                      tone={assignmentTone(assignment.etatAffectation)}
+                    />
+                    <StatusBadge
+                      label={displayStatus(assignment.decisionEquipe)}
+                      tone={decisionTone(assignment.decisionEquipe)}
+                    />
+                  </div>
+                ),
+              },
+              {
+                key: 'latest',
+                label: 'Dernière intervention',
+                render: (assignment) => {
+                  const latest = latestByAssignment.get(assignment.idAffectation);
+                  return latest ? (
+                    <span>
+                      <span className="management-table__primary">{latest.statutIntervention}</span>
+                      <span className="management-table__secondary">
+                        {dateLabel(latest.dateHeureDebut)}
+                      </span>
+                    </span>
+                  ) : 'Non démarrée';
+                },
+              },
+              {
+                key: 'actions',
+                label: 'Actions',
+                render: (assignment) => {
+                  const latest = latestByAssignment.get(assignment.idAffectation);
+                  const latestVerification = latest?.verification ?? null;
+                  const isAuthor = latest?.renseignePar === profile?.utilisateurId;
+                  const canStart =
+                    assignment.decisionEquipe === 'ACCEPTEE' &&
+                    (!latest ||
+                      (latest.statutIntervention === 'SOUMISE' &&
+                        latestVerification?.etatVerification === 'REPRISE' &&
+                        new Date(latestVerification.dateVerification).getTime() >=
+                          new Date(latest.dateSoumissionCompteRendu ?? 0).getTime()));
+                  return (
+                    <details>
+                      <summary>Gérer la mission</summary>
+                      <div className="management-table__details">
+                        <div className="space-y-3">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
                         <h3 className="font-bold text-ink-900">
                           {assignment.contenuDossier.dossier.referenceDossier} ·{' '}
@@ -765,10 +833,15 @@ export function InterventionsPage() {
                         </button>
                       </div>
                     ) : null}
-                  </article>
-                );
-              })}
-            </div>
+                        </div>
+                      </div>
+                    </details>
+                  );
+                },
+              },
+            ]}
+          />
+        ) : null}
           </section>
         </>
       ) : null}

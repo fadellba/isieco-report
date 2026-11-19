@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { FeedbackBanner, StatusBadge } from '../../components/StatusBadge';
+import { ManagementTable } from '../../components/ManagementTable';
 
 interface QueueItem {
   idSignalement: string;
@@ -216,56 +217,79 @@ export function QualificationQueuePage() {
           </div>
         ) : null}
 
-        <div className="qualification-queue-list">
-          {filteredItems.map((item) => {
-            const person = item.utilisateur.prenom
-              ? item.utilisateur.prenom + ' ' + item.utilisateur.nom
-              : item.utilisateur.nom;
-            return (
-              <article key={item.idSignalement} className="qualification-queue-item">
-                <div className="qualification-queue-item__main">
-                  <div className="qualification-queue-item__title">
-                    <h3>{person}</h3>
-                    <StatusBadge
-                      label={qualificationLabel(item.statutSignalement)}
-                      tone={qualificationTone(item.statutSignalement)}
-                    />
-                  </div>
-                  <div className="qualification-queue-item__meta">
-                    <span>Soumis le {dateLabel(item.dateSoumission)}</span>
-                    <code>#{item.idSignalement.slice(0, 8).toUpperCase()}</code>
-                  </div>
-                  <p className="qualification-queue-item__description">
-                    {item.description || 'Le citoyen n’a pas ajouté de description.'}
-                  </p>
-                  <div className="qualification-queue-item__tags">
-                    {item.contenus.length ? (
-                      item.contenus.map((content) => (
-                        <span key={content.idTypeDechet}>{content.typeDechet.libelle}</span>
-                      ))
-                    ) : (
-                      <span className="is-muted">Catégorie à préciser</span>
-                    )}
-                  </div>
-                  {item.demandesComplement[0] ? (
-                    <p className="qualification-queue-item__supplement">
-                      Dernier complément :{' '}
-                      <strong>{qualificationLabel(item.demandesComplement[0].etatDemande)}</strong>
-                    </p>
-                  ) : null}
-                </div>
-                <div className="qualification-queue-item__action">
+        {filteredItems.length ? (
+          <ManagementTable
+            label="Signalements à qualifier"
+            rows={filteredItems}
+            rowKey={(item) => item.idSignalement}
+            emptyMessage="Aucun signalement à examiner."
+            columns={[
+              {
+                key: 'reference',
+                label: 'Référence',
+                render: (item) => (
+                  <span className="management-table__primary">
+                    #{item.idSignalement.slice(0, 8).toUpperCase()}
+                  </span>
+                ),
+              },
+              {
+                key: 'citizen',
+                label: 'Citoyen',
+                render: (item) => (
+                  <span className="management-table__primary">
+                    {item.utilisateur.prenom ? item.utilisateur.prenom + ' ' : ''}{item.utilisateur.nom}
+                  </span>
+                ),
+              },
+              {
+                key: 'submitted',
+                label: 'Soumis le',
+                render: (item) => dateLabel(item.dateSoumission),
+              },
+              {
+                key: 'description',
+                label: 'Description',
+                render: (item) => (
+                  <span className="management-table__secondary">
+                    {item.description || 'Aucune description fournie.'}
+                  </span>
+                ),
+              },
+              {
+                key: 'types',
+                label: 'Catégories',
+                render: (item) =>
+                  item.contenus.length
+                    ? item.contenus.map((content) => content.typeDechet.libelle).join(', ')
+                    : 'À préciser',
+              },
+              {
+                key: 'status',
+                label: 'Statut',
+                render: (item) => (
+                  <StatusBadge
+                    label={qualificationLabel(item.statutSignalement)}
+                    tone={qualificationTone(item.statutSignalement)}
+                  />
+                ),
+              },
+              {
+                key: 'actions',
+                label: 'Action',
+                className: 'text-right',
+                render: (item) => (
                   <Link
                     to={`/qualification/${item.idSignalement}`}
-                    className="workflow-button workflow-button--primary"
+                    className="inline-flex items-center rounded-lg bg-emerald-700 px-3 py-2 text-[11px] font-bold text-white transition hover:bg-emerald-800"
                   >
-                    Examiner <span aria-hidden="true">→</span>
+                    Examiner
                   </Link>
-                </div>
-              </article>
-            );
-          })}
-        </div>
+                ),
+              },
+            ]}
+          />
+        ) : null}
 
         {result && result.total > result.pageSize ? (
           <div className="qualification-queue-pagination">

@@ -7,6 +7,10 @@ interface BrandMarkProps {
   showSubtitle?: boolean;
 }
 
+/**
+ * ISIECO mark: a clean city skyline with a leaf, representing urban cleanliness,
+ * citizen reporting and environmental action.
+ */
 export function EcoLeafIcon({ className = 'w-7 h-7', ...props }: SVGProps<SVGSVGElement>) {
   return (
     <svg
@@ -14,40 +18,16 @@ export function EcoLeafIcon({ className = 'w-7 h-7', ...props }: SVGProps<SVGSVG
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
+      role="img"
+      aria-label="ISIECO, propreté urbaine et environnement"
       {...props}
     >
-      {/* Main central upright leaf */}
-      <path
-        d="M23 42C23 42 22 28 35 15C35 15 37 29 27 38C25.5 39.4 24 40.8 23 42Z"
-        fill="#22C55E"
-      />
-      <path d="M23 42C23 42 21 27 37 8C37 8 40 26 27 38C25.5 39.4 24 40.8 23 42Z" fill="#16A34A" />
-      {/* Left angled leaf */}
-      <path d="M22 36C22 36 10 32 8 18C8 18 22 17 25 28C25.5 30 24 33 22 36Z" fill="#4ADE80" />
-      <path
-        d="M22 36C22 36 12 30 11 20C11 20 21 19 24 29C24.5 30.5 23.5 33.5 22 36Z"
-        fill="#22C55E"
-      />
-      {/* Right lower leaf */}
-      <path
-        d="M26 39C26 39 36 37 41 27C41 27 32 24 27 31C25.8 33 25.8 36.5 26 39Z"
-        fill="#86EFAC"
-      />
-      {/* Delicate center vein */}
-      <path
-        d="M23 41C25 32 29 23 35 15"
-        stroke="#FFFFFF"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeOpacity="0.8"
-      />
-      <path
-        d="M19 29C15 24 11 20 8 18"
-        stroke="#FFFFFF"
-        strokeWidth="1.2"
-        strokeLinecap="round"
-        strokeOpacity="0.7"
-      />
+      <rect x="2" y="2" width="44" height="44" rx="13" fill="#16834A" />
+      <path d="M7 39H41" stroke="white" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M8 23H17V39H8zM19 16H29V39H19zM31 21H40V39H31z" fill="#F5FFF7" fillOpacity=".17" stroke="white" strokeWidth="1.5" />
+      <path d="M11 27h2M11 31h2M22 21h2M26 21h.5M22 26h2M26 26h.5M34 26h2M34 31h2" stroke="white" strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M24 14C26.3 8.8 32.2 6.2 38.5 7.2C38 13.5 33 17.3 26 16.2" fill="#D7E6A5" />
+      <path d="M24 15.5C27.5 12.5 31 10.5 35.5 9" stroke="#0B5C38" strokeWidth="1.3" strokeLinecap="round" />
     </svg>
   );
 }
@@ -62,9 +42,9 @@ export function BrandMark({
   const isIconOnly = variant === 'icon-only';
 
   const iconSizes = {
-    sm: 'w-6 h-6',
-    md: 'w-8 h-8',
-    lg: 'w-11 h-11',
+    sm: 'w-8 h-8',
+    md: 'w-10 h-10',
+    lg: 'w-14 h-14',
   };
 
   const titleSizes = {
@@ -75,25 +55,25 @@ export function BrandMark({
 
   return (
     <div className={`flex items-center gap-3 ${className}`}>
-      <div className="flex-shrink-0 drop-shadow-sm">
+      <div className="flex-shrink-0">
         <EcoLeafIcon className={iconSizes[size]} />
       </div>
-      {!isIconOnly && (
+      {!isIconOnly ? (
         <div className="flex flex-col leading-none">
           <span className={`${titleSizes[size]} ${isDark ? 'text-white' : 'text-slate-900'}`}>
             ISIECO
           </span>
-          {showSubtitle && (
+          {showSubtitle ? (
             <span
-              className={`text-[9px] font-bold tracking-widest uppercase mt-1 ${
-                isDark ? 'text-emerald-300/80' : 'text-emerald-700'
+              className={`mt-1 text-[9px] font-bold uppercase tracking-[0.14em] ${
+                isDark ? 'text-emerald-200/80' : 'text-emerald-700'
               }`}
             >
-              Eco Green City
+              Propreté urbaine
             </span>
-          )}
+          ) : null}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
