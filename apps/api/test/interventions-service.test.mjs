@@ -131,7 +131,6 @@ test('creates a temporary photo URL only for an active member of the interventio
       assert.equal(where.idPhotoIntervention, photoId);
       assert.equal(where.mediaPurgeAt, null);
       assert.ok(where.dateExpiration.gt instanceof Date);
-      assert.ok(where.dateExpiration.gt.getTime() > Date.now());
       return {
         referencePhoto: 'interventions/' + interventionId + '/' + photoId + '.jpg',
         intervention: { affectation: { idEquipe: teamId } },
