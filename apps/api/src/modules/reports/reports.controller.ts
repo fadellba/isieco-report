@@ -152,6 +152,8 @@ export class ReportsController {
   @ApiQuery({ name: 'radiusMeters', required: false, type: Number, minimum: 250, maximum: 5000, description: 'Rayon de recherche, 3 000 mètres par défaut.' })
   @ApiOkResponse({ type: NearbyReportsResponseDto })
   @ApiBadRequestResponse({ description: 'Coordonnées ou rayon de recherche invalides.' })
+  @ApiUnauthorizedResponse({ description: 'Jeton Supabase absent ou invalide.' })
+  @ApiForbiddenResponse({ description: 'Un compte citoyen actif est requis.' })
   listNearby(@Query() query: NearbyReportsQueryDto, @CurrentAuthUser() user: User) {
     return this.reports.listNearby(
       query.latitude,
