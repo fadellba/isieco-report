@@ -35,7 +35,7 @@ EXECUTE FUNCTION public.assert_signalement_has_photo();
 CREATE OR REPLACE FUNCTION public.lock_signalement_before_photo_removal()
 RETURNS trigger
 LANGUAGE plpgsql
-AS $$
+AS $lock_photo$
 BEGIN
   IF TG_OP = 'UPDATE' AND NEW.id_signalement <> OLD.id_signalement THEN
     RAISE EXCEPTION 'Une photo de signalement ne peut pas être déplacée vers un autre signalement.'
@@ -54,7 +54,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$;
+$lock_photo$;
 
 CREATE TRIGGER photo_signalement_lock_owner_before_removal
 BEFORE DELETE OR UPDATE ON public.photo_signalement
