@@ -63,7 +63,7 @@ async function updateQueue(
   update: (items: OfflineReportQueueItem[]) => OfflineReportQueueItem[],
 ): Promise<OfflineReportQueueItem[]> {
   const previous = queueMutationTails.get(ownerId) ?? Promise.resolve();
-  let release = () => undefined;
+  let release: () => void = () => {};
   const current = new Promise<void>((resolve) => {
     release = resolve;
   });
