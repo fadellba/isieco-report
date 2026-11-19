@@ -6,6 +6,7 @@ import {
 } from '@isieco/shared';
 import { api } from '../../lib/api';
 import { FeedbackBanner, StatusBadge } from '../../components/StatusBadge';
+import { ManagementTable } from '../../components/ManagementTable';
 
 interface AccountListResponse {
   items: AuthenticatedProfile[];
@@ -301,20 +302,72 @@ export function AccountsPage() {
           </div>
         ) : null}
 
-        <div className="divide-y divide-line-subtle">
-          {filteredAccounts.map((account) => {
-            const assignedRoles = new Set(account.roles.map((role) => role.code));
-            const availableRoles = FUNCTIONAL_ROLE_CODES.filter((role) => !assignedRoles.has(role));
-            const selected = selectedRoles[account.utilisateurId];
-            const selectedAvailable = selected && availableRoles.includes(selected);
-            const effectiveSelection = selectedAvailable ? selected : (availableRoles[0] ?? '');
-            const isPending = pendingRevocation?.account.utilisateurId === account.utilisateurId;
+        <ManagementTable
+          label="Annuaire des comptes"
+          rows={filteredAccounts}
+          rowKey={(account) => account.utilisateurId}
+          emptyMessage={
+            data?.items.length
+              ? 'Aucun compte ne correspond à la recherche ou au filtre.'
+              : 'Aucun compte enregistré.'
+          }
+          columns={[
+            {
+              key: 'account',
+              label: 'Compte',
+              render: (account) => (
+                <span>
+                  <span className="management-table__primary">{accountName(account)}</span>
+                  <span className="management-table__secondary">{account.email}</span>
+                </span>
+              ),
+            },
+            {
+              key: 'status',
+              label: 'Statut',
+              render: (account) => (
+                <StatusBadge
+                  label={account.etatCompte === 'ACTIF' ? 'Actif' : account.etatCompte}
+                  tone={account.etatCompte === 'ACTIF' ? 'success' : 'warning'}
+                />
+              ),
+            },
+            {
+              key: 'roles',
+              label: 'Habilitations',
+              render: (account) => (
+                <span className="flex flex-wrap gap-1.5">
+                  {account.roles.length ? (
+                    account.roles.map((role) => (
+                      <StatusBadge key={role.code} label={role.libelle} tone={roleTone(role.code)} />
+                    ))
+                  ) : (
+                    <span className="text-xs text-ink-400">Aucun rôle actif</span>
+                  )}
+                </span>
+              ),
+            },
+            {
+              key: 'actions',
+              label: 'Actions',
+              className: 'text-right',
+              render: (account) => {
+                const assignedRoles = new Set(account.roles.map((role) => role.code));
+                const availableRoles = FUNCTIONAL_ROLE_CODES.filter(
+                  (role) => !assignedRoles.has(role),
+                );
+                const selected = selectedRoles[account.utilisateurId];
+                const selectedAvailable = selected && availableRoles.includes(selected);
+                const effectiveSelection = selectedAvailable ? selected : (availableRoles[0] ?? '');
+                const isPending =
+                  pendingRevocation?.account.utilisateurId === account.utilisateurId;
 
-            return (
-              <article
-                key={account.utilisateurId}
-                className="grid gap-5 p-5 transition-colors hover:bg-surface-base/40 xl:grid-cols-[minmax(0,1fr)_minmax(300px,0.78fr)] xl:p-6"
-              >
+                return (
+                  <details>
+                    <summary>Gérer les accès</summary>
+                    <div className="management-table__details max-w-none">
+                      <div className="space-y-4">
+                        
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="text-base font-extrabold text-ink-900">
@@ -475,10 +528,14 @@ export function AccountsPage() {
                     </p>
                   )}
                 </form>
-              </article>
-            );
-          })}
-        </div>
+                      </div>
+                    </div>
+                  </details>
+                );
+              },
+            },
+          ]}
+        />
 
         {data ? (
           <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-line-subtle bg-surface-base px-5 py-4">
