@@ -56,6 +56,33 @@ async function writeQueue(ownerId: string, items: OfflineReportQueueItem[]) {
   await AsyncStorage.setItem(storageKey(ownerId), JSON.stringify(items));
 }
 
+const queueMutationTails = new Map<string, Promise<void>>();
+
+async function updateQueue(
+  ownerId: string,
+  update: (items: OfflineReportQueueItem[]) => OfflineReportQueueItem[],
+): Promise<OfflineReportQueueItem[]> {
+  const previous = queueMutationTails.get(ownerId) ?? Promise.resolve();
+  let release = () => undefined;
+  const current = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  queueMutationTails.set(ownerId, current);
+
+  await previous;
+  try {
+    const currentItems = await readQueue(ownerId);
+    const nextItems = update(currentItems);
+    await writeQueue(ownerId, nextItems);
+    return nextItems;
+  } finally {
+    release();
+    if (queueMutationTails.get(ownerId) === current) {
+      queueMutationTails.delete(ownerId);
+    }
+  }
+}
+
 async function ensureDirectory() {
   if (!FileSystem.documentDirectory) {
     throw new Error('Le stockage local permanent est indisponible sur cet appareil.');
@@ -94,8 +121,7 @@ export async function queueOfflineReport(input: {
   };
 
   try {
-    const items = await readQueue(input.ownerId);
-    await writeQueue(input.ownerId, [...items, item]);
+    await updateQueue(input.ownerId, (items) => [...items, item]);
   } catch (error) {
     await FileSystem.deleteAsync(photoUri, { idempotent: true }).catch(() => undefined);
     throw error;
@@ -111,10 +137,10 @@ export async function getOfflineReportQueue(ownerId: string): Promise<OfflineRep
 
 export async function syncOfflineReports(ownerId: string): Promise<OfflineSyncResult> {
   if (!ownerId) return { synced: 0, remaining: 0 };
-  let items = await readQueue(ownerId);
+  const initialItems = await readQueue(ownerId);
   let synced = 0;
 
-  for (const item of [...items]) {
+  for (const item of initialItems) {
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 15_000);
@@ -128,22 +154,24 @@ export async function syncOfflineReports(ownerId: string): Promise<OfflineSyncRe
       } finally {
         clearTimeout(timeout);
       }
-      items = items.filter((candidate) => candidate.id !== item.id);
-      await writeQueue(ownerId, items);
+      await updateQueue(ownerId, (currentItems) =>
+        currentItems.filter((candidate) => candidate.id !== item.id),
+      );
       await FileSystem.deleteAsync(item.photoUri, { idempotent: true }).catch(() => undefined);
       synced += 1;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Échec de synchronisation.';
-      items = items.map((candidate) =>
-        candidate.id === item.id
-          ? { ...candidate, attempts: candidate.attempts + 1, lastError: message }
-          : candidate,
+      await updateQueue(ownerId, (currentItems) =>
+        currentItems.map((candidate) =>
+          candidate.id === item.id
+            ? { ...candidate, attempts: candidate.attempts + 1, lastError: message }
+            : candidate,
+        ),
       );
-      await writeQueue(ownerId, items);
       // Preserve ordering. Retry the oldest failed submission before later ones.
       break;
     }
   }
 
-  return { synced, remaining: items.length };
+  return { synced, remaining: (await readQueue(ownerId)).length };
 }
