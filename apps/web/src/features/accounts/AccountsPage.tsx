@@ -160,7 +160,7 @@ export function AccountsPage() {
   }, [filter, items, search]);
 
   return (
-    <div className="space-y-6">
+    <div className="management-page space-y-4">
       <header className="overflow-hidden rounded-3xl border border-line-subtle bg-white">
         <div className="grid gap-6 p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end lg:p-8">
           <div>
