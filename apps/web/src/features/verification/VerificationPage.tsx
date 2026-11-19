@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../app/auth-context';
 import { api } from '../../lib/api';
 import { FeedbackBanner, StatusBadge, type StatusTone } from '../../components/StatusBadge';
+import { ManagementTable } from '../../components/ManagementTable';
 
 interface VerificationPhoto {
   idPhotoIntervention: string;
