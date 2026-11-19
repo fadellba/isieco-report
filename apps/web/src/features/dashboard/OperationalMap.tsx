@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react';
+import { AppIcon } from '../../components/AppIcon';
 
 interface MapFeature {
   kind: 'DOSSIER' | 'SIGNALEMENT' | 'INTERVENTION';
@@ -432,7 +433,17 @@ export function OperationalMap({
                 }
                 aria-expanded={marker.features.length > 1 && expandedClusterKey === marker.key}
               >
-                <span>{marker.features.length > 1 ? marker.features.length : null}</span>
+                <span>
+                  {marker.features.length > 1 ? (
+                    marker.features.length
+                  ) : singleFeature?.kind === 'DOSSIER' ? (
+                    <AppIcon name="mapCase" size={14} />
+                  ) : singleFeature?.kind === 'INTERVENTION' ? (
+                    <AppIcon name="mapIntervention" size={14} />
+                  ) : (
+                    <AppIcon name="mapReport" size={14} />
+                  )}
+                </span>
               </button>
               {expandedClusterKey === marker.key ? (
                 <div
