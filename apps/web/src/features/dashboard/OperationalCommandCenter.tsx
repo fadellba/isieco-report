@@ -85,6 +85,31 @@ function statusLabel(status: string) {
   return labels[status] ?? status.replaceAll('_', ' ').toLowerCase();
 }
 
+/**
+ * Keep the Web client compatible with API deployments that predate the
+ * interventions map layer. A missing or malformed collection is treated as
+ * an empty layer instead of crashing the entire command center.
+ */
+function normalizeCommandCenterOverview(response: CommandCenterOverview): CommandCenterOverview {
+  if (!response || typeof response !== 'object') {
+    throw new Error('L’API a renvoyé une réponse invalide pour le centre de commandement.');
+  }
+
+  const map = response.map && typeof response.map === 'object' ? response.map : null;
+  return {
+    ...response,
+    map: {
+      items: Array.isArray(map?.items) ? map.items : [],
+      interventions: Array.isArray(map?.interventions) ? map.interventions : [],
+      totalLocated: typeof map?.totalLocated === 'number' ? map.totalLocated : 0,
+      truncated: map?.truncated === true,
+      limit: typeof map?.limit === 'number' ? map.limit : 200,
+      hasMore: map?.hasMore === true,
+      nextCursor: typeof map?.nextCursor === 'string' ? map.nextCursor : null,
+    },
+  };
+}
+
 export function OperationalCommandCenter() {
   const { profile, refreshProfile } = useAuth();
   const roles = new Set(profile?.roles.map((role) => role.code) ?? []);
@@ -113,8 +138,10 @@ export function OperationalCommandCenter() {
           params.set('minLon', String(viewportBounds.minLon));
           params.set('maxLon', String(viewportBounds.maxLon));
         }
-        const response = await api.request<CommandCenterOverview>(
-          `/command-center/overview?${params.toString()}`,
+        const response = normalizeCommandCenterOverview(
+          await api.request<CommandCenterOverview>(
+            `/command-center/overview?${params.toString()}`,
+          ),
         );
         if (currentRequest !== requestVersion.current) return;
         setData(response);
@@ -261,8 +288,10 @@ export function OperationalCommandCenter() {
         params.set('minLon', String(viewportBounds.minLon));
         params.set('maxLon', String(viewportBounds.maxLon));
       }
-      const response = await api.request<CommandCenterOverview>(
-        `/command-center/overview?${params.toString()}`,
+      const response = normalizeCommandCenterOverview(
+        await api.request<CommandCenterOverview>(
+          `/command-center/overview?${params.toString()}`,
+        ),
       );
       setData((prev) => {
         if (!prev) return response;
