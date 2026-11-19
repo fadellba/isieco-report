@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import { useAuth } from '../../app/auth-context';
 import { api } from '../../lib/api';
 import { StatusBadge, type StatusTone } from '../../components/StatusBadge';
+import { ManagementTable } from '../../components/ManagementTable';
 
 interface AgentTeam {
   idEquipe: string;
