@@ -302,7 +302,7 @@ export function AssignmentsPage() {
   const totalPages = result ? Math.max(1, Math.ceil(result.total / result.pageSize)) : 1;
 
   return (
-    <div className="assignment-workspace">
+    <div className="management-page assignment-workspace">
       <header className="assignment-workspace__hero">
         <div>
           <span className="assignment-workspace__eyebrow">PILOTAGE OPÉRATIONNEL</span>
@@ -357,19 +357,18 @@ export function AssignmentsPage() {
         </article>
       </section>
 
-      <section className="assignment-create-panel">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="font-bold text-ink-900">Nouvelle affectation</h2>
-            <p className="mt-1 text-xs leading-5 text-ink-500">
-              Seuls les contenus actifs en attente, non déjà affectés et rattachés à un dossier
-              ouvert sont proposés.
-            </p>
-          </div>
+      <details className="assignment-create-panel management-disclosure">
+        <summary className="management-disclosure__summary">
+          <strong>Nouvelle affectation</strong>
           <span className="rounded-full bg-surface-base px-3 py-1 text-xs font-bold text-ink-800">
             {pendingContents.length} contenu(s) disponible(s)
           </span>
-        </div>
+        </summary>
+        <div className="management-disclosure__body">
+          <p className="mb-3 text-xs leading-5 text-ink-500">
+            Seuls les contenus actifs en attente, non déjà affectés et rattachés à un dossier
+            ouvert sont proposés.
+          </p>
         <div className="assignment-create-steps" aria-label="Étapes de création">
           <span>
             <b>01</b> Contenu du dossier
@@ -488,7 +487,8 @@ export function AssignmentsPage() {
             {busyKey === 'create' ? 'Enregistrement…' : 'Créer l’affectation'}
           </button>
         </div>
-      </section>
+      </div>
+      </details>
 
       <section className="assignment-history-panel">
         <div className="assignment-history-panel__header">
