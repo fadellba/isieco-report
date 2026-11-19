@@ -156,7 +156,7 @@ export function CasesPage() {
   const closedCount = data?.items.filter((item) => item.statutDossier === 'CLOTURE').length ?? 0;
 
   return (
-    <div className="case-workspace">
+    <div className="management-page case-workspace">
       <header className="case-workspace__hero">
         <div>
           <span className="case-workspace__eyebrow">PILOTAGE OPÉRATIONNEL</span>
@@ -189,8 +189,8 @@ export function CasesPage() {
         </div>
       ) : null}
 
-      <section className="case-workspace__create">
-        <div className="case-workspace__create-heading">
+      <details className="case-workspace__create management-disclosure">
+        <summary className="case-workspace__create-heading management-disclosure__summary">
           <div>
             <span className="case-workspace__section-eyebrow">NOUVEAU DOSSIER</span>
             <h2>Créer à partir d’un signalement qualifié</h2>
@@ -200,7 +200,7 @@ export function CasesPage() {
             </p>
           </div>
           <span className="case-workspace__available">{availableReports.length} disponible(s)</span>
-        </div>
+        </summary>
 
         {availableReports.length ? (
           <form
@@ -283,7 +283,7 @@ export function CasesPage() {
             </div>
           </div>
         )}
-      </section>
+      </details>
 
       <section className="case-workspace__list">
         <div className="case-workspace__list-heading">
