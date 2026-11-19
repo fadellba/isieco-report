@@ -190,17 +190,16 @@ export function CasesPage() {
       ) : null}
 
       <details className="case-workspace__create management-disclosure">
-        <summary className="case-workspace__create-heading management-disclosure__summary">
-          <div>
-            <span className="case-workspace__section-eyebrow">NOUVEAU DOSSIER</span>
-            <h2>Créer à partir d’un signalement qualifié</h2>
-            <p>
-              Un signalement source est nécessaire. Vous pourrez ensuite compléter le dossier et y
-              rattacher d’autres signalements.
-            </p>
-          </div>
+        <summary className="management-disclosure__summary">
+          <span className="case-workspace__section-eyebrow">NOUVEAU DOSSIER</span>
+          <strong>Créer à partir d’un signalement qualifié</strong>
           <span className="case-workspace__available">{availableReports.length} disponible(s)</span>
         </summary>
+        <div className="management-disclosure__body">
+          <p className="mb-3 text-xs leading-5 text-ink-500">
+            Un signalement source est nécessaire. Vous pourrez ensuite compléter le dossier et y
+            rattacher d’autres signalements.
+          </p>
 
         {availableReports.length ? (
           <form
@@ -283,6 +282,7 @@ export function CasesPage() {
             </div>
           </div>
         )}
+        </div>
       </details>
 
       <section className="case-workspace__list">
