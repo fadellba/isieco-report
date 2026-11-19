@@ -88,11 +88,26 @@ test('PostgreSQL enforces the simplified 18-table PFE domain model', { skip: !da
       [reportId, userId, dossierId],
     );
 
+    const reportPhotoId = randomUUID();
     await client.query(
       `INSERT INTO photo_signalement
         (id_photo_signalement, id_signalement, reference_photo, date_ajout, date_expiration)
        VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '30 days')`,
-      [randomUUID(), reportId, `integration/${reportId}/initial.png`],
+      [reportPhotoId, reportId, `integration/${reportId}/initial.png`],
+    );
+
+    await client.query(
+      'UPDATE photo_signalement SET media_purge_at = CURRENT_TIMESTAMP WHERE id_photo_signalement = $1',
+      [reportPhotoId],
+    );
+    const purgedPhoto = await client.query(
+      'SELECT media_purge_at FROM photo_signalement WHERE id_photo_signalement = $1',
+      [reportPhotoId],
+    );
+    assert.ok(purgedPhoto.rows[0]?.media_purge_at instanceof Date);
+    await client.query(
+      'UPDATE photo_signalement SET media_purge_at = NULL WHERE id_photo_signalement = $1',
+      [reportPhotoId],
     );
 
     await client.query('SAVEPOINT report_photo_required_probe');
