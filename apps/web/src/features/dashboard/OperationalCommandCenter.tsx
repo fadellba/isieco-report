@@ -5,6 +5,7 @@ import { api } from '../../lib/api';
 import { supabase } from '../../lib/supabase';
 import { OperationalMap } from './OperationalMap';
 import { EcoSkylineBanner } from '../../components/EcoSkylineBanner';
+import { AppIcon } from '../../components/AppIcon';
 
 interface CommandCenterFeature {
   kind: 'DOSSIER' | 'SIGNALEMENT' | 'INTERVENTION';
@@ -375,6 +376,32 @@ export function OperationalCommandCenter() {
     (data?.summary.reportsAwaitingQualification ?? 0) +
     (data?.summary.reportsAwaitingCitizen ?? 0);
 
+  const recentFeatures = useMemo(() => {
+    const source = [...(data?.map.items ?? []), ...(data?.map.interventions ?? [])];
+    const query = searchTerm.trim().toLocaleLowerCase('fr-FR');
+    return source
+      .filter((item) => statusFilter === 'TOUS' || item.status === statusFilter)
+      .filter((item) =>
+        !query
+          ? true
+          : [
+              item.title,
+              item.status,
+              item.locationLabel,
+              ...item.teamNames,
+              ...item.wasteTypes,
+            ]
+              .filter(Boolean)
+              .join(' ')
+              .toLocaleLowerCase('fr-FR')
+              .includes(query),
+      )
+      .sort(
+        (left, right) =>
+          new Date(right.occurredAt ?? 0).getTime() - new Date(left.occurredAt ?? 0).getTime(),
+      )
+      .slice(0, 8);
+  }, [data, searchTerm, statusFilter]);
 
   return (
     <div className="command-center-page space-y-3">
@@ -532,7 +559,7 @@ export function OperationalCommandCenter() {
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                      {selectedFeature.kind === 'INTERVENTION' ? 'Intervention' : 'Signalement'}
+                      {selectedFeature.kind === 'INTERVENTION' ? 'Intervention' : selectedFeature.kind === 'DOSSIER' ? 'Dossier' : 'Signalement'}
                     </span>
                     <span className="text-xs font-bold text-slate-900">
                       #{selectedFeature.id.slice(0, 8).toUpperCase()}
@@ -597,36 +624,116 @@ export function OperationalCommandCenter() {
           ) : null}
         </div>
 
-        {/* Right Column (1/3): Activité Récente & Filtres matching web.PNG */}
-        <div className="command-center-filters space-y-3">
-          {/* Card: Filtres matching web.PNG */}
-          <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4">
-            <h2 className="text-sm font-black text-slate-900 tracking-tight mb-3">
-              Filtres opérationnels
-            </h2>
-
-            <div className="space-y-3">
+        {/* Activité récente, classée par date métier. */}
+        <aside className="command-center-filters space-y-3" aria-label="Activité récente">
+          <section className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm">
+            <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-4">
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-600 mb-1">
-                  Statut
-                </label>
+                <h2 className="text-sm font-black tracking-tight text-slate-900">Actions récentes</h2>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  Derniers signalements, dossiers et démarrages d’intervention.
+                </p>
+              </div>
+              <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-800">
+                {recentFeatures.length}
+              </span>
+            </div>
+            <div className="space-y-2 border-b border-slate-100 p-3">
+              <label className="block">
+                <span className="sr-only">Rechercher dans l’activité récente</span>
+                <input
+                  type="search"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Rechercher une référence, une équipe…"
+                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs text-slate-800 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none"
+                />
+              </label>
+              <label className="block">
+                <span className="sr-only">Filtrer l’activité par statut</span>
                 <select
                   value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-emerald-500"
+                  onChange={(event) => setStatusFilter(event.target.value)}
+                  className="h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-700 focus:border-emerald-500 focus:outline-none"
                 >
-                  <option value="TOUS">Tous statuts</option>
+                  <option value="TOUS">Tous les statuts</option>
                   <option value="SOUMIS">À qualifier</option>
-                  <option value="EN_COURS">En cours d'intervention</option>
-                  <option value="QUALIFIE">Qualifié</option>
-                  <option value="EN_ATTENTE_COMPLEMENT">En attente du citoyen</option>
+                  <option value="COMPLEMENT_REPONDU">Complément reçu</option>
+                  <option value="EN_ATTENTE_COMPLEMENT">En attente citoyen</option>
+                  <option value="OUVERT">Ouvert</option>
+                  <option value="EN_COURS">En cours</option>
+                  <option value="EN_ATTENTE">En attente</option>
                 </select>
-              </div>
-
-              <p className="pt-1 text-[11px] text-slate-500">Les points de la carte sont limités aux signalements et interventions géolocalisés.</p>
+              </label>
             </div>
-          </div>
-        </div>
+            {recentFeatures.length ? (
+              <ol className="divide-y divide-slate-100">
+                {recentFeatures.map((feature) => {
+                  const featureType =
+                    feature.kind === 'INTERVENTION'
+                      ? 'Intervention démarrée'
+                      : feature.kind === 'DOSSIER'
+                        ? 'Dossier créé'
+                        : 'Signalement reçu';
+                  const icon =
+                    feature.kind === 'INTERVENTION'
+                      ? 'mapIntervention'
+                      : feature.kind === 'DOSSIER'
+                        ? 'mapCase'
+                        : 'mapReport';
+                  return (
+                    <li key={feature.kind + ':' + feature.id}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setKindFilter('TOUS');
+                          setStatusFilter('TOUS');
+                          setSearchTerm('');
+                          setSelectedFeatureId(feature.id);
+                        }}
+                        className="flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-slate-50 focus-visible:bg-slate-50"
+                      >
+                        <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-emerald-50 text-emerald-800">
+                          <AppIcon name={icon} size={16} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                            {featureType}
+                          </span>
+                          <span className="mt-0.5 block truncate text-xs font-bold text-slate-900">
+                            {feature.title}
+                          </span>
+                          <span className="mt-1 block truncate text-[10px] text-slate-500">
+                            {feature.locationLabel || feature.teamNames.join(', ') || 'Localisation non précisée'}
+                          </span>
+                          <span className="mt-1 block text-[10px] text-slate-400">
+                            {dateTimeLabel(feature.occurredAt)}
+                          </span>
+                        </span>
+                        <span className="shrink-0 pt-4 text-[10px] font-semibold text-emerald-700">
+                          Carte
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+            ) : (
+              <div className="px-4 py-10 text-center">
+                <span className="mx-auto grid h-10 w-10 place-items-center rounded-xl bg-slate-100 text-slate-500">
+                  <AppIcon name="overview" size={18} />
+                </span>
+                <p className="mt-3 text-xs font-bold text-slate-800">Aucune activité récente</p>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  Les éléments apparaîtront ici à mesure qu’ils sont enregistrés.
+                </p>
+              </div>
+            )}
+            <div className="border-t border-slate-100 px-4 py-3 text-[10px] text-slate-500">
+              Classement selon les dates de soumission, de création et de démarrage.
+            </div>
+          </section>
+        </aside>
       </div>
     </div>
   );
