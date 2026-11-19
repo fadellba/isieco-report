@@ -720,21 +720,67 @@ export function ReferentialsPage() {
             </form>
           ) : null}
 
-          <div className="space-y-3">
-            {filteredTeams.map((team) => {
-              const currentTeamMembers = team.appartenances.filter((member) => !member.dateFin);
-              const pastTeamMembers = team.appartenances.filter((member) =>
-                Boolean(member.dateFin),
-              );
-              const currentSkills = team.competences.filter((skill) => skill.actif);
-              const inactiveSkills = team.competences.filter((skill) => !skill.actif);
-              const statusActive = team.etatEquipe === 'ACTIVE';
+          <ManagementTable
+            label="Équipes opérationnelles"
+            rows={filteredTeams}
+            rowKey={(team) => team.idEquipe}
+            emptyMessage={
+              teams.length
+                ? 'Aucune équipe ne correspond à cette recherche.'
+                : 'Aucune équipe enregistrée. Créez une équipe pour organiser les interventions.'
+            }
+            columns={[
+              {
+                key: 'team',
+                label: 'Équipe',
+                render: (team) => (
+                  <span>
+                    <span className="management-table__primary">{team.nomEquipe}</span>
+                    <span className="management-table__secondary">
+                      {team.description || 'Aucune description renseignée.'}
+                    </span>
+                  </span>
+                ),
+              },
+              {
+                key: 'status',
+                label: 'Statut',
+                render: (team) => (
+                  <StatusBadge
+                    label={team.etatEquipe === 'ACTIVE' ? 'Active' : 'Inactive'}
+                    tone={team.etatEquipe === 'ACTIVE' ? 'success' : 'neutral'}
+                  />
+                ),
+              },
+              {
+                key: 'members',
+                label: 'Membres actifs',
+                render: (team) => team.appartenances.filter((member) => !member.dateFin).length,
+              },
+              {
+                key: 'skills',
+                label: 'Compétences actives',
+                render: (team) => team.competences.filter((skill) => skill.actif).length,
+              },
+              {
+                key: 'actions',
+                label: 'Actions',
+                className: 'text-right',
+                render: (team) => {
+                  const currentTeamMembers = team.appartenances.filter((member) => !member.dateFin);
+                  const pastTeamMembers = team.appartenances.filter((member) =>
+                    Boolean(member.dateFin),
+                  );
+                  const currentSkills = team.competences.filter((skill) => skill.actif);
+                  const inactiveSkills = team.competences.filter((skill) => !skill.actif);
+                  const statusActive = team.etatEquipe === 'ACTIVE';
 
-              return (
-                <article
-                  key={team.idEquipe}
-                  className="overflow-hidden rounded-2xl border border-line-strong bg-white"
-                >
+                  return (
+                    <details>
+                      <summary>Gérer l’équipe</summary>
+                      <div className="management-table__details max-w-none">
+                        <div className="space-y-4">
+                          
                   <div className="flex flex-wrap items-start justify-between gap-4 p-5">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
@@ -1049,22 +1095,14 @@ export function ReferentialsPage() {
                       </form>
                     </section>
                   </div>
-                </article>
-              );
-            })}
-            {!loading && !filteredTeams.length ? (
-              <div className="rounded-2xl border border-line-strong bg-white p-8 text-center">
-                <p className="font-bold text-ink-800">
-                  {teams.length ? 'Aucune équipe ne correspond' : 'Aucune équipe enregistrée'}
-                </p>
-                <p className="mt-1 text-sm text-ink-500">
-                  {teams.length
-                    ? 'Modifiez la recherche pour retrouver une équipe.'
-                    : 'Créez une équipe pour commencer à organiser les interventions.'}
-                </p>
-              </div>
-            ) : null}
-          </div>
+                        </div>
+                      </div>
+                    </details>
+                  );
+                },
+              },
+            ]}
+          />
         </section>
       )}
     </div>
