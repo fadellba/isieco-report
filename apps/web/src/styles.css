@@ -5485,3 +5485,120 @@ button {
   .eco-banner__scene { animation: none; opacity: 0; }
   .eco-banner__scene--one { opacity: 1; }
 }
+
+
+/* Semantic CRUD tables */
+.management-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+.management-table {
+  width: 100%;
+  min-width: 680px;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: #fff;
+  color: var(--ink-700);
+  font-size: 12px;
+  text-align: left;
+}
+.management-table thead th {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line-strong);
+  background: #f8fafc;
+  color: var(--ink-500);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .055em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.management-table tbody td {
+  padding: 13px 14px;
+  border-bottom: 1px solid #edf1f4;
+  vertical-align: middle;
+}
+.management-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.management-table tbody tr:hover {
+  background: #f8fbf9;
+}
+.management-table__empty {
+  padding: 32px 18px !important;
+  color: var(--ink-500);
+  text-align: center;
+}
+.management-table__primary {
+  display: block;
+  color: var(--ink-900);
+  font-size: 12px;
+  font-weight: 800;
+}
+.management-table__secondary {
+  display: block;
+  max-width: 360px;
+  margin-top: 3px;
+  color: var(--ink-500);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.management-table__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  white-space: nowrap;
+}
+.management-table details > summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--brand-forest);
+  font-size: 11px;
+  font-weight: 800;
+  list-style-position: inside;
+}
+.management-table details[open] > summary {
+  margin-bottom: 10px;
+}
+.management-table__details {
+  min-width: 260px;
+  max-width: 480px;
+  padding: 12px;
+  border: 1px solid var(--line-subtle);
+  border-radius: 12px;
+  background: #fff;
+  white-space: normal;
+}
+.management-table__details label {
+  display: block;
+  margin-top: 10px;
+}
+.management-table__details label > span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--ink-500);
+  font-size: 10px;
+  font-weight: 700;
+}
+.management-table__details input,
+.management-table__details select,
+.management-table__details textarea {
+  width: 100%;
+  min-height: 36px;
+  padding: 7px 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink-900);
+  font-size: 11px;
+}
+@media (max-width: 767px) {
+  .management-table-scroll {
+    margin-inline: -1px;
+  }
+  .management-table {
+    min-width: 680px;
+  }
+}
