@@ -48,9 +48,13 @@ BEGIN
   WHERE id_signalement = OLD.id_signalement
   FOR UPDATE;
 
-  RETURN OLD;
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  END IF;
+
+  RETURN NEW;
 END;
-$$;
+$;
 
 CREATE TRIGGER photo_signalement_lock_owner_before_removal
 BEFORE DELETE OR UPDATE ON public.photo_signalement
