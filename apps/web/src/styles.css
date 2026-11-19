@@ -1029,44 +1029,28 @@ button {
   z-index: 10;
 }
 .operational-map__marker span {
-  display: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  line-height: 0;
 }
 .operational-map__marker.is-case {
   background: #16a34a;
 }
-.operational-map__marker.is-case::before {
-  content: '✓';
-  color: white;
-  font-size: 13px;
-  font-weight: 900;
-}
+
 .operational-map__marker.is-report {
   background: #f59e0b;
 }
-.operational-map__marker.is-report::before {
-  content: '!';
-  color: white;
-  font-size: 13px;
-  font-weight: 900;
-}
+
 .operational-map__marker.is-intervention {
   background: #0f766e;
 }
-.operational-map__marker.is-intervention::before {
-  content: '🚚';
-  color: white;
-  font-size: 12px;
-  line-height: 1;
-}
+
 .operational-map__marker.is-critical {
   background: #ef4444;
 }
-.operational-map__marker.is-critical::before {
-  content: '▲';
-  color: white;
-  font-size: 11px;
-  font-weight: 900;
-}
+
 .operational-map__marker.is-selected {
   z-index: 5;
   box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.4);
