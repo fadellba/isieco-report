@@ -97,7 +97,7 @@ test('PostgreSQL enforces the simplified 18-table PFE domain model', { skip: !da
     );
 
     await client.query(
-      'UPDATE photo_signalement SET media_purge_at = CURRENT_TIMESTAMP WHERE id_photo_signalement = $1',
+      'UPDATE photo_signalement SET media_purge_at = date_expiration + INTERVAL \'1 second\' WHERE id_photo_signalement = $1',
       [reportPhotoId],
     );
     const purgedPhoto = await client.query(
