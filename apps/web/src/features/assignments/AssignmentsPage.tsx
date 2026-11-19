@@ -570,54 +570,81 @@ export function AssignmentsPage() {
             </button>
           </div>
         ) : null}
-        <div className="assignment-history-list">
-          {visibleAssignments.map((item) => {
-            const canReassign =
-              item.decisionEquipe === 'REFUSEE' ||
-              (item.dateFinAffectation === null && item.decisionEquipe === 'EN_ATTENTE');
-            const teams = eligibleByType[item.idTypeDechet] ?? [];
-            return (
-              <article key={item.idAffectation} className="assignment-history-item">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <h3 className="font-bold text-ink-900">
-                      {item.contenuDossier.dossier.referenceDossier} ·{' '}
-                      {item.contenuDossier.typeDechet.libelle}
-                    </h3>
-                    <p className="mt-1 text-xs text-ink-500">
-                      {item.equipe.nomEquipe} · affectée le {dateLabel(item.dateHeureAffectation)}
-                    </p>
-                    <p className="mt-1 text-xs text-ink-500">
-                      {item.motif || 'Aucun motif initial.'}
-                    </p>
-                    {item.decisionEquipe === 'REFUSEE' && item.motifRefusEquipe ? (
-                      <p className="mt-1 text-xs text-red-700">Refus : {item.motifRefusEquipe}</p>
-                    ) : null}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <StatusBadge
-                      label={'Affectation ' + stateLabel(item.etatAffectation)}
-                      tone={assignmentStateTone(item.etatAffectation)}
-                    />
-                    <StatusBadge
-                      label={'Équipe ' + stateLabel(item.decisionEquipe)}
-                      tone={teamDecisionTone(item.decisionEquipe)}
-                    />
-                  </div>
+        <ManagementTable
+          label="Historique des affectations"
+          rows={visibleAssignments}
+          rowKey={(item) => item.idAffectation}
+          emptyMessage="Aucune affectation ne correspond aux filtres."
+          columns={[
+            {
+              key: 'case',
+              label: 'Dossier et contenu',
+              render: (item) => (
+                <span>
+                  <span className="management-table__primary">
+                    {item.contenuDossier.dossier.referenceDossier}
+                  </span>
+                  <span className="management-table__secondary">
+                    {item.contenuDossier.typeDechet.libelle}
+                  </span>
+                </span>
+              ),
+            },
+            {
+              key: 'team',
+              label: 'Équipe',
+              render: (item) => item.equipe.nomEquipe,
+            },
+            {
+              key: 'date',
+              label: 'Date',
+              render: (item) => dateLabel(item.dateHeureAffectation),
+            },
+            {
+              key: 'state',
+              label: 'État',
+              render: (item) => (
+                <div className="flex flex-col items-start gap-1">
+                  <StatusBadge
+                    label={stateLabel(item.etatAffectation)}
+                    tone={assignmentStateTone(item.etatAffectation)}
+                  />
+                  <StatusBadge
+                    label={stateLabel(item.decisionEquipe)}
+                    tone={teamDecisionTone(item.decisionEquipe)}
+                  />
                 </div>
-                {canReassign ? (
-                  <div>
+              ),
+            },
+            {
+              key: 'reason',
+              label: 'Motif',
+              render: (item) => (
+                <span className="management-table__secondary">
+                  {item.motif || item.motifRefusEquipe || 'Aucun motif renseigné.'}
+                </span>
+              ),
+            },
+            {
+              key: 'actions',
+              label: 'Actions',
+              className: 'text-right',
+              render: (item) => {
+                const canReassign =
+                  item.decisionEquipe === 'REFUSEE' ||
+                  (item.dateFinAffectation === null && item.decisionEquipe === 'EN_ATTENTE');
+                const teams = eligibleByType[item.idTypeDechet] ?? [];
+                return canReassign ? (
+                  <div className="management-table__actions">
                     <button
                       type="button"
                       onClick={() => void openReassign(item)}
                       className={secondaryClass}
                     >
-                      {reassignOpen[item.idAffectation]
-                        ? 'Masquer la réaffectation'
-                        : 'Réaffecter à une autre équipe'}
+                      {reassignOpen[item.idAffectation] ? 'Fermer' : 'Réaffecter'}
                     </button>
                     {reassignOpen[item.idAffectation] ? (
-                      <div className="mt-3 grid gap-3 rounded-xl bg-surface-base p-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
+                      <div className="management-table__details text-left">
                         <label className={labelClass}>
                           Nouvelle équipe
                           <select
@@ -659,18 +686,20 @@ export function AssignmentsPage() {
                           type="button"
                           onClick={() => void reassign(item)}
                           disabled={busyKey === item.idAffectation}
-                          className={buttonClass}
+                          className={buttonClass + ' mt-3'}
                         >
                           {busyKey === item.idAffectation ? 'Réaffectation…' : 'Confirmer'}
                         </button>
                       </div>
                     ) : null}
                   </div>
-                ) : null}
-              </article>
-            );
-          })}
-        </div>
+                ) : (
+                  <span className="text-xs text-ink-400">Aucune action</span>
+                );
+              },
+            },
+          ]}
+        />
         <div className="assignment-history-panel__pagination">
           <p className="text-xs text-ink-500">
             Page {page} sur {totalPages}
