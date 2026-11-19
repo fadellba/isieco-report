@@ -5325,8 +5325,11 @@ button {
 }
 
 .eco-banner {
-  opacity: 0.24;
-  mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.28) 26%, #000 100%);
+  opacity: 0.62;
+  mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.2) 18%, #000 54%);
+}
+.eco-banner__scene {
+  filter: saturate(0.82) contrast(0.94);
 }
 .eco-banner__scene { animation-duration: 18s; }
 .eco-banner__scene--one { animation-delay: 0s; }
