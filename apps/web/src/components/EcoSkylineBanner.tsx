@@ -1,7 +1,7 @@
 export function EcoSkylineBanner({ className = '' }: { className?: string }) {
   return (
     <div
-      className={`eco-banner pointer-events-none absolute right-0 top-0 h-32 w-[32rem] select-none ${className}`}
+      className={`eco-banner pointer-events-none absolute inset-0 h-full w-full select-none ${className}`}
       aria-hidden="true"
     >
       <svg className="eco-banner__scene eco-banner__scene--one" viewBox="0 0 600 160" fill="none" xmlns="http://www.w3.org/2000/svg">
