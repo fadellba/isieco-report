@@ -551,6 +551,21 @@ export function OperationalCommandCenter() {
               </div>
             )}
           </div>
+          {data?.map.hasMore && data.map.nextCursor ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-4 py-3">
+              <p className="text-[10px] leading-4 text-slate-500">
+                D’autres éléments cartographiques sont disponibles. Certains dossiers ne sont pas affichés comme marqueurs.
+              </p>
+              <button
+                type="button"
+                onClick={() => void loadMore()}
+                disabled={loadingMore}
+                className="shrink-0 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-bold text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-wait disabled:opacity-60"
+              >
+                {loadingMore ? 'Chargement…' : 'Charger les points suivants'}
+              </button>
+            </div>
+          ) : null}
         </div>
 
         {/* Right Column (1/3): Activité Récente & Filtres matching web.PNG */}

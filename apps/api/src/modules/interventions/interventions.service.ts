@@ -508,8 +508,14 @@ export class InterventionsService {
     authUserId: string,
   ) {
     const actorId = await this.actorId(authUserId);
+    const now = new Date();
     const photo = await this.prisma.photoIntervention.findFirst({
-      where: { idIntervention, idPhotoIntervention },
+      where: {
+        idIntervention,
+        idPhotoIntervention,
+        dateExpiration: { gt: now },
+        mediaPurgeAt: null,
+      },
       select: {
         referencePhoto: true,
         intervention: {

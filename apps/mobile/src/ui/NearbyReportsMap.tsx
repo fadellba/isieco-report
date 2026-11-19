@@ -13,7 +13,7 @@ interface NearbyReportsMapProps {
 }
 
 const TILE_SIZE = 256;
-const ZOOM = 14;
+const ZOOM = 12;
 const USER_AGENT = 'ISIECO/0.1.0 (+https://github.com/fadellba/isieco-report)';
 
 function worldPoint(latitude: number, longitude: number) {

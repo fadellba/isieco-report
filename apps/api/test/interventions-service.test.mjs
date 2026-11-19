@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { ConflictException, ForbiddenException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import test from 'node:test';
 import { InterventionsService } from '../dist/modules/interventions/interventions.service.js';
 
@@ -127,7 +127,11 @@ test('creates a temporary photo URL only for an active member of the interventio
   const prisma = actorPrisma();
   prisma.photoIntervention = {
     findFirst: async ({ where }) => {
-      assert.deepEqual(where, { idIntervention: interventionId, idPhotoIntervention: photoId });
+      assert.equal(where.idIntervention, interventionId);
+      assert.equal(where.idPhotoIntervention, photoId);
+      assert.equal(where.mediaPurgeAt, null);
+      assert.ok(where.dateExpiration.gt instanceof Date);
+      assert.ok(where.dateExpiration.gt.getTime() > Date.now());
       return {
         referencePhoto: 'interventions/' + interventionId + '/' + photoId + '.jpg',
         intervention: { affectation: { idEquipe: teamId } },
@@ -155,6 +159,34 @@ test('creates a temporary photo URL only for an active member of the interventio
     signedUrl: 'https://storage.example/signed-proof',
     expiresInSeconds: 60,
   });
+});
+
+test('does not create a proof URL for an expired or purged intervention photo', async () => {
+  const photoId = '99999999-9999-4999-8999-999999999999';
+  let signedUrlCalls = 0;
+  const prisma = actorPrisma();
+  prisma.photoIntervention = {
+    findFirst: async ({ where }) => {
+      assert.equal(where.idIntervention, interventionId);
+      assert.equal(where.idPhotoIntervention, photoId);
+      assert.equal(where.mediaPurgeAt, null);
+      assert.ok(where.dateExpiration.gt instanceof Date);
+      return null;
+    },
+  };
+  prisma.appartenanceEquipe = { findFirst: async () => ({ idEquipe: teamId }) };
+  const service = new InterventionsService(prisma, {
+    createSignedUrl: async () => {
+      signedUrlCalls += 1;
+      return { signedUrl: 'https://storage.example/signed-proof', expiresInSeconds: 60 };
+    },
+  });
+
+  await assert.rejects(
+    service.createPhotoUrl(interventionId, photoId, authId),
+    NotFoundException,
+  );
+  assert.equal(signedUrlCalls, 0);
 });
 
 test('does not create a proof URL for a former team member', async () => {
