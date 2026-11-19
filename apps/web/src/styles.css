@@ -5363,7 +5363,7 @@ button {
   letter-spacing: -0.035em;
 }
 .management-page > header { border-radius: 14px !important; }
-.management-page > header > div:first-child {
+.management-page > header:not(.qualification-queue-hero):not(.case-workspace__hero):not(.assignment-workspace__hero):not(.interventions-workspace__hero) > div:first-child {
   gap: 10px !important;
   padding: 14px 18px !important;
 }
