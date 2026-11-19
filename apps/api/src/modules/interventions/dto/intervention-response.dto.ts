@@ -65,6 +65,23 @@ export class InterventionAssignmentDto {
   contenuDossier!: InterventionAssignmentContentDto;
 }
 
+export class InterventionPhotoResponseDto {
+  @ApiProperty({ format: 'uuid' })
+  idPhotoIntervention!: string;
+
+  @ApiProperty()
+  contextePhoto!: string;
+
+  @ApiProperty({ type: 'string', nullable: true })
+  description!: string | null;
+
+  @ApiProperty({ format: 'date-time' })
+  dateAjout!: Date;
+
+  @ApiProperty({ enum: ['PRIVEE'] })
+  etatPublication!: 'PRIVEE';
+}
+
 export class InterventionResponseDto {
   @ApiProperty({ format: 'uuid' })
   idIntervention!: string;
@@ -95,6 +112,9 @@ export class InterventionResponseDto {
 
   @ApiProperty({ format: 'uuid' })
   renseignePar!: string;
+
+  @ApiProperty({ type: [InterventionPhotoResponseDto] })
+  photos!: InterventionPhotoResponseDto[];
 
   @ApiProperty({ type: 'object', nullable: true, additionalProperties: true })
   verification!: {

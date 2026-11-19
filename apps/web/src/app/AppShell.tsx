@@ -4,6 +4,7 @@ import { useAuth } from './auth-context';
 import { navigationItems, type NavigationGroup } from './navigation';
 import { AppIcon } from '../components/AppIcon';
 import { BrandMark } from '../components/BrandMark';
+import { NotificationCenterPopover } from '../components/NotificationCenterPopover';
 
 const groups: NavigationGroup[] = ['Opérations', 'Administration'];
 
@@ -12,6 +13,7 @@ export function AppShell() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   const activeRoles = profile?.roles ?? [];
   const links = navigationItems.filter((item) =>
@@ -38,9 +40,9 @@ export function AppShell() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row text-slate-900 selection:bg-emerald-100 selection:text-emerald-900">
+    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row md:h-dvh md:min-h-0 md:overflow-hidden text-slate-900 selection:bg-emerald-100 selection:text-emerald-900">
       {/* Dark Forest Green Sidebar matching web.PNG */}
-      <aside className="w-full md:w-64 bg-[#0A261E] border-r border-[#13382D] flex-shrink-0 flex flex-col justify-between z-30">
+      <aside className="w-full md:w-64 bg-[#0A261E] border-r border-[#13382D] flex-shrink-0 flex flex-col justify-between z-30 md:h-dvh md:max-h-dvh md:overflow-y-auto">
         <div>
           {/* Logo brand */}
           <div className="h-20 flex items-center px-6 border-b border-[#13382D]">
@@ -50,7 +52,7 @@ export function AppShell() {
           </div>
 
           {/* Navigation items */}
-          <nav className="p-4 space-y-6">
+          <nav className="p-3 space-y-4">
             <div>
               <p className="px-3 text-[10px] font-black uppercase tracking-widest text-emerald-400/60 mb-2">
                 Espace Principal
@@ -104,32 +106,25 @@ export function AppShell() {
           </nav>
         </div>
 
-        {/* Sidebar Footer User Info */}
-        <div className="p-4 border-t border-[#13382D] bg-[#071E17]">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-9 h-9 rounded-xl bg-orange-500 text-white font-black text-xs flex items-center justify-center flex-shrink-0 shadow-sm">
-              {initials}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold text-white truncate">{fullName}</p>
-              <p className="text-[10px] text-emerald-400/80 truncate">{primaryRole}</p>
-            </div>
-          </div>
+        <div className="border-t border-[#13382D] bg-[#071E17] p-4">
           <button
             type="button"
             onClick={() => void handleSignOut()}
-            className="w-full flex items-center justify-center gap-2 py-2 px-3 text-xs font-medium text-slate-400 hover:text-red-300 hover:bg-red-950/20 rounded-lg transition"
+            className="flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-300 transition hover:bg-red-950/20 hover:text-red-200"
           >
-            <AppIcon name="logout" size={14} />
+            <AppIcon name="logout" size={15} />
             <span>Déconnexion</span>
           </button>
+          <p className="mt-3 text-center text-[10px] text-emerald-100/50">
+            © {new Date().getFullYear()} ISIECO
+          </p>
         </div>
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 md:h-dvh md:min-h-0 md:overflow-hidden">
         {/* Top Header Bar matching web.PNG */}
-        <header className="h-16 bg-white border-b border-slate-200/80 px-6 sm:px-8 flex items-center justify-between gap-4 sticky top-0 z-20 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+        <header className="h-16 shrink-0 bg-white border-b border-slate-200/80 px-6 sm:px-8 flex items-center justify-between gap-4 sticky top-0 z-20 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
           {/* Search bar */}
           <div className="relative max-w-md w-full">
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
@@ -147,23 +142,21 @@ export function AppShell() {
           {/* Right actions: Notifications & User pill */}
           <div className="flex items-center gap-4">
             {/* Notification bell with indicator */}
-            <button
-              type="button"
-              className="relative p-2 text-slate-500 hover:text-slate-800 rounded-lg hover:bg-slate-100 transition"
-              aria-label="Notifications"
-            >
-              <svg
-                className="w-5 h-5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setNotificationsOpen((open) => !open)}
+                className="relative rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+                aria-label="Ouvrir les notifications"
+                aria-expanded={notificationsOpen}
+                aria-haspopup="dialog"
               >
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-              </svg>
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
-            </button>
+                <span aria-hidden="true" className="text-lg">🔔</span>
+              </button>
+              {notificationsOpen ? (
+                <NotificationCenterPopover onClose={() => setNotificationsOpen(false)} />
+              ) : null}
+            </div>
 
             <div className="h-5 w-px bg-slate-200" />
 
@@ -181,7 +174,7 @@ export function AppShell() {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-6 sm:p-8 relative">
+        <main className="relative flex-1 min-h-0 p-3 sm:p-4 lg:p-4 md:overflow-y-auto md:overscroll-contain">
           <Outlet />
         </main>
       </div>

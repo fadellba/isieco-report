@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
+import { ApiRequestError } from '@isieco/api-client';
+import { useMobileAuth } from '../../../src/features/auth/mobile-auth-context';
+import { queueOfflineReport } from '../../../src/features/reports/offline-report-outbox';
 import {
   ActivityIndicator,
   Image,
@@ -29,6 +32,7 @@ import {
 
 export default function NewCitizenReportScreen() {
   const router = useRouter();
+  const { profile } = useMobileAuth();
   const [photo, setPhoto] = useState<PreparedMobilePhoto | null>(null);
   const [description, setDescription] = useState('');
   const [wasteTypes, setWasteTypes] = useState<WasteTypeOption[]>([]);
@@ -43,7 +47,7 @@ export default function NewCitizenReportScreen() {
   const [error, setError] = useState<string | null>(null);
   const idempotencyRef = useRef<{ fingerprint: string; key: string } | null>(null);
 
-  // Auto-load waste types and auto-detect GPS location
+  // Load optional waste categories. GPS remains opt-in.
   useEffect(() => {
     let active = true;
     listAvailableWasteTypes()
@@ -54,24 +58,7 @@ export default function NewCitizenReportScreen() {
         // Categories optional
       });
 
-    // Auto-detect location on screen open
-    void (async () => {
-      try {
-        setGettingLocation(true);
-        const coordinates = await requestCurrentForegroundCoordinates();
-        if (active) {
-          setLatitude(coordinates.latitude.toFixed(6));
-          setLongitude(coordinates.longitude.toFixed(6));
-          if (coordinates.precisionLocalisation !== undefined) {
-            setPrecision(String(coordinates.precisionLocalisation));
-          }
-        }
-      } catch {
-        // Location will remain manual/optional if permission refused
-      } finally {
-        if (active) setGettingLocation(false);
-      }
-    })();
+    // GPS permission is requested only from the explicit location button.
 
     return () => {
       active = false;
@@ -170,12 +157,49 @@ export default function NewCitizenReportScreen() {
       }
 
       setBusy(true);
-      const result = await submitReportWithPhoto(payload, idempotencyRef.current.key, photo);
-      idempotencyRef.current = null;
-      router.replace({
-        pathname: '/(citizen)/reports/[id]',
-        params: { id: result.idSignalement },
-      });
+      const idempotencyKey = idempotencyRef.current.key;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15_000);
+      try {
+        const result = await submitReportWithPhoto(
+          payload,
+          idempotencyKey,
+          photo,
+          controller.signal,
+        );
+        idempotencyRef.current = null;
+        router.replace({
+          pathname: '/(citizen)/reports/[id]',
+          params: { id: result.idSignalement },
+        });
+      } catch (submissionError) {
+        const networkFailure =
+          submissionError instanceof TypeError ||
+          submissionError instanceof ApiRequestError &&
+            (submissionError.status === 408 ||
+              submissionError.status === 429 ||
+              submissionError.status >= 500) ||
+          typeof submissionError === 'object' &&
+            submissionError !== null &&
+            'name' in submissionError &&
+            (submissionError.name === 'AbortError' || submissionError.name === 'NetworkError');
+
+        if (!networkFailure) throw submissionError;
+        if (!profile?.utilisateurId) {
+          throw new Error('Votre profil doit être chargé avant de conserver un signalement hors ligne.');
+        }
+
+        await queueOfflineReport({
+          ownerId: profile.utilisateurId,
+          idempotencyKey,
+          payload,
+          photo,
+        });
+        idempotencyRef.current = null;
+        router.replace('/(citizen)/home');
+      } finally {
+        clearTimeout(timeout);
+      }
     } catch (reason) {
       setError(
         reason instanceof Error ? reason.message : 'Impossible d’enregistrer le signalement.',
@@ -306,7 +330,7 @@ export default function NewCitizenReportScreen() {
                 </Text>
               </View>
             ) : (
-              <Text className="text-[10px] font-bold uppercase text-ink-400">Automatique</Text>
+              <Text className="text-[10px] font-bold uppercase text-ink-400">Au choix</Text>
             )}
           </View>
 

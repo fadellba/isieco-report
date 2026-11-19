@@ -44,6 +44,8 @@ import { ListReportsQueryDto } from './dto/list-reports-query.dto.js';
 import { ReportsService } from './reports.service.js';
 import { ReportListResponseDto, ReportResponseDto } from './dto/report-response.dto.js';
 import { CreateSupplementResponseDto } from './dto/create-supplement-response.dto.js';
+import { NearbyReportsQueryDto } from './dto/nearby-reports-query.dto.js';
+import { NearbyReportsResponseDto } from './dto/nearby-reports-response.dto.js';
 import { UploadReportPhotoDto } from './dto/upload-report-photo.dto.js';
 import { ReportSupplementListResponseDto, SupplementAnswerDto } from './dto/report-supplement-response.dto.js';
 
@@ -60,8 +62,8 @@ export class ReportsController {
   @ApiRateLimit({ limit: 5, windowMs: 60_000 })
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_IMAGE_SIZE_BYTES, files: 1 } }))
   @ApiOperation({
-    summary: 'Crée un signalement citoyen avec une première photo facultative',
-    description: 'Le signalement et, si elle est fournie, sa première photo sont enregistrés comme une seule opération métier. La photo, la description, les catégories et la localisation sont facultatives séparément ; au moins une information utile doit être fournie. La clé idempotente inclut le contenu de la photo lorsqu’elle est présente.',
+    summary: 'Crée un signalement citoyen avec une photo obligatoire',
+    description: 'Le signalement et sa photo initiale sont enregistrés comme une seule opération métier. Une photo JPEG, PNG ou WebP valide est obligatoire. La description, les catégories et la localisation restent facultatives. La clé idempotente inclut l’empreinte de la photo.',
   })
   @ApiHeader({
     name: 'Idempotency-Key',
@@ -82,10 +84,11 @@ export class ReportsController {
         dateConstat: { type: 'string', format: 'date-time' },
         contenus: { type: 'string', description: 'Tableau JSON optionnel des catégories de déchets.' },
       },
+      required: ['file'],
     },
   })
   @ApiCreatedResponse({ type: ReportResponseDto })
-  @ApiBadRequestResponse({ description: 'Photo éventuelle, localisation ou métadonnées invalides, ou signalement entièrement vide.' })
+  @ApiBadRequestResponse({ description: 'Photo obligatoire absente ou invalide, localisation ou métadonnées invalides.' })
   @ApiConflictResponse({ description: 'Clé idempotente réutilisée avec un autre contenu.' })
   createWithPhoto(
     @Body() dto: CreateReportWithPhotoDto,
@@ -99,18 +102,17 @@ export class ReportsController {
   @Post()
   @ApiRateLimit({ limit: 10, windowMs: 60_000 })
   @ApiOperation({
-    summary: 'Dépose un signalement citoyen',
+    deprecated: true,
+    summary: 'Ancienne route JSON désactivée',
     description:
-      'La soumission est idempotente. Une même clé et un même corps retournent le signalement initial ; réutiliser la clé avec un corps différent renvoie 409.',
+      'La soumission sans photo est interdite. Cette route est conservée pour renvoyer une erreur explicite aux anciens clients ; utiliser POST /reports/with-photo.',
   })
   @ApiHeader({
     name: 'Idempotency-Key',
     required: true,
     description: 'Clé opaque de 8 à 128 caractères générée par le client et conservée en cas de retry.',
   })
-  @ApiCreatedResponse({ type: ReportResponseDto, description: 'Signalement créé avec ses contenus et son historique initial de statut.' })
-  @ApiBadRequestResponse({ description: 'Données invalides ou localisation incohérente. Un signalement doit contenir au moins une photo, une description, une catégorie ou une indication de localisation.' })
-  @ApiConflictResponse({ description: 'Clé idempotente réutilisée avec un autre contenu ou conflit concurrent.' })
+  @ApiBadRequestResponse({ description: 'Cette route JSON est désactivée. Une photo est obligatoire via POST /reports/with-photo.' })
   @ApiUnauthorizedResponse({ description: 'Jeton Supabase absent ou invalide.' })
   @ApiForbiddenResponse({ description: 'Un compte citoyen actif est requis.' })
   create(
@@ -138,6 +140,27 @@ export class ReportsController {
   @ApiUnauthorizedResponse({ description: 'Jeton Supabase absent ou invalide.' })
   listMine(@Query() query: ListReportsQueryDto, @CurrentAuthUser() user: User) {
     return this.reports.listMine(user.id, query);
+  }
+
+  @Get('nearby')
+  @ApiOperation({
+    summary: 'Liste les signalements qualifiés à proximité d’une position choisie par le citoyen',
+    description: 'Retourne uniquement des marqueurs anonymisés. Les coordonnées sont arrondies à trois décimales et aucune description ni identité du déclarant n’est exposée. La position est fournie explicitement par le client ; aucun accès GPS n’est déclenché par l’API.',
+  })
+  @ApiQuery({ name: 'latitude', required: true, type: Number, minimum: -90, maximum: 90 })
+  @ApiQuery({ name: 'longitude', required: true, type: Number, minimum: -180, maximum: 180 })
+  @ApiQuery({ name: 'radiusMeters', required: false, type: Number, minimum: 250, maximum: 5000, description: 'Rayon de recherche, 3 000 mètres par défaut.' })
+  @ApiOkResponse({ type: NearbyReportsResponseDto })
+  @ApiBadRequestResponse({ description: 'Coordonnées ou rayon de recherche invalides.' })
+  @ApiUnauthorizedResponse({ description: 'Jeton Supabase absent ou invalide.' })
+  @ApiForbiddenResponse({ description: 'Un compte citoyen actif est requis.' })
+  listNearby(@Query() query: NearbyReportsQueryDto, @CurrentAuthUser() user: User) {
+    return this.reports.listNearby(
+      query.latitude,
+      query.longitude,
+      query.radiusMeters,
+      user.id,
+    );
   }
 
   @Get(':id/history')

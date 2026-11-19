@@ -27,7 +27,7 @@ L'application présente un splash natif Expo assorti à l'identité ISIECO, puis
 ## Parcours citoyen — Phase 18 intégrée
 
 - `/(citizen)/reports` : liste paginée et suivi des seuls signalements du compte connecté ;
-- `/(citizen)/reports/new` : signalement avec photo facultative, localisation ponctuelle ou manuelle, description et catégories facultatives ;
+- `/(citizen)/reports/new` : signalement avec photo obligatoire, localisation ponctuelle ou manuelle, description et catégories facultatives ;
 - `/(citizen)/reports/[id]` : détail propriétaire, chronologie des statuts et jalons opérationnels, photos privées, catégories qualifiées et demandes de complément.
 
 La soumission utilise `POST /api/v1/reports/with-photo` et l'en-tête `Idempotency-Key`. Le signalement et, lorsqu’elle est fournie, sa première photo privée sont créés ensemble ; la clé est conservée lors d'une nouvelle tentative avec les mêmes métadonnées et la même photo, et renouvelée lorsque le formulaire change. La chronologie provient de `GET /api/v1/reports/:id/history`. Les demandes et réponses réutilisent les endpoints Reports existants. Aucun endpoint de référentiel réservé au gestionnaire n'est appelé par le citoyen.

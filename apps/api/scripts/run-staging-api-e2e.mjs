@@ -145,12 +145,12 @@ async function api(token, path, options = {}) {
   return { status: response.status, body: parsed };
 }
 
-async function apiMultipart(token, path, fileBytes, filename, fields = {}) {
+async function apiMultipart(token, path, fileBytes, filename, fields = {}, extraHeaders = {}) {
   const form = new FormData();
   form.set('file', new Blob([fileBytes], { type: 'image/png' }), filename);
   for (const [key, value] of Object.entries(fields)) form.set(key, value);
 
-  const headers = { accept: 'application/json' };
+  const headers = { accept: 'application/json', ...extraHeaders };
   if (token) headers.authorization = 'Bearer ' + token;
   const response = await fetch(apiUrl(path), {
     method: 'POST',
@@ -727,11 +727,19 @@ async function runBusinessJourney(tokens) {
     }],
   };
 
-  const report = expectSuccess(await api(citizen, '/reports', {
-    method: 'POST',
-    headers: { 'Idempotency-Key': idempotencyPrefix + '-report' },
-    body: reportRequest,
-  }), 'Create citizen report');
+  const report = expectSuccess(await apiMultipart(
+    citizen,
+    '/reports/with-photo',
+    REPORT_IMAGE_FIXTURE,
+    'isieco-staging-report-e2e.png',
+    {
+      description: reportRequest.description,
+      dateConstat: reportRequest.dateConstat,
+      descriptionLocalisation: reportRequest.descriptionLocalisation,
+      contenus: JSON.stringify(reportRequest.contenus),
+    },
+    { 'Idempotency-Key': idempotencyPrefix + '-report' },
+  ), 'Create citizen report with mandatory photo');
   assert.ok(report.idSignalement, 'Created report must expose idSignalement.');
   assert.equal(report.statutSignalement, 'SOUMIS', 'New report must start as SOUMIS.');
 

@@ -29,7 +29,7 @@ const interventionDetailSelect = {
   renseignePar: true,
   photos: {
     orderBy: { dateAjout: 'asc' as const },
-    select: { idPhotoIntervention: true, description: true, dateAjout: true },
+    select: { idPhotoIntervention: true, contextePhoto: true, description: true, dateAjout: true },
   },
   verification: {
     select: { dateVerification: true, resultatVerification: true, motif: true },
@@ -500,6 +500,38 @@ export class InterventionsService {
       await this.storage.remove(storagePath).catch(() => undefined);
       throw error;
     }
+  }
+
+  async createPhotoUrl(
+    idIntervention: string,
+    idPhotoIntervention: string,
+    authUserId: string,
+  ) {
+    const actorId = await this.actorId(authUserId);
+    const now = new Date();
+    const photo = await this.prisma.photoIntervention.findFirst({
+      where: {
+        idIntervention,
+        idPhotoIntervention,
+        dateExpiration: { gt: now },
+        mediaPurgeAt: null,
+      },
+      select: {
+        referencePhoto: true,
+        intervention: {
+          select: {
+            affectation: { select: { idEquipe: true } },
+          },
+        },
+      },
+    });
+    if (!photo) throw new NotFoundException('Preuve photo introuvable.');
+    await this.requireCurrentTeamMembership(
+      this.prisma,
+      actorId,
+      photo.intervention.affectation.idEquipe,
+    );
+    return this.storage.createSignedUrl(photo.referencePhoto);
   }
 
   private async requireCurrentTeamMembership(

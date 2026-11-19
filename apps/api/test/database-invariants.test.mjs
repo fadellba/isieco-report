@@ -88,6 +88,51 @@ test('PostgreSQL enforces the simplified 18-table PFE domain model', { skip: !da
       [reportId, userId, dossierId],
     );
 
+    const reportPhotoId = randomUUID();
+    await client.query(
+      `INSERT INTO photo_signalement
+        (id_photo_signalement, id_signalement, reference_photo, date_ajout, date_expiration)
+       VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '30 days')`,
+      [reportPhotoId, reportId, `integration/${reportId}/initial.png`],
+    );
+
+    await client.query(
+      'UPDATE photo_signalement SET media_purge_at = date_expiration + INTERVAL \'1 second\' WHERE id_photo_signalement = $1',
+      [reportPhotoId],
+    );
+    const purgedPhoto = await client.query(
+      'SELECT media_purge_at FROM photo_signalement WHERE id_photo_signalement = $1',
+      [reportPhotoId],
+    );
+    assert.ok(purgedPhoto.rows[0]?.media_purge_at instanceof Date);
+    await client.query(
+      'UPDATE photo_signalement SET media_purge_at = NULL WHERE id_photo_signalement = $1',
+      [reportPhotoId],
+    );
+
+    await client.query('SAVEPOINT report_photo_required_probe');
+    await client.query(
+      `INSERT INTO signalement
+        (id_signalement, id_utilisateur, statut_signalement)
+       VALUES ($1, $2, 'SOUMIS')`,
+      [randomUUID(), userId],
+    );
+    await assert.rejects(
+      client.query('SET CONSTRAINTS signalement_photo_required IMMEDIATE'),
+      (error) => error && error.code === '23514',
+    );
+    await client.query('ROLLBACK TO SAVEPOINT report_photo_required_probe');
+    await client.query('RELEASE SAVEPOINT report_photo_required_probe');
+
+    await client.query('SAVEPOINT last_report_photo_probe');
+    await client.query('DELETE FROM photo_signalement WHERE id_signalement = $1', [reportId]);
+    await assert.rejects(
+      client.query('SET CONSTRAINTS photo_signalement_last_photo_required IMMEDIATE'),
+      (error) => error && error.code === '23514',
+    );
+    await client.query('ROLLBACK TO SAVEPOINT last_report_photo_probe');
+    await client.query('RELEASE SAVEPOINT last_report_photo_probe');
+
     await expectSqlState(
       `INSERT INTO signalement
         (id_signalement, id_utilisateur, statut_signalement, latitude)

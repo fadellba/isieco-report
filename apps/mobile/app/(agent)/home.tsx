@@ -84,12 +84,22 @@ export default function AgentHomeScreen() {
           </View>
         </View>
 
-        <TouchableOpacity
-          onPress={() => router.push('/(agent)/map')}
-          className="h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 border border-emerald-100"
-        >
-          <Text className="text-base">🧭</Text>
-        </TouchableOpacity>
+        <View className="flex-row items-center gap-2">
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Ouvrir les notifications"
+            onPress={() => router.push('/notifications')}
+            className="h-10 w-10 items-center justify-center rounded-2xl border border-line-subtle bg-white"
+          >
+            <Text className="text-base">🔔</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => router.push('/(agent)/map')}
+            className="h-10 w-10 items-center justify-center rounded-2xl border border-emerald-100 bg-emerald-50"
+          >
+            <Text className="text-base">🧭</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView

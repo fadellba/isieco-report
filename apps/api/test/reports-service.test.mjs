@@ -63,6 +63,42 @@ test('lists only active waste types for a citizen', async () => {
   assert.deepEqual(result, [{ idTypeDechet: typeId, codeType: 'PLASTIQUE', libelle: 'Plastique' }]);
 });
 
+test('returns anonymized, rounded markers for qualified nearby reports only', async () => {
+  const prisma = basePrisma();
+  prisma.$queryRaw = async () => [
+    {
+      idSignalement: reportId,
+      dateSoumission: new Date('2026-11-15T10:00:00.000Z'),
+      latitude: 14.71672,
+      longitude: -17.46761,
+      statutSignalement: 'QUALIFIE',
+    },
+    {
+      idSignalement: '66666666-6666-4666-8666-666666666666',
+      dateSoumission: new Date('2026-11-14T10:00:00.000Z'),
+      latitude: 14.742,
+      longitude: -17.444,
+      statutSignalement: 'QUALIFIE',
+    },
+  ];
+  const service = new ReportsService(prisma, {});
+  const result = await service.listNearby(14.7167, -17.4677, 3000, authId);
+
+  assert.equal(result.radiusMeters, 3000);
+  assert.equal(result.items.length, 1);
+  assert.deepEqual(result.items[0], {
+    idSignalement: reportId,
+    latitude: 14.717,
+    longitude: -17.468,
+    statutSignalement: 'QUALIFIE',
+    dateSoumission: new Date('2026-11-15T10:00:00.000Z'),
+    distanceMeters: result.items[0].distanceMeters,
+  });
+  assert.ok(result.items[0].distanceMeters < 100);
+  assert.equal('description' in result.items[0], false);
+  assert.equal('idUtilisateur' in result.items[0], false);
+});
+
 test('rejects an entirely empty report when no initial photo is provided', async () => {
   let writes = 0;
   const prisma = basePrisma();
@@ -76,8 +112,8 @@ test('rejects an entirely empty report when no initial photo is provided', async
   assert.equal(writes, 0);
 });
 
-test('creates a signalement, qualification content and initial status history atomically', async () => {
-  const calls = { report: null, contents: null, status: null, isolation: null, audit: 0 };
+test('creates a signalement, its mandatory photo, qualification content and initial status atomically', async () => {
+  const calls = { report: null, contents: null, photo: null, status: null, isolation: null, audit: 0, uploaded: null };
   const prisma = basePrisma();
   const tx = {
     $executeRaw: async () => { calls.audit += 1; return 1; },
@@ -90,6 +126,9 @@ test('creates a signalement, qualification content and initial status history at
     contenuSignalement: {
       createMany: async ({ data }) => { calls.contents = data; return { count: data.length }; },
     },
+    photoSignalement: {
+      create: async ({ data }) => { calls.photo = data; return data; },
+    },
     historiqueStatutSignalement: {
       create: async ({ data }) => { calls.status = data; return data; },
     },
@@ -101,23 +140,34 @@ test('creates a signalement, qualification content and initial status history at
   prisma.signalement.findFirst = async ({ where } = {}) => where?.cleIdempotence
     ? null
     : reportRow({ contenus: [{ idTypeDechet: typeId, quantiteEstimee: '2.5', volumeEstime: null, remarque: null, typeDechet: { codeType: 'PLASTIQUE', libelle: 'Plastique' } }] });
-  const storage = {};
+  const storage = {
+    upload: async (path) => { calls.uploaded = path; },
+    remove: async () => undefined,
+    getExpirationDate: () => new Date('2026-12-01T00:00:00.000Z'),
+  };
   const service = new ReportsService(prisma, storage);
+  const file = {
+    buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    mimetype: 'image/png',
+    size: 8,
+  };
 
   const result = await service.createReport({
     description: 'Un dépôt de déchets est visible près du marché.',
     contenus: [{ idTypeDechet: typeId, quantiteEstimee: 2.5 }],
-  }, authId, 'report-idem-0001');
+  }, authId, 'report-idem-0001', file);
 
   assert.equal(calls.report.idUtilisateur, userId);
   assert.equal(calls.report.statutSignalement, 'SOUMIS');
   assert.equal(calls.report.cleIdempotence, 'report-idem-0001');
   assert.equal(calls.contents[0].idTypeDechet, typeId);
   assert.equal(calls.contents[0].etatQualification, 'EN_ATTENTE');
+  assert.equal(calls.photo.idSignalement, calls.report.idSignalement);
+  assert.match(calls.uploaded, new RegExp(calls.report.idSignalement));
   assert.equal(calls.status.nouveauStatut, 'SOUMIS');
   assert.equal(calls.isolation, 'Serializable');
   assert.equal(result.idSignalement, reportId);
-  assert.equal(calls.audit, 1);
+  assert.equal(calls.audit, 2);
 });
 
 test('replays an existing idempotent request without creating a second signalement', async () => {
@@ -135,8 +185,13 @@ test('replays an existing idempotent request without creating a second signaleme
   };
   prisma.$transaction = async () => { transactions += 1; };
   const service = new ReportsService(prisma, {});
+  const file = {
+    buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    mimetype: 'image/png',
+    size: 8,
+  };
   await assert.rejects(
-    service.createReport({ description: 'Un dépôt de déchets est visible près du marché.', contenus: [{ idTypeDechet: typeId }] }, authId, 'report-idem-0002'),
+    service.createReport({ description: 'Un dépôt de déchets est visible près du marché.', contenus: [{ idTypeDechet: typeId }] }, authId, 'report-idem-0002', file),
     ConflictException,
   );
   assert.equal(transactions, 0);
@@ -184,36 +239,19 @@ test('does not reveal a report owned by another citizen', async () => {
 });
 
 
-test('creates a citizen report without a photo when optional metadata is provided', async () => {
-  const calls = { report: null, history: null, audit: 0 };
+test('rejects a citizen report without a photo even when optional metadata is provided', async () => {
+  let writes = 0;
   const prisma = basePrisma();
-  const tx = {
-    $executeRaw: async () => { calls.audit += 1; return 1; },
-    signalement: {
-      create: async ({ data }) => {
-        calls.report = data;
-        return { idSignalement: data.idSignalement };
-      },
-    },
-    historiqueStatutSignalement: {
-      create: async ({ data }) => { calls.history = data; return data; },
-    },
-  };
-  prisma.$transaction = async (operation, options) => {
-    assert.equal(options.isolationLevel, 'Serializable');
-    return operation(tx);
-  };
+  prisma.$transaction = async () => { writes += 1; };
   const service = new ReportsService(prisma, {});
 
-  const result = await service.createReport({
-    description: 'Un dépôt est situé près de l’entrée du marché.',
-  }, authId, 'report-no-photo-0001');
-
-  assert.equal(calls.report.description, 'Un dépôt est situé près de l’entrée du marché.');
-  assert.equal(calls.report.statutSignalement, 'SOUMIS');
-  assert.equal(calls.history.nouveauStatut, 'SOUMIS');
-  assert.equal(calls.audit, 1);
-  assert.equal(result.idSignalement, reportId);
+  await assert.rejects(
+    service.createReport({
+      description: 'Un dépôt est situé près de l’entrée du marché.',
+    }, authId, 'report-no-photo-0001'),
+    BadRequestException,
+  );
+  assert.equal(writes, 0);
 });
 
 test('creates a photo-first report without description or waste categories in one transaction', async () => {

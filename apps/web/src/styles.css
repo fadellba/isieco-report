@@ -4,12 +4,12 @@
 
 :root {
   font-family:
-    Inter,
-    ui-sans-serif,
+    "Segoe UI Variable",
     system-ui,
+    "Aptos",
+    Inter,
     -apple-system,
     BlinkMacSystemFont,
-    'Segoe UI',
     sans-serif;
   color: #0f172a;
   background: #f8fafc;
@@ -58,6 +58,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
+  line-height: 1.45;
   background: var(--surface-base);
   color: var(--ink-900);
 }
@@ -77,6 +78,33 @@ button {
 ::selection {
   background: #d9eee2;
   color: var(--brand-forest-dark);
+}
+
+.eco-banner {
+  overflow: hidden;
+  opacity: 0.42;
+  mask-image: linear-gradient(to left, #000 68%, transparent 100%);
+}
+.eco-banner__scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  animation: eco-banner-crossfade 15s infinite;
+}
+.eco-banner__scene--one { animation-delay: 0s; }
+.eco-banner__scene--two { animation-delay: 5s; }
+.eco-banner__scene--three { animation-delay: 10s; }
+@keyframes eco-banner-crossfade {
+  0%, 3% { opacity: 0; transform: translateX(12px) scale(1.02); }
+  8%, 28% { opacity: 1; transform: translateX(0) scale(1); }
+  34%, 100% { opacity: 0; transform: translateX(-10px) scale(.99); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .eco-banner__scene { animation: none; opacity: 0; }
+  .eco-banner__scene--one { opacity: 1; }
 }
 
 /* Application frame */
@@ -964,7 +992,7 @@ button {
 }
 .operational-map__viewport {
   position: relative;
-  height: 490px;
+  height: 360px;
   overflow: hidden;
   background: #eaf0e8;
   cursor: grab;
@@ -1020,6 +1048,15 @@ button {
   color: white;
   font-size: 13px;
   font-weight: 900;
+}
+.operational-map__marker.is-intervention {
+  background: #0f766e;
+}
+.operational-map__marker.is-intervention::before {
+  content: '🚚';
+  color: white;
+  font-size: 12px;
+  line-height: 1;
 }
 .operational-map__marker.is-critical {
   background: #ef4444;
@@ -5277,4 +5314,174 @@ button {
 }
 .auth-form__error .auth-form__link {
   margin-top: 10px;
+}
+
+
+/* Web operations: compact CRUD surfaces and a single, predictable scroll region. */
+:root {
+  font-family: Inter, "Segoe UI Variable", Aptos, ui-sans-serif, system-ui,
+    -apple-system, BlinkMacSystemFont, sans-serif;
+  font-optical-sizing: auto;
+}
+
+.eco-banner {
+  opacity: 0.62;
+  mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.2) 18%, #000 54%);
+}
+.eco-banner__scene {
+  filter: saturate(0.82) contrast(0.94);
+}
+.eco-banner__scene { animation-duration: 18s; }
+.eco-banner__scene--one { animation-delay: 0s; }
+.eco-banner__scene--two { animation-delay: 6s; }
+.eco-banner__scene--three { animation-delay: 12s; }
+
+.command-center-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.command-center-page > section[aria-label="Indicateurs opérationnels"] { gap: 10px; }
+.command-center-page > section[aria-label="Indicateurs opérationnels"] article { padding: 9px 11px; }
+.command-center-page > section[aria-label="Indicateurs opérationnels"] article p.text-xl {
+  margin-top: 2px;
+  font-size: 1.1rem;
+  line-height: 1.25;
+}
+.command-center-layout { gap: 12px !important; }
+.command-center-map { height: clamp(260px, 38vh, 340px) !important; }
+.command-center-filters { gap: 10px; }
+.command-center-filters > div { padding: 12px !important; }
+.command-center-filters h2 { margin-bottom: 8px !important; }
+
+.management-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.management-page > :not([hidden]) ~ :not([hidden]) { margin-top: 0 !important; }
+.management-page h1 {
+  font-size: clamp(1.2rem, 1.8vw, 1.55rem) !important;
+  line-height: 1.2;
+  letter-spacing: -0.035em;
+}
+.management-page > header { border-radius: 14px !important; }
+.management-page > header:not(.qualification-queue-hero):not(.case-workspace__hero):not(.assignment-workspace__hero):not(.interventions-workspace__hero) > div:first-child {
+  gap: 10px !important;
+  padding: 14px 18px !important;
+}
+.management-page > header > div:first-child p {
+  margin-top: 5px !important;
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+}
+.management-page > header > div:last-child > div { padding: 9px 12px !important; }
+.management-page > header > div:last-child p.text-2xl {
+  margin-top: 2px !important;
+  font-size: 1.15rem !important;
+}
+.management-page input,
+.management-page select {
+  min-height: 36px;
+  padding-block: 7px !important;
+  font-size: 12px !important;
+}
+.management-page textarea { font-size: 12px !important; }
+.management-page section > div.border-b { padding: 12px !important; }
+.management-page .qualification-queue-hero,
+.management-page .case-workspace__hero,
+.management-page .assignment-workspace__hero,
+.management-page .interventions-workspace__hero {
+  min-height: 0;
+  padding: 14px 18px;
+  border-radius: 14px;
+}
+.management-page .qualification-queue-hero h1,
+.management-page .case-workspace__hero h1,
+.management-page .assignment-workspace__hero h1,
+.management-page .interventions-workspace__hero h1 {
+  margin-top: 5px;
+  font-size: 1.45rem !important;
+}
+.management-page .qualification-queue-hero p,
+.management-page .case-workspace__hero p,
+.management-page .assignment-workspace__hero p,
+.management-page .interventions-workspace__hero p {
+  margin-top: 5px;
+  font-size: 10px;
+  line-height: 1.45;
+}
+.management-page .qualification-queue-summary,
+.management-page .case-workspace__summary,
+.management-page .assignment-workspace__summary,
+.management-page .interventions-summary { gap: 8px; }
+.management-page .qualification-queue-stat,
+.management-page .case-workspace__stat,
+.management-page .assignment-workspace__summary article,
+.management-page .interventions-summary article { padding: 10px 12px; }
+.management-page .qualification-queue-stat strong,
+.management-page .assignment-workspace__summary strong,
+.management-page .interventions-summary strong { font-size: 1.15rem; }
+.management-page .qualification-queue-panel,
+.management-page .case-workspace__list,
+.management-page .assignment-history-panel,
+.management-page .interventions-panel,
+.management-page .verification-queue { border-radius: 12px; }
+.management-page .qualification-queue-panel__header,
+.management-page .case-workspace__list-heading,
+.management-page .assignment-history-panel__header,
+.management-page .interventions-panel__header { padding: 12px 14px; }
+.management-page .qualification-queue-panel__header h2,
+.management-page .case-workspace__list-heading h2,
+.management-page .assignment-history-panel__header h2,
+.management-page .interventions-panel__header h2 { font-size: 13px; }
+.management-page .qualification-queue-toolbar,
+.management-page .case-workspace__filters,
+.management-page .assignment-history-panel__toolbar,
+.management-page .interventions-panel__toolbar {
+  gap: 10px;
+  padding: 10px 14px;
+}
+.management-page .qualification-queue-item,
+.management-page .interventions-panel__list article { padding-block: 11px; }
+.management-page .verification-queue > div:first-child { padding: 12px 14px !important; }
+.management-page .verification-queue h2 { font-size: 13px; }
+.management-page .verification-queue input,
+.management-page .verification-queue select { padding: 7px 10px !important; }
+.management-page .statistics-page section { border-radius: 12px; }
+
+.management-disclosure { padding: 0 !important; }
+.management-disclosure > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  list-style: none;
+}
+.management-disclosure > summary::-webkit-details-marker { display: none; }
+.management-disclosure > summary::after {
+  content: "＋";
+  margin-left: auto;
+  color: var(--brand-forest);
+  font-size: 17px;
+  font-weight: 700;
+}
+.management-disclosure[open] > summary::after { content: "−"; }
+.management-disclosure__summary:focus-visible {
+  outline-offset: -3px;
+  border-radius: 12px;
+}
+.management-disclosure__body { padding: 0 16px 16px; }
+.case-workspace__create.management-disclosure > summary { padding: 14px 18px; }
+.case-workspace__create.management-disclosure > summary h2 { font-size: 13px; }
+.case-workspace__create.management-disclosure > summary p { margin-top: 4px; line-height: 1.4; }
+
+@media (min-width: 768px) {
+  .management-page > header > div:first-child h1 { font-size: 1.5rem !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .eco-banner__scene { animation: none; opacity: 0; }
+  .eco-banner__scene--one { opacity: 1; }
 }

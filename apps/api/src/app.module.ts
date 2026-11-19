@@ -13,6 +13,7 @@ import { InterventionsModule } from './modules/interventions/interventions.modul
 import { VerificationModule } from './modules/verification/verification.module.js';
 import { ReferentialsModule } from './modules/referentials/referentials.module.js';
 import { CommandCenterModule } from './modules/command-center/command-center.module.js';
+import { NotificationsModule } from './modules/notifications/notifications.module.js';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { CommandCenterModule } from './modules/command-center/command-center.mod
     VerificationModule,
     ReferentialsModule,
     CommandCenterModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

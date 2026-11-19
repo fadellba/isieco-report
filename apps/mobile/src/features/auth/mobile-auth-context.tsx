@@ -8,6 +8,7 @@ import {
   type PropsWithChildren,
 } from 'react';
 import type { AuthenticatedProfile } from '@isieco/shared';
+import type { Session } from '@supabase/supabase-js';
 import { api } from '../../lib/api';
 import { supabase } from '../../lib/supabase';
 
@@ -55,46 +56,59 @@ export function MobileAuthProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     let active = true;
+    let requestVersion = 0;
 
-    const load = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const { data, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) throw sessionError;
-        if (!data.session) {
-          if (active) setProfile(null);
-          return;
-        }
-        const result = await api.request<AuthenticatedProfile>('/accounts/me');
-        if (active) setProfile(result);
-      } catch {
-        if (active) {
-          setProfile(null);
-          setError('Impossible de charger votre profil. Vérifiez votre connexion et réessayez.');
-        }
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
-
-    const { data } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT' || !session) {
+    const load = async (session: Session | null) => {
+      const currentRequest = ++requestVersion;
+      if (!session) {
         if (active) {
           setProfile(null);
           setError(null);
           setLoading(false);
         }
-      } else if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-        // Token refreshes do not change the business profile. Avoid blocking the
-        // current screen on routine Supabase session renewal.
-        void Promise.resolve().then(load);
+        return;
       }
+
+      setLoading(true);
+      setError(null);
+      try {
+        // INITIAL_SESSION contains the restored session. No extra getSession()
+        // call is needed before /accounts/me.
+        const result = await api.request<AuthenticatedProfile>('/accounts/me');
+        if (active && currentRequest === requestVersion) setProfile(result);
+      } catch {
+        if (active && currentRequest === requestVersion) {
+          setProfile(null);
+          setError('Impossible de charger votre profil. Vérifiez votre connexion et réessayez.');
+        }
+      } finally {
+        if (active && currentRequest === requestVersion) setLoading(false);
+      }
+    };
+
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        requestVersion += 1;
+        if (active) {
+          setProfile(null);
+          setError(null);
+          setLoading(false);
+        }
+      } else if (
+        event === 'INITIAL_SESSION' ||
+        event === 'SIGNED_IN' ||
+        event === 'USER_UPDATED'
+      ) {
+        setLoading(true);
+        // Work outside Supabase's auth callback to avoid holding its lock.
+        void Promise.resolve().then(() => load(session));
+      }
+      // TOKEN_REFRESHED does not invalidate the business profile.
     });
 
-    void load();
     return () => {
       active = false;
+      requestVersion += 1;
       data.subscription.unsubscribe();
     };
   }, []);

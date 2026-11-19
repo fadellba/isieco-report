@@ -94,7 +94,7 @@ export function QualificationQueuePage() {
   }, [result, search]);
 
   return (
-    <div className="qualification-queue-page">
+    <div className="management-page qualification-queue-page">
       <header className="qualification-queue-hero">
         <div>
           <span className="qualification-queue-hero__eyebrow">TRAITEMENT DES SIGNALEMENTS</span>

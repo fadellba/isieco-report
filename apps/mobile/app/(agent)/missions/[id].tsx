@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import {
   getAgentProfile,
+  getInterventionPhotoUrl,
   listMyTeams,
   listTeamAssignments,
   listTeamInterventions,
@@ -26,6 +27,7 @@ import {
   type MobileAgentProfile,
   type TeamAssignment,
   type TeamIntervention,
+  type TeamInterventionPhoto,
 } from '../../../src/features/interventions/agent-api';
 import { dateLabel } from '../../../src/features/reports/report-format';
 import {
@@ -41,6 +43,8 @@ const inputClass =
 const primaryButton = 'rounded-2xl bg-brand-forest px-4 py-3.5 disabled:opacity-50 shadow-sm';
 const secondaryButton =
   'rounded-2xl border border-line-strong bg-white px-4 py-3.5 disabled:opacity-50';
+
+type LoadedInterventionPhoto = TeamInterventionPhoto & { signedUrl: string };
 
 function latestFor(id: string, items: TeamIntervention[]): TeamIntervention | undefined {
   return items
@@ -144,6 +148,7 @@ export default function AgentMissionDetailScreen() {
   const [teams, setTeams] = useState<AgentTeam[]>([]);
   const [assignment, setAssignment] = useState<TeamAssignment | null>(null);
   const [intervention, setIntervention] = useState<TeamIntervention>();
+  const [proofPhotos, setProofPhotos] = useState<LoadedInterventionPhoto[]>([]);
   const [refusalReason, setRefusalReason] = useState('');
   const [observation, setObservation] = useState('');
   const [result, setResult] = useState<'TERMINEE' | 'PARTIELLE' | 'IMPOSSIBLE'>('TERMINEE');
@@ -195,10 +200,32 @@ export default function AgentMissionDetailScreen() {
       setProfile(agent);
       setTeams(memberships);
       setAssignment(selected);
-      setIntervention(latestFor(id, interventions));
+      const currentIntervention = latestFor(id, interventions);
+      setIntervention(currentIntervention);
+      if (currentIntervention?.photos.length) {
+        const signedPhotos = await Promise.all(
+          currentIntervention.photos.map(async (photo) => {
+            try {
+              const signed = await getInterventionPhotoUrl(
+                currentIntervention.idIntervention,
+                photo.idPhotoIntervention,
+              );
+              return { ...photo, signedUrl: signed.signedUrl };
+            } catch {
+              return null;
+            }
+          }),
+        );
+        setProofPhotos(signedPhotos.filter(
+          (photo): photo is LoadedInterventionPhoto => photo !== null,
+        ));
+      } else {
+        setProofPhotos([]);
+      }
     } catch (reason) {
       setAssignment(null);
       setIntervention(undefined);
+      setProofPhotos([]);
       setError(reason instanceof Error ? reason.message : 'Impossible de charger la mission.');
     } finally {
       setLoading(false);
@@ -306,6 +333,7 @@ export default function AgentMissionDetailScreen() {
       setProofContext('');
       setProofDescription('');
       setNotice('Preuve photo ajoutée avec succès.');
+      await load();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Échec de l’envoi de la preuve.');
     } finally {
@@ -690,6 +718,35 @@ export default function AgentMissionDetailScreen() {
                 rendu.
               </Text>
             )}
+          </View>
+        )}
+
+        {proofPhotos.length > 0 && (
+          <View className="mt-4 rounded-3xl border border-line-subtle bg-white p-5 shadow-sm">
+            <Text className="text-sm font-extrabold text-ink-900">Preuves photo transmises</Text>
+            <Text className="mt-1 text-xs text-ink-500">
+              Les images sont privées et visibles temporairement après authentification.
+            </Text>
+            <View className="mt-3 gap-3">
+              {proofPhotos.map((photo) => (
+                <View key={photo.idPhotoIntervention} className="overflow-hidden rounded-2xl border border-line-subtle">
+                  <Image
+                    source={{ uri: photo.signedUrl }}
+                    resizeMode="cover"
+                    style={{ width: '100%', height: 170 }}
+                  />
+                  <View className="p-3">
+                    <Text className="text-xs font-bold text-ink-800">{photo.contextePhoto}</Text>
+                    {photo.description ? (
+                      <Text className="mt-1 text-xs text-ink-600">{photo.description}</Text>
+                    ) : null}
+                    <Text className="mt-1 text-[10px] text-ink-400">
+                      Ajoutée le {dateLabel(photo.dateAjout)}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
           </View>
         )}
 

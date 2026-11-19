@@ -74,6 +74,7 @@ Le modèle simplifié ne comporte plus de référentiels région/département/co
 | POST | `/reports` | `CITOYEN` ; dépôt JSON idempotent avec l'en-tête `Idempotency-Key`. |
 | POST | `/reports/with-photo` | `CITOYEN` ; dépôt multipart avec photo facultative et métadonnées facultatives, sous réserve d'au moins une information utile. |
 | GET | `/reports/waste-types` | `CITOYEN` ; types de déchets actifs pour la déclaration. |
+| GET | `/reports/nearby` | `CITOYEN` ; marqueurs anonymisés des signalements qualifiés à proximité, avec coordonnées arrondies. |
 | GET | `/reports` | `CITOYEN` ; liste paginée appartenant au compte connecté. |
 | GET | `/reports/:id` | `CITOYEN` propriétaire ; détail du signalement. |
 | GET | `/reports/:id/history` | `CITOYEN` propriétaire ; chronologie filtrée des statuts et jalons opérationnels. |
@@ -193,3 +194,14 @@ Toutes les routes métier sont préfixées par `/api/v1`. Préférer les changem
 ## Workflow de changement
 
 Mettre à jour contrôleur, DTO, service, tests et annotations OpenAPI dans la même PR. La CI génère OpenAPI et valide le JSON produit. Ce fichier doit rester un index des routes réellement implémentées et ne doit pas réintroduire des endpoints supprimés du modèle.
+
+
+### Photo obligatoire, GPS et données cartographiques
+
+La création d’un signalement citoyen exige une photo. La route JSON historique `POST /reports` est dépréciée et refuse les dépôts sans image ; la route multipart `POST /reports/with-photo` enregistre le signalement et sa première photo comme une seule opération métier. Une contrainte différée PostgreSQL refuse la validation d’une transaction sans photo et empêche la suppression de la dernière photo.
+
+La route `GET /reports/nearby` ne retourne que des signalements qualifiés. Elle expose des coordonnées arrondies à trois décimales, la distance arrondie au mètre et aucun champ descriptif ou identifiant utilisateur. Le client ne déclenche pas le GPS ; il fournit une position après consentement explicite.
+
+Les preuves photo d’intervention sont retournées sous forme de métadonnées privées. Le chemin de stockage n’est jamais exposé ; un membre actif de l’équipe obtient séparément une URL signée de 60 secondes.
+
+Le centre de commandement retourne les signalements et les interventions actives dans des couches cartographiques distinctes. Les dossiers de traitement ne sont pas des marqueurs. Les statistiques agrègent les dates de création des signalements, dossiers, affectations et interventions. Les notifications sont dérivées du journal d’audit privé et filtrées en base selon les droits actuels.

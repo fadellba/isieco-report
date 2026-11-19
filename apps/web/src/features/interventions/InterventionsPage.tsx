@@ -342,7 +342,7 @@ export function InterventionsPage() {
   const selectedTeam = teams.find((team) => team.idEquipe === selectedTeamId) ?? null;
 
   return (
-    <div className="interventions-workspace">
+    <div className="management-page interventions-workspace">
       <header className="interventions-workspace__hero">
         <div>
           <span className="interventions-workspace__eyebrow">OPÉRATIONS DE TERRAIN</span>

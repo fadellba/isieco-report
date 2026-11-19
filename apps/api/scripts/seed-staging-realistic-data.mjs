@@ -517,6 +517,17 @@ async function main() {
         }
       }
 
+      const reportsMissingRequiredPhotos = realisticReportsSeed.filter((report) => {
+        const photoKey = Object.keys(REAL_PHOTOS).find((key) => REAL_PHOTOS[key] === report.photoUrl);
+        return !photoKey || !imageBuffers.has(photoKey);
+      });
+      if (reportsMissingRequiredPhotos.length > 0) {
+        const missingCodes = reportsMissingRequiredPhotos.map((report) => report.code).join(', ');
+        throw new Error(
+          `Staging seed aborted before report creation: required citizen photos are unavailable for ${missingCodes}.`,
+        );
+      }
+
       console.log('6. Création des signalements, dossiers et interventions réalistes...');
       const citizenId = provisionedProfiles.get('citoyen');
       const qualificationId = provisionedProfiles.get('agent-qualification');

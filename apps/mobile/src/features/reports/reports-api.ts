@@ -51,6 +51,20 @@ export interface ReportPage {
   total: number;
 }
 
+export interface NearbyReportMarker {
+  idSignalement: string;
+  latitude: number;
+  longitude: number;
+  statutSignalement: 'QUALIFIE';
+  dateSoumission: string | null;
+  distanceMeters: number;
+}
+
+export interface NearbyReportsResult {
+  radiusMeters: number;
+  items: NearbyReportMarker[];
+}
+
 export interface Supplement {
   idDemande: string;
   dateDemande: string;
@@ -87,12 +101,40 @@ export interface CreateReportPayload {
   descriptionLocalisation?: string;
 }
 
+export interface AppNotification {
+  id: string;
+  actionCode: string;
+  entityType: string;
+  entityId: string;
+  dossierId: string | null;
+  occurredAt: string;
+  title: string;
+  message: string;
+}
+
 export async function listAvailableWasteTypes(): Promise<WasteTypeOption[]> {
   return api.request<WasteTypeOption[]>('/reports/waste-types');
 }
 
 export async function listMyReports(page = 1, pageSize = 20): Promise<ReportPage> {
   return api.request<ReportPage>('/reports?page=' + page + '&pageSize=' + pageSize);
+}
+
+export async function listNearbyReports(
+  latitude: number,
+  longitude: number,
+  radiusMeters = 3000,
+): Promise<NearbyReportsResult> {
+  const params = new URLSearchParams({
+    latitude: String(latitude),
+    longitude: String(longitude),
+    radiusMeters: String(radiusMeters),
+  });
+  return api.request<NearbyReportsResult>('/reports/nearby?' + params.toString());
+}
+
+export async function listNotifications(limit = 30): Promise<AppNotification[]> {
+  return api.request<AppNotification[]>('/notifications?limit=' + String(Math.min(100, Math.max(1, limit))));
 }
 
 export async function getMyReport(id: string): Promise<Report> {
@@ -107,17 +149,6 @@ export async function listReportSupplements(id: string): Promise<SupplementList>
   return api.request<SupplementList>('/reports/' + encodeURIComponent(id) + '/supplements');
 }
 
-export async function submitReport(
-  payload: CreateReportPayload,
-  idempotencyKey: string,
-): Promise<Report> {
-  return api.request<Report>('/reports', {
-    method: 'POST',
-    headers: { 'Idempotency-Key': idempotencyKey },
-    body: JSON.stringify(payload),
-  });
-}
-
 /**
  * Creates a citizen report and its first private photo atomically.
  * Do not set Content-Type: the platform must generate the multipart boundary.
@@ -125,10 +156,11 @@ export async function submitReport(
 export async function submitReportWithPhoto(
   payload: CreateReportPayload,
   idempotencyKey: string,
-  photo?: { uri: string; name: string; type: string },
+  photo: { uri: string; name: string; type: string },
+  signal?: AbortSignal,
 ): Promise<Report> {
   const body = new FormData();
-  if (photo) body.append('file', photo as unknown as Blob);
+  body.append('file', photo as unknown as Blob);
   if (payload.description?.trim()) body.append('description', payload.description.trim());
   if (payload.dateConstat) body.append('dateConstat', payload.dateConstat);
   if (payload.latitude !== undefined) body.append('latitude', String(payload.latitude));
@@ -143,6 +175,7 @@ export async function submitReportWithPhoto(
     method: 'POST',
     headers: { 'Idempotency-Key': idempotencyKey },
     body,
+    ...(signal ? { signal } : {}),
   });
 }
 

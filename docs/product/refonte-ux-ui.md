@@ -210,3 +210,22 @@ Cette livraison couvre maintenant une première reprise des routes applicatives 
 - Carte Mobile agent : les coordonnées réelles ouvrent l’emplacement correspondant sur OpenStreetMap ; aucune position fictive n’est ajoutée. Les missions dépourvues de coordonnées restent accessibles dans leur section dédiée.
 - Cartographie Mobile : OpenStreetMap est ouvert via le navigateur système. Aucune clé API ou variable EAS n’est à configurer.
 - Assets natifs : `icon.png` (1024×1024), `adaptive-icon.png` (1024×1024 transparent), `splash.png` (1024×1024 transparent) et `brand-mark.png` (512×512 transparent) sont maintenant committés dans `apps/mobile/assets/`.
+
+
+## Décisions UX ajoutées — novembre 2026
+
+- La photo du dépôt est obligatoire dans l’interface, l’API et les contraintes différées PostgreSQL.
+- Le GPS n’est sollicité qu’après activation explicite d’un bouton. La saisie manuelle des coordonnées reste possible.
+- L’accueil citoyen affiche une carte OpenStreetMap des signalements qualifiés dans un rayon de 3 km. Les coordonnées retournées sont arrondies et les données du déclarant restent privées.
+- Les preuves photo d’intervention sont visibles après authentification et appartenance active à l’équipe ; le stockage reste privé et les URL signées expirent après 60 secondes.
+- Les KPI back-office sont compacts et ordonnés : signalements, dossiers, affectations, interventions. Les chiffres fictifs ont été supprimés.
+- La carte opérationnelle distingue les signalements des interventions en cours ; les dossiers ne sont plus des marqueurs.
+- La bannière alterne trois paysages illustrés avec fondu progressif et respecte la préférence de réduction des animations.
+- La typographie utilise une pile système et les icônes du menu utilisent des émojis.
+- Le tableau de bord n’affiche plus de cartes d’accès opérationnel en doublon ; les modules restent dans la navigation latérale.
+- La page Statistiques propose des périodes journalière, hebdomadaire, mensuelle, semestrielle et annuelle, ainsi qu’un export CSV.
+- Les notifications métier sont filtrées par propriétaire, rôles actifs et appartenance à une équipe.
+
+## Périmètre hors ligne
+
+La file locale persistante couvre le dépôt citoyen avec sa photo et une synchronisation idempotente. Les actions d’affectation, les interventions, les vérifications et les autres décisions métier ne sont pas disponibles hors ligne.

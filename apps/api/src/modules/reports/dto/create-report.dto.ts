@@ -99,5 +99,5 @@ export class CreateReportDto {
   contenus?: CreateReportContentDto[];
 }
 
-/** Multipart metadata DTO for a citizen report; the initial photo is optional. */
+/** Multipart metadata DTO for a citizen report; a first photo is mandatory at the controller/service boundary. */
 export class CreateReportWithPhotoDto extends CreateReportDto {}

@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import type { CommandCenterQueryDto } from './dto/command-center-query.dto.js';
+import type { StatisticsPeriod } from './dto/statistics-query.dto.js';
 import { pendingVerificationWhere } from '../verification/pending-verification.query.js';
 
 const OPEN_REPORT_STATUSES = ['SOUMIS', 'EN_ATTENTE_COMPLEMENT', 'COMPLEMENT_REPONDU'] as const;
@@ -94,6 +95,118 @@ function compareMapFeatures(
 @Injectable()
 export class CommandCenterService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async getStatistics(period: StatisticsPeriod) {
+    const now = new Date();
+    const start = new Date(now);
+    let bucket: 'hour' | 'day' | 'month';
+    let interval: '1 hour' | '1 day' | '1 month';
+
+    if (period === 'DAILY') {
+      start.setUTCHours(0, 0, 0, 0);
+      bucket = 'hour';
+      interval = '1 hour';
+    } else if (period === 'WEEKLY') {
+      start.setUTCHours(0, 0, 0, 0);
+      const daysSinceMonday = (start.getUTCDay() + 6) % 7;
+      start.setUTCDate(start.getUTCDate() - daysSinceMonday);
+      bucket = 'day';
+      interval = '1 day';
+    } else if (period === 'MONTHLY') {
+      start.setUTCHours(0, 0, 0, 0);
+      start.setUTCDate(1);
+      bucket = 'day';
+      interval = '1 day';
+    } else if (period === 'SEMIANNUAL') {
+      start.setUTCMinutes(0, 0, 0);
+      start.setUTCHours(0, 0, 0, 0);
+      start.setUTCMonth(start.getUTCMonth() < 6 ? 0 : 6, 1);
+      bucket = 'month';
+      interval = '1 month';
+    } else {
+      start.setUTCMinutes(0, 0, 0);
+      start.setUTCHours(0, 0, 0, 0);
+      start.setUTCMonth(0, 1);
+      bucket = 'month';
+      interval = '1 month';
+    }
+
+    const rows = await this.prisma.$queryRaw<Array<{
+      bucketStart: Date;
+      signalements: number;
+      dossiers: number;
+      affectations: number;
+      interventions: number;
+    }>>(Prisma.sql`
+      WITH buckets AS (
+        SELECT generate_series(
+          date_trunc(${bucket}, ${start}::timestamptz),
+          date_trunc(${bucket}, ${now}::timestamptz),
+          ${interval}::interval
+        ) AS bucket_start
+      ),
+      reports AS (
+        SELECT date_trunc(${bucket}, date_soumission) AS bucket_start, COUNT(*)::int AS total
+        FROM public.signalement
+        WHERE date_soumission >= ${start} AND date_soumission <= ${now}
+        GROUP BY 1
+      ),
+      cases AS (
+        SELECT date_trunc(${bucket}, date_creation_dossier) AS bucket_start, COUNT(*)::int AS total
+        FROM public.dossier_traitement
+        WHERE date_creation_dossier >= ${start} AND date_creation_dossier <= ${now}
+        GROUP BY 1
+      ),
+      assignments AS (
+        SELECT date_trunc(${bucket}, date_heure_affectation) AS bucket_start, COUNT(*)::int AS total
+        FROM public.affectation
+        WHERE date_heure_affectation >= ${start} AND date_heure_affectation <= ${now}
+        GROUP BY 1
+      ),
+      interventions AS (
+        SELECT date_trunc(${bucket}, date_heure_debut) AS bucket_start, COUNT(*)::int AS total
+        FROM public.intervention
+        WHERE date_heure_debut >= ${start} AND date_heure_debut <= ${now}
+        GROUP BY 1
+      )
+      SELECT
+        buckets.bucket_start AS "bucketStart",
+        COALESCE(reports.total, 0)::int AS signalements,
+        COALESCE(cases.total, 0)::int AS dossiers,
+        COALESCE(assignments.total, 0)::int AS affectations,
+        COALESCE(interventions.total, 0)::int AS interventions
+      FROM buckets
+      LEFT JOIN reports ON reports.bucket_start = buckets.bucket_start
+      LEFT JOIN cases ON cases.bucket_start = buckets.bucket_start
+      LEFT JOIN assignments ON assignments.bucket_start = buckets.bucket_start
+      LEFT JOIN interventions ON interventions.bucket_start = buckets.bucket_start
+      ORDER BY buckets.bucket_start ASC
+    `);
+
+    const totals = rows.reduce(
+      (acc, row) => ({
+        signalements: acc.signalements + row.signalements,
+        dossiers: acc.dossiers + row.dossiers,
+        affectations: acc.affectations + row.affectations,
+        interventions: acc.interventions + row.interventions,
+      }),
+      { signalements: 0, dossiers: 0, affectations: 0, interventions: 0 },
+    );
+    const verificationsConformes = await this.prisma.verification.count({
+      where: {
+        resultatVerification: 'CONFORME',
+        dateVerification: { gte: start, lte: now },
+      },
+    });
+
+    return {
+      period,
+      from: start,
+      to: now,
+      totals: { ...totals, verificationsConformes },
+      series: rows,
+    };
+  }
 
   async getOverview(query: CommandCenterQueryDto) {
     const bounds = [query.minLat, query.maxLat, query.minLon, query.maxLon];
@@ -365,7 +478,92 @@ export class CommandCenterService {
       wasteTypes: [],
     }));
 
-    const totalLocated = mapLocatedCasesCount + mapLocatedReportsCount;
+    type InterventionMapRow = {
+      id: string;
+      occurredAt: Date | null;
+      referenceDossier: string;
+      latitude: string;
+      longitude: string;
+      locationLabel: string | null;
+      teamName: string;
+      wasteType: string;
+    };
+    let interventionRows: InterventionMapRow[] = [];
+    let locatedInterventionsCount = 0;
+
+    // Unit-test doubles may omit raw-query support. Production Prisma always provides it.
+    if (typeof this.prisma.$queryRaw === 'function') {
+      const interventionMapFrom = Prisma.sql`
+        FROM public.intervention AS intervention
+        JOIN public.affectation AS assignment
+          ON assignment.id_affectation = intervention.id_affectation
+        JOIN public.contenu_dossier AS content
+          ON content.id_contenu_dossier = assignment.id_contenu_dossier
+        JOIN public.dossier_traitement AS dossier
+          ON dossier.id_dossier = content.id_dossier
+        JOIN public.equipe AS team
+          ON team.id_equipe = assignment.id_equipe
+        JOIN public.type_dechet AS waste_type
+          ON waste_type.id_type_dechet = content.id_type_dechet
+        WHERE intervention.statut_intervention = 'EN_COURS'
+          AND assignment.etat_affectation = 'ACTIVE'
+          AND assignment.date_fin_affectation IS NULL
+          AND assignment.decision_equipe = 'ACCEPTEE'
+          AND content.etat_contenu_dossier = 'ACTIF'
+          AND content.etat_prise_en_charge = 'EN_COURS'
+          AND dossier.statut_dossier <> 'CLOTURE'
+          AND dossier.latitude IS NOT NULL
+          AND dossier.longitude IS NOT NULL
+          ${hasViewport ? Prisma.sql`
+            AND dossier.latitude BETWEEN ${minLat} AND ${maxLat}
+            AND (
+              (${minLon} <= ${maxLon} AND dossier.longitude BETWEEN ${minLon} AND ${maxLon})
+              OR
+              (${minLon} > ${maxLon} AND (dossier.longitude >= ${minLon} OR dossier.longitude <= ${maxLon}))
+            )
+          ` : Prisma.empty}
+      `;
+
+      const [rows, countRows] = await Promise.all([
+        this.prisma.$queryRaw<InterventionMapRow[]>(Prisma.sql`
+          SELECT
+            intervention.id_intervention AS id,
+            intervention.date_heure_debut AS "occurredAt",
+            dossier.reference_dossier AS "referenceDossier",
+            dossier.latitude::text AS latitude,
+            dossier.longitude::text AS longitude,
+            dossier.description_localisation AS "locationLabel",
+            team.nom_equipe AS "teamName",
+            waste_type.libelle AS "wasteType"
+          ${interventionMapFrom}
+          ORDER BY intervention.date_heure_debut DESC NULLS LAST,
+                   intervention.id_intervention DESC
+          LIMIT ${limit}
+        `),
+        this.prisma.$queryRaw<Array<{ total: number }>>(Prisma.sql`
+          SELECT COUNT(*)::int AS total
+          ${interventionMapFrom}
+        `),
+      ]);
+      interventionRows = rows;
+      locatedInterventionsCount = countRows[0]?.total ?? 0;
+    }
+
+    const interventionFeatures = interventionRows.map((item) => ({
+      kind: 'INTERVENTION' as const,
+      id: item.id,
+      title: 'Intervention • ' + item.referenceDossier,
+      status: 'EN_COURS',
+      priority: null,
+      latitude: item.latitude,
+      longitude: item.longitude,
+      locationLabel: item.locationLabel,
+      occurredAt: item.occurredAt,
+      teamNames: [item.teamName],
+      activeInterventions: 1,
+      wasteTypes: [item.wasteType],
+    }));
+        const totalLocated = mapLocatedReportsCount + locatedInterventionsCount;
     const orderedItems = [...caseFeatures, ...reportFeatures]
       .sort(compareMapFeatures)
       .slice(0, limit + 1);
@@ -388,6 +586,7 @@ export class CommandCenterService {
       },
       map: {
         items: mapItems,
+        interventions: interventionFeatures,
         totalLocated,
         truncated: hasMore,
         limit,
