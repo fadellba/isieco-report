@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { api } from '../../lib/api';
 import { FeedbackBanner, StatusBadge } from '../../components/StatusBadge';
+import { ManagementTable } from '../../components/ManagementTable';
 
 interface WasteType {
   idTypeDechet: string;
@@ -591,52 +592,70 @@ export function ReferentialsPage() {
                 {filteredTypes.length}
               </span>
             </div>
-            <div className="divide-y divide-line-subtle">
-              {filteredTypes.map((item) => (
-                <article
-                  key={item.idTypeDechet}
-                  className="flex flex-wrap items-center justify-between gap-4 px-5 py-4 transition hover:bg-surface-base/50"
-                >
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-bold text-ink-900">{item.libelle}</h3>
-                      <StatusBadge
-                        label={item.actif ? 'Actif' : 'Inactif'}
-                        tone={item.actif ? 'success' : 'neutral'}
-                      />
-                    </div>
-                    <p className="mt-1 break-words text-xs text-ink-500">
-                      <span className="font-bold tracking-wide">{item.codeType}</span>
-                      {item.description ? ' · ' + item.description : ''}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => void toggleWasteType(item)}
-                    disabled={busy === 'type-' + item.idTypeDechet}
-                    className={secondaryClass}
-                  >
-                    {busy === 'type-' + item.idTypeDechet
-                      ? 'Mise à jour…'
-                      : item.actif
-                        ? 'Désactiver'
-                        : 'Réactiver'}
-                  </button>
-                </article>
-              ))}
-              {!loading && !filteredTypes.length ? (
-                <div className="p-8 text-center">
-                  <p className="font-bold text-ink-800">
-                    {wasteTypes.length ? 'Aucun résultat' : 'Aucun type enregistré'}
-                  </p>
-                  <p className="mt-1 text-sm text-ink-500">
-                    {wasteTypes.length
-                      ? 'Modifiez votre recherche ou affichez les types inactifs.'
-                      : 'Créez le premier type de déchet pour alimenter le référentiel.'}
-                  </p>
-                </div>
-              ) : null}
-            </div>
+            <ManagementTable
+              label="Catalogue des types de déchets"
+              rows={filteredTypes}
+              rowKey={(item) => item.idTypeDechet}
+              emptyMessage={
+                wasteTypes.length
+                  ? 'Aucun type ne correspond à cette recherche. Vérifiez également le filtre des inactifs.'
+                  : 'Aucun type enregistré. Créez le premier type de déchet.'
+              }
+              columns={[
+                {
+                  key: 'code',
+                  label: 'Code',
+                  render: (item) => (
+                    <span className="management-table__primary">{item.codeType}</span>
+                  ),
+                },
+                {
+                  key: 'label',
+                  label: 'Libellé',
+                  render: (item) => (
+                    <span className="management-table__primary">{item.libelle}</span>
+                  ),
+                },
+                {
+                  key: 'description',
+                  label: 'Description',
+                  render: (item) => (
+                    <span className="management-table__secondary">
+                      {item.description || '—'}
+                    </span>
+                  ),
+                },
+                {
+                  key: 'status',
+                  label: 'Statut',
+                  render: (item) => (
+                    <StatusBadge
+                      label={item.actif ? 'Actif' : 'Inactif'}
+                      tone={item.actif ? 'success' : 'neutral'}
+                    />
+                  ),
+                },
+                {
+                  key: 'actions',
+                  label: 'Actions',
+                  className: 'text-right',
+                  render: (item) => (
+                    <button
+                      type="button"
+                      onClick={() => void toggleWasteType(item)}
+                      disabled={busy === 'type-' + item.idTypeDechet}
+                      className={secondaryClass}
+                    >
+                      {busy === 'type-' + item.idTypeDechet
+                        ? 'Mise à jour…'
+                        : item.actif
+                          ? 'Désactiver'
+                          : 'Réactiver'}
+                    </button>
+                  ),
+                },
+              ]}
+            />
           </div>
         </section>
       ) : (
