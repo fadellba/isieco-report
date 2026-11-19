@@ -348,10 +348,10 @@ export function OperationalCommandCenter() {
 
 
   return (
-    <div className="space-y-4">
+    <div className="command-center-page space-y-3">
       {/* Header with Skyline Banner matching web.PNG */}
       <div className="relative overflow-hidden bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-sm">
-        <EcoSkylineBanner className="hidden md:block" />
+        <EcoSkylineBanner />
 
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -448,7 +448,7 @@ export function OperationalCommandCenter() {
       </section>
 
       {/* Main Operational Layout: 2/3 Map + 1/3 Right Column matching web.PNG */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="command-center-layout grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Left Column (2/3): The Interactive Map */}
         <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden flex flex-col">
           {/* Map Top Bar */}
@@ -483,7 +483,7 @@ export function OperationalCommandCenter() {
           </div>
 
           {/* Map Canvas */}
-          <div className="relative h-[360px] w-full bg-slate-100">
+          <div className="command-center-map relative h-[320px] w-full bg-slate-100">
             {data ? (
               <OperationalMap
                 features={filteredFeatures}
@@ -569,7 +569,7 @@ export function OperationalCommandCenter() {
         </div>
 
         {/* Right Column (1/3): Activité Récente & Filtres matching web.PNG */}
-        <div className="space-y-6">
+        <div className="command-center-filters space-y-3">
           {/* Card: Filtres matching web.PNG */}
           <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4">
             <h2 className="text-sm font-black text-slate-900 tracking-tight mb-3">
