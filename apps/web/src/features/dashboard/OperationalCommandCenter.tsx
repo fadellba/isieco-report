@@ -118,7 +118,7 @@ export function OperationalCommandCenter() {
   const [viewportBounds, setViewportBounds] = useState<MapViewportBounds | null>(null);
   const requestVersion = useRef(0);
   const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(null);
-  const [kindFilter, setKindFilter] = useState<'TOUS' | 'SIGNALEMENT' | 'INTERVENTION'>('TOUS');
+  const [kindFilter, setKindFilter] = useState<'TOUS' | 'DOSSIER' | 'SIGNALEMENT' | 'INTERVENTION'>('TOUS');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('TOUS');
   const [loading, setLoading] = useState(true);
@@ -318,10 +318,7 @@ export function OperationalCommandCenter() {
 
   const filteredFeatures = useMemo(() => {
     if (!data) return [];
-    const visibleFeatures = [
-      ...data.map.items.filter((item) => item.kind === 'SIGNALEMENT'),
-      ...data.map.interventions,
-    ];
+    const visibleFeatures = [...data.map.items, ...data.map.interventions];
     return visibleFeatures.filter((item) => {
       if (kindFilter !== 'TOUS' && item.kind !== kindFilter) return false;
       if (statusFilter !== 'TOUS' && item.status !== statusFilter) return false;
@@ -518,7 +515,7 @@ export function OperationalCommandCenter() {
 
             {/* Quick Kind Filter Pills */}
             <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs">
-              {(['TOUS', 'SIGNALEMENT', 'INTERVENTION'] as const).map((kind) => (
+              {(['TOUS', 'DOSSIER', 'SIGNALEMENT', 'INTERVENTION'] as const).map((kind) => (
                 <button
                   key={kind}
                   type="button"
@@ -532,7 +529,7 @@ export function OperationalCommandCenter() {
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  {kind === 'TOUS' ? 'Tous' : kind === 'SIGNALEMENT' ? 'Signalements' : 'Interventions'}
+                  {kind === 'TOUS' ? 'Tous' : kind === 'DOSSIER' ? 'Dossiers' : kind === 'SIGNALEMENT' ? 'Signalements' : 'Interventions'}
                 </button>
               ))}
             </div>
@@ -675,7 +672,7 @@ export function OperationalCommandCenter() {
                       : feature.kind === 'DOSSIER'
                         ? 'Dossier créé'
                         : 'Signalement reçu';
-                  const icon =
+                  const icon: 'mapIntervention' | 'mapCase' | 'mapReport' =
                     feature.kind === 'INTERVENTION'
                       ? 'mapIntervention'
                       : feature.kind === 'DOSSIER'
