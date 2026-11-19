@@ -65,7 +65,7 @@ async function updateQueue(
   const previous = queueMutationTails.get(ownerId) ?? Promise.resolve();
   let release: () => void = () => {};
   const current = new Promise<void>((resolve) => {
-    release = resolve;
+    release = () => resolve();
   });
   queueMutationTails.set(ownerId, current);
 
