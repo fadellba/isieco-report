@@ -43,7 +43,7 @@ export function AppShell() {
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row md:h-dvh md:min-h-0 md:overflow-hidden text-slate-900 selection:bg-emerald-100 selection:text-emerald-900">
       {/* Dark Forest Green Sidebar matching web.PNG */}
       <aside className="w-full md:w-64 bg-[#0A261E] border-r border-[#13382D] flex-shrink-0 flex flex-col justify-between z-30 md:h-dvh md:max-h-dvh md:overflow-hidden">
-        <div>
+        <div className="flex min-h-0 flex-1 flex-col">
           {/* Logo brand */}
           <div className="h-20 flex items-center px-6 border-b border-[#13382D]">
             <Link to="/" className="flex items-center gap-3" aria-label="ISIECO Accueil">
