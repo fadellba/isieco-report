@@ -12,13 +12,13 @@ const onboardingSlides = [
     icon: '📸',
     title: 'Signalez les dépôts sauvages autour de vous',
     subtitle:
-      'En quelques secondes, photographiez et localisez un problème pour aider votre ville.',
+      'En quelques secondes, photographiez un problème et ajoutez sa localisation si vous le souhaitez.',
   },
   {
     icon: '📍',
-    title: 'Localisation précise & immédiate',
+    title: 'Localisation à votre demande',
     subtitle:
-      'Votre position est détectée automatiquement pour orienter les équipes de terrain sans perte de temps.',
+      'Votre position est demandée uniquement lorsque vous appuyez sur « Détecter ma position ». Vous pouvez aussi décrire le lieu manuellement.',
   },
   {
     icon: '🚚',
