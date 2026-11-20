@@ -1,4 +1,6 @@
 import * as ImageManipulator from 'expo-image-manipulator';
+import { Platform } from 'react-native';
+import { isUsableRecentPosition } from './mobile-location-utils';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 
@@ -77,25 +79,91 @@ export interface ForegroundCoordinates {
   latitude: number;
   longitude: number;
   precisionLocalisation?: number;
+  source: 'current' | 'last-known';
 }
 
-export async function requestCurrentForegroundCoordinates(): Promise<ForegroundCoordinates> {
-  const permission = await Location.requestForegroundPermissionsAsync();
-  if (permission.status !== 'granted') {
-    throw new Error(
-      'L’autorisation de localisation a été refusée. Vous pouvez toujours saisir les coordonnées manuellement.',
-    );
+function mapLocation(
+  position: Location.LocationObject,
+  source: ForegroundCoordinates['source'],
+): ForegroundCoordinates {
+  const { latitude, longitude, accuracy } = position.coords;
+  if (
+    !Number.isFinite(latitude) ||
+    latitude < -90 ||
+    latitude > 90 ||
+    !Number.isFinite(longitude) ||
+    longitude < -180 ||
+    longitude > 180
+  ) {
+    throw new Error('Le téléphone a renvoyé des coordonnées GPS invalides.');
   }
 
-  const current = await Location.getCurrentPositionAsync({
-    accuracy: Location.Accuracy.Balanced,
-  });
-  const accuracy = current.coords.accuracy;
   return {
-    latitude: current.coords.latitude,
-    longitude: current.coords.longitude,
+    latitude,
+    longitude,
+    source,
     ...(typeof accuracy === 'number' && Number.isFinite(accuracy)
       ? { precisionLocalisation: Math.max(0, Math.round(accuracy)) }
       : {}),
   };
+}
+
+export async function requestCurrentForegroundCoordinates(): Promise<ForegroundCoordinates> {
+  const permission = await Location.requestForegroundPermissionsAsync();
+  if (!permission.granted) {
+    throw new Error(
+      permission.canAskAgain
+        ? 'Autorisez la localisation pendant l’utilisation d’ISIECO pour associer votre position au signalement.'
+        : 'La localisation est bloquée pour ISIECO. Activez l’autorisation dans les réglages du téléphone, ou indiquez un repère dans le formulaire.',
+    );
+  }
+
+  let servicesEnabled = await Location.hasServicesEnabledAsync();
+  if (!servicesEnabled && Platform.OS === 'android') {
+    try {
+      await Location.enableNetworkProviderAsync();
+    } catch {
+      // The user may decline the system prompt. The check below gives the actionable message.
+    }
+    servicesEnabled = await Location.hasServicesEnabledAsync();
+  }
+  if (!servicesEnabled) {
+    throw new Error(
+      'La localisation du téléphone est désactivée. Activez le service de localisation puis réessayez, ou précisez le lieu dans le formulaire.',
+    );
+  }
+
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const current = await Promise.race<Location.LocationObject>([
+      Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+        mayShowUserSettingsDialog: true,
+      }),
+      new Promise<Location.LocationObject>((_, reject) => {
+        timeout = setTimeout(() => reject(new Error('LOCATION_FIX_TIMEOUT')), 20_000);
+      }),
+    ]);
+    return mapLocation(current, 'current');
+  } catch (reason) {
+    const lastKnown = await Location.getLastKnownPositionAsync({
+      maxAge: 2 * 60 * 1000,
+      requiredAccuracy: 1000,
+    }).catch(() => null);
+
+    if (isUsableRecentPosition(lastKnown)) {
+      return mapLocation(lastKnown, 'last-known');
+    }
+
+    if (reason instanceof Error && reason.message === 'LOCATION_FIX_TIMEOUT') {
+      throw new Error(
+        'Le GPS met trop de temps à répondre. Réessayez à l’extérieur, activez la localisation ou indiquez un repère dans le formulaire.',
+      );
+    }
+    throw new Error(
+      'Position GPS indisponible. Vérifiez les autorisations et les réglages de localisation, ou indiquez un repère dans le formulaire.',
+    );
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
 }

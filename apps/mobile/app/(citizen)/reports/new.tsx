@@ -41,6 +41,8 @@ export default function NewCitizenReportScreen() {
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
   const [precision, setPrecision] = useState('');
+  const [locationSource, setLocationSource] = useState<'current' | 'last-known' | null>(null);
+  const [wasteTypesUnavailable, setWasteTypesUnavailable] = useState(false);
   const [mediaBusy, setMediaBusy] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -52,10 +54,13 @@ export default function NewCitizenReportScreen() {
     let active = true;
     listAvailableWasteTypes()
       .then((items) => {
-        if (active) setWasteTypes(items);
+        if (active) {
+          setWasteTypes(items);
+          setWasteTypesUnavailable(items.length === 0);
+        }
       })
       .catch(() => {
-        // Categories optional
+        if (active) setWasteTypesUnavailable(true);
       });
 
     // GPS permission is requested only from the explicit location button.
@@ -96,6 +101,7 @@ export default function NewCitizenReportScreen() {
     setError(null);
     try {
       const coordinates = await requestCurrentForegroundCoordinates();
+      setLocationSource(coordinates.source);
       setLatitude(coordinates.latitude.toFixed(6));
       setLongitude(coordinates.longitude.toFixed(6));
       setPrecision(
@@ -113,6 +119,7 @@ export default function NewCitizenReportScreen() {
   }
 
   async function handleSubmit() {
+    if (busy || mediaBusy || gettingLocation) return;
     setError(null);
 
     // Mandatory photo check as required by user
@@ -159,7 +166,7 @@ export default function NewCitizenReportScreen() {
       setBusy(true);
       const idempotencyKey = idempotencyRef.current.key;
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15_000);
+      const timeout = setTimeout(() => controller.abort(), 60_000);
       try {
         const result = await submitReportWithPhoto(
           payload,
@@ -269,7 +276,7 @@ export default function NewCitizenReportScreen() {
                 </View>
                 <TouchableOpacity
                   onPress={() => void takePhoto()}
-                  disabled={mediaBusy}
+                  disabled={mediaBusy || busy}
                   className="rounded-full border border-line-strong bg-white px-3 py-1.5"
                 >
                   <Text className="text-xs font-bold text-ink-700">Changer la photo</Text>
@@ -339,7 +346,9 @@ export default function NewCitizenReportScreen() {
               <View className="flex-row items-center justify-between">
                 <View className="min-w-0 flex-1 pr-2">
                   <Text className="text-xs font-bold text-emerald-950">
-                    Coordonnées GPS enregistrées
+                    {locationSource === 'last-known'
+                      ? 'Dernière position GPS récente utilisée'
+                      : 'Coordonnées GPS enregistrées'}
                   </Text>
                   <Text className="mt-0.5 text-[11px] text-emerald-800">
                     {latitude}, {longitude}{' '}
@@ -348,7 +357,7 @@ export default function NewCitizenReportScreen() {
                 </View>
                 <TouchableOpacity
                   onPress={() => void refreshLocation()}
-                  disabled={gettingLocation}
+                  disabled={gettingLocation || busy}
                   className="rounded-lg bg-white px-2.5 py-1.5 border border-emerald-200"
                 >
                   <Text className="text-[10px] font-bold text-emerald-900">
@@ -412,6 +421,11 @@ export default function NewCitizenReportScreen() {
           </Text>
 
           <View className="mt-3 flex-row flex-wrap gap-2">
+            {wasteTypesUnavailable ? (
+              <Text className="text-xs leading-5 text-amber-800">
+                Les catégories ne sont pas disponibles pour le moment. Vous pouvez envoyer le signalement sans en sélectionner.
+              </Text>
+            ) : null}
             {wasteTypes.map((item) => {
               const selected = selectedWasteTypeIds.includes(item.idTypeDechet);
               return (
@@ -451,7 +465,7 @@ export default function NewCitizenReportScreen() {
         {/* Submit button */}
         <TouchableOpacity
           onPress={() => void handleSubmit()}
-          disabled={busy || mediaBusy}
+          disabled={busy || mediaBusy || gettingLocation}
           className={`mt-6 flex-row items-center justify-center gap-2 rounded-2xl py-4 shadow-sm ${
             !photo ? 'bg-brand-forest/60' : 'bg-brand-forest'
           } disabled:opacity-50`}
