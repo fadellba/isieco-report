@@ -108,7 +108,7 @@ export default function CitizenHomeScreen() {
   const inProgressCount = result
     ? items.filter((item) => !['QUALIFIE', 'REJETE'].includes(item.statutSignalement)).length
     : 0;
-  const resolvedCount = result
+  const qualifiedCount = result
     ? items.filter((item) => item.statutSignalement === 'QUALIFIE').length
     : 0;
 
@@ -243,7 +243,7 @@ export default function CitizenHomeScreen() {
             <Text className="text-[10px] text-slate-500">en traitement (5 récents)</Text>
           </View>
           <View className="flex-1 rounded-xl border border-slate-200 bg-white p-3">
-            <Text className="text-lg font-extrabold text-slate-900">{numberLabel(resolvedCount)}</Text>
+            <Text className="text-lg font-extrabold text-slate-900">{numberLabel(qualifiedCount)}</Text>
             <Text className="text-[10px] text-slate-500">qualifiés (5 récents)</Text>
           </View>
         </View>

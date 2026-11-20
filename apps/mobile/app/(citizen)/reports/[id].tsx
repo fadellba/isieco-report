@@ -22,6 +22,7 @@ import {
   type Supplement,
 } from '../../../src/features/reports/reports-api';
 import { dateLabel, reportStatusLabel } from '../../../src/features/reports/report-format';
+import { deriveReportProgress } from '../../../src/features/reports/report-progress.mjs';
 import { FeedbackBanner } from '../../../src/ui/FeedbackBanner';
 import {
   captureMobilePhoto,
@@ -38,13 +39,7 @@ function reportBadgeInfo(status: string): { label: string; bg: string; text: str
     case 'COMPLEMENT_REPONDU':
       return { label: 'Complément transmis', bg: 'bg-blue-100', text: 'text-blue-800' };
     case 'QUALIFIE':
-      return { label: 'Validé par les services', bg: 'bg-emerald-100', text: 'text-emerald-800' };
-    case 'AFFECTE':
-    case 'INTERVENTION_EN_COURS':
-      return { label: 'Intervention en cours', bg: 'bg-emerald-600', text: 'text-white' };
-    case 'RESOLU':
-    case 'CLOTURE':
-      return { label: 'Dépôt nettoyé', bg: 'bg-emerald-800', text: 'text-white' };
+      return { label: 'Qualifié par les services', bg: 'bg-emerald-100', text: 'text-emerald-800' };
     case 'REJETE':
       return { label: 'Non retenu', bg: 'bg-rose-100', text: 'text-rose-800' };
     default:
@@ -241,28 +236,20 @@ export default function CitizenReportDetailScreen() {
     );
   }
 
-  const badge = reportBadgeInfo(report.statutSignalement);
   const firstPhoto = report.photos[0];
   const firstPhotoUrl = firstPhoto ? photoLinks[firstPhoto.idPhotoSignalement]?.url : null;
   const displayTitle = report.contenus[0]?.typeDechet.libelle ?? 'Dépôt sauvage';
   const hasCoordinates = report.latitude !== null && report.longitude !== null;
-
-  // Determine stage progression for stepper (matching mobile-screen.PNG)
-  // Stage 1: Soumis (always completed if report exists)
-  // Stage 2: Qualifié / Validé (completed if QUALIFIE, AFFECTE, RESOLU, CLOTURE)
-  // Stage 3: Intervention en cours (active if AFFECTE, INTERVENTION_EN_COURS; completed if RESOLU)
-  // Stage 4: Dépôt nettoyé (completed if RESOLU or CLOTURE)
-  const isStage1Done = true;
-  const isStage2Done = [
-    'QUALIFIE',
-    'AFFECTE',
-    'INTERVENTION_EN_COURS',
-    'RESOLU',
-    'CLOTURE',
-  ].includes(report.statutSignalement);
-  const isStage3Active = ['AFFECTE', 'INTERVENTION_EN_COURS'].includes(report.statutSignalement);
-  const isStage3Done = ['RESOLU', 'CLOTURE'].includes(report.statutSignalement);
-  const isStage4Done = ['RESOLU', 'CLOTURE'].includes(report.statutSignalement);
+  // The signalement status stops at QUALIFIE; operational progress comes from the dossier timeline.
+  const progress = deriveReportProgress(report.statutSignalement, history?.events ?? []);
+  const badge = progress.isStage4Done
+    ? { label: 'Dossier clôturé', bg: 'bg-emerald-800', text: 'text-white' }
+    : reportBadgeInfo(report.statutSignalement);
+  const isStage2Done = progress.isStage2Done;
+  const isStage3Active = progress.isStage3Active;
+  const isStage3Done = progress.isStage3Done;
+  const isStage4Done = progress.isStage4Done;
+  const isRejected = report.statutSignalement === 'REJETE';
 
   return (
     <View className="flex-1 bg-[#F8FAF9]">
@@ -359,7 +346,7 @@ export default function CitizenReportDetailScreen() {
               </View>
             </View>
 
-            {/* Step 2: Validé par les services */}
+            {/* Step 2: Signalement qualifié */}
             <View className="flex-row">
               <View className="mr-3.5 items-center">
                 <View
@@ -386,9 +373,15 @@ export default function CitizenReportDetailScreen() {
                   Validé par les services
                 </Text>
                 <Text className="mt-0.5 text-xs text-ink-400">
-                  {isStage2Done
-                    ? 'Catégorisation et vérification approuvées'
-                    : 'En attente de revue administrative'}
+                  {isRejected
+                    ? report.motifDecision || 'Les services n’ont pas retenu ce signalement.'
+                    : isStage2Done
+                      ? 'Catégorisation et vérification approuvées'
+                      : report.statutSignalement === 'EN_ATTENTE_COMPLEMENT'
+                        ? 'Des précisions sont attendues avant la qualification.'
+                        : report.statutSignalement === 'COMPLEMENT_REPONDU'
+                          ? 'Votre complément a été transmis et attend une revue.'
+                          : 'En attente de revue administrative'}
                 </Text>
               </View>
             </View>
@@ -425,9 +418,9 @@ export default function CitizenReportDetailScreen() {
                 </Text>
                 <Text className="mt-0.5 text-xs text-ink-400">
                   {isStage3Active
-                    ? 'Équipe de propreté mobilisée sur zone'
+                    ? 'Intervention démarrée ou reprise demandée par le vérificateur'
                     : isStage3Done
-                      ? 'Intervention réalisée'
+                      ? 'Compte rendu transmis, en attente de vérification'
                       : 'Planification par le centre opérationnel'}
                 </Text>
               </View>
@@ -455,7 +448,7 @@ export default function CitizenReportDetailScreen() {
                   Dépôt nettoyé
                 </Text>
                 <Text className="mt-0.5 text-xs text-ink-400">
-                  {isStage4Done ? 'Espace public remis en état' : 'En attente de clôture'}
+                  {isStage4Done ? 'Le dossier a été clôturé après vérification' : 'En attente de clôture'}
                 </Text>
               </View>
             </View>
