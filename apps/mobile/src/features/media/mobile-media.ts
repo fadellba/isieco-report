@@ -1,6 +1,6 @@
 import * as ImageManipulator from 'expo-image-manipulator';
 import { Platform } from 'react-native';
-import { isUsableRecentPosition } from './mobile-location-utils';
+import { isUsableRecentPosition } from './mobile-location-utils.mjs';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 
