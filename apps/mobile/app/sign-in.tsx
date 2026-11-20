@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 import { supabase } from '../src/lib/supabase';
+import { normalizeEmailAddress, validateEmailAddress } from '../src/features/auth/email-utils.mjs';
 import { AuthScreenFrame } from '../src/ui/AuthScreenFrame';
 
 const inputClass =
@@ -16,12 +17,18 @@ export default function SignInScreen() {
   const [busy, setBusy] = useState(false);
 
   async function handleSubmit() {
-    if (busy || !email.trim() || !password) return;
+    if (busy || !password) return;
+    const normalizedEmail = normalizeEmailAddress(email);
+    const emailError = validateEmailAddress(normalizedEmail);
+    if (emailError) {
+      setError(emailError);
+      return;
+    }
     setError(null);
     setBusy(true);
     try {
       const { error: authError } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email: normalizedEmail,
         password,
       });
       if (authError) {
@@ -113,7 +120,7 @@ export default function SignInScreen() {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Se connecter"
-        disabled={busy}
+        disabled={busy || validateEmailAddress(email) !== null || !password}
         onPress={() => void handleSubmit()}
         className="mt-6 min-h-[50px] items-center justify-center rounded-xl bg-emerald-600 active:bg-emerald-700 shadow-sm shadow-emerald-950/20"
       >

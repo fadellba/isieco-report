@@ -3,6 +3,7 @@ import { Link } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { supabase } from '../src/lib/supabase';
+import { normalizeEmailAddress, validateEmailAddress } from '../src/features/auth/email-utils.mjs';
 import { AuthScreenFrame } from '../src/ui/AuthScreenFrame';
 
 const inputClass =
@@ -15,12 +16,18 @@ export default function ForgotPasswordScreen() {
   const [busy, setBusy] = useState(false);
 
   async function handleSubmit() {
-    if (busy || !email.trim()) return;
+    if (busy) return;
+    const normalizedEmail = normalizeEmailAddress(email);
+    const emailError = validateEmailAddress(normalizedEmail);
+    if (emailError) {
+      setError(emailError);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
       const redirectTo = Linking.createURL('reset-password');
-      const { error: requestError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      const { error: requestError } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
         redirectTo,
       });
       if (requestError) throw requestError;
@@ -61,6 +68,7 @@ export default function ForgotPasswordScreen() {
             autoCapitalize="none"
             autoComplete="email"
             autoCorrect={false}
+            textContentType="emailAddress"
             className={inputClass}
             keyboardType="email-address"
             onChangeText={setEmail}
@@ -81,7 +89,7 @@ export default function ForgotPasswordScreen() {
             accessibilityRole="button"
             accessibilityState={{ disabled: busy || !email.trim() }}
             className="mt-6 min-h-[52px] items-center justify-center rounded-2xl bg-brand-forest px-5 py-4 disabled:opacity-50"
-            disabled={busy || !email.trim()}
+            disabled={busy || validateEmailAddress(email) !== null}
             onPress={() => void handleSubmit()}
           >
             <Text className="text-sm font-extrabold text-white">

@@ -1,7 +1,13 @@
 import { useState } from 'react';
 import { Link, useRouter } from 'expo-router';
+import * as Linking from 'expo-linking';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 import { supabase } from '../src/lib/supabase';
+import {
+  normalizeEmailAddress,
+  signUpErrorMessage,
+  validateEmailAddress,
+} from '../src/features/auth/email-utils.mjs';
 import { AuthScreenFrame } from '../src/ui/AuthScreenFrame';
 
 const inputClass =
@@ -14,56 +20,77 @@ export default function SignUpScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [registrationEmail, setRegistrationEmail] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function handleSubmit() {
-    if (
-      busy ||
-      nom.trim().length < 2 ||
-      prenom.trim().length < 2 ||
-      !email.trim() ||
-      password.length < 8
-    )
+    if (busy) return;
+    if (nom.trim().length < 2 || prenom.trim().length < 2) {
+      setError('Renseignez votre prénom et votre nom (2 caractères minimum).');
       return;
+    }
+
+    const normalizedEmail = normalizeEmailAddress(email);
+    const emailError = validateEmailAddress(normalizedEmail);
+    if (emailError) {
+      setError(emailError);
+      return;
+    }
+    if (password.length < 12) {
+      setError('Choisissez un mot de passe de 12 caractères minimum.');
+      return;
+    }
+
     setError(null);
     setMessage(null);
     setBusy(true);
     try {
       const { data, error: authError } = await supabase.auth.signUp({
-        email: email.trim(),
+        email: normalizedEmail,
         password,
-        options: { data: { nom: nom.trim(), prenom: prenom.trim() } },
+        options: {
+          data: { nom: nom.trim(), prenom: prenom.trim() },
+          emailRedirectTo: Linking.createURL('auth/callback'),
+        },
       });
       if (authError) {
-        if (
-          authError.message?.toLowerCase().includes('rate limit') ||
-          (authError as { code?: string }).code === 'over_email_send_rate_limit'
-        ) {
-          setError(
-            "Limite d'envoi d'e-mails atteinte sur le serveur Supabase. Veuillez patienter quelques instants ou utiliser un compte de test.",
-          );
-        } else if (
-          authError.message?.toLowerCase().includes('already registered') ||
-          (authError as { code?: string }).code === 'user_already_exists'
-        ) {
-          setError('Un compte existe déjà avec cette adresse e-mail. Veuillez vous connecter.');
-        } else {
-          setError(
-            authError.message ||
-              'La création du compte est impossible. Vérifiez les informations ou réessayez.',
-          );
-        }
+        setError(signUpErrorMessage(authError));
         return;
       }
       if (data.session) {
         router.replace('/');
         return;
       }
-      setMessage('Votre compte a été créé. Consultez vos e-mails pour confirmer votre adresse.');
-    } catch {
-      setError('La création du compte est momentanément indisponible. Réessayez.');
+
+      setRegistrationEmail(normalizedEmail);
+      setMessage(
+        'Votre demande de création de compte a été enregistrée. Ouvrez le lien de confirmation reçu à ' +
+          normalizedEmail +
+          ' pour activer votre compte.',
+      );
+    } catch (reason) {
+      setError(signUpErrorMessage(reason));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resendConfirmation() {
+    if (busy || !registrationEmail) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const { error: resendError } = await supabase.auth.resend({
+        type: 'signup',
+        email: registrationEmail,
+        options: { emailRedirectTo: Linking.createURL('auth/callback') },
+      });
+      if (resendError) throw resendError;
+      setMessage('Un nouvel e-mail de confirmation a été envoyé à ' + registrationEmail + '.');
+    } catch (reason) {
+      setError(signUpErrorMessage(reason));
     } finally {
       setBusy(false);
     }
@@ -73,12 +100,12 @@ export default function SignUpScreen() {
     !busy &&
     nom.trim().length >= 2 &&
     prenom.trim().length >= 2 &&
-    Boolean(email.trim()) &&
-    password.length >= 8;
+    validateEmailAddress(email) === null &&
+    password.length >= 12;
 
   return (
     <AuthScreenFrame
-      title="Créer un compte"
+      title="Créer un compte citoyen"
       description="Participez à la propreté de votre ville en signalant les dépôts sauvages."
     >
       <View className="flex-row gap-3">
@@ -111,13 +138,16 @@ export default function SignUpScreen() {
           Adresse e-mail
         </Text>
         <TextInput
+          accessibilityLabel="Adresse e-mail"
           autoCapitalize="none"
           autoComplete="email"
+          autoCorrect={false}
           className={inputClass}
           keyboardType="email-address"
           onChangeText={setEmail}
           placeholder="nom@exemple.com"
           placeholderTextColor="#94A3B8"
+          textContentType="emailAddress"
           value={email}
         />
       </View>
@@ -134,33 +164,52 @@ export default function SignUpScreen() {
           </Pressable>
         </View>
         <TextInput
+          accessibilityLabel="Mot de passe, 12 caractères minimum"
           autoCapitalize="none"
+          autoComplete="new-password"
           className={inputClass}
           onChangeText={setPassword}
-          placeholder="8 caractères minimum"
+          placeholder="12 caractères minimum"
           placeholderTextColor="#94A3B8"
           secureTextEntry={!showPassword}
+          textContentType="newPassword"
           value={password}
         />
       </View>
 
       {error ? (
         <View className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3.5">
-          <Text className="text-xs text-red-700">{error}</Text>
+          <Text accessibilityRole="alert" className="text-xs leading-5 text-red-700">
+            {error}
+          </Text>
         </View>
       ) : null}
 
       {message ? (
         <View className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3.5">
-          <Text className="text-xs text-emerald-800 font-medium">{message}</Text>
+          <Text className="text-xs font-medium leading-5 text-emerald-800">{message}</Text>
+          {registrationEmail ? (
+            <Pressable
+              accessibilityRole="button"
+              disabled={busy}
+              onPress={() => void resendConfirmation()}
+              className="mt-3 self-start"
+            >
+              <Text className="text-xs font-extrabold text-emerald-900 underline">
+                {busy ? 'Envoi…' : 'Renvoyer l’e-mail de confirmation'}
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
       ) : null}
 
       <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ disabled: !canSubmit }}
         disabled={!canSubmit}
         onPress={() => void handleSubmit()}
-        className={`mt-6 min-h-[50px] items-center justify-center rounded-xl bg-emerald-600 active:bg-emerald-700 shadow-sm ${
-          !canSubmit ? 'opacity-50' : ''
+        className={`mt-6 min-h-[50px] items-center justify-center rounded-xl bg-emerald-600 shadow-sm shadow-emerald-950/20 ${
+          !canSubmit ? 'opacity-50' : 'active:bg-emerald-700'
         }`}
       >
         {busy ? (
