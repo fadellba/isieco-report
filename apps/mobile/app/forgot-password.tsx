@@ -68,7 +68,6 @@ export default function ForgotPasswordScreen() {
             autoCapitalize="none"
             autoComplete="email"
             autoCorrect={false}
-            textContentType="emailAddress"
             className={inputClass}
             keyboardType="email-address"
             onChangeText={setEmail}
