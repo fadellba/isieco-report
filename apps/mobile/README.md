@@ -89,3 +89,12 @@ Les notifications, le mode hors connexion et l'affichage des preuves d'intervent
 La cartographie mobile utilise les liens OpenStreetMap : aucune clé API, aucun compte fournisseur et aucune configuration EAS ne sont nécessaires. L'ouverture de la carte se fait dans le navigateur de l'appareil. Respecter l'attribution OpenStreetMap et les conditions d'utilisation du service public.
 
 Pour tester la récupération de compte, autoriser dans Supabase Auth les URLs de redirection Web de l'application vers `/reinitialiser-mot-de-passe` ainsi que le schéma mobile `isiecoreport://**`. Vérifier le parcours sur des comptes de test, y compris un lien expiré.
+
+
+## Authentification mobile et confirmation e-mail
+
+L'application utilise le schéma natif isiecoreport. Dans Supabase, ajoutez isiecoreport://** à Authentication → URL Configuration → Redirect URLs pour autoriser le retour vers l'écran auth/callback. Le modèle de confirmation doit conserver le flux de confirmation Supabase ({{ .ConfirmationURL }}) ou transmettre un token_hash avec type=signup au callback mobile.
+
+Pour les inscriptions citoyennes ouvertes au public, configurez un fournisseur SMTP personnalisé et vérifiez l'expéditeur ainsi que le modèle de confirmation. Le service d'e-mail intégré de test Supabase est soumis à des restrictions de destinataires et de débit ; les validations côté application ne peuvent pas lever ces restrictions.
+
+Documentation : https://supabase.com/docs/guides/auth/native-mobile-deep-linking et https://supabase.com/docs/guides/auth/auth-smtp.

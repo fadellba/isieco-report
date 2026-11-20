@@ -143,7 +143,7 @@ export async function syncOfflineReports(ownerId: string): Promise<OfflineSyncRe
   for (const item of initialItems) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15_000);
+      const timeout = setTimeout(() => controller.abort(), 60_000);
       try {
         await submitReportWithPhoto(
           item.payload,

@@ -18,17 +18,13 @@ function reportBadge(status: string) {
     case 'SOUMIS':
       return { label: 'Reçu', bg: 'bg-amber-100', text: 'text-amber-800' };
     case 'EN_ATTENTE_COMPLEMENT':
-      return { label: 'Action requise', bg: 'bg-orange-100', text: 'text-orange-800' };
+      return { label: 'Complément demandé', bg: 'bg-orange-100', text: 'text-orange-800' };
+    case 'COMPLEMENT_REPONDU':
+      return { label: 'Complément transmis', bg: 'bg-blue-100', text: 'text-blue-800' };
     case 'QUALIFIE':
-      return { label: 'Validé', bg: 'bg-emerald-100', text: 'text-emerald-800' };
-    case 'AFFECTE':
-    case 'INTERVENTION_EN_COURS':
-      return { label: 'En cours', bg: 'bg-emerald-600', text: 'text-white' };
-    case 'RESOLU':
-    case 'CLOTURE':
-      return { label: 'Nettoyé', bg: 'bg-emerald-800', text: 'text-white' };
+      return { label: 'Qualifié', bg: 'bg-emerald-100', text: 'text-emerald-800' };
     case 'REJETE':
-      return { label: 'Rejeté', bg: 'bg-rose-100', text: 'text-rose-800' };
+      return { label: 'Non retenu', bg: 'bg-rose-100', text: 'text-rose-800' };
     default:
       return { label: reportStatusLabel(status), bg: 'bg-slate-100', text: 'text-slate-800' };
   }
@@ -37,7 +33,7 @@ function reportBadge(status: string) {
 export default function CitizenReportsScreen() {
   const router = useRouter();
   const [result, setResult] = useState<ReportPage | null>(null);
-  const [filter, setFilter] = useState<'ALL' | 'ACTIVE' | 'RESOLVED'>('ALL');
+  const [filter, setFilter] = useState<'ALL' | 'TO_PROCESS' | 'QUALIFIED' | 'REJECTED'>('ALL');
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -71,12 +67,13 @@ export default function CitizenReportsScreen() {
   );
 
   const filteredItems = (result?.items ?? []).filter((item) => {
-    if (filter === 'ACTIVE') {
-      return !['RESOLU', 'CLOTURE', 'REJETE'].includes(item.statutSignalement);
+    if (filter === 'TO_PROCESS') {
+      return ['SOUMIS', 'EN_ATTENTE_COMPLEMENT', 'COMPLEMENT_REPONDU'].includes(
+        item.statutSignalement,
+      );
     }
-    if (filter === 'RESOLVED') {
-      return ['RESOLU', 'CLOTURE'].includes(item.statutSignalement);
-    }
+    if (filter === 'QUALIFIED') return item.statutSignalement === 'QUALIFIE';
+    if (filter === 'REJECTED') return item.statutSignalement === 'REJETE';
     return true;
   });
 
@@ -109,7 +106,7 @@ export default function CitizenReportsScreen() {
               Mes signalements
             </Text>
             <Text className="mt-0.5 text-xs text-ink-500">
-              Suivi en temps réel de vos déclarations citoyennes
+              Suivi de vos déclarations citoyennes
             </Text>
           </View>
           <TouchableOpacity
@@ -122,11 +119,12 @@ export default function CitizenReportsScreen() {
         </View>
 
         {/* Filter chips */}
-        <View className="mt-5 flex-row gap-2">
+        <View className="mt-5 flex-row flex-wrap gap-2">
           {[
             { key: 'ALL' as const, label: 'Tous' },
-            { key: 'ACTIVE' as const, label: 'En cours' },
-            { key: 'RESOLVED' as const, label: 'Résolus' },
+            { key: 'TO_PROCESS' as const, label: 'À traiter' },
+            { key: 'QUALIFIED' as const, label: 'Qualifiés' },
+            { key: 'REJECTED' as const, label: 'Non retenus' },
           ].map((tab) => {
             const active = filter === tab.key;
             return (
