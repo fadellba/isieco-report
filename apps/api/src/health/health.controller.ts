@@ -16,7 +16,28 @@ export class HealthController {
 
   @Get('ready')
   @ApiOperation({ summary: 'Vérifie que l’API peut traiter des requêtes' })
-  @ApiOkResponse({ description: 'La base de données est joignable et la révision déployée est publiée.' })
+  @ApiOkResponse({
+    description: 'La base de données est joignable et la révision déployée est publiée.',
+    schema: {
+      type: 'object',
+      required: ['status', 'service', 'checks', 'revision', 'timestamp'],
+      properties: {
+        status: { type: 'string', enum: ['ok'] },
+        service: { type: 'string', enum: ['isieco-api'] },
+        checks: {
+          type: 'object',
+          required: ['database'],
+          properties: { database: { type: 'string', enum: ['ok'] } },
+        },
+        revision: {
+          type: 'string',
+          nullable: true,
+          description: 'SHA Git exposé par RENDER_GIT_COMMIT.',
+        },
+        timestamp: { type: 'string', format: 'date-time' },
+      },
+    },
+  })
   @ApiServiceUnavailableResponse({ description: 'La base de données est indisponible.' })
   async readiness() {
     try {
