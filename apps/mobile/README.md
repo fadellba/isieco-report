@@ -30,7 +30,20 @@ L'application présente un splash natif Expo assorti à l'identité ISIECO, puis
 - `/(citizen)/reports/new` : signalement avec photo obligatoire, localisation ponctuelle ou manuelle, description et catégories facultatives ;
 - `/(citizen)/reports/[id]` : détail propriétaire, chronologie des statuts et jalons opérationnels, photos privées, catégories qualifiées et demandes de complément.
 
-La soumission utilise `POST /api/v1/reports/with-photo` et l'en-tête `Idempotency-Key`. Le signalement et, lorsqu’elle est fournie, sa première photo privée sont créés ensemble ; la clé est conservée lors d'une nouvelle tentative avec les mêmes métadonnées et la même photo, et renouvelée lorsque le formulaire change. La chronologie provient de `GET /api/v1/reports/:id/history`. Les demandes et réponses réutilisent les endpoints Reports existants. Aucun endpoint de référentiel réservé au gestionnaire n'est appelé par le citoyen.
+La soumission utilise `POST /api/v1/reports/with-photo` et l'en-tête `Idempotency-Key`. Le signalement et sa photo initiale obligatoire sont créés ensemble ; la clé est conservée lors d'une nouvelle tentative avec les mêmes métadonnées et la même photo, et renouvelée lorsque le formulaire change. La chronologie provient de `GET /api/v1/reports/:id/history`. Les demandes et réponses réutilisent les endpoints Reports existants. Aucun endpoint de référentiel réservé au gestionnaire n'est appelé par le citoyen.
+
+
+### Écarts citoyens remontés le 24 novembre 2026
+
+Les points suivants sont des anomalies ou évolutions demandées, pas des fonctionnalités validées :
+
+- **Navigation Suivi :** le bottom navigation déclare l'onglet `reports`, dont la liste est `/(citizen)/reports/index`. Un renvoi vers `/(citizen)/reports/new` a été rapporté lors du clic sur Suivi. La cause de cette navigation inattendue reste à reproduire.
+- **Photos multiples :** le formulaire `/(citizen)/reports/new` conserve une seule photo dans son état et appelle `pickMobilePhotos(1)`. Il ne permet donc pas encore de préparer plusieurs photos dans un même dépôt. L'API accepte une photo initiale obligatoire, puis des ajouts via `POST /reports/:id/photos`, avec une limite de trois photos par signalement. La sélection multiple, la prévisualisation et la gestion des envois partiels restent à implémenter.
+- **Erreur multipart :** un utilisateur signale `UnsupportedFormData` au moment de soumettre le formulaire. Le client partagé détecte les instances `FormData` et évite de forcer le `Content-Type: application/json`, mais cela ne suffit pas à prouver que le descripteur de fichier et le transport multipart sont compatibles avec le runtime React Native utilisé. La cause doit être reproduite sur appareil et corrigée avant de déclarer le dépôt fonctionnel.
+- **Accueil citoyen :** la présentation actuelle (action de signalement, carte de proximité, signalements récents et compteurs) doit être revue selon une hiérarchie plus claire et une lecture plus immédiate.
+- **Profil citoyen :** l'écran commun `ProfileScreen` affiche les informations et les habilitations en lecture seule. L'API possède déjà `PATCH /api/v1/accounts/me` pour modifier `nom`, `prenom` et `telephone` ; le formulaire mobile et la confirmation de sauvegarde ne sont pas implémentés. L'adresse e-mail et les rôles ne sont pas modifiables par ce formulaire.
+
+La photo initiale reste obligatoire depuis la migration `20261118190000_require_report_photo`. Les changements d'interface ne doivent pas réintroduire la création d'un signalement sans photo.
 
 ## Parcours Agent terrain — Phase 19 intégrée
 
