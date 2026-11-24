@@ -139,9 +139,9 @@ export default function CitizenHomeScreen() {
           accessibilityRole="button"
           accessibilityLabel="Ouvrir les notifications"
           onPress={() => router.push('/notifications')}
-          className="h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white"
+          className="rounded-2xl border border-slate-200 bg-white px-3.5 py-3"
         >
-          <Text className="text-lg text-slate-700">♧</Text>
+          <Text className="text-xs font-bold text-slate-700">Alertes</Text>
         </Pressable>
       </View>
 
