@@ -125,7 +125,7 @@ Le splash natif Expo existe déjà. Il doit être traité comme une signature de
 
 L'onboarding est une introduction, pas une formation exhaustive :
 - Écran 1 : pourquoi ISIECO existe et quels acteurs elle relie.
-- Écran 2 : le parcours citoyen, dont la photo facultative et le suivi.
+- Écran 2 : le parcours citoyen, avec photo initiale obligatoire, sélection multi-photos à concevoir et suivi.
 - Écran 3 : le parcours agent, de l'affectation à l'intervention puis à la vérification indépendante.
 - Un indicateur de progression, un bouton Continuer, une action Passer et une sortie claire vers la connexion.
 - Le texte précise que le compte citoyen peut être créé depuis l'application, tandis que l'agent utilise les identifiants fournis par son organisation.
@@ -195,7 +195,7 @@ La branche `feat/isieco-ux-ui-foundation` porte une première livraison progress
 - La fiche de mission est maintenant séparée de la file de travail. Une prochaine itération pourra encore approfondir le découpage visuel interne entre exécution, preuves et compte rendu, sans modifier le cycle métier.
 - La carte Mobile ouvre les emplacements sur OpenStreetMap via le navigateur système. Le SDK Google Maps et sa clé API ne sont plus nécessaires ; les parcours restent à tester sur appareils Android/iOS réels.
 - La carte Web utilise maintenant un regroupement visuel des marqueurs proches ; les règles avancées de densité à l’échelle territoriale et la représentation des secteurs restent à concevoir.
-- Les états hors connexion et les brouillons locaux restent hors de cette livraison.
+- Une file locale partielle existe déjà pour les signalements citoyens avec photo ; le hors-ligne complet, les brouillons agent et la synchronisation des décisions métier restent hors de cette livraison.
 - La recette visuelle et l'accessibilité doivent encore être vérifiées sur navigateur, formats mobiles courants et appareils Android/iOS réels. Les vérifications de type et de build ne remplacent pas cette recette.
 
 Cette livraison couvre maintenant une première reprise des routes applicatives Web et Mobile recensées, avec une attention renforcée aux parcours d'administration et de contrôle. Elle ne doit toutefois pas être déclarée définitivement terminée avant la recette visuelle réelle, la validation d'accessibilité, le recette des assets natifs sur les appareils et le traitement des fonctionnalités identifiées comme absentes.
