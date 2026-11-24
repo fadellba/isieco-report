@@ -95,7 +95,7 @@ Les conditions et les tâches différées en raison d'un coût sont centralisée
 
 ## Limites restantes
 
-Les notifications, le mode hors connexion et l'affichage des preuves d'intervention après upload restent à réaliser. La recette sur appareils Android/iOS réels est à effectuer avec le [protocole de recette](../../docs/mobile/recette-appareils.md), sur un environnement de test et avec des comptes fictifs. Le bucket Supabase distant, la rétention des médias et la planification Cron doivent être configurés indépendamment du client Mobile.
+Les notifications métier disposent d'un écran de consultation in-app, mais les notifications push natives restent à réaliser. Une file hors ligne partielle existe pour les signalements citoyens avec photo ; elle ne constitue pas un mode hors ligne complet et ne couvre pas les missions ou décisions des agents. La recette sur appareils Android/iOS réels reste à effectuer. La recette sur appareils Android/iOS réels est à effectuer avec le [protocole de recette](../../docs/mobile/recette-appareils.md), sur un environnement de test et avec des comptes fictifs. Le bucket Supabase distant, la rétention des médias et la planification Cron doivent être configurés indépendamment du client Mobile.
 
 ### Configuration des services natifs
 
