@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import { AppState, ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
-import { Link, useFocusEffect, useRouter } from 'expo-router';
+import {
+  AppState,
+  ActivityIndicator,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useMobileAuth } from '../../src/features/auth/mobile-auth-context';
 import {
   listMyReports,
@@ -8,7 +16,10 @@ import {
   type NearbyReportsResult,
   type ReportPage,
 } from '../../src/features/reports/reports-api';
-import { getOfflineReportQueue, syncOfflineReports } from '../../src/features/reports/offline-report-outbox';
+import {
+  getOfflineReportQueue,
+  syncOfflineReports,
+} from '../../src/features/reports/offline-report-outbox';
 import { dateLabel, reportStatusLabel } from '../../src/features/reports/report-format';
 import { requestCurrentForegroundCoordinates } from '../../src/features/media/mobile-media';
 import { BrandMark } from '../../src/ui/BrandMark';
@@ -40,7 +51,7 @@ export default function CitizenHomeScreen() {
     else setLoading(true);
     setError(null);
     try {
-      setResult(await listMyReports(1, 5));
+      setResult(await listMyReports(1, 30));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Impossible de charger vos signalements.');
     } finally {
@@ -82,9 +93,7 @@ export default function CitizenHomeScreen() {
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') {
-        void refreshOfflineQueue(true);
-      }
+      if (state === 'active') void refreshOfflineQueue(true);
     });
     return () => subscription.remove();
   }, [refreshOfflineQueue]);
@@ -98,25 +107,31 @@ export default function CitizenHomeScreen() {
       setCenter(coordinates);
       setNearby(await listNearbyReports(coordinates.latitude, coordinates.longitude, 3000));
     } catch (reason) {
-      setLocationError(reason instanceof Error ? reason.message : 'Position indisponible. Vérifiez les autorisations ou réessayez.');
+      setLocationError(
+        reason instanceof Error
+          ? reason.message
+          : 'Position indisponible. Vérifiez les autorisations ou réessayez.',
+      );
     } finally {
       setLocationBusy(false);
     }
   }
 
   const items = result?.items ?? [];
-  const inProgressCount = result
-    ? items.filter((item) => !['QUALIFIE', 'REJETE'].includes(item.statutSignalement)).length
-    : 0;
-  const resolvedCount = result
-    ? items.filter((item) => item.statutSignalement === 'QUALIFIE').length
-    : 0;
+  const recentItems = items.slice(0, 3);
+  const firstName = profile?.prenom?.trim();
 
   return (
     <ScrollView
-      className="flex-1 bg-slate-50"
-      contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 48, paddingBottom: 32 }}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} tintColor="#16A34A" />}
+      className="flex-1 bg-[#F5F7F5]"
+      contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 44, paddingBottom: 36 }}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => void load(true)}
+          tintColor="#166534"
+        />
+      }
     >
       <View className="flex-row items-center justify-between">
         <BrandMark />
@@ -124,27 +139,30 @@ export default function CitizenHomeScreen() {
           accessibilityRole="button"
           accessibilityLabel="Ouvrir les notifications"
           onPress={() => router.push('/notifications')}
-          className="h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white"
+          className="h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white"
         >
-          <Text className="text-lg">🔔</Text>
+          <Text className="text-lg text-slate-700">♧</Text>
         </Pressable>
       </View>
 
       {pendingOfflineCount > 0 ? (
-        <View className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3">
+        <View className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3.5">
           <View className="flex-row items-center justify-between gap-3">
             <View className="min-w-0 flex-1">
-              <Text className="text-xs font-extrabold text-amber-900">
-                {pendingOfflineCount} signalement(s) en attente de synchronisation
+              <Text className="text-xs font-extrabold text-amber-950">
+                {pendingOfflineCount} signalement(s) en attente
               </Text>
               <Text className="mt-1 text-[10px] leading-4 text-amber-800">
-                Conservés sur cet appareil et associés au compte connecté.
+                Conservés sur cet appareil jusqu’au retour de la connexion.
               </Text>
             </View>
             <Pressable
-              onPress={() => { setSyncMessage(null); void refreshOfflineQueue(true); }}
+              onPress={() => {
+                setSyncMessage(null);
+                void refreshOfflineQueue(true);
+              }}
               disabled={syncBusy}
-              className="rounded-lg bg-amber-800 px-3 py-2 disabled:opacity-60"
+              className="rounded-xl bg-amber-800 px-3 py-2 disabled:opacity-60"
             >
               <Text className="text-[10px] font-bold text-white">
                 {syncBusy ? 'Envoi…' : 'Synchroniser'}
@@ -155,49 +173,150 @@ export default function CitizenHomeScreen() {
       ) : null}
       {syncMessage ? <Text className="mt-2 text-xs text-emerald-800">{syncMessage}</Text> : null}
 
-      <View className="mt-6">
-        <Text className="text-2xl font-black leading-tight tracking-tight text-slate-900">
-          Ensemble pour une ville plus propre 🌱
+      <View className="mt-6 overflow-hidden rounded-3xl bg-[#174C3D] p-6">
+        <Text className="text-xs font-extrabold uppercase tracking-[0.14em] text-emerald-100">
+          {firstName ? 'Bonjour ' + firstName : 'Espace citoyen'}
         </Text>
-        <Text className="mt-2 text-sm leading-5 text-slate-600">
-          Signalez un dépôt et suivez son traitement depuis votre espace.
+        <Text className="mt-3 text-3xl font-black leading-tight text-white">
+          Agissons pour une ville plus propre.
         </Text>
+        <Text className="mt-3 text-sm leading-6 text-emerald-50">
+          Signalez un dépôt, transmettez des photos et suivez les actions des équipes.
+        </Text>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push('/(citizen)/reports/new')}
+          className="mt-5 min-h-[52px] flex-row items-center justify-center rounded-2xl bg-white px-4 py-3"
+        >
+          <Text className="text-sm font-extrabold text-[#174C3D]">Nouveau signalement</Text>
+          <Text className="ml-2 text-base font-bold text-[#174C3D]">＋</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.replace('/(citizen)/reports')}
+          className="mt-3 items-center py-2"
+        >
+          <Text className="text-xs font-bold text-white">Voir mes signalements →</Text>
+        </Pressable>
       </View>
 
-      <Pressable
-        onPress={() => router.push('/(citizen)/reports/new')}
-        className="mt-5 h-14 w-full flex-row items-center justify-center rounded-2xl bg-emerald-700 shadow-sm"
-      >
-        <Text className="mr-2 text-lg">📷</Text>
-        <Text className="text-sm font-extrabold text-white">Signaler un dépôt</Text>
-      </Pressable>
+      <View className="mt-4 flex-row items-center rounded-2xl border border-slate-200 bg-white p-4">
+        <View className="h-11 w-11 items-center justify-center rounded-xl bg-emerald-50">
+          <Text className="text-lg font-extrabold text-emerald-800">#</Text>
+        </View>
+        <View className="ml-3 min-w-0 flex-1">
+          <Text className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+            Votre contribution
+          </Text>
+          <Text className="mt-0.5 text-xl font-extrabold text-slate-900">
+            {loading ? '—' : numberLabel(result?.total ?? 0)}
+          </Text>
+          <Text className="text-[10px] text-slate-500">signalement(s) envoyé(s) au total</Text>
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.replace('/(citizen)/reports')}
+          className="rounded-xl bg-slate-50 px-3 py-2"
+        >
+          <Text className="text-[10px] font-bold text-emerald-800">Consulter</Text>
+        </Pressable>
+      </View>
 
       <View className="mt-7">
         <View className="mb-3 flex-row items-center justify-between">
-          <Text className="text-base font-extrabold text-slate-900">Signalements à proximité</Text>
+          <View>
+            <Text className="text-lg font-extrabold text-slate-900">Activité récente</Text>
+            <Text className="mt-0.5 text-xs text-slate-500">Les trois derniers signalements</Text>
+          </View>
+          <Pressable onPress={() => router.replace('/(citizen)/reports')}>
+            <Text className="text-xs font-extrabold text-emerald-800">Tout voir →</Text>
+          </Pressable>
+        </View>
+
+        {loading ? (
+          <View className="items-center rounded-2xl border border-slate-200 bg-white py-8">
+            <ActivityIndicator color="#166534" />
+            <Text className="mt-2 text-xs text-slate-500">Chargement de votre activité…</Text>
+          </View>
+        ) : error ? (
+          <View className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
+            <Text className="text-xs leading-5 text-rose-800">{error}</Text>
+            <Pressable onPress={() => void load(true)} className="mt-2 self-start">
+              <Text className="text-xs font-bold text-rose-900">Réessayer</Text>
+            </Pressable>
+          </View>
+        ) : recentItems.length ? (
+          <View className="gap-2.5">
+            {recentItems.map((item) => (
+              <Pressable
+                key={item.idSignalement}
+                onPress={() =>
+                  router.push({
+                    pathname: '/(citizen)/reports/[id]',
+                    params: { id: item.idSignalement },
+                  })
+                }
+                className="flex-row items-center rounded-2xl border border-slate-200 bg-white p-4"
+              >
+                <View className="mr-3 h-10 w-10 items-center justify-center rounded-xl bg-slate-100">
+                  <Text className="text-base text-slate-700">↗</Text>
+                </View>
+                <View className="min-w-0 flex-1 pr-2">
+                  <Text className="text-sm font-bold text-slate-900" numberOfLines={1}>
+                    {item.description || 'Signalement environnemental'}
+                  </Text>
+                  <Text className="mt-1 text-[10px] text-slate-500">
+                    {item.dateSoumission ? dateLabel(item.dateSoumission) : 'Date non disponible'}
+                  </Text>
+                </View>
+                <Text className="text-right text-[10px] font-bold text-emerald-800">
+                  {reportStatusLabel(item.statutSignalement)}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : (
+          <View className="items-center rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-7">
+            <Text className="text-base font-extrabold text-slate-900">Aucun signalement pour le moment</Text>
+            <Text className="mt-2 text-center text-xs leading-5 text-slate-500">
+              Votre activité apparaîtra ici après l’envoi de votre première déclaration.
+            </Text>
+          </View>
+        )}
+      </View>
+
+      <View className="mt-7 rounded-3xl border border-slate-200 bg-white p-5">
+        <View className="flex-row items-center justify-between">
+          <View className="min-w-0 flex-1 pr-3">
+            <Text className="text-lg font-extrabold text-slate-900">Autour de vous</Text>
+            <Text className="mt-1 text-xs leading-5 text-slate-500">
+              Consultez les signalements qualifiés dans un rayon de 3 km. Votre position n’est demandée qu’après votre action.
+            </Text>
+          </View>
           {center ? (
             <Pressable onPress={() => void loadNearbyReports()} disabled={locationBusy}>
-              <Text className="text-xs font-bold text-emerald-700">Actualiser</Text>
+              <Text className="text-xs font-bold text-emerald-800">Actualiser</Text>
             </Pressable>
           ) : null}
         </View>
-        <Text className="mb-3 text-xs leading-5 text-slate-500">
-          La carte affiche des signalements qualifiés dans un rayon de 3 km. Votre position n’est demandée qu’après votre action.
-        </Text>
         {!center ? (
           <Pressable
             onPress={() => void loadNearbyReports()}
             disabled={locationBusy}
-            className="h-12 flex-row items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 disabled:opacity-60"
+            className="mt-4 min-h-[48px] flex-row items-center justify-center rounded-xl bg-emerald-50 px-3 py-3 disabled:opacity-60"
           >
-            {locationBusy ? <ActivityIndicator color="#166534" /> : (
-              <Text className="text-sm font-bold text-emerald-800">📍 Me localiser pour afficher la carte</Text>
+            {locationBusy ? (
+              <ActivityIndicator color="#166534" />
+            ) : (
+              <Text className="text-xs font-extrabold text-emerald-900">Afficher la carte à proximité</Text>
             )}
           </Pressable>
         ) : (
           <>
-            <NearbyReportsMap center={center} markers={nearby?.items ?? []} />
-            <Text className="mt-2 text-[11px] text-slate-500">
+            <View className="mt-4">
+              <NearbyReportsMap center={center} markers={nearby?.items ?? []} />
+            </View>
+            <Text className="mt-2 text-[10px] text-slate-500">
               {nearby?.items.length
                 ? nearby.items.length + ' signalement(s) qualifié(s) affiché(s).'
                 : 'Aucun signalement qualifié trouvé dans ce rayon.'}
@@ -205,48 +324,6 @@ export default function CitizenHomeScreen() {
           </>
         )}
         {locationError ? <Text className="mt-2 text-xs text-rose-700">{locationError}</Text> : null}
-      </View>
-
-      <View className="mt-7">
-        <View className="mb-3 flex-row items-center justify-between">
-          <Text className="text-base font-extrabold text-slate-900">Mes signalements récents</Text>
-          <Link href="/(citizen)/reports" className="text-xs font-bold text-emerald-700">Voir tout →</Link>
-        </View>
-        {loading ? (
-          <View className="items-center py-6"><ActivityIndicator color="#166534" /></View>
-        ) : error ? (
-          <Text className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">{error}</Text>
-        ) : items.length ? (
-          <View className="gap-2">
-            {items.slice(0, 3).map((item) => (
-              <Pressable
-                key={item.idSignalement}
-                onPress={() => router.push({ pathname: '/(citizen)/reports/[id]', params: { id: item.idSignalement } })}
-                className="flex-row items-center justify-between rounded-xl border border-slate-200 bg-white p-3"
-              >
-                <View className="min-w-0 flex-1 pr-3">
-                  <Text className="text-xs font-bold text-slate-900" numberOfLines={1}>{item.description || 'Signalement environnemental'}</Text>
-                  <Text className="mt-1 text-[10px] text-slate-500">{item.dateSoumission ? dateLabel(item.dateSoumission) : 'Date non disponible'}</Text>
-                </View>
-                <Text className="text-[10px] font-semibold text-emerald-800">{reportStatusLabel(item.statutSignalement)}</Text>
-              </Pressable>
-            ))}
-          </View>
-        ) : (
-          <Text className="rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-500">
-            Vous n’avez pas encore envoyé de signalement.
-          </Text>
-        )}
-        <View className="mt-3 flex-row gap-3">
-          <View className="flex-1 rounded-xl border border-slate-200 bg-white p-3">
-            <Text className="text-lg font-extrabold text-slate-900">{numberLabel(inProgressCount)}</Text>
-            <Text className="text-[10px] text-slate-500">en traitement (5 récents)</Text>
-          </View>
-          <View className="flex-1 rounded-xl border border-slate-200 bg-white p-3">
-            <Text className="text-lg font-extrabold text-slate-900">{numberLabel(resolvedCount)}</Text>
-            <Text className="text-[10px] text-slate-500">qualifiés (5 récents)</Text>
-          </View>
-        </View>
       </View>
     </ScrollView>
   );
