@@ -1,7 +1,17 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import type { CreateReportPayload } from './reports-api';
-import { submitReportWithPhoto } from './reports-api';
+import {
+  getMyReport,
+  submitReportWithPhoto,
+  uploadReportPhoto,
+} from './reports-api';
+
+export interface OfflinePhotoFile {
+  photoUri: string;
+  photoName: string;
+  photoType: 'image/jpeg';
+}
 
 export interface OfflineReportQueueItem {
   id: string;
@@ -11,6 +21,8 @@ export interface OfflineReportQueueItem {
   photoUri: string;
   photoName: string;
   photoType: 'image/jpeg';
+  additionalPhotos?: OfflinePhotoFile[];
+  reportId?: string;
   createdAt: string;
   attempts: number;
   lastError: string | null;
@@ -41,7 +53,13 @@ async function readQueue(ownerId: string): Promise<OfflineReportQueueItem[]> {
         typeof candidate.id === 'string' &&
         typeof candidate.idempotencyKey === 'string' &&
         typeof candidate.photoUri === 'string' &&
-        typeof candidate.photoName === 'string';
+        typeof candidate.photoName === 'string' &&
+        (candidate.additionalPhotos === undefined ||
+          (Array.isArray(candidate.additionalPhotos) &&
+            candidate.additionalPhotos.every((photo) =>
+              typeof photo.photoUri === 'string' &&
+              typeof photo.photoName === 'string' &&
+              photo.photoType === 'image/jpeg')));
     });
   } catch {
     return [];
@@ -97,37 +115,61 @@ export async function queueOfflineReport(input: {
   ownerId: string;
   idempotencyKey: string;
   payload: CreateReportPayload;
-  photo: { uri: string; name: string; type: 'image/jpeg' };
+  photos: Array<{ uri: string; name: string; type: 'image/jpeg' }>;
 }): Promise<OfflineReportQueueItem> {
   if (!input.ownerId.trim()) throw new Error('Le compte connecté est requis pour la file hors ligne.');
+  if (input.photos.length < 1 || input.photos.length > 3) {
+    throw new Error('Un signalement hors ligne doit contenir entre 1 et 3 photos.');
+  }
   await ensureDirectory();
 
   const id = 'offline-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
-  const extension = input.photo.name.toLowerCase().endsWith('.jpg') ? '.jpg' : '.jpeg';
-  const photoUri = DIRECTORY + id + extension;
-  await FileSystem.copyAsync({ from: input.photo.uri, to: photoUri });
-
-  const item: OfflineReportQueueItem = {
-    id,
-    ownerId: input.ownerId,
-    idempotencyKey: input.idempotencyKey,
-    payload: input.payload,
-    photoUri,
-    photoName: input.photo.name,
-    photoType: 'image/jpeg',
-    createdAt: new Date().toISOString(),
-    attempts: 0,
-    lastError: null,
+  const copyPhoto = async (photo: { uri: string; name: string }, suffix: string) => {
+    const extension = photo.name.toLowerCase().endsWith('.jpg') ? '.jpg' : '.jpeg';
+    const photoUri = DIRECTORY + id + suffix + extension;
+    await FileSystem.copyAsync({ from: photo.uri, to: photoUri });
+    return {
+      photoUri,
+      photoName: photo.name,
+      photoType: 'image/jpeg' as const,
+    };
   };
 
+  const copied: OfflinePhotoFile[] = [];
   try {
+    const primaryPhoto = input.photos[0];
+    if (!primaryPhoto) throw new Error('La photo principale est absente.');
+    const primary = await copyPhoto(primaryPhoto, '');
+    copied.push(primary);
+    const additionalPhotos: OfflinePhotoFile[] = [];
+    for (let index = 1; index < input.photos.length; index += 1) {
+      const selectedPhoto = input.photos[index];
+      if (!selectedPhoto) continue;
+      const extra = await copyPhoto(selectedPhoto, '-' + String(index + 1));
+      additionalPhotos.push(extra);
+      copied.push(extra);
+    }
+
+    const item: OfflineReportQueueItem = {
+      id,
+      ownerId: input.ownerId,
+      idempotencyKey: input.idempotencyKey,
+      payload: input.payload,
+      ...primary,
+      ...(additionalPhotos.length ? { additionalPhotos } : {}),
+      createdAt: new Date().toISOString(),
+      attempts: 0,
+      lastError: null,
+    };
+
     await updateQueue(input.ownerId, (items) => [...items, item]);
+    return item;
   } catch (error) {
-    await FileSystem.deleteAsync(photoUri, { idempotent: true }).catch(() => undefined);
+    await Promise.all(copied.map((photo) =>
+      FileSystem.deleteAsync(photo.photoUri, { idempotent: true }).catch(() => undefined),
+    ));
     throw error;
   }
-
-  return item;
 }
 
 export async function getOfflineReportQueue(ownerId: string): Promise<OfflineReportQueueItem[]> {
@@ -142,22 +184,54 @@ export async function syncOfflineReports(ownerId: string): Promise<OfflineSyncRe
 
   for (const item of initialItems) {
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15_000);
-      try {
-        await submitReportWithPhoto(
-          item.payload,
-          item.idempotencyKey,
-          { uri: item.photoUri, name: item.photoName, type: item.photoType },
-          controller.signal,
+      let reportId = item.reportId;
+      if (!reportId) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15_000);
+        try {
+          const report = await submitReportWithPhoto(
+            item.payload,
+            item.idempotencyKey,
+            { uri: item.photoUri, name: item.photoName, type: item.photoType },
+            controller.signal,
+          );
+          reportId = report.idSignalement;
+        } finally {
+          clearTimeout(timeout);
+        }
+        const createdReportId = reportId;
+        if (!createdReportId) throw new Error('Le signalement synchronisé est introuvable.');
+        await updateQueue(ownerId, (currentItems) =>
+          currentItems.map((candidate) =>
+            candidate.id === item.id ? { ...candidate, reportId: createdReportId } : candidate,
+          ),
         );
-      } finally {
-        clearTimeout(timeout);
       }
+
+      if (!reportId) throw new Error('Le signalement synchronisé est introuvable.');
+
+      const currentReport = await getMyReport(reportId);
+      const alreadyAttached = Math.max(0, currentReport.photos.length - 1);
+      const additionalPhotos = item.additionalPhotos ?? [];
+      // The server-side photo count avoids re-uploading an attachment when
+      // the previous request succeeded but its response never reached the app.
+      for (const photo of additionalPhotos.slice(alreadyAttached)) {
+        await uploadReportPhoto(reportId, {
+          uri: photo.photoUri,
+          name: photo.photoName,
+          type: photo.photoType,
+        });
+      }
+
       await updateQueue(ownerId, (currentItems) =>
         currentItems.filter((candidate) => candidate.id !== item.id),
       );
-      await FileSystem.deleteAsync(item.photoUri, { idempotent: true }).catch(() => undefined);
+      await Promise.all([
+        FileSystem.deleteAsync(item.photoUri, { idempotent: true }).catch(() => undefined),
+        ...additionalPhotos.map((photo) =>
+          FileSystem.deleteAsync(photo.photoUri, { idempotent: true }).catch(() => undefined),
+        ),
+      ]);
       synced += 1;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Échec de synchronisation.';

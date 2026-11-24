@@ -1,3 +1,4 @@
+import { File as ExpoFile } from 'expo-file-system';
 import { api } from '../../lib/api';
 
 export interface WasteTypeOption {
@@ -112,6 +113,16 @@ export interface AppNotification {
   message: string;
 }
 
+function appendPhotoPart(
+  body: FormData,
+  photo: { uri: string; name: string; type: string },
+) {
+  // Expo SDK 57's fetch serializer accepts Blob/File parts, not legacy
+  // React Native { uri, name, type } pseudo-Blob objects.
+  const file = new ExpoFile(photo.uri);
+  body.append('file', file, photo.name);
+}
+
 export async function listAvailableWasteTypes(): Promise<WasteTypeOption[]> {
   return api.request<WasteTypeOption[]>('/reports/waste-types');
 }
@@ -160,7 +171,7 @@ export async function submitReportWithPhoto(
   signal?: AbortSignal,
 ): Promise<Report> {
   const body = new FormData();
-  body.append('file', photo as unknown as Blob);
+  appendPhotoPart(body, photo);
   if (payload.description?.trim()) body.append('description', payload.description.trim());
   if (payload.dateConstat) body.append('dateConstat', payload.dateConstat);
   if (payload.latitude !== undefined) body.append('latitude', String(payload.latitude));
@@ -217,7 +228,7 @@ export async function uploadReportPhoto(
   description?: string,
 ): Promise<ReportPhotoUploadResponse> {
   const body = new FormData();
-  body.append('file', photo as unknown as Blob);
+  appendPhotoPart(body, photo);
   if (description?.trim()) body.append('description', description.trim());
   return api.request<ReportPhotoUploadResponse>(
     '/reports/' + encodeURIComponent(reportId) + '/photos',

@@ -7,6 +7,7 @@ export interface RoleTabItem {
   route: string;
   label: string;
   icon: RoleTabIconName;
+  onPress?: () => void;
 }
 
 interface RoleTabBarProps {
@@ -160,7 +161,10 @@ export function RoleTabBar({ state, navigation, items, action }: RoleTabBarProps
             target: route.key,
             canPreventDefault: true,
           });
-          if (!selected && !event.defaultPrevented) navigation.navigate(item.route);
+          if (!event.defaultPrevented) {
+            if (item.onPress) item.onPress();
+            else if (!selected) navigation.navigate(item.route);
+          }
         }}
         className="min-w-0 flex-1 items-center justify-center px-1 py-2"
       >

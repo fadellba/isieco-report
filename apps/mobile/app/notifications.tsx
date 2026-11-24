@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, Text, View, ActivityIndicator } from 'react-native';
+import { Pressable, ScrollView, Text, View, ActivityIndicator, RefreshControl } from 'react-native';
 import { Redirect, useFocusEffect, useRouter } from 'expo-router';
 import { listNotifications, type AppNotification } from '../src/features/reports/reports-api';
 import { useMobileAuth } from '../src/features/auth/mobile-auth-context';
@@ -11,10 +11,12 @@ export default function NotificationsScreen() {
   const { profile, loading: profileLoading } = useMobileAuth();
   const [items, setItems] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (refresh = false) => {
+    if (refresh) setRefreshing(true);
+    else setLoading(true);
     setError(null);
     try {
       setItems(await listNotifications(50));
@@ -22,6 +24,7 @@ export default function NotificationsScreen() {
       setError(reason instanceof Error ? reason.message : 'Impossible de charger les notifications.');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
@@ -43,7 +46,10 @@ export default function NotificationsScreen() {
         <Text className="text-base font-extrabold text-slate-900">Notifications</Text>
         <View className="h-9 w-9" />
       </View>
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 32 }}>
+      <ScrollView
+        contentContainerStyle={{ padding: 20, paddingBottom: 32 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} tintColor="#166534" />}
+      >
         <Text className="mb-4 text-xs leading-5 text-slate-500">
           Événements concernant votre compte, vos signalements ou vos missions. Les notifications couvrent les 90 derniers jours.
         </Text>
