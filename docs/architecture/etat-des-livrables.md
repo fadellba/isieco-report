@@ -14,9 +14,9 @@ Dernier snapshot opérationnel détaillé du **7 novembre 2026**. Un delta du d�
 | PR #94 | **Fusionnée** : filtre viewport, pagination keyset, curseur lié au viewport, total sans curseur recalculé à chaque requête, plafond serveur de 250 éléments/page. |
 | PR #96 | **Fusionnée** : journal métier → trigger `pg_notify` → API PostgreSQL `LISTEN` → endpoint SSE protégé par rôles ; heartbeat 15 s, durée de connexion 60 s, reconnexion exponentielle et polling REST 60 s en fallback. La migration du trigger est versionnée, mais pas appliquée au staging. |
 | PR #98 | **Fusionnée** : sur HTTP 401/403 du SSE, le client invalide les requêtes, vide les données de carte et de sélection, rafraîchit le profil et laisse les gardes retirer le centre si le rôle n'est plus actif. |
-| Mode hors ligne Mobile | Absent ; backlog [#87](https://github.com/fadellba/isieco-report/issues/87). |
+| Mode hors ligne Mobile | Partiel : file locale de signalements citoyens avec photo et synchronisation idempotente ; aucun parcours hors ligne agent ni cache métier complet. Backlog [#87](https://github.com/fadellba/isieco-report/issues/87). |
 | Carte native Mobile | Absente ; `apps/mobile/app/(agent)/map.tsx` reste un placeholder ; backlog [#88](https://github.com/fadellba/isieco-report/issues/88). |
-| Notifications Mobile | Non implémentées ; backlog [#90](https://github.com/fadellba/isieco-report/issues/90). |
+| Notifications Mobile | Consultation in-app via `GET /notifications` et écran mobile présents ; notifications push natives non implémentées. Backlog [#90](https://github.com/fadellba/isieco-report/issues/90). |
 | Performance cartographique | Pas encore de mesure sur dataset volumineux/plans SQL représentatifs ; index spatial/PostGIS et clustering à décider sur mesures ([#89](https://github.com/fadellba/isieco-report/issues/89)). |
 | GPS agents | Aucune télémétrie GPS des agents collectée, stockée ou diffusée. |
 | Tests physiques | Aucun test attesté sur appareils Android/iOS réels ; [#53](https://github.com/fadellba/isieco-report/issues/53) reste ouvert. |
