@@ -27,7 +27,7 @@ La carte Web, le flux SSE et la purge après refus d'accès sont intégrés en s
 
 ## Retours citoyens Mobile — 24 novembre 2026
 
-Ces constats complètent le snapshot historique du 13 novembre. Ils combinent le code source examiné sur `main` (commit `04ee5672601b66d22aed3625c2dc7df9e59f43d5`, 19 novembre 2026) et les problèmes remontés par l'utilisateur le 24 novembre. Les problèmes rapportés restent **à reproduire et à corriger** ; la lecture statique du code ne vaut pas recette sur appareil.
+Ces constats complètent le snapshot historique du 13 novembre. Le code source examiné sur `main` (commit `04ee5672601b66d22aed3625c2dc7df9e59f43d5`, 19 novembre 2026) comprend désormais 15 migrations versionnées dans `prisma/migrations`, dont `20261118190000_require_report_photo`. Le statut d'application de cette quinzième migration sur le staging n'a pas été vérifié dans cette mise à jour. Les constats combinent ce code source et les problèmes remontés par l'utilisateur le 24 novembre. Les problèmes rapportés restent **à reproduire et à corriger** ; la lecture statique du code ne vaut pas recette sur appareil.
 
 | Sujet | État du code / retour | Travail à réaliser |
 |---|---|---|
