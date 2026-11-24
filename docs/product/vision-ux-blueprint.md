@@ -513,7 +513,7 @@ Les exigences suivantes doivent être planifiées comme des travaux backend expl
 
 | Priorité | Évolution | État / prochaine action |
 |---|---|---|
-| P0 | Signalement citoyen sans photo, avec description et catégories facultatives | Implémenté et fusionné via PR #86 ; vérifier le parcours sur staging après réconciliation des migrations. |
+| P0 | Signalement citoyen avec photo initiale obligatoire, description et catégories facultatives | Règle imposée par la migration `20261118190000_require_report_photo` ; vérifier le parcours multipart sur staging et les photos complémentaires jusqu'à trois au total. |
 | P0 | Timeline citoyenne limitée aux événements communicables et au propriétaire | Implémentée via `GET /reports/:id/history` ; terminer la recette métier de bout en bout. |
 | P0 | Coordonnées et repère du dossier exposés aux membres actifs de l'équipe agent | Implémentés dans le DTO d'affectation utilisé par le mobile ; tester les cas de localisation absente ou imprécise. |
 | P1 | Centre de commandement cartographique avec KPI et entités géolocalisées | Implémenté sur Web via `GET /command-center/overview`, carte et panneau contextuel ; améliorer la couverture/recette. |
@@ -619,7 +619,7 @@ Les valeurs chiffrées ci-dessous sont des **cibles proposées pour les tests**,
 
 Ces points ne doivent pas être inventés par l'équipe de conception :
 
-1. **Photo facultative :** comportement fusionné dans `main` via la PR #86 ; le formulaire refuse toujours un signalement entièrement vide.
+1. **Photo obligatoire :** le comportement sans photo introduit par la PR #86 a été remplacé par la migration `20261118190000_require_report_photo`. Une photo initiale est exigée ; description, catégories et localisation restent facultatives.
 2. **Localisation facultative :** le GPS est demandé à la demande de l'utilisateur ; un repère textuel peut être saisi. Un signalement entièrement vide reste refusé. La saisie manuelle des coordonnées a été retirée de l'écran rapide.
 3. **Types de déchets facultatifs :** comportement fusionné dans `main` via la PR #86.
 4. **Visibilité citoyenne de la timeline :** le endpoint actuel expose les statuts et jalons opérationnels traduits, sans identité d'agent ni métadonnées d'audit ; toute extension de visibilité doit faire l'objet d'une décision métier.
