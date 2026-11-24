@@ -18,6 +18,7 @@ import {
   createReportIdempotencyKey,
   listAvailableWasteTypes,
   submitReportWithPhoto,
+  uploadReportPhoto,
   type CreateReportPayload,
   type WasteTypeOption,
 } from '../../../src/features/reports/reports-api';
@@ -33,7 +34,7 @@ import {
 export default function NewCitizenReportScreen() {
   const router = useRouter();
   const { profile } = useMobileAuth();
-  const [photo, setPhoto] = useState<PreparedMobilePhoto | null>(null);
+  const [photos, setPhotos] = useState<PreparedMobilePhoto[]>([]);
   const [description, setDescription] = useState('');
   const [wasteTypes, setWasteTypes] = useState<WasteTypeOption[]>([]);
   const [selectedWasteTypeIds, setSelectedWasteTypeIds] = useState<string[]>([]);
@@ -66,24 +67,35 @@ export default function NewCitizenReportScreen() {
   }, []);
 
   async function chooseGallery() {
+    const remaining = Math.max(0, 3 - photos.length);
+    if (remaining === 0) {
+      setError('Vous pouvez joindre au maximum 3 photos par signalement.');
+      return;
+    }
     setMediaBusy(true);
     setError(null);
     try {
-      const selected = (await pickMobilePhotos(1))[0] ?? null;
-      if (selected) setPhoto(selected);
+      const selected = await pickMobilePhotos(remaining);
+      if (selected.length) {
+        setPhotos((current) => [...current, ...selected].slice(0, 3));
+      }
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Impossible de sélectionner la photo.');
+      setError(reason instanceof Error ? reason.message : 'Impossible de sélectionner les photos.');
     } finally {
       setMediaBusy(false);
     }
   }
 
   async function takePhoto() {
+    if (photos.length >= 3) {
+      setError('Vous pouvez joindre au maximum 3 photos par signalement.');
+      return;
+    }
     setMediaBusy(true);
     setError(null);
     try {
       const captured = await captureMobilePhoto();
-      if (captured) setPhoto(captured);
+      if (captured) setPhotos((current) => [...current, captured].slice(0, 3));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Impossible de prendre la photo.');
     } finally {
@@ -115,9 +127,8 @@ export default function NewCitizenReportScreen() {
   async function handleSubmit() {
     setError(null);
 
-    // Mandatory photo check as required by user
-    if (!photo) {
-      setError('La photo du dépôt est obligatoire pour enregistrer votre signalement.');
+    if (photos.length === 0) {
+      setError('Au moins une photo du dépôt est obligatoire pour enregistrer votre signalement.');
       return;
     }
 
@@ -132,6 +143,9 @@ export default function NewCitizenReportScreen() {
         throw new Error(
           'Renseignez la latitude et la longitude ensemble, ou laissez les deux vides.',
         );
+      }
+      if (precisionNumber !== undefined && (!Number.isFinite(precisionNumber) || precisionNumber < 0)) {
+        throw new Error('La précision GPS doit être un nombre positif.');
       }
 
       const payload: CreateReportPayload = {
@@ -151,38 +165,40 @@ export default function NewCitizenReportScreen() {
           : {}),
       };
 
-      const fingerprint = JSON.stringify({ payload, photoUri: photo.uri });
+      const fingerprint = JSON.stringify({ payload, photoUris: photos.map((photo) => photo.uri) });
       if (!idempotencyRef.current || idempotencyRef.current.fingerprint !== fingerprint) {
         idempotencyRef.current = { fingerprint, key: createReportIdempotencyKey() };
       }
 
       setBusy(true);
       const idempotencyKey = idempotencyRef.current.key;
+      const primaryPhoto = photos[0];
+      if (!primaryPhoto) throw new Error('La photo principale est absente.');
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 15_000);
+      let createdReport: Awaited<ReturnType<typeof submitReportWithPhoto>>;
       try {
-        const result = await submitReportWithPhoto(
+        createdReport = await submitReportWithPhoto(
           payload,
           idempotencyKey,
-          photo,
+          primaryPhoto,
           controller.signal,
         );
-        idempotencyRef.current = null;
-        router.replace({
-          pathname: '/(citizen)/reports/[id]',
-          params: { id: result.idSignalement },
-        });
       } catch (submissionError) {
+        const message = submissionError instanceof Error ? submissionError.message : '';
+        const multipartFailure = /UnsupportedFormData|FormDataPart/i.test(message);
         const networkFailure =
-          submissionError instanceof TypeError ||
-          submissionError instanceof ApiRequestError &&
-            (submissionError.status === 408 ||
-              submissionError.status === 429 ||
-              submissionError.status >= 500) ||
-          typeof submissionError === 'object' &&
-            submissionError !== null &&
-            'name' in submissionError &&
-            (submissionError.name === 'AbortError' || submissionError.name === 'NetworkError');
+          !multipartFailure && (
+            submissionError instanceof TypeError ||
+            submissionError instanceof ApiRequestError &&
+              (submissionError.status === 408 ||
+                submissionError.status === 429 ||
+                submissionError.status >= 500) ||
+            typeof submissionError === 'object' &&
+              submissionError !== null &&
+              'name' in submissionError &&
+              (submissionError.name === 'AbortError' || submissionError.name === 'NetworkError')
+          );
 
         if (!networkFailure) throw submissionError;
         if (!profile?.utilisateurId) {
@@ -193,13 +209,33 @@ export default function NewCitizenReportScreen() {
           ownerId: profile.utilisateurId,
           idempotencyKey,
           payload,
-          photo,
+          photos,
         });
         idempotencyRef.current = null;
         router.replace('/(citizen)/home');
+        return;
       } finally {
         clearTimeout(timeout);
       }
+
+      // The initial photo is part of the report transaction. Extra photos
+      // are sent one-by-one to the existing attachment endpoint.
+      let photosFailed = 0;
+      for (const photo of photos.slice(1)) {
+        try {
+          await uploadReportPhoto(createdReport.idSignalement, photo);
+        } catch {
+          photosFailed += 1;
+        }
+      }
+      idempotencyRef.current = null;
+      router.replace({
+        pathname: '/(citizen)/reports/[id]',
+        params: {
+          id: createdReport.idSignalement,
+          ...(photosFailed > 0 ? { photosFailed: String(photosFailed) } : {}),
+        },
+      });
     } catch (reason) {
       setError(
         reason instanceof Error ? reason.message : 'Impossible d’enregistrer le signalement.',
@@ -236,85 +272,89 @@ export default function NewCitizenReportScreen() {
         contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 50 }}
         keyboardShouldPersistTaps="handled"
       >
-        {/* 1. PHOTO DU DÉPÔT (OBLIGATOIRE) */}
+        {/* 1. PHOTOS DU DÉPÔT (1 À 3, OBLIGATOIRE) */}
         <View className="rounded-3xl border border-line-subtle bg-white p-5 shadow-sm">
           <View className="flex-row items-center justify-between">
-            <Text className="text-sm font-extrabold text-ink-900">1. Photo du dépôt</Text>
+            <View>
+              <Text className="text-sm font-extrabold text-ink-900">1. Photos du dépôt</Text>
+              <Text className="mt-1 text-xs text-ink-500">Une photo minimum, trois maximum</Text>
+            </View>
             <View className="rounded-full bg-emerald-50 px-2.5 py-1">
               <Text className="text-[10px] font-extrabold uppercase text-emerald-800">
-                Obligatoire
+                {photos.length}/3
               </Text>
             </View>
           </View>
 
-          {photo ? (
-            <View className="mt-4">
-              <View className="relative overflow-hidden rounded-2xl border border-line-subtle">
-                <Image
-                  source={{ uri: photo.uri }}
-                  resizeMode="cover"
-                  style={{ width: '100%', height: 220 }}
-                />
-                <TouchableOpacity
-                  onPress={() => setPhoto(null)}
-                  className="absolute right-3 top-3 h-8 w-8 items-center justify-center rounded-full bg-ink-900/70"
+          {photos.length ? (
+            <View className="mt-4 flex-row flex-wrap gap-3">
+              {photos.map((photo, index) => (
+                <View
+                  key={photo.uri}
+                  className="relative overflow-hidden rounded-2xl border border-line-subtle bg-slate-50"
+                  style={{ width: '48%' }}
                 >
-                  <Text className="text-xs font-bold text-white">✕</Text>
-                </TouchableOpacity>
-              </View>
-              <View className="mt-3 flex-row items-center justify-between">
-                <View className="flex-row items-center gap-1.5">
-                  <View className="h-2 w-2 rounded-full bg-emerald-600" />
-                  <Text className="text-xs font-semibold text-emerald-800">Photo enregistrée</Text>
+                  <Image
+                    source={{ uri: photo.uri }}
+                    resizeMode="cover"
+                    style={{ width: '100%', height: 132 }}
+                  />
+                  <View className="flex-row items-center justify-between px-2.5 py-2">
+                    <Text className="text-[10px] font-bold text-ink-700">
+                      {index === 0 ? 'Principale' : 'Photo ' + (index + 1)}
+                    </Text>
+                    <TouchableOpacity
+                      accessibilityRole="button"
+                      accessibilityLabel={'Supprimer la photo ' + (index + 1)}
+                      onPress={() => setPhotos((current) => current.filter((_, i) => i !== index))}
+                      disabled={busy || mediaBusy}
+                      className="h-6 w-6 items-center justify-center rounded-full bg-rose-50"
+                    >
+                      <Text className="text-xs font-bold text-rose-700">✕</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-                <TouchableOpacity
-                  onPress={() => void takePhoto()}
-                  disabled={mediaBusy}
-                  className="rounded-full border border-line-strong bg-white px-3 py-1.5"
-                >
-                  <Text className="text-xs font-bold text-ink-700">Changer la photo</Text>
-                </TouchableOpacity>
-              </View>
+              ))}
             </View>
           ) : (
-            <View className="mt-4">
-              <View className="min-h-[160px] items-center justify-center rounded-2xl border-2 border-dashed border-emerald-300 bg-emerald-50/40 p-6 text-center">
-                <View className="h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
-                  <Text className="text-2xl">📷</Text>
-                </View>
-                <Text className="mt-3 text-sm font-extrabold text-ink-900">
-                  Photographiez le dépôt
-                </Text>
-                <Text className="mt-1 text-center text-xs leading-5 text-ink-500">
-                  Prenez une photo claire pour que nos équipes puissent intervenir rapidement.
-                </Text>
+            <View className="mt-4 min-h-[150px] items-center justify-center rounded-2xl border-2 border-dashed border-emerald-300 bg-emerald-50/40 p-6">
+              <View className="h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
+                <Text className="text-2xl">📷</Text>
               </View>
-
-              <View className="mt-3.5 flex-row gap-2.5">
-                <TouchableOpacity
-                  onPress={() => void takePhoto()}
-                  disabled={mediaBusy || busy}
-                  className="flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-brand-forest py-3.5 shadow-sm disabled:opacity-50"
-                >
-                  <Text className="text-sm">📷</Text>
-                  <Text className="text-xs font-extrabold text-white">Prendre une photo</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => void chooseGallery()}
-                  disabled={mediaBusy || busy}
-                  className="flex-1 flex-row items-center justify-center gap-2 rounded-2xl border border-line-strong bg-white py-3.5 disabled:opacity-50"
-                >
-                  <Text className="text-sm">🖼️</Text>
-                  <Text className="text-xs font-extrabold text-ink-800">Galerie</Text>
-                </TouchableOpacity>
-              </View>
+              <Text className="mt-3 text-sm font-extrabold text-ink-900">
+                Ajoutez une photo du dépôt
+              </Text>
+              <Text className="mt-1 text-center text-xs leading-5 text-ink-500">
+                La première photo sera utilisée comme image principale du signalement.
+              </Text>
             </View>
           )}
 
+          <View className="mt-3.5 flex-row gap-2.5">
+            <TouchableOpacity
+              onPress={() => void takePhoto()}
+              disabled={mediaBusy || busy || photos.length >= 3}
+              className="flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-brand-forest py-3.5 shadow-sm disabled:opacity-50"
+            >
+              <Text className="text-sm">📷</Text>
+              <Text className="text-xs font-extrabold text-white">Prendre une photo</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => void chooseGallery()}
+              disabled={mediaBusy || busy || photos.length >= 3}
+              className="flex-1 flex-row items-center justify-center gap-2 rounded-2xl border border-line-strong bg-white py-3.5 disabled:opacity-50"
+            >
+              <Text className="text-sm">🖼️</Text>
+              <Text className="text-xs font-extrabold text-ink-800">Galerie</Text>
+            </TouchableOpacity>
+          </View>
+          <Text className="mt-2 text-[10px] leading-4 text-ink-400">
+            Vous pouvez sélectionner plusieurs images dans la galerie. La photo principale est obligatoire.
+          </Text>
           {mediaBusy && (
             <View className="mt-3 flex-row items-center gap-2">
               <ActivityIndicator size="small" color="#174C3D" />
-              <Text className="text-xs text-ink-500">Préparation de l’image...</Text>
+              <Text className="text-xs text-ink-500">Préparation des images...</Text>
             </View>
           )}
         </View>
@@ -453,7 +493,7 @@ export default function NewCitizenReportScreen() {
           onPress={() => void handleSubmit()}
           disabled={busy || mediaBusy}
           className={`mt-6 flex-row items-center justify-center gap-2 rounded-2xl py-4 shadow-sm ${
-            !photo ? 'bg-brand-forest/60' : 'bg-brand-forest'
+            photos.length === 0 ? 'bg-brand-forest/60' : 'bg-brand-forest'
           } disabled:opacity-50`}
         >
           {busy ? (
@@ -461,7 +501,7 @@ export default function NewCitizenReportScreen() {
           ) : (
             <>
               <Text className="text-center font-extrabold text-white text-base">
-                {photo ? 'Envoyer le signalement' : 'Prendre une photo pour envoyer'}
+                {photos.length ? 'Envoyer le signalement' : 'Ajouter une photo pour envoyer'}
               </Text>
             </>
           )}
