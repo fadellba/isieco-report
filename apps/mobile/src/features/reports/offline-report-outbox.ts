@@ -206,6 +206,8 @@ export async function syncOfflineReports(ownerId: string): Promise<OfflineSyncRe
         );
       }
 
+      if (!reportId) throw new Error('Le signalement synchronisé est introuvable.');
+
       const currentReport = await getMyReport(reportId);
       const alreadyAttached = Math.max(0, currentReport.photos.length - 1);
       const additionalPhotos = item.additionalPhotos ?? [];
