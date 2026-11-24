@@ -119,6 +119,20 @@ export default function CitizenReportDetailScreen() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    const rawFailed = Array.isArray(params.photosFailed)
+      ? params.photosFailed[0]
+      : params.photosFailed;
+    const failed = Number(rawFailed);
+    if (Number.isInteger(failed) && failed > 0) {
+      setNotice(
+        failed === 1
+          ? 'Le signalement est enregistré, mais une photo supplémentaire n’a pas été envoyée.'
+          : `Le signalement est enregistré, mais ${failed} photos supplémentaires n’ont pas été envoyées.`,
+      );
+    }
+  }, [params.photosFailed]);
+
   async function uploadSelectedPhotos(photos: PreparedMobilePhoto[]) {
     if (!id || !photos.length) return;
     setPhotoBusy(true);
