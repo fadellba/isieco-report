@@ -34,6 +34,8 @@ test('lists notifications for an active account with a bounded page size', async
 
   assert.deepEqual(result, events);
   assert.match(query, /audit\.evenement_metier/);
+  assert.match(query, /event\.action_code IN \('SIGNALEMENT_SOUMIS', 'STATUT_SIGNALEMENT_TRANSITION'\)/);
+  assert.match(query, /event\.action_code IN \('DOSSIER_CREE', 'INTERVENTION_DEMARREE'.*'DOSSIER_CLOTURE'\)/);
   assert.match(query, /user_role\.date_fin/);
   assert.match(query, /JOIN public\.appartenance_equipe AS membership/);
   assert.match(query, /membership\.date_fin IS NULL/);
