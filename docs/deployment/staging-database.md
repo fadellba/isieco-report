@@ -20,6 +20,12 @@ Après validation de la sauvegarde indépendante et approbation de l'opération,
 
 Le bucket privé `isieco-private-media` existe déjà, avec limite 10 MiB et types autorisés JPEG, PNG et WebP. Cette configuration Storage est distincte des migrations de la base métier.
 
+
+### Delta du dépôt observé le 19 novembre 2026
+
+Le dépôt `main` contient désormais **15 migrations**. La migration ajoutée le 18 novembre, `20261118190000_require_report_photo`, impose une photo initiale obligatoire pour chaque signalement et empêche la suppression de sa dernière photo. Le nombre de migrations appliquées au staging après le contrôle du 14 novembre n'a pas été vérifié dans cette mise à jour. Ne pas supposer que cette migration est appliquée à distance : contrôler `prisma migrate status` et la table `public._prisma_migrations` avant toute opération ou toute affirmation sur le comportement du staging.
+
+
 ## Pourquoi passer par Prisma Migrate
 
 La source de vérité du schéma métier est `prisma/schema.prisma` et les migrations SQL versionnées dans `prisma/migrations/`. Les six premières migrations construisent l'ancien modèle de 38 tables ; la migration `20261105000000_simplified_domain_model` le transforme en 18 tables. L'historique d'application est conservé dans `_prisma_migrations`.
