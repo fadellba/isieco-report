@@ -22,7 +22,12 @@ export default function CitizenLayout() {
           navigation={navigation}
           items={[
             { route: 'home', label: 'Accueil', icon: 'home' },
-            { route: 'reports', label: 'Suivi', icon: 'list' },
+            {
+              route: 'reports',
+              label: 'Suivi',
+              icon: 'list',
+              onPress: () => router.replace('/(citizen)/reports'),
+            },
             { route: 'profile', label: 'Profil', icon: 'profile' },
           ]}
           action={{
