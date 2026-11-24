@@ -199,9 +199,11 @@ export async function syncOfflineReports(ownerId: string): Promise<OfflineSyncRe
         } finally {
           clearTimeout(timeout);
         }
+        const createdReportId = reportId;
+        if (!createdReportId) throw new Error('Le signalement synchronisé est introuvable.');
         await updateQueue(ownerId, (currentItems) =>
           currentItems.map((candidate) =>
-            candidate.id === item.id ? { ...candidate, reportId } : candidate,
+            candidate.id === item.id ? { ...candidate, reportId: createdReportId } : candidate,
           ),
         );
       }
