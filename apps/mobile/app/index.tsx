@@ -30,7 +30,9 @@ export default function IndexScreen() {
   useEffect(() => {
     if (loading || onboardingComplete === null) return;
     if (!profile) {
-      router.replace(onboardingComplete ? '/sign-in' : '/onboarding');
+      // Keep the diagnostic screen visible when Supabase authentication succeeded
+      // but the business profile could not be loaded from the API.
+      if (!error) router.replace(onboardingComplete ? '/sign-in' : '/onboarding');
       return;
     }
 
@@ -41,7 +43,7 @@ export default function IndexScreen() {
     else if (hasCitizen) router.replace('/(citizen)/home');
     else if (hasAgent) router.replace('/(agent)/home');
     else router.replace('/no-mobile-access');
-  }, [loading, onboardingComplete, profile, router]);
+  }, [error, loading, onboardingComplete, profile, router]);
 
   if (error && !profile) {
     return (
