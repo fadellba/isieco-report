@@ -3,3 +3,7 @@ Fix: compile workspace packages during EAS install.
 Preflight: Metro Android export using staging environment values.
 Profile: preview-apk
 Environment: preview (staging only)
+
+Staging APK rebuild request: 2026-11-25
+Source commit: aaf5b14aaa56eeed510a385624dbd1a18158eb51
+Reason: merged mobile auth profile failure diagnostics (PR #111).
