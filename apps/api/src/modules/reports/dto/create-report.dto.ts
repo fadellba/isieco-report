@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Transform, Type } from 'class-transformer';
+import { plainToInstance, Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   ArrayUnique,
@@ -84,18 +84,25 @@ export class CreateReportDto {
   @ApiPropertyOptional({ type: () => [CreateReportContentDto], minItems: 0, maxItems: 20 })
   @IsOptional()
   @Transform(({ value }) => {
-    if (typeof value !== 'string') return value;
-    try {
-      return JSON.parse(value) as unknown;
-    } catch {
-      return value;
+    let parsed: unknown = value;
+    if (typeof value === 'string') {
+      try {
+        parsed = JSON.parse(value) as unknown;
+      } catch {
+        return value;
+      }
     }
-  })
+
+    // Multipart fields arrive as JSON strings. Convert each nested object into
+    // its DTO instance before class-validator applies strict whitelist checks.
+    return Array.isArray(parsed)
+      ? plainToInstance(CreateReportContentDto, parsed)
+      : parsed;
+  }, { toClassOnly: true })
   @IsArray()
   @ArrayMaxSize(20)
   @ArrayUnique((content: CreateReportContentDto) => content.idTypeDechet)
   @ValidateNested({ each: true })
-  @Type(() => CreateReportContentDto)
   contenus?: CreateReportContentDto[];
 }
 
