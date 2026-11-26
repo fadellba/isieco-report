@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import pg from 'pg';
 import test from 'node:test';
 
@@ -444,6 +445,136 @@ test('business audit preserves same-transaction event order when copied to a dos
       BigInt(copiedEvents.rows[0].event_sequence) < BigInt(copiedEvents.rows[1].event_sequence),
       'Copied history must retain the source event order.',
     );
+  } finally {
+    await client.query('ROLLBACK');
+    client.release();
+    await pool.end();
+  }
+});
+
+test('business audit backfills legacy TRANSMIS history and keeps pre-attachment events copyable', { skip: !databaseUrl }, async () => {
+  const pool = new Pool({ connectionString: databaseUrl, max: 1 });
+  const client = await pool.connect();
+  const userId = randomUUID();
+  const authUserId = randomUUID();
+  const dossierId = randomUUID();
+  const attachedReportId = randomUUID();
+  const unattachedReportId = randomUUID();
+  const attachedHistoryId = randomUUID();
+  const unattachedHistoryId = randomUUID();
+  const migrationSql = readFileSync(
+    new URL('../../../prisma/migrations/20261123100000_backfill_transmitted_report_history/migration.sql', import.meta.url),
+    'utf8',
+  );
+  const associateReportEventsSql = `
+    INSERT INTO audit.evenement_metier (
+      occurred_at, actor_id, action_code, entity_type, entity_id,
+      dossier_id, reason, correlation_id, source_event_id, metadata
+    )
+    SELECT
+      source.occurred_at, source.actor_id, source.action_code, source.entity_type,
+      source.entity_id, $2, source.reason, source.correlation_id, source.id, source.metadata
+    FROM audit.evenement_metier AS source
+    WHERE source.entity_type = 'SIGNALEMENT'
+      AND source.entity_id = $1
+      AND source.dossier_id IS NULL
+    ORDER BY source.occurred_at ASC, source.event_sequence ASC
+    ON CONFLICT (source_event_id, dossier_id)
+      WHERE source_event_id IS NOT NULL
+    DO NOTHING
+  `;
+
+  try {
+    await client.query('BEGIN');
+    await client.query(
+      `INSERT INTO utilisateur (id_utilisateur, auth_user_id, nom, email)
+       VALUES ($1, $2, 'Audit backfill test', $3)`,
+      [userId, authUserId, `audit-backfill-${userId}@example.test`],
+    );
+    await client.query(
+      `INSERT INTO dossier_traitement
+        (id_dossier, reference_dossier, description_synthese, date_creation_dossier,
+         statut_dossier, priorite, cree_par)
+       VALUES ($1, $2, 'Dossier audit backfill test', CURRENT_TIMESTAMP, 'OUVERT', 'NORMALE', $3)`,
+      [dossierId, `DOS-AUDIT-${dossierId}`, userId],
+    );
+    await client.query(
+      `INSERT INTO signalement
+        (id_signalement, id_utilisateur, id_dossier, statut_signalement,
+         cle_idempotence, empreinte_requete)
+       VALUES
+         ($1, $3, $4, 'TRANSMIS', $5, 'attached-fingerprint'),
+         ($2, $3, NULL, 'TRANSMIS', $6, 'unattached-fingerprint')`,
+      [
+        attachedReportId,
+        unattachedReportId,
+        userId,
+        dossierId,
+        `attached-${attachedReportId}`,
+        `unattached-${unattachedReportId}`,
+      ],
+    );
+    await client.query(
+      `INSERT INTO photo_signalement
+        (id_photo_signalement, id_signalement, reference_photo, date_ajout, date_expiration)
+       VALUES
+         ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '30 days'),
+         ($4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '30 days')`,
+      [
+        randomUUID(),
+        attachedReportId,
+        `audit-backfill/${attachedReportId}.png`,
+        randomUUID(),
+        unattachedReportId,
+        `audit-backfill/${unattachedReportId}.png`,
+      ],
+    );
+    await client.query(
+      `INSERT INTO historique_statut_signalement
+        (id_historique_statut, id_signalement, id_utilisateur, ancien_statut, nouveau_statut, date_changement)
+       VALUES
+         ($1, $2, $4, 'QUALIFIE', 'TRANSMIS', TIMESTAMP '2026-11-22 10:00:00'),
+         ($3, $5, $4, 'QUALIFIE', 'TRANSMIS', TIMESTAMP '2026-11-22 10:01:00')`,
+      [attachedHistoryId, attachedReportId, unattachedHistoryId, userId, unattachedReportId],
+    );
+
+    await client.query(migrationSql);
+    const backfilled = await client.query(
+      `SELECT id, entity_id, dossier_id, source_event_id, metadata
+       FROM audit.evenement_metier
+       WHERE source_event_id = ANY($1::uuid[])
+       ORDER BY entity_id`,
+      [[attachedHistoryId, unattachedHistoryId]],
+    );
+    assert.equal(backfilled.rowCount, 2, 'Each legacy TRANSMIS row must be imported once.');
+    const attachedEvent = backfilled.rows.find((row) => row.entity_id === attachedReportId);
+    const unattachedEvent = backfilled.rows.find((row) => row.entity_id === unattachedReportId);
+    assert.equal(attachedEvent?.dossier_id, dossierId, 'An already attached report must enter its dossier timeline.');
+    assert.equal(unattachedEvent?.dossier_id, null, 'A report without a dossier must retain an unassociated source event.');
+    assert.equal(unattachedEvent?.metadata.previousStatus, 'QUALIFIE');
+    assert.equal(unattachedEvent?.metadata.nextStatus, 'TRANSMIS');
+
+    await client.query(associateReportEventsSql, [unattachedReportId, dossierId]);
+    await client.query(associateReportEventsSql, [unattachedReportId, dossierId]);
+    const copied = await client.query(
+      `SELECT source_event_id
+       FROM audit.evenement_metier
+       WHERE dossier_id = $1
+         AND entity_type = 'SIGNALEMENT'
+         AND entity_id = $2
+         AND source_event_id = $3`,
+      [dossierId, unattachedReportId, unattachedEvent.id],
+    );
+    assert.equal(copied.rowCount, 1, 'A pre-attachment event must be copied once into the dossier timeline.');
+
+    await client.query(migrationSql);
+    const repeatedBackfill = await client.query(
+      `SELECT count(*)::int AS count
+       FROM audit.evenement_metier
+       WHERE source_event_id = ANY($1::uuid[])`,
+      [[attachedHistoryId, unattachedHistoryId]],
+    );
+    assert.equal(repeatedBackfill.rows[0].count, 2, 'Re-running the backfill must not duplicate legacy source rows.');
   } finally {
     await client.query('ROLLBACK');
     client.release();
