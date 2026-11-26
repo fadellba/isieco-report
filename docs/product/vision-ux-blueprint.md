@@ -168,7 +168,7 @@ Contenu recommandé :
 
 Le formulaire devient un écran simple, organisé dans cet ordre :
 
-1. **Photo :** ouvrir la caméra ou choisir une image de la galerie ; afficher immédiatement un aperçu.
+1. **Photos :** ouvrir la caméra ou choisir plusieurs images de la galerie ; afficher les aperçus, permettre le retrait individuel et limiter le dépôt à trois photos au total. Une photo initiale est obligatoire selon la règle métier actuelle.
 2. **Localisation :** proposer la position courante après consentement, puis permettre de déplacer le marqueur ou de saisir un lieu.
 3. **Description facultative :** champ court, repliable ou secondaire.
 4. **Type de déchets facultatif :** choix par chips ou icônes, sans bloquer l'envoi.
@@ -178,15 +178,15 @@ Principes :
 - pas de date de constat demandée dans le parcours rapide ; la date de soumission est enregistrée automatiquement ;
 - pas de coordonnées latitude/longitude saisies manuellement par défaut ;
 - ne pas afficher la précision GPS comme un champ à remplir ;
-- autoriser un dépôt si l'utilisateur refuse l'accès à la caméra ou à la localisation, sous réserve des règles métier finales ;
+- permettre de poursuivre la saisie si la permission GPS est refusée ; la photo initiale reste obligatoire et doit pouvoir être prise ou choisie via une source autorisée ;
 - prévoir un état de confirmation avec référence et prochain statut ;
 - préserver les données saisies lorsque l'envoi échoue.
 
-**État de mise en œuvre au 13 novembre 2026 :** la PR #86 est fusionnée dans `main` par le commit `47f846a`. Le formulaire autorise un signalement sans photo dès lors qu'au moins un autre élément utile est fourni (description, catégorie ou indication de localisation). Chaque élément reste facultatif séparément, mais le contrôle métier refuse un formulaire entièrement vide. La localisation GPS du citoyen est demandée ponctuellement à l'avant-plan et reste facultative ; cette fonction ne constitue pas une télémétrie d'agent.
+**État de mise en œuvre observé sur le code du 19 novembre 2026 :** le comportement sans photo introduit par la PR #86 a été remplacé par la migration `20261118190000_require_report_photo`. La photo initiale est obligatoire côté formulaire, API et PostgreSQL ; description, catégories et localisation restent facultatives. Le formulaire actuel ne sélectionne qu'une photo à la fois, alors que le besoin cible est de gérer jusqu'à trois photos. La localisation GPS du citoyen est demandée ponctuellement à l'avant-plan et reste facultative ; elle ne constitue pas une télémétrie d'agent.
 
 ### Photo : séquence technique
 
-L'API actuelle crée le signalement avant de recevoir les photos : l'upload utilise `POST /reports/:id/photos`. L'interface peut néanmoins présenter la capture comme première étape : les photos sont préparées localement, le signalement est créé, puis les photos sont envoyées et leur progression est affichée. Une API de pré-upload ou de brouillon n'est nécessaire que si l'on décide d'exiger une validation serveur de la photo avant toute création du signalement.
+L'API crée actuellement le signalement et sa photo initiale obligatoire via `POST /reports/with-photo` (un fichier initial). Les photos complémentaires passent par `POST /reports/:id/photos`, dans la limite de trois photos par signalement. Le formulaire multi-photos devra orchestrer ces envois et rendre visible l'état de chaque média. Il faudra spécifier la reprise en cas d'échec partiel afin de ne pas créer un deuxième signalement ni perdre les photos déjà persistées. Une création atomique de l'ensemble des médias nécessiterait une évolution dédiée du contrat API.
 
 ### Suivi du signalement : timeline
 
@@ -339,9 +339,12 @@ Bottom navigation proposée :
 | Accueil | Action principale, résumé et informations utiles |
 | Signaler | Ouverture directe du formulaire rapide, visuellement prioritaire |
 | Suivi | Liste et timeline des signalements |
-| Profil | Identité, préférences, aide et déconnexion |
+| Profil | Identité, édition du nom/prénom/téléphone, espaces autorisés, aide et déconnexion ; e-mail et rôles en lecture seule |
 
 Le bouton Signaler peut être visuellement mis en avant au centre, sans masquer les autres onglets ni gêner les technologies d'assistance.
+
+
+Règle de navigation à tester : l'onglet **Suivi** doit ouvrir l'index `/(citizen)/reports` depuis toutes les routes citoyennes. Le bouton **Signaler** ouvre uniquement `/(citizen)/reports/new`. Le défaut de renvoi du Suivi vers le formulaire a été remonté le 24 novembre 2026 ; sa cause reste à reproduire.
 
 ## 5.2 Mobile — espace agent
 
@@ -464,19 +467,32 @@ Cibles de conception :
 |---|---|---|
 | Application mobile | Une application Expo Router avec espaces `(citizen)` et `(agent)`, garde de routes adaptée aux rôles et profils chargés depuis l'API | Le sélecteur d'espace multi-rôle et les transitions d'espace restent à vérifier en recette sur appareil |
 | Identité native | Marque ISIECO et splash Expo configurés et fusionnés via PR #86 | Validation visuelle iOS/Android sur appareils réels à faire |
-| Mobile citoyen | Liste/détail des signalements, ajout de photos, localisation ponctuelle, compléments et chronologie | Le parcours rapide photo facultative est fusionné via PR #86 ; le détail du signalement doit être testé en réseau instable et sur appareils réels |
-| Signalement API | Le service accepte les métadonnées sans fichier si un élément utile est fourni ; DTO/OpenAPI et contrôleur ajustés dans la PR #86 | Valider les scénarios sans photo et sans catégorie en staging lorsque la porte de migrations sera levée |
+| Mobile citoyen | Liste/détail des signalements, une photo initiale obligatoire, localisation ponctuelle, compléments et chronologie | Multi-photos, erreur multipart `UnsupportedFormData`, navigation Suivi et recette sur appareils restent à traiter |
+| Signalement API | La photo initiale est obligatoire depuis la migration `20261118190000_require_report_photo` ; les champs descriptifs, catégories et localisation restent facultatifs | Valider le dépôt multipart avec une photo initiale, puis les photos complémentaires jusqu'à trois au total |
 | Photos citoyennes | Création du signalement et upload de photos privées, consultation à la demande via URL signée temporaire ; limite client de trois photos | Le dépôt photo et le cycle de vie Storage réel restent à valider sur staging |
 | Timeline citoyenne | `GET /reports/:id/history` vérifie le propriétaire et renvoie des événements de statut et des jalons opérationnels autorisés ; écran détail connecté | Recette métier des scénarios complets encore nécessaire |
 | Missions agent | Équipes, affectations, acceptation/refus motivés, démarrage, preuves photo privées et compte rendu soumis à vérification | Le parcours connecté existe ; ergonomie terrain et recette end-to-end restent à consolider |
 | Géolocalisation mission | Les coordonnées et repères sont inclus dans les données d'affectation agent ; contrôle d'appartenance à l'équipe côté API | Les données sont disponibles ; vérifier les cas sans coordonnées et les valeurs imprécises |
 | Navigation agent | Le bouton d'une affectation ouvre un itinéraire externe à partir des coordonnées | Pas de guidage intégré ou hors ligne |
 | Carte native agent | Route `/(agent)/map` présente mais encore placeholder | Écran carte natif à réaliser après décision sur le fournisseur et les credentials |
-| Mode hors ligne | Pas de cache métier persistant, de brouillon durable ni de file de synchronisation | Chantier P2 à spécifier avec chiffrement local, idempotence et résolution de conflits |
+| Mode hors ligne | Une file locale partielle existe pour les signalements citoyens avec photo et synchronisation idempotente ; les opérations agent ne sont pas hors ligne | Compléter la protection locale, les limites et la reprise ; ne pas qualifier l'ensemble du mobile de pleinement hors ligne |
 | Web back office | Shell et navigation par rôle, modules de qualification, dossiers, affectations, interventions, vérification, référentiels et comptes | Poursuivre la cohérence visuelle et la recette par rôle |
 | Centre de commandement Web | `GET /command-center/overview` renvoie KPI et entités géolocalisées ; PR #94 ajoute le filtre viewport, le curseur keyset, `hasMore`/`nextCursor`, le total par viewport et le bouton de page suivante | Recette visuelle et tests de performance sur volumes représentatifs restent à faire ; plafond serveur de 250 résultats/page |
 | Actualisation / télémétrie | SSE via PostgreSQL LISTEN/NOTIFY, heartbeat 15 s, bail 60 s et polling REST 60 s en fallback ; aucun GPS agent | Flux livré via PR #96 ; purge client sur HTTP 401/403 livrée via PR #98 ; activation staging après migration à valider |
 | Design system | Tokens de base, navigation et icônes SVG côté Web ; composants NativeWind et marque mobile | Le système partagé est une fondation, pas encore une bibliothèque complète de composants documentés et testés |
+
+
+### Retours citoyens remontés le 24 novembre 2026
+
+| Domaine | État du code examiné | Écart signalé / cible |
+|---|---|---|
+| Bottom navigation | L'onglet est déclaré `reports` et la liste `reports/index.tsx` existe. | Le clic sur Suivi ouvre le formulaire sur l'appareil signalé ; reproduire et corriger la résolution de route. |
+| Multipart | Le client partagé reconnaît FormData et ne force pas le Content-Type JSON. | L'utilisateur observe `UnsupportedFormData` à la soumission. Tester le descripteur fichier natif et le transport sur Android/iOS ; cause non confirmée. |
+| Photos multiples | Le formulaire contient une seule photo en état et appelle `pickMobilePhotos(1)`. | Ajouter la capture/sélection multi-images, jusqu'à trois photos, aperçu, retrait et reprise d'échec partiel. |
+| Accueil | L'écran affiche action de dépôt, carte de proximité, récents, synchronisation et compteurs. | Revoir l'ordre, la hiérarchie et la densité avec priorité au dépôt et au suivi personnel. |
+| Profil | Écran en lecture seule ; l'API `PATCH /accounts/me` permet `nom`, `prenom`, `telephone`. | Ajouter l'édition de ces trois champs, feedback et rafraîchissement du profil ; e-mail et rôles restent non modifiables. |
+
+Ces points sont des retours à traiter, non des fonctionnalités déjà livrées. Les critères de validation détaillés sont dans `docs/mobile/recette-appareils.md`.
 
 ### 7.1 Contraintes métier à ne pas casser
 
@@ -497,7 +513,7 @@ Les exigences suivantes doivent être planifiées comme des travaux backend expl
 
 | Priorité | Évolution | État / prochaine action |
 |---|---|---|
-| P0 | Signalement citoyen sans photo, avec description et catégories facultatives | Implémenté et fusionné via PR #86 ; vérifier le parcours sur staging après réconciliation des migrations. |
+| P0 | Signalement citoyen avec photo initiale obligatoire, description et catégories facultatives | Règle imposée par la migration `20261118190000_require_report_photo` ; vérifier le parcours multipart sur staging et les photos complémentaires jusqu'à trois au total. |
 | P0 | Timeline citoyenne limitée aux événements communicables et au propriétaire | Implémentée via `GET /reports/:id/history` ; terminer la recette métier de bout en bout. |
 | P0 | Coordonnées et repère du dossier exposés aux membres actifs de l'équipe agent | Implémentés dans le DTO d'affectation utilisé par le mobile ; tester les cas de localisation absente ou imprécise. |
 | P1 | Centre de commandement cartographique avec KPI et entités géolocalisées | Implémenté sur Web via `GET /command-center/overview`, carte et panneau contextuel ; améliorer la couverture/recette. |
@@ -603,7 +619,7 @@ Les valeurs chiffrées ci-dessous sont des **cibles proposées pour les tests**,
 
 Ces points ne doivent pas être inventés par l'équipe de conception :
 
-1. **Photo facultative :** comportement fusionné dans `main` via la PR #86 ; le formulaire refuse toujours un signalement entièrement vide.
+1. **Photo obligatoire :** le comportement sans photo introduit par la PR #86 a été remplacé par la migration `20261118190000_require_report_photo`. Une photo initiale est exigée ; description, catégories et localisation restent facultatives.
 2. **Localisation facultative :** le GPS est demandé à la demande de l'utilisateur ; un repère textuel peut être saisi. Un signalement entièrement vide reste refusé. La saisie manuelle des coordonnées a été retirée de l'écran rapide.
 3. **Types de déchets facultatifs :** comportement fusionné dans `main` via la PR #86.
 4. **Visibilité citoyenne de la timeline :** le endpoint actuel expose les statuts et jalons opérationnels traduits, sans identité d'agent ni métadonnées d'audit ; toute extension de visibilité doit faire l'objet d'une décision métier.

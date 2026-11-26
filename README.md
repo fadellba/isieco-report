@@ -46,7 +46,7 @@ Ne jamais exposer dans le Web ou le Mobile une clé Supabase service_role, un se
 
 ## Modèle de données et authentification
 
-Le modèle métier courant comporte 18 modèles Prisma dans le schéma PostgreSQL public. La classe conceptuelle Dossier est représentée par DossierTraitement dans le code et par la table dossier_traitement. Supabase Auth gère les identités et sessions ; auth_user_id est une référence externe. Le journal d'audit métier n'est pas un 19e modèle Prisma : il est hébergé séparément dans le schéma PostgreSQL audit sous la table audit.evenement_metier, protégée par RLS et des triggers append-only. Les 14 migrations Prisma suivies dans le dépôt comprennent six migrations historiques, la simplification du modèle, quatre migrations additives pour le ledger d'audit, deux migrations qui ordonnent les événements du ledger et rétro-remplissent leur séquence, puis une migration de notification du centre Web par PostgreSQL LISTEN/NOTIFY. Au contrôle staging du 13 novembre 2026, 11 migrations étaient appliquées ; les trois migrations restantes sont en attente. Le staging avait initialement reçu les sept premières migrations le 6 novembre, puis son historique a été porté à 11 migrations. La transformation simplifiée reste destructive pour certaines anciennes tables et colonnes ; le replay CI sur données synthétiques ne remplace pas une sauvegarde restaurable des données réelles.
+Le modèle métier courant comporte 18 modèles Prisma dans le schéma PostgreSQL public. La classe conceptuelle Dossier est représentée par DossierTraitement dans le code et par la table dossier_traitement. Supabase Auth gère les identités et sessions ; auth_user_id est une référence externe. Le journal d'audit métier n'est pas un 19e modèle Prisma : il est hébergé séparément dans le schéma PostgreSQL audit sous la table audit.evenement_metier, protégée par RLS et des triggers append-only. Les 15 migrations Prisma suivies dans le dépôt comprennent six migrations historiques, la simplification du modèle, les migrations additives du ledger d'audit, l'ordonnancement des événements, la notification du centre Web par PostgreSQL LISTEN/NOTIFY et `20261118190000_require_report_photo`, qui rend obligatoire la photo initiale d'un signalement. Au contrôle staging du 13 novembre 2026, 11 migrations étaient appliquées ; les trois migrations restantes sont en attente. Le staging avait initialement reçu les sept premières migrations le 6 novembre, puis son historique a été porté à 11 migrations. La transformation simplifiée reste destructive pour certaines anciennes tables et colonnes ; le replay CI sur données synthétiques ne remplace pas une sauvegarde restaurable des données réelles.
 
 La CI #184 et la PR #34 sont des validations historiques du socle et du replay de migration depuis l'ancien schéma avec données synthétiques. Le registre des livrables contient les exécutions plus récentes, dont la CI et le parcours E2E staging du 7 novembre. Voir docs/merise/README.md et le registre des livrables.
 
@@ -63,6 +63,19 @@ La révision fonctionnelle de référence est [`652d16d56b0e7898b639ca09a822a35d
 - **Sauvegarde / reprise :** aucune restauration indépendante depuis une sauvegarde PostgreSQL et un export Storage datés n'est attestée ([#54](https://github.com/fadellba/isieco-report/issues/54), [#51](https://github.com/fadellba/isieco-report/issues/51)).
 
 La feuille de route consolidée et les conditions de sortie sont dans [docs/architecture/roadmap-lots-1-4.md](docs/architecture/roadmap-lots-1-4.md).
+
+
+## État actualisé des parcours citoyens mobiles — retours du 24 novembre 2026
+
+Le commit source observé sur `main` est `04ee5672601b66d22aed3625c2dc7df9e59f43d5` (19 novembre 2026). La migration `20261118190000_require_report_photo` a remplacé le comportement antérieur associé à la PR #86 : un signalement sans photo n'est plus accepté. Le formulaire doit joindre une photo initiale ; la limite métier côté API est de trois photos au total.
+
+Les retours utilisateur suivants sont à traiter et ne doivent pas être considérés comme corrigés :
+- l'onglet **Suivi** du bottom navigation citoyen renvoie à tort vers le formulaire au lieu de la liste des signalements ; la cause exacte reste à reproduire ;
+- le formulaire ne permet actuellement de sélectionner qu'une photo à la fois et son envoi remonte l'erreur `UnsupportedFormData` sur l'appareil signalé ; la cause technique n'est pas encore établie ;
+- l'accueil citoyen doit être réorganisé pour améliorer la hiérarchie de l'information et la lisibilité ;
+- l'écran Profil ne permet pas de modifier les informations personnelles, bien que l'API expose déjà `PATCH /api/v1/accounts/me` pour le nom, le prénom et le téléphone.
+
+Le détail des critères et la recette de non-régression figurent dans [l'état des livrables](docs/architecture/etat-des-livrables.md), [l'inventaire UX](docs/product/inventaire-ecrans-refonte-ux-ui.md) et [la recette mobile](docs/mobile/recette-appareils.md).
 
 ## CI
 

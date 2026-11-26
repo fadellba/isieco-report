@@ -67,13 +67,13 @@ Les icônes doivent partager une même grille, un même poids de trait et un voc
 2. Onboarding uniquement lors de la première découverte de la version de l'expérience.
 3. Connexion ou création d'un compte citoyen.
 4. Accueil citoyen : action principale « Signaler un dépôt », puis accès aux signalements et à leur suivi.
-5. Création du signalement : décrire le dépôt, renseigner le lieu, ajouter une photo facultative et choisir les catégories si elles sont proposées.
+5. Création du signalement : décrire le dépôt, renseigner le lieu, ajouter une photo obligatoire (avec prise en charge cible de plusieurs photos) et choisir les catégories si elles sont proposées.
 6. Vérification des informations avant envoi, avec indication claire des données manquantes.
 7. Confirmation de réception avec référence et prochaine étape attendue.
 8. Détail du signalement : statut actuel, chronologie, pièces jointes et demandes de complément éventuelles.
 9. Réponse à une demande de complément, puis suivi jusqu'à la clôture.
 
-La photo est facultative dans le parcours actuel. La localisation GPS est demandée uniquement après une action explicite ; une saisie manuelle doit rester possible. Ne jamais présenter un signalement comme traité simplement parce qu'il a été envoyé.
+La photo initiale est obligatoire depuis la migration `20261118190000_require_report_photo`. Le formulaire actuel ne gère qu'une photo à la fois ; l'évolution demandée est de permettre jusqu'à trois photos par signalement. La localisation GPS est demandée uniquement après une action explicite ; une saisie manuelle doit rester possible. Ne jamais présenter un signalement comme traité simplement parce qu'il a été envoyé.
 
 ### Agent de terrain
 
@@ -125,7 +125,7 @@ Le splash natif Expo existe déjà. Il doit être traité comme une signature de
 
 L'onboarding est une introduction, pas une formation exhaustive :
 - Écran 1 : pourquoi ISIECO existe et quels acteurs elle relie.
-- Écran 2 : le parcours citoyen, dont la photo facultative et le suivi.
+- Écran 2 : le parcours citoyen, avec photo initiale obligatoire, sélection multi-photos à concevoir et suivi.
 - Écran 3 : le parcours agent, de l'affectation à l'intervention puis à la vérification indépendante.
 - Un indicateur de progression, un bouton Continuer, une action Passer et une sortie claire vers la connexion.
 - Le texte précise que le compte citoyen peut être créé depuis l'application, tandis que l'agent utilise les identifiants fournis par son organisation.
@@ -157,7 +157,7 @@ La branche `feat/isieco-ux-ui-foundation` porte une première livraison progress
 - Navigation Mobile avec icônes de ligne cohérentes au lieu des glyphes Unicode.
 - Introduction mobile versionnée, avec visuels dédiés au territoire, au parcours citoyen et au cycle de mission.
 - Écran de préparation après lancement et couleurs de splash natif alignés à la marque.
-- Formulaire citoyen rendu plus explicite sur les informations utiles, le caractère facultatif de la photo et l'ordre des repères affichés.
+- Formulaire citoyen rendu plus explicite sur les informations utiles et l'ordre des repères affichés ; la photo initiale est désormais obligatoire depuis la migration du 18 novembre 2026.
 - Détail du signalement : prochaine étape expliquée à partir du statut métier et action de reprise disponible si le chargement échoue.
 - Liste des missions agent transformée en file de travail filtrable (à accepter, à démarrer, en cours, à vérifier, reprises et validées), avec compteurs et priorisation par prochaine action.
 - Fiche de mission dédiée `/(agent)/missions/[id]` avec contexte du dépôt, localisation, équipe, réponse à l'affectation, démarrage de l'intervention, ajout des preuves et compte rendu.
@@ -171,7 +171,7 @@ La branche `feat/isieco-ux-ui-foundation` porte une première livraison progress
 - États de vérification de session Web/Mobile alignés sur le système visuel.
 - Écrans Web et Mobile d'URL inconnue explicites au lieu d'une redirection silencieuse.
 - Page publique de téléchargement mobile et page d'accès refusé Web repensées.
-- Profil mobile commun citoyen/agent structuré autour de l'identité, des habilitations, du changement d'espace et de la déconnexion.
+- Profil mobile commun citoyen/agent structuré autour de l'identité, des habilitations, du changement d'espace et de la déconnexion ; l'édition des informations personnelles n'est pas encore proposée dans l'interface.
 - Liste et détail Mobile des signalements migrés vers les tokens communs pour poursuivre la cohérence du parcours citoyen.
 - Centre de navigation Web : contexte du module dans l'en-tête et déconnexion disponible également sur les petits écrans.
 - Pages Web de comptes, qualification, dossiers, affectation, interventions, référentiels et vérification migrées vers les tokens de marque partagés ; champs et tableaux harmonisés.
@@ -195,7 +195,7 @@ La branche `feat/isieco-ux-ui-foundation` porte une première livraison progress
 - La fiche de mission est maintenant séparée de la file de travail. Une prochaine itération pourra encore approfondir le découpage visuel interne entre exécution, preuves et compte rendu, sans modifier le cycle métier.
 - La carte Mobile ouvre les emplacements sur OpenStreetMap via le navigateur système. Le SDK Google Maps et sa clé API ne sont plus nécessaires ; les parcours restent à tester sur appareils Android/iOS réels.
 - La carte Web utilise maintenant un regroupement visuel des marqueurs proches ; les règles avancées de densité à l’échelle territoriale et la représentation des secteurs restent à concevoir.
-- Les états hors connexion et les brouillons locaux restent hors de cette livraison.
+- Une file locale partielle existe déjà pour les signalements citoyens avec photo ; le hors-ligne complet, les brouillons agent et la synchronisation des décisions métier restent hors de cette livraison.
 - La recette visuelle et l'accessibilité doivent encore être vérifiées sur navigateur, formats mobiles courants et appareils Android/iOS réels. Les vérifications de type et de build ne remplacent pas cette recette.
 
 Cette livraison couvre maintenant une première reprise des routes applicatives Web et Mobile recensées, avec une attention renforcée aux parcours d'administration et de contrôle. Elle ne doit toutefois pas être déclarée définitivement terminée avant la recette visuelle réelle, la validation d'accessibilité, le recette des assets natifs sur les appareils et le traitement des fonctionnalités identifiées comme absentes.
@@ -225,6 +225,19 @@ Cette livraison couvre maintenant une première reprise des routes applicatives 
 - Le tableau de bord n’affiche plus de cartes d’accès opérationnel en doublon ; les modules restent dans la navigation latérale.
 - La page Statistiques propose des périodes journalière, hebdomadaire, mensuelle, semestrielle et annuelle, ainsi qu’un export CSV.
 - Les notifications métier sont filtrées par propriétaire, rôles actifs et appartenance à une équipe.
+
+
+## Retours citoyens et corrections à planifier — 24 novembre 2026
+
+Les observations suivantes sont remontées par l'utilisateur et restent à corriger/recetter. Les causes non reproduites sont explicitement laissées ouvertes.
+
+1. **Bottom navigation / Suivi — défaut de navigation signalé.** Le clic sur l'onglet Suivi renvoie vers le formulaire de nouveau signalement au lieu de la liste. La route d'onglet déclarée est `reports` et la liste existe dans `reports/index.tsx` ; reproduire la navigation imbriquée avant de conclure à la cause. Le bouton central **Signaler** doit être le seul qui ouvre `reports/new`.
+2. **Soumission multipart — erreur `UnsupportedFormData` signalée.** Le client API partagé évite de définir `Content-Type: application/json` pour une instance FormData, mais le fichier est actuellement ajouté avec un cast Blob du modèle `uri/name/type`. Vérifier le descripteur natif, le runtime fetch, la frontière multipart et les headers sur appareils Android/iOS. La cause n'est pas encore confirmée.
+3. **Photos multiples — évolution fonctionnelle requise.** Le formulaire conserve un seul média et le sélecteur galerie est appelé avec la limite 1. Le parcours cible permet de prendre ou sélectionner plusieurs photos, jusqu'à trois au total, les prévisualiser, les retirer individuellement et suivre chaque envoi. L'API attend une photo initiale obligatoire et permet d'ajouter les photos suivantes par l'endpoint photo du signalement.
+4. **Accueil citoyen — refonte de présentation.** Revoir la hiérarchie et la densité : action principale, suivi des signalements propres au citoyen, demandes nécessitant une action, puis informations de proximité et compteurs. Préserver les états vides, erreur, chargement et synchronisation en attente. Ne pas utiliser de données fictives.
+5. **Profil citoyen — édition absente du client.** L'API `PATCH /api/v1/accounts/me` accepte déjà `nom`, `prenom` et `telephone`. Ajouter un formulaire avec validation, sauvegarde, confirmation et actualisation du contexte d'authentification. Garder l'e-mail et les rôles en lecture seule.
+
+La règle métier de la photo initiale obligatoire remplace les anciennes formulations de photo facultative issues de la PR #86. Le citoyen ne doit pas pouvoir modifier ses habilitations depuis son profil.
 
 ## Périmètre hors ligne
 

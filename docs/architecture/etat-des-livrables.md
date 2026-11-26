@@ -14,15 +14,34 @@ Dernier snapshot opérationnel détaillé du **7 novembre 2026**. Un delta du d�
 | PR #94 | **Fusionnée** : filtre viewport, pagination keyset, curseur lié au viewport, total sans curseur recalculé à chaque requête, plafond serveur de 250 éléments/page. |
 | PR #96 | **Fusionnée** : journal métier → trigger `pg_notify` → API PostgreSQL `LISTEN` → endpoint SSE protégé par rôles ; heartbeat 15 s, durée de connexion 60 s, reconnexion exponentielle et polling REST 60 s en fallback. La migration du trigger est versionnée, mais pas appliquée au staging. |
 | PR #98 | **Fusionnée** : sur HTTP 401/403 du SSE, le client invalide les requêtes, vide les données de carte et de sélection, rafraîchit le profil et laisse les gardes retirer le centre si le rôle n'est plus actif. |
-| Mode hors ligne Mobile | Absent ; backlog [#87](https://github.com/fadellba/isieco-report/issues/87). |
+| Mode hors ligne Mobile | Partiel : file locale de signalements citoyens avec photo et synchronisation idempotente ; aucun parcours hors ligne agent ni cache métier complet. Backlog [#87](https://github.com/fadellba/isieco-report/issues/87). |
 | Carte native Mobile | Absente ; `apps/mobile/app/(agent)/map.tsx` reste un placeholder ; backlog [#88](https://github.com/fadellba/isieco-report/issues/88). |
-| Notifications Mobile | Non implémentées ; backlog [#90](https://github.com/fadellba/isieco-report/issues/90). |
+| Notifications Mobile | Consultation in-app via `GET /notifications` et écran mobile présents ; notifications push natives non implémentées. Backlog [#90](https://github.com/fadellba/isieco-report/issues/90). |
 | Performance cartographique | Pas encore de mesure sur dataset volumineux/plans SQL représentatifs ; index spatial/PostGIS et clustering à décider sur mesures ([#89](https://github.com/fadellba/isieco-report/issues/89)). |
 | GPS agents | Aucune télémétrie GPS des agents collectée, stockée ou diffusée. |
 | Tests physiques | Aucun test attesté sur appareils Android/iOS réels ; [#53](https://github.com/fadellba/isieco-report/issues/53) reste ouvert. |
 | Sauvegarde / restauration | Aucune preuve de restauration indépendante depuis backups PostgreSQL + Storage datés ; [#54](https://github.com/fadellba/isieco-report/issues/54) et [#51](https://github.com/fadellba/isieco-report/issues/51) restent ouverts. |
 
 La carte Web, le flux SSE et la purge après refus d'accès sont intégrés en source via les PR #94, #96 et #98. La migration du trigger reste bloquée par les portes de sauvegarde/migration staging.
+
+
+## Retours citoyens Mobile — 24 novembre 2026
+
+Ces constats complètent le snapshot historique du 13 novembre. Le code source examiné sur `main` (commit `04ee5672601b66d22aed3625c2dc7df9e59f43d5`, 19 novembre 2026) comprend désormais 15 migrations versionnées dans `prisma/migrations`, dont `20261118190000_require_report_photo`. Le statut d'application de cette quinzième migration sur le staging n'a pas été vérifié dans cette mise à jour. Les constats combinent ce code source et les problèmes remontés par l'utilisateur le 24 novembre. Les problèmes rapportés restent **à reproduire et à corriger** ; la lecture statique du code ne vaut pas recette sur appareil.
+
+| Sujet | État du code / retour | Travail à réaliser |
+|---|---|---|
+| Bottom navigation — Suivi | `RoleTabBar` navigue vers l'onglet `reports`, qui contient une route liste `reports/index` et une route enfant `reports/new`. Le clic sur Suivi renvoie néanmoins l'utilisateur au formulaire selon le retour reçu. | Reproduire sur Android et iOS ; garantir que **Suivi** ouvre toujours la liste, que seul le bouton **Signaler** ouvre le formulaire et que le retour du formulaire conserve une destination cohérente. |
+| Plusieurs photos à la création | Le formulaire garde une seule valeur `photo` et appelle `pickMobilePhotos(1)`. Il ne propose donc pas la sélection multi-images demandée. L'API exige une photo initiale et permet des photos complémentaires, jusqu'à trois au total. | Ajouter capture/galerie multi-sélection, aperçus, suppression individuelle, limite globale de trois et suivi de chaque envoi. Définir le comportement en cas d'échec partiel sans perdre le signalement ni dupliquer les médias. |
+| Envoi multipart | L'erreur `UnsupportedFormData` est rapportée à l'appui sur Envoyer. Le client partagé reconnaît `FormData` et ne force pas un Content-Type JSON ; la construction du champ fichier et sa compatibilité avec le transport React Native restent à vérifier. | Reproduire sur appareil physique, vérifier le descripteur fichier `uri/name/type`, la frontière multipart générée par le runtime, les headers et la réponse API ; ajouter un test de non-régression. Ne pas déclarer une cause avant reproduction. |
+| Accueil citoyen | L'écran actuel juxtapose action de signalement, carte de proximité, signalements récents, états de synchronisation et compteurs. L'utilisateur juge la présentation peu satisfaisante. | Revoir la hiérarchie, les priorités visuelles et les raccourcis sans retirer le suivi, les demandes de complément ou la carte consentie. Faire valider la maquette et les états vide/chargement/erreur. |
+| Profil citoyen | `ProfileScreen` affiche identité et habilitations en lecture seule. L'API expose déjà `PATCH /api/v1/accounts/me` avec `nom`, `prenom` et `telephone`. | Ajouter un formulaire de modification, validation, sauvegarde, feedback et rechargement du profil. Garder l'e-mail et les rôles en lecture seule ; aucun droit métier ne doit être modifiable par le citoyen. |
+
+### Statut fonctionnel à préserver
+
+La migration `20261118190000_require_report_photo` rend la photo initiale obligatoire au niveau API/base. La documentation historique de la PR #86 qui autorisait un signalement sans photo est donc dépassée par la règle plus récente. Les photos suivantes peuvent être ajoutées par l'endpoint `POST /reports/:id/photos`, dans la limite de trois photos par signalement.
+
+La recette physique doit inclure les cas CIT de [la matrice mobile](../mobile/recette-appareils.md). Aucun de ces retours ne doit être marqué « corrigé » avant vérification sur appareils Android et iOS, puis association à un commit candidat.
 
 ## Snapshot historique des validations staging du 7 novembre
 

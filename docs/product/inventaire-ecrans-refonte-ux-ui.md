@@ -51,11 +51,24 @@ L'inventaire ci-dessous sert de registre de couverture. Une ligne n'est considé
 
 | Route | Écran | Couverture attendue |
 |---|---|---|
-| `/(citizen)/home` | Accueil citoyen | Action principale, état des dossiers, raccourcis |
-| `/(citizen)/reports` | Liste et suivi | Statuts, pagination, vide, actualisation |
-| `/(citizen)/reports/new` | Création de signalement | Formulaire, localisation manuelle/GPS, photo facultative, validation |
+| `/(citizen)/home` | Accueil citoyen | Refonte de la hiérarchie visuelle : action principale, progression des signalements personnels, actions requises, aperçu de proximité après consentement et états de synchronisation clairement séparés |
+| `/(citizen)/reports` | Liste et suivi | Liste paginée, statuts, filtres, vide, actualisation ; l'onglet inférieur **Suivi** doit ouvrir cette liste et jamais le formulaire |
+| `/(citizen)/reports/new` | Création de signalement | Photo initiale obligatoire ; capture caméra et sélection multiple depuis la galerie, jusqu'à trois photos au total, prévisualisation/suppression, localisation consentie, champs facultatifs, upload multipart fiable et reprise des erreurs |
 | `/(citizen)/reports/[id]` | Détail signalement | Chronologie, pièces jointes, complément, récupération d'erreur |
-| `/(citizen)/profile` | Profil citoyen | Identité, informations du compte, déconnexion |
+| `/(citizen)/profile` | Profil citoyen | Consultation et modification du nom, prénom et téléphone ; e-mail et habilitations en lecture seule ; validation, confirmation de sauvegarde et déconnexion |
+
+
+### Retours et exigences de correction — espace citoyen (24 novembre 2026)
+
+| Élément | État observé | Exigence de sortie |
+|---|---|---|
+| Bottom navigation | Le composant d'onglets cible la route `reports`, mais un renvoi vers `reports/new` a été signalé au clic sur Suivi. La cause n'est pas établie. | La sélection **Suivi** ouvre l'index `reports` depuis chaque écran citoyen ; le bouton central **Signaler** est le seul raccourci vers `reports/new`. Ajouter un test de navigation. |
+| FormData | L'erreur `UnsupportedFormData` est rapportée à la soumission. | Valider le transport multipart sur Android et iOS avec le descripteur de fichier natif, sans Content-Type manuel, et conserver un feedback exploitable en cas d'échec. |
+| Photos multiples | Le code du formulaire stocke une seule photo et appelle le sélecteur avec une limite de 1. | Permettre la capture répétée ou la sélection multiple, avec aperçu, suppression individuelle et limite totale de trois photos. Gérer un échec d'upload partiel sans perdre les photos déjà envoyées. |
+| Accueil | L'utilisateur demande une nouvelle présentation ; la disposition actuelle ne lui convient pas. | Reconcevoir l'ordre et la densité des sections autour de l'action principale, des signalements personnels et des actions requises. La carte de proximité reste secondaire et déclenchée après consentement. |
+| Profil | L'écran affiche les champs en lecture seule. | Ajouter l'édition du nom, du prénom et du téléphone en consommant `PATCH /api/v1/accounts/me`. L'e-mail et les rôles demeurent non éditables dans l'espace citoyen. |
+
+La photo initiale est obligatoire depuis la migration `20261118190000_require_report_photo`. Le besoin multi-photos concerne donc un dépôt comportant une photo initiale et jusqu'à deux photos complémentaires, dans la limite de trois au total.
 
 ## Mobile — agent terrain
 
